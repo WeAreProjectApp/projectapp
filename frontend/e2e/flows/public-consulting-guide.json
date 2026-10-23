@@ -1,0 +1,14 @@
+{
+  "id": "public-consulting-guide",
+  "name": "Public Consulting Guide",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Leer la guía de primera visita, avanzar, omitir y reiniciarla.",
+  "outcomes": [
+    "display",
+    "success"
+  ]
+}

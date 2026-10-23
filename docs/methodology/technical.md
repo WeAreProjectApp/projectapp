@@ -1,5 +1,7 @@
 > **Video explicativo de Building on Demand — 2026-10-22:** Pipeline brag v2: 60 s, 1080p/30 fps, voz es-CO-SalomeNeural, MP4 H.264 y portada WebP. edge-tts 7.3.1 permite producir con el endpoint vigente del proveedor. Células administra el recurso por idioma usando sesión/CSRF; el MCP Programas comparte operaciones. El documento y su PDF conservan su contenido comercial.
 
+> **Consultoría y asesoría — 2026-10-23:** Consultoría: rutas públicas localizadas /consulting y /panel/consulting con admin-auth. API /api/consulting/public/ y public/pdf/ acepta lang=es|en; admin/ y admin/program/versions/ exigen IsAdminUser. Nuevas tablas y contenido inicial mediante content.0300; la base de despliegue se migra solo en deploy.
+
 > **Captura de IVA con centavos — 2026-10-22:** cambiar únicamente entre base y total incluido conserva el pago y su reparto automático. La captura monetaria se emite al editar importe o tasa; no se reconstruye el total desde una base redondeada.
 
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.

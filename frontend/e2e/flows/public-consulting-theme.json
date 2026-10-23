@@ -1,0 +1,13 @@
+{
+  "id": "public-consulting-theme",
+  "name": "Public Consulting Theme",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Cambiar el tema y conservar la preferencia al recargar.",
+  "outcomes": [
+    "success"
+  ]
+}

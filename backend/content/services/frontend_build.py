@@ -109,6 +109,7 @@ def latest_published_change():
         BlogPost,
         BuildingOnDemandProgramRevision,
         BuildingWithUsProgramRevision,
+        ConsultingProgramRevision,
         ExplainerVideoSettings,
         FinancingPolicyRevision,
         HourPackage,
@@ -132,6 +133,7 @@ def latest_published_change():
         (FinancingPolicyRevision.objects.all(), 'created_at'),
         # Building with Us publishes append-only presentation revisions.
         (BuildingWithUsProgramRevision.objects.all(), 'created_at'),
+        (ConsultingProgramRevision.objects.all(), 'created_at'),
         # Building on Demand publishes append-only presentation revisions.
         (BuildingOnDemandProgramRevision.objects.all(), 'created_at'),
         (

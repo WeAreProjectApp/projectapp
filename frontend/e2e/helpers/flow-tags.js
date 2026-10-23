@@ -323,6 +323,11 @@ export const ADMIN_PANEL_SESSION_EXPIRED = ['@flow:admin-panel-session-expired',
 export const BLOG_DETAIL = ['@flow:blog-detail', '@module:blog', '@priority:P2'];
 export const BLOG_LIST = ['@flow:blog-list', '@module:blog', '@priority:P2'];
 
+// ── commercial ──
+export const ADMIN_CONSULTING_DISTRIBUTION = ['@flow:admin-consulting-distribution', '@module:commercial', '@priority:P1'];
+export const ADMIN_CONSULTING_HISTORY = ['@flow:admin-consulting-history', '@module:commercial', '@priority:P2'];
+export const ADMIN_CONSULTING_PREVIEW = ['@flow:admin-consulting-preview', '@module:commercial', '@priority:P1'];
+
 // ── diagnostic ──
 export const DIAGNOSTIC_PUBLIC_DARK_MODE = ['@flow:diagnostic-public-dark-mode', '@module:diagnostic', '@priority:P3'];
 export const DIAGNOSTIC_PUBLIC_ONBOARDING = ['@flow:diagnostic-public-onboarding', '@module:diagnostic', '@priority:P3'];
@@ -467,6 +472,15 @@ export const PUBLIC_BUILDING_WITH_US_OVERVIEW = ['@flow:public-building-with-us-
 export const PUBLIC_BUILDING_WITH_US_PDF = ['@flow:public-building-with-us-pdf', '@module:public', '@priority:P2'];
 export const PUBLIC_BUILDING_WITH_US_SHARE = ['@flow:public-building-with-us-share', '@module:public', '@priority:P2'];
 export const PUBLIC_BUILDING_WITH_US_THEME = ['@flow:public-building-with-us-theme', '@module:public', '@priority:P2'];
+export const PUBLIC_CONSULTING_FAQ = ['@flow:public-consulting-faq', '@module:public', '@priority:P2'];
+export const PUBLIC_CONSULTING_GUIDE = ['@flow:public-consulting-guide', '@module:public', '@priority:P2'];
+export const PUBLIC_CONSULTING_LANGUAGE = ['@flow:public-consulting-language', '@module:public', '@priority:P2'];
+export const PUBLIC_CONSULTING_LOAD = ['@flow:public-consulting-load', '@module:public', '@priority:P1'];
+export const PUBLIC_CONSULTING_NEXT_STEP = ['@flow:public-consulting-next-step', '@module:public', '@priority:P2'];
+export const PUBLIC_CONSULTING_OVERVIEW = ['@flow:public-consulting-overview', '@module:public', '@priority:P1'];
+export const PUBLIC_CONSULTING_PDF = ['@flow:public-consulting-pdf', '@module:public', '@priority:P2'];
+export const PUBLIC_CONSULTING_SHARE = ['@flow:public-consulting-share', '@module:public', '@priority:P2'];
+export const PUBLIC_CONSULTING_THEME = ['@flow:public-consulting-theme', '@module:public', '@priority:P2'];
 export const PUBLIC_CONTACT_SUBMIT = ['@flow:public-contact-submit', '@module:public', '@priority:P1'];
 export const PUBLIC_FINANCING_EXPLAINER = ['@flow:public-financing-explainer', '@module:public', '@priority:P2'];
 export const PUBLIC_FINANCING_GUIDE = ['@flow:public-financing-guide', '@module:public', '@priority:P2'];

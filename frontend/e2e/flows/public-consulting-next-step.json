@@ -1,0 +1,13 @@
+{
+  "id": "public-consulting-next-step",
+  "name": "Public Consulting Next Step",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Solicitar una cotización por WhatsApp sin enviar mensajes automáticamente, o visitar Células y Building with Us desde las tarjetas de implementación.",
+  "outcomes": [
+    "success"
+  ]
+}

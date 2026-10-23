@@ -6,6 +6,7 @@ from content.mcp.accounting_tools import ACCOUNTING_TOOLS
 from content.mcp.building_on_demand_contract_tools import BUILDING_ON_DEMAND_CONTRACT_TOOLS
 from content.mcp.building_on_demand_tools import BUILDING_ON_DEMAND_TOOLS
 from content.mcp.building_with_us_tools import BUILDING_WITH_US_TOOLS
+from content.mcp.consulting_tools import CONSULTING_TOOLS
 from content.mcp.client_tools import CLIENT_TOOLS
 from content.mcp.commercial_module_tools import (
     ADDITIONAL_MODULE_TOOLS,
@@ -187,8 +188,8 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'commercial': ConnectorSpec(
-        'commercial', '5.0.0',
-        (CLIENT_TOOLS, PROPOSAL_TOOLS, DIAGNOSTIC_TOOLS, COMMERCIAL_PARITY_TOOLS,
+        'commercial', '5.1.0',
+        (CLIENT_TOOLS, PROPOSAL_TOOLS, DIAGNOSTIC_TOOLS, COMMERCIAL_PARITY_TOOLS, CONSULTING_TOOLS,
          PROPOSAL_VIDEO_TOOLS, PROPOSAL_FORMALIZATION_TOOLS,
          [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS
           if tool['name'] not in {existing['name'] for existing in COMMERCIAL_PARITY_TOOLS}]),

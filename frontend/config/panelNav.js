@@ -51,6 +51,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Nueva propuesta', href: lp('/panel/proposals/create'), icon: 'plus' },
         { label: 'Diagnósticos', href: lp('/panel/diagnostics'), icon: 'file' },
         { label: 'Nuevo diagnóstico', href: lp('/panel/diagnostics/create'), icon: 'plus' },
+        { label: 'Consultoría y asesoría', href: lp('/panel/consulting'), icon: 'search' },
         { divider: true },
         { label: 'Defaults', href: lp('/panel/defaults'), icon: 'settings' },
         { label: 'Entregabilidad email', href: lp('/panel/proposals/email-deliverability'), icon: 'mail' },

@@ -1,5 +1,7 @@
 > **Video de Scrum y distribución contable — 2026-10-22:** Building on Demand reutiliza los recursos de video privados, los controles compartidos y las operaciones MCP de Programas. Su visibilidad y archivo se resuelven en lectura pública, separados de las revisiones del programa. La migración aditiva content.0298 agrega el interruptor. Las tablas contables optan por distribución por contenido; las demás conservan el reparto proporcional.
 
+> **Consultoría y asesoría — 2026-10-23:** Consultoría y asesoría usa ConsultingProgram singleton y ConsultingProgramRevision append-only. El servicio es la fuente compartida de la vista pública, PDF y MCP Comercial; la publicación compara ETag y pide regeneración después del commit. El panel solo consulta y distribuye.
+
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
 
 > **Segmentación del menú y MCPs — 2026-10-22:** Comercial conserva clientes,

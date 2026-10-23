@@ -1,5 +1,7 @@
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
 
+> **Consultoría y asesoría — 2026-10-23:** Consultoría y asesoría: implementar y validar las vistas pública/panel, contenido ES/EN, PDF y publicación versionada por MCP Comercial; cierre con PR verde y merge-queue solicitado por el operador. Precio y duración por alcance, equipo propio, sin descuentos automáticos ni garantía de impacto.
+
 > **Segmentación comercial — 2026-10-22:** implementación en la rama de sesión
 > `feat/21102026-menu-mcp-segmentation`: tres secciones, separadores por subconjunto,
 > MCPs Comercial / Nuestra oferta / Programas y descripciones ampliadas. Migración

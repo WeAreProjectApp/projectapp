@@ -1,0 +1,13 @@
+{
+  "id": "public-consulting-language",
+  "name": "Public Consulting Language",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Cambiar a English para leer la presentación localizada y navegar a su URL inglesa.",
+  "outcomes": [
+    "success"
+  ]
+}

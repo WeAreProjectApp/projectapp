@@ -1,0 +1,14 @@
+{
+  "id": "public-consulting-pdf",
+  "name": "Public Consulting PDF",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Descargar el PDF en el idioma actual o leer el error de descarga conservando la presentación.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

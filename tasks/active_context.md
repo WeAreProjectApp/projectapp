@@ -1,5 +1,7 @@
 # Tablas contables y video de Células Scrum — 2026-10-22
 
+> **Consultoría y asesoría — 2026-10-23:** Consultoría y asesoría incorpora presentación pública bilingüe, PDF y panel informativo junto a Diagnósticos en Comercial. Cinco áreas elegibles y seis caminos medibles, sin gestión de casos ni datos privados de clientes. Publicación y restauración por MCP Comercial con historial inmutable. Migración content.0300 para el despliegue; no ejecutar migrate desde el worktree.
+
 Implementado en la rama de sesión: Bolsillo, Ingresos (clásico y agrupado) y Gastos usan una
 distribución opcional que reserva el ancho sobrante para Concepto. Tipo conserva
 su alineación izquierda y los importes su alineación derecha.
