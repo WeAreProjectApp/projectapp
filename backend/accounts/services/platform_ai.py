@@ -112,7 +112,12 @@ def require_ai_feature(actor, feature, project=None, *, audio=False, require_pro
         raise AIUnavailable()
     if project is not None:
         from accounts.services.project_collaboration_access import project_for_actor
-        return project_for_actor(project.pk if hasattr(project, 'pk') else project, actor)
+        target = project_for_actor(project.pk if hasattr(project, 'pk') else project, actor)
+        # These paid client features never inherit administrative project access
+        # from a cached profile after a role change.
+        if target.client_id != actor.pk:
+            raise NotFound('Proyecto no encontrado.')
+        return target
     if (require_project or feature != 'chatbot') and not Project.objects.filter(client_id=actor.pk).exists():
         raise PermissionDenied('No hay proyectos disponibles.')
     return None

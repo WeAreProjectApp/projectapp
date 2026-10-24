@@ -114,8 +114,11 @@ _decide(covered('PJ2'), '''
     accounts.IssueEvent.project accounts.ProjectClientAccessPolicy.project accounts.ProjectClientAccessEvent.project
     accounts.ProjectIdea.project accounts.ProjectIdeaCollection.project content.Linktree.project
     content.ProjectBrandAsset.project monitoring.Resource.project
-    accounts.PlatformAIJob.project accounts.PlatformAIUsage.project
 ''')
+_decide(exempt('Borrador privado temporal: se elimina con el proyecto, expira por TTL y revalida el acceso; no se reasigna ni entra en retención.'),
+        'accounts.PlatformAIJob.project')
+_decide(exempt('Contadores de consumo sin contenido: se conservan independientes con project SET_NULL; no son registros del contexto de retención.'),
+        'accounts.PlatformAIUsage.project')
 _decide(covered('PJ2', 'PJ8'), 'accounts.DeliveryNotificationEvent.project')
 _decide(covered('PJ8'), '''
     accounts.DeliveryEvidenceEmail.project accounts.DeliveryPromptContext.project
