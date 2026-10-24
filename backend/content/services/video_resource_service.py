@@ -14,10 +14,11 @@ from django.db import transaction
 from rest_framework.exceptions import APIException, ValidationError
 
 from content.models import ExplainerVideoSettings, VideoResource
+from content.services.platform_video_service import PLATFORM_VIDEO_MODULES
 
 logger = logging.getLogger(__name__)
 VIDEO_MAX_BYTES = 250 * 1024 * 1024
-VIDEO_MODULES = ('financing', 'additional-modules', 'proposal', 'building-on-demand')
+VIDEO_MODULES = ('financing', 'additional-modules', 'proposal', 'building-on-demand', *PLATFORM_VIDEO_MODULES)
 
 
 class VideoConflict(APIException):
@@ -26,7 +27,7 @@ class VideoConflict(APIException):
 
 
 def resource_key(module, language, proposal=None):
-    if module not in VIDEO_MODULES or language not in ('es', 'en'):
+    if module not in VIDEO_MODULES or language not in ('es', 'en') or (module in PLATFORM_VIDEO_MODULES and language != 'es'):
         raise ValidationError({'resource': 'Módulo o idioma inválido.'})
     if proposal is not None:
         if module != 'proposal':
@@ -64,7 +65,7 @@ def resource_payload(module, language, proposal=None):
     resource = get_resource(module, language, proposal)
     from content.services.explainer_video_service import explainer_video_visible
     return {
-        'visible': explainer_video_visible(module) if proposal is None else bool(video_descriptor(resource)),
+        'visible': (not resource or resource.mode != 'none') if module in PLATFORM_VIDEO_MODULES else explainer_video_visible(module) if proposal is None else bool(video_descriptor(resource)),
         'key': resource_key(module, language, proposal),
         'module': module, 'language': language,
         'mode': resource.mode if resource else ('none' if proposal else 'default'),
@@ -146,7 +147,7 @@ def _save_resource(module, language, proposal, actor, revision, mode, source=Non
                 from content.services.proposal_audit import log_proposal_change
                 log_proposal_change(proposal, 'updated', description='Video personalizado actualizado', field_name='video_resource', old_value=str(revision), new_value=str(resource.revision))
             transaction.on_commit(lambda: _delete_files(old_names))
-            if proposal is None:
+            if proposal is None and module not in PLATFORM_VIDEO_MODULES:
                 from content.services.frontend_build import schedule_rebuild_after_publish
                 transaction.on_commit(lambda: schedule_rebuild_after_publish(reason='video-resource'))
     except Exception:

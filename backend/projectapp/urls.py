@@ -2,6 +2,7 @@ import os
 
 from django.conf import settings
 from django.http import HttpResponseNotFound, JsonResponse
+from accounts.views_platform_videos import platform_videos
 from django.urls import path, include, re_path
 from django.views.generic import RedirectView
 from content.admin import admin_site
@@ -59,6 +60,7 @@ urlpatterns = [
     path('admin', RedirectView.as_view(url='/admin/', permanent=False)),
     path('admin/', admin_site.urls),
     path('api/', include('content.urls')),
+    path('api/platform/help/videos/', platform_videos, name='platform-help-videos'),
     path('api/accounts/', include('accounts.urls')),
     path('sitemap.xml', serve_sitemap_xml, name='sitemap-xml'),
     path('t/<uuid:card_id>/', qr_card_redirect, name='qr-card-redirect'),

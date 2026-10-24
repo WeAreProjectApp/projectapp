@@ -15,6 +15,7 @@ const props = defineProps({
   module: { type: String, default: 'proposal' },
   proposalId: { type: Number, default: null },
   language: { type: String, default: 'es' },
+  languages: { type: Array, default: () => ['es', 'en'] },
 })
 const emit = defineEmits(['updated'])
 const { t } = useI18n()
@@ -111,7 +112,7 @@ async function save(action) {
     if (fileInput.value) fileInput.value.value = ''
     notice.value = label('saved')
     emit('updated', updated)
-    if (!props.proposalId) await explainers.fetchSettings()
+    if (!props.proposalId && !props.module.startsWith('platform-')) await explainers.fetchSettings()
   } catch (exception) {
     if (current !== generation) return
     if (exception.code === 'ERR_CANCELED') notice.value = label('cancelled')
@@ -132,7 +133,7 @@ async function save(action) {
     <p class="text-sm text-text-subtle">{{ label(proposalId ? 'personalizedDescription' : 'description') }}</p>
     <BaseFormField v-if="!proposalId" :label="label('language')">
       <BaseSelect v-model="selectedLanguage" :aria-label="label('language')">
-        <option value="es">{{ label('spanish') }}</option><option value="en">{{ label('english') }}</option>
+        <option v-for="language in languages" :key="language" :value="language">{{ label(language === 'es' ? 'spanish' : 'english') }}</option>
       </BaseSelect>
     </BaseFormField>
     <video v-if="video" :key="video.src" :src="video.src" :poster="video.poster" controls playsinline preload="metadata" class="aspect-video w-full max-w-3xl rounded-xl bg-surface-muted" :aria-label="label('preview')" />
