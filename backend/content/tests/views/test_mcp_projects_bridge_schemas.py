@@ -45,6 +45,25 @@ _INTEGRITY_BRIDGE_NAMES = {
     'apply_integrity_fixes', 'list_integrity_operations', 'preview_integrity_operation_undo',
     'undo_integrity_operation',
 }
+_PLATFORM_HELP_BRIDGE_NAMES = {
+    'get_platform_help_settings', 'update_platform_help_settings',
+    'list_platform_help_clients', 'get_platform_help_client',
+    'update_platform_help_client', 'list_platform_guided_tours',
+    'get_platform_guided_tour', 'create_platform_guided_tour',
+    'update_platform_guided_tour', 'preview_platform_guided_tour',
+    'publish_platform_guided_tour', 'archive_platform_guided_tour',
+    'list_platform_guided_tour_revisions', 'list_platform_tour_progress',
+}
+_PLATFORM_AI_BRIDGE_NAMES = {
+    'get_platform_ai_settings', 'update_platform_ai_settings',
+    'list_platform_ai_clients', 'get_platform_ai_client',
+    'update_platform_ai_client', 'list_platform_ai_templates',
+    'get_platform_ai_template', 'update_platform_ai_template',
+    'preview_platform_ai_template', 'list_platform_ai_template_versions',
+    'restore_platform_ai_template', 'get_platform_ai_usage',
+    'list_platform_ai_events', 'invalidate_platform_ai_cache',
+    'test_platform_ai_credential', 'delete_platform_ai_credential',
+}
 
 
 def _serializer_class(path):
@@ -149,8 +168,11 @@ def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tool
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 55
-    assert set(PROJECTS_BRIDGE_SCHEMAS) | _INTEGRITY_BRIDGE_NAMES == set(original_bridge_tools)
+    assert len(original_bridge_tools) == 85
+    assert (
+        set(PROJECTS_BRIDGE_SCHEMAS) | _INTEGRITY_BRIDGE_NAMES
+        | _PLATFORM_HELP_BRIDGE_NAMES | _PLATFORM_AI_BRIDGE_NAMES
+    ) == set(original_bridge_tools)
     assert failures == {name: [] for name in original_bridge_tools}, failures
 
 

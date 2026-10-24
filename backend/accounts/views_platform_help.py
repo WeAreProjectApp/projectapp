@@ -8,15 +8,21 @@ from accounts.authentication import SessionJWTAuthentication
 from accounts.services import platform_help as service
 
 
-class HelpQuerySerializer(serializers.Serializer):
+class HelpCatalogQuerySerializer(serializers.Serializer):
     project_id = serializers.IntegerField(min_value=1, required=False)
-    user_id = serializers.IntegerField(min_value=1, required=False)
+
+
+class HelpClientsQuerySerializer(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, default=1)
     search = serializers.CharField(max_length=200, required=False, default='')
 
 
-def _query(request):
-    serializer = HelpQuerySerializer(data=request.query_params)
+class HelpProgressQuerySerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(min_value=1, required=False)
+    page = serializers.IntegerField(min_value=1, default=1)
+
+
+def _query(serializer):
     serializer.is_valid(raise_exception=True)
     return serializer.validated_data
 
@@ -31,7 +37,8 @@ def _response(payload, status=200):
 @authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def client_help(request):
-    return _response(service.client_catalog(request.user, _query(request).get('project_id')))
+    query = _query(HelpCatalogQuerySerializer(data=request.query_params))
+    return _response(service.client_catalog(request.user, query.get('project_id')))
 
 
 @api_view(['POST'])
@@ -53,7 +60,7 @@ def help_settings(request):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def help_clients(request):
-    query = _query(request)
+    query = _query(HelpClientsQuerySerializer(data=request.query_params))
     return _response(service.list_clients(request.user, query['page'], query['search']))
 
 
@@ -113,5 +120,5 @@ def tour_revisions(request, tour_id):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def help_progress(request):
-    query = _query(request)
+    query = _query(HelpProgressQuerySerializer(data=request.query_params))
     return _response(service.progress_report(request.user, query['page'], query.get('user_id')))

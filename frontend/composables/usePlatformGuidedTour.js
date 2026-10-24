@@ -76,8 +76,10 @@ export function usePlatformGuidedTour() {
 
   async function start(tourId, { projectId = null, manual = true } = {}) {
     completedTour.value = null
-    await pause()
+    const previous = pause()
     const token = ++runToken
+    await previous
+    if (token !== runToken) return false
     if (!await store.fetchHelp(projectId) || !store.tourEnabled || token !== runToken) return false
     const tour = store.tours.find((item) => item.id === tourId)
     if (!tour || (!manual && ['completed', 'skipped', 'paused'].includes(tour.status))) return false
