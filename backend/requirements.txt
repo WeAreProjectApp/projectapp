@@ -3,7 +3,7 @@ Django==6.1.2
 django-cors-headers==4.9.0
 django-dbbackup>=4.0.0
 django-silk>=5.5.2
-djangorestframework==3.18.0
+djangorestframework==3.18.3
 djangorestframework-simplejwt>=5.5.1,<6.0
 Faker==40.37.0
 huey>=3.3.4
@@ -28,7 +28,7 @@ freezegun==1.5.5
 
 # PDF generation
 reportlab>=5.0,<6.0
-pypdf>=6.21.1,<7.0
+pypdf>=6.21.2,<7.0
 num2words>=0.5,<0.6
 
 # Spreadsheet export
