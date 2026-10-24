@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-24 — app not running)
 /** Responsive Appi surface: launcher, selectors, history, quota and send action stay reachable. */
 import { test, expect } from '../helpers/test.js'
 import { VIEWPORTS, viewportUse } from '../helpers/viewports.js'
