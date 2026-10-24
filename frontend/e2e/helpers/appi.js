@@ -57,7 +57,7 @@ export async function setupAppi(page, { user = mockPlatformClient, appiCapabilit
 export async function visitClientProject(page) {
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
   await page.getByTestId(`project-row-${project.id}`).or(page.getByTestId(`project-card-${project.id}`)).click()
-  await page.waitForURL(/\/platform\/projects\/7$/)
+  await page.waitForURL(/\/platform\/projects\/7$/, { waitUntil: 'domcontentloaded' })
 }
 
 export async function openAppi(page) {
