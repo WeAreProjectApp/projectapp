@@ -63,7 +63,11 @@ function runNode(script, args) {
 runNode('./sync-assets.mjs', ['--video', video, '--edition', EDITION])
 runNode('./stage.mjs', ['--video', video, '--lang', language, '--edition', EDITION])
 
-if (!options['skip-render']) {
+if (!options['skip-render'] && video.startsWith('platform-')) {
+  runNode('./capture-platform-tutorial.mjs', ['--video', video, '--edition', EDITION])
+}
+
+if (!options['skip-render'] && !video.startsWith('platform-')) {
   assertExists(HYPERFRAMES_BIN, 'Corré npm install en explainers/.')
   const renderArgs = [
     'render', '.',
@@ -104,7 +108,7 @@ if (hasMusic && hasNarration) {
     '[ducked][2:a]amix=inputs=2:duration=first:normalize=0[mix]',
     `[mix]loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st=${fadeStart}:d=4[aout]`,
   )
-  if (EDITION === 'brag-v2' && video !== 'proposal') {
+  if (EDITION === 'brag-v2' && video !== 'proposal' && !video.startsWith('platform-')) {
     inputs.push('-i', assertExists(resolve(EDITION_ROOT, 'shared', 'sfx', 'click.ogg')))
     filters.pop()
     const cueOffsets = video === 'additional-modules' ? [['scene-2', 2], ['scene-4', 2], ['scene-5', 2.2]] : [['scene-2', 2], ['scene-3', 2.2], ['scene-5', 1.2]]
@@ -115,7 +119,7 @@ if (hasMusic && hasNarration) {
     // Leave headroom for inter-sample peaks introduced by AAC encoding.
     filters.push(`[scored]loudnorm=I=-16:TP=-2.5:LRA=11,afade=t=out:st=${totalDuration - 0.5}:d=0.5[aout]`)
   }
-  if (EDITION === 'brag-v2' && video === 'proposal') {
+  if (EDITION === 'brag-v2' && (video === 'proposal' || video.startsWith('platform-'))) {
     filters.pop()
     filters.push(`[mix]loudnorm=I=-16:TP=-2.5:LRA=11,afade=t=out:st=${totalDuration - 0.5}:d=0.5[aout]`)
   }

@@ -1,0 +1,92 @@
+[
+  {
+    "text": "Entra al proyecto y abre el formulario del reporte.",
+    "start": 0.2,
+    "end": 3.9189565217391307
+  },
+  {
+    "text": "Si tienes la función disponible, puedes preparar su contenido",
+    "start": 3.9189565217391307,
+    "end": 7.637913043478261
+  },
+  {
+    "text": "con una nota de voz.",
+    "start": 7.637913043478261,
+    "end": 9.704
+  },
+  {
+    "text": "Permite el micrófono, graba lo que ocurre y detén",
+    "start": 12.2,
+    "end": 16.122105263157895
+  },
+  {
+    "text": "la grabación. Describe el problema y el resultado que",
+    "start": 16.122105263157895,
+    "end": 20.04421052631579
+  },
+  {
+    "text": "esperabas.",
+    "start": 20.04421052631579,
+    "end": 20.48
+  },
+  {
+    "text": "Revisa la transcripción y corrige cualquier palabra o detalle.",
+    "start": 24.2,
+    "end": 28.221714285714285
+  },
+  {
+    "text": "Después, pide generar una propuesta de reporte a partir",
+    "start": 28.221714285714285,
+    "end": 32.24342857142857
+  },
+  {
+    "text": "de ese texto.",
+    "start": 32.24342857142857,
+    "end": 33.584
+  },
+  {
+    "text": "Lee la propuesta y corrige lo que haga falta.",
+    "start": 36.2,
+    "end": 39.96591304347827
+  },
+  {
+    "text": "Cuando estés conforme, usa el contenido en el formulario.",
+    "start": 39.96591304347827,
+    "end": 43.73182608695653
+  },
+  {
+    "text": "Todavía no se ha enviado.",
+    "start": 43.73182608695653,
+    "end": 45.82400000000001
+  },
+  {
+    "text": "Completa los campos requeridos y agrega la evidencia que",
+    "start": 48.2,
+    "end": 52.25
+  },
+  {
+    "text": "necesites. Revisa todo y envía el reporte manualmente desde",
+    "start": 52.25,
+    "end": 56.3
+  },
+  {
+    "text": "el formulario.",
+    "start": 56.3,
+    "end": 57.199999999999996
+  },
+  {
+    "text": "Si la grabación o la propuesta no te sirven,",
+    "start": 60.2,
+    "end": 64.06307692307692
+  },
+  {
+    "text": "puedes rechazarlas, regrabar o escribir manualmente. La nota de",
+    "start": 64.06307692307692,
+    "end": 67.92615384615384
+  },
+  {
+    "text": "voz nunca envía un reporte por su cuenta.",
+    "start": 67.92615384615384,
+    "end": 71.35999999999999
+  }
+]
