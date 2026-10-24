@@ -1,7 +1,7 @@
 export const APPI_COPY = {
   es: {
     open: 'Abrir Appi', close: 'Cerrar Appi', purpose: 'Te ayudo a conocer el estado de tus proyectos y a utilizar tu plataforma.',
-    private: 'Historial privado durante 90 días. No compartas contraseñas ni datos sensibles.',
+    private: 'Historial privado durante 90 días. La consulta y los datos necesarios se procesan con proveedores de IA. No compartas contraseñas ni datos sensibles.',
     all: 'Todos mis proyectos', project: 'Proyecto de la consulta', history: 'Conversaciones', newChat: 'Nueva conversación',
     empty: 'Hola, soy Appi. ¿Qué quieres consultar?', placeholder: 'Pregunta por tu proyecto o cómo usar la plataforma…',
     send: 'Enviar pregunta', sending: 'Appi está consultando…', failed: 'No pude completar la consulta. Puedes reintentar sin duplicar el consumo.',
@@ -21,7 +21,7 @@ export const APPI_COPY = {
   },
   en: {
     open: 'Open Appi', close: 'Close Appi', purpose: 'I help you check your projects and learn how to use your platform.',
-    private: 'Private history retained for 90 days. Do not share passwords or sensitive information.',
+    private: 'Private history retained for 90 days. Your question and necessary facts are processed by AI providers. Do not share passwords or sensitive information.',
     all: 'All my projects', project: 'Project for this question', history: 'Conversations', newChat: 'New conversation',
     empty: 'Hi, I am Appi. What would you like to check?', placeholder: 'Ask about your project or how to use the platform…',
     send: 'Send question', sending: 'Appi is checking…', failed: 'I could not complete the query. Retry without duplicating usage.',

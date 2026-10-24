@@ -5,7 +5,7 @@ import re
 from accounts.services import appi_jev
 from accounts.services.appi_catalog import GUIDES
 from accounts.services.appi_sources import digest, text
-from accounts.services.platform_ai import AIUnavailable, configuration
+from accounts.services.platform_ai import AIUnavailable, cache_version, configuration
 from accounts.services.platform_ai_providers import generate_text
 from accounts.services.platform_ai_templates import get_template, render_chat_template
 
@@ -16,10 +16,11 @@ def scenario_for(query, data):
     return query['scenario']
 
 
-def dependencies(query, data, language):
-    config = configuration()
+def dependencies(query, data, language, *, config=None, cache_token=None):
+    config = config or configuration()
     template = get_template('chatbot', scenario_for(query, data), language)
-    return digest({'policy': appi_jev.POLICY_VERSION, 'model': config.chatbot_model, 'epoch': config.cache_epoch,
+    return digest({'policy': appi_jev.POLICY_VERSION, 'model': config.chatbot_model,
+                   'epoch': cache_token if cache_token is not None else cache_version('chatbot', config),
                    'template_id': template.pk, 'template_version': template.version, 'query': query,
                    'basis': data['basis'], 'scope': data['project_ids']})
 
@@ -46,7 +47,7 @@ def template_answer(query, data, language):
             'provenance': 'template', 'scenario': scenario, 'project_ids': data['project_ids']}
 
 
-def _explain(actor, project, question, data, language):
+def _explain(actor, project, question, data, language, config):
     facts = data['facts'][:15]
     if not facts or len(json.dumps(facts, ensure_ascii=False)) > 10000:
         return None
@@ -60,7 +61,6 @@ def _explain(actor, project, question, data, language):
         'Return a concise summary (up to 1200 characters) and the supplied fact_ids that fully support it. '
         'If facts cannot answer, use an empty summary. Never invent a fact id. No tools or external knowledge.'
     )
-    config = configuration()
     raw, _usage_id = generate_text(actor=actor, project=project, purpose='chatbot', model=config.chatbot_model,
         instructions=instructions, text=json.dumps({'question': question, 'language': language, 'facts': facts}, ensure_ascii=False),
         schema=schema, max_tokens=min(config.max_output_tokens, 1000))
@@ -86,11 +86,11 @@ def _explain(actor, project, question, data, language):
     return summary if decision['grounded'] == 'supported' else None
 
 
-def answer(actor, project, question, query, data, language):
+def answer(actor, project, question, query, data, language, *, config=None):
     result = template_answer(query, data, language)
     if query.get('explain') and result['scenario'] not in ('clarification', 'out_of_scope') and not result['scenario'].startswith('guide_'):
         try:
-            summary = _explain(actor, project, question, data, language)
+            summary = _explain(actor, project, question, data, language, config or configuration())
         except AIUnavailable:
             summary = None
         if summary:
