@@ -1,4 +1,4 @@
-"""Provision the private AI key without touching the application database."""
+"""Provision the private AI key without writing to the application database."""
 import os
 from pathlib import Path
 
@@ -13,6 +13,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if config('AI_CREDENTIALS_CIPHER_KEY', default=''):
+            from accounts.services.platform_ai_cipher import cipher
+            try:
+                cipher()
+            except Exception:
+                raise CommandError('La llave de IA del entorno no es válida.') from None
             self.stdout.write('La llave de IA está configurada mediante el entorno.')
             return
         path = Path(config('AI_CREDENTIALS_CIPHER_KEY_FILE', default='') or Path(settings.PRIVATE_MEDIA_ROOT) / 'runtime-secrets' / 'platform-ai.key')
@@ -24,6 +29,9 @@ class Command(BaseCommand):
                 raise CommandError('La llave existente no es válida. Restáurala; no se reemplazó ningún archivo.') from None
             self.stdout.write('La llave privada de IA ya existe y se conserva.')
             return
+        from accounts.models_ai import PlatformAICredential
+        if PlatformAICredential.objects.exclude(encrypted_value='').exists():
+            raise CommandError('Hay credenciales cifradas y falta su llave. Restaura el archivo original desde el respaldo.')
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         try:
             descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)

@@ -73,11 +73,16 @@ def credential(provider):
 
 
 def ai_capabilities(actor):
-    from django.contrib.auth import get_user_model
-    if not actor or not actor.is_authenticated or not actor.is_active or not get_user_model().objects.filter(pk=actor.pk, is_active=True).exists():
+    if not actor or not actor.is_authenticated or not actor.is_active:
         raise PermissionDenied('Se requiere una cuenta activa.')
     # Never reuse actor.profile's relation cache across a billed request.
-    profile = UserProfile.objects.filter(user_id=actor.pk).first()
+    profile = UserProfile.objects.select_related('user').filter(user_id=actor.pk).first()
+    if profile and not profile.user.is_active:
+        raise PermissionDenied('Se requiere una cuenta activa.')
+    if not profile:
+        from django.contrib.auth import get_user_model
+        if not get_user_model().objects.filter(pk=actor.pk, is_active=True).exists():
+            raise PermissionDenied('Se requiere una cuenta activa.')
     config = configuration()
     keys = credential_status()
     client = bool(profile and profile.is_client)
@@ -93,7 +98,7 @@ def ai_capabilities(actor):
         result[name] = {'enabled': enabled, 'available': bool(enabled and ready)}
     result['chatbot']['voice_available'] = bool(result['chatbot']['available'] and keys['openai']['configured'])
     from accounts.services.platform_ai_quota import snapshot
-    result['quota'] = snapshot(actor, config)
+    result['quota'] = snapshot(actor, config, profile=profile)
     return result
 
 

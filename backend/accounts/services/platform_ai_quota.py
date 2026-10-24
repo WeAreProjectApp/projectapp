@@ -3,6 +3,7 @@ import math
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Count, Min
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, Throttled, ValidationError
 
@@ -11,16 +12,17 @@ from accounts.models_ai import PlatformAIQuotaReservation, PlatformAISettings
 from accounts.services.platform_ai import AIConflict, configuration
 
 
-def snapshot(actor, config=None):
+def snapshot(actor, config=None, *, profile=None):
     config = config or configuration()
-    profile = UserProfile.objects.filter(user_id=actor.pk).first()
+    profile = profile or UserProfile.objects.filter(user_id=actor.pk).first()
     limit = (profile.ai_request_limit if profile else None) or config.ai_request_limit
     minutes = (profile.ai_window_minutes if profile else None) or config.ai_window_minutes
     now = timezone.now()
     rows = PlatformAIQuotaReservation.objects.filter(actor=actor, status__in=['reserved', 'consumed'], created_at__gt=now - timedelta(minutes=minutes))
-    count = rows.count()
+    totals = rows.aggregate(count=Count('id'), oldest=Min('created_at'))
+    count = totals['count']
     offset = max(0, count - limit)
-    first = rows.order_by('created_at').values_list('created_at', flat=True)[offset:offset + 1].first()
+    first = rows.order_by('created_at').values_list('created_at', flat=True)[offset:offset + 1].first() if offset else totals['oldest']
     reset = first + timedelta(minutes=minutes) if first else None
     return {'limit': limit, 'used': count, 'remaining': max(0, limit - count), 'window_minutes': minutes,
             'resets_at': reset.isoformat() if reset else None, 'next_available_at': reset.isoformat() if reset else None,
@@ -71,7 +73,7 @@ def redeem_chat_audio(actor, transcription_id, request_id, *, project_id=None):
     config, _ = PlatformAISettings.objects.get_or_create(pk=1)
     PlatformAISettings.objects.select_for_update().get(pk=config.pk)
     from accounts.services.platform_ai import require_ai_feature
-    require_ai_feature(actor, 'chatbot', project_id, audio=True)
+    require_ai_feature(actor, 'chatbot', project_id, audio=True, require_project=False)
     job = PlatformAIJob.objects.select_for_update().filter(pk=transcription_id, actor=actor, purpose='chatbot',
         operation='transcription', status='ready', project_id=project_id, expires_at__gt=timezone.now()).first()
     if not job:

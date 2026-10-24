@@ -68,11 +68,15 @@ accounts.ProjectIdeaCollection.created_by accounts.ProjectClientAccessPolicy.upd
 accounts.ProjectClientAccessEvent.actor accounts.BillingContextEvent.actor accounts.IssueResponse.actor accounts.IssueEvent.actor
 accounts.DeliveryEvidenceEmail.prepared_by accounts.DeliveryEvidenceEmailAttempt.actor
 accounts.DeliveryNotificationEvent.actor accounts.DeliveryNotificationAttempt.requested_by
+accounts.PlatformAIEvent.actor accounts.PlatformAIJob.actor accounts.PlatformAIQuotaReservation.actor
+accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
 monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
 secure_links.SecureLinkEvent.actor
 ''')
 
 RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
+# Private AI preparations, usage and quota receipts keep the original actor.
+# Merging identities must not transfer drafts or rewrite audit/idempotency evidence.
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 content.CommunicationFolder.client content.CommunicationThread.client
 content.DocumentFolder.client_user accounts.Project.client

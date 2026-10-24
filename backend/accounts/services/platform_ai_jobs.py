@@ -57,7 +57,7 @@ def report_context(project, actor, values):
 
 
 def _authorize(job, *, context=False):
-    project = require_ai_feature(job.actor, _feature(job.purpose), job.project, audio=job.operation == 'transcription')
+    project = require_ai_feature(job.actor, _feature(job.purpose), job.project, audio=job.operation == 'transcription', require_project=job.purpose != 'chatbot')
     if job.expires_at <= timezone.now():
         raise NotFound('El borrador expiró.')
     if context and job.operation == 'draft' and report_context(project, job.actor, job.payload) != job.payload['context']:
@@ -88,7 +88,7 @@ def create_transcription(actor, values):
     purpose = values['purpose']
     if purpose == 'voice_report' and not values.get('project_id'):
         raise ValidationError({'project_id': 'Selecciona el proyecto.'})
-    project = require_ai_feature(actor, _feature(purpose), values.get('project_id'), audio=True)
+    project = require_ai_feature(actor, _feature(purpose), values.get('project_id'), audio=True, require_project=purpose != 'chatbot')
     audio = values['audio']
     if audio.size > 10 * 1024 * 1024:
         raise ValidationError({'audio': 'La grabación supera 10 MB.'})
