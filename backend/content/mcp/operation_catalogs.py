@@ -15,6 +15,7 @@ from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
+from content.mcp.platform_help_tools import PLATFORM_HELP_TOOLS
 from content.mcp.platform_ai_tools import PLATFORM_AI_TOOLS
 from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
@@ -120,6 +121,7 @@ def _project_create_tool():
 
 
 PROJECT_TOOLS = [
+    *PLATFORM_HELP_TOOLS,
     _op('list_projects', 'Lista proyectos y sus indicadores por estado; client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_projects']),
     _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['get_project']),
     _project_create_tool(),

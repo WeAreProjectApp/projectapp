@@ -3015,3 +3015,12 @@ Changelogs con ejemplos antes/después y runbook de guards/slices preparados:
 Los controles compartidos y `*_history` de PR #503 quedan fuera del barrido.
 El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
 entrada documental no declara terminados esos pasos ni operaciones en producción.
+
+
+## 2026-10-24 — Recorrido guiado de clientes (en implementación)
+
+Plan aprobado: guías general/contextual/voz por usuario, ES/EN, novedades
+editables y administración común por Panel y MCP Proyectos. Ayuda comparte
+coordinación con las sesiones Appi, reportes por voz y videos; los destinos
+son un catálogo cerrado y no ejecutan acciones de negocio. Esta entrada no
+acredita pruebas, entrega ni despliegue.
