@@ -10,7 +10,7 @@ from rest_framework.exceptions import APIException, NotFound
 
 from accounts.models_appi import AppiConversation, AppiTurn
 from accounts.models_ai import PlatformAISettings
-from accounts.services import appi_answers, appi_jev, appi_sources
+from accounts.services import appi_answers, appi_cache, appi_jev, appi_sources
 from accounts.services.appi_catalog import routing_options
 from accounts.services.platform_ai import AIConflict, configuration, require_ai_feature
 from accounts.services.platform_ai_quota import consume, redeem_chat_audio, refund, reserve, snapshot as quota_snapshot
@@ -68,9 +68,12 @@ def _valid_query(query):
     return isinstance(query, dict) and query.get('scenario') in routing_options() and query.get('topic', 'general') in appi_jev.CONTRACT_TOPICS
 
 
-def _cached(actor, conversation, exact_key):
-    if not configuration().chatbot_cache_enabled:
+def _cached(actor, conversation, exact_key, config):
+    if not config.chatbot_cache_enabled:
         return None
+    hot = appi_cache.lookup(actor, conversation.project_id, 'exact', exact_key, config)
+    if hot and hot.exact_key == exact_key:
+        return hot
     return AppiTurn.objects.filter(actor=actor, conversation__project_id=conversation.project_id,
         conversation__expires_at__gt=timezone.now(), exact_key=exact_key, status='ready', expires_at__gt=timezone.now()).order_by('-created_at').first()
 
@@ -117,9 +120,12 @@ def submit(actor, conversation_id, values):
     return turn
 
 
-def _semantic_cached(actor, turn, query, dependency):
-    if not configuration().chatbot_cache_enabled:
+def _semantic_cached(actor, turn, query, dependency, config):
+    if not config.chatbot_cache_enabled:
         return None
+    hot = appi_cache.lookup(actor, turn.conversation.project_id, 'typed', dependency, config)
+    if hot and hot.dependencies == dependency and hot.query == query:
+        return hot
     # Exact typed parameters: never nearest-neighbour prose matching.
     candidates = AppiTurn.objects.filter(actor=actor, conversation__project_id=turn.conversation.project_id,
         status='ready', dependencies=dependency, expires_at__gt=timezone.now()).exclude(pk=turn.pk).order_by('-created_at')[:10]
@@ -139,7 +145,8 @@ def process(turn_id):
         if turn.expires_at <= timezone.now():
             raise NotFound('La conversación expiró.')
         context = turn.query.get('context', {})
-        cached = _cached(actor, conversation, turn.exact_key)
+        config = configuration()
+        cached = _cached(actor, conversation, turn.exact_key, config)
         query = cached.query if cached and _valid_query(cached.query) else appi_jev.classify(actor, project, turn.question, context)
         data = appi_sources.snapshot(actor, conversation.project_id, query, turn.language)
         if not cached and data['candidates'] and query['scenario'] in ('bugs', 'phase_status', 'deliverables', 'contract_clause'):
@@ -152,7 +159,7 @@ def process(turn_id):
         dependency = appi_answers.dependencies(query, data, turn.language)
         if cached and cached.dependencies != dependency:
             cached = None
-        cached = cached or _semantic_cached(actor, turn, query, dependency)
+        cached = cached or _semantic_cached(actor, turn, query, dependency, config)
         response = {**cached.answer, 'provenance': 'cache'} if cached else appi_answers.answer(actor, project, turn.question, query, data, turn.language)
         # Reauthorization covers switch changes and transfers during provider I/O.
         require_appi(actor, conversation.project_id)
@@ -171,6 +178,7 @@ def process(turn_id):
             persisted.status, persisted.verified_at = 'ready', now
             persisted.save(update_fields=['query', 'answer', 'dependencies', 'status', 'verified_at'])
             consume(turn.quota_id)
+        appi_cache.remember(persisted, configuration())
     except Exception:
         AppiTurn.objects.filter(pk=turn.pk, status='processing').update(status='failed', query={}, answer={})
         refund(turn.quota_id)
@@ -184,14 +192,17 @@ def turn_data(actor, turn, *, memo=None):
         return base
     if not _valid_query(turn.query):
         return {**base, 'question': '', 'status': 'unavailable'}
-    current_ids = {project.pk for project in appi_sources.projects_for(actor, turn.conversation.project_id)}
+    memo = memo if memo is not None else {}
+    membership = ('projects', turn.conversation.project_id)
+    if membership not in memo:
+        memo[membership] = {project.pk for project in appi_sources.projects_for(actor, turn.conversation.project_id)}
+    current_ids = memo[membership]
     if not set(turn.answer.get('project_ids', [])).issubset(current_ids):
         return {**base, 'question': '', 'status': 'unavailable'}
-    memo = memo if memo is not None else {}
     key = appi_sources.digest({'project': turn.conversation.project_id, 'query': turn.query, 'language': turn.language})
     if key not in memo:
         try:
-            current = appi_sources.snapshot(actor, turn.conversation.project_id, turn.query, turn.language)
+            current = appi_sources.snapshot(actor, turn.conversation.project_id, turn.query, turn.language, freshness_only=True)
             memo[key] = appi_answers.dependencies(turn.query, current, turn.language)
         except APIException:
             memo[key] = None

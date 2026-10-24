@@ -320,8 +320,8 @@ const platformCapabilities = [
     'Convierte cada proyecto en un espacio operativo con una visión compartida.',
     [
       feature('platform-project-portfolio', 'Consultar los proyectos',
-        'Permite recorrer el portafolio y entrar al resumen de una iniciativa.',
-        'Da una lectura clara de qué se está construyendo y dónde continuar.',
+        'Permite recorrer el portafolio y entrar al resumen de una iniciativa. Appi consulta estado, salud y fuentes de proyectos propios, conserva historial privado y orienta con guías de uso cuando está habilitado.',
+        'Da una lectura clara de qué se está construyendo y dónde continuar. El cliente ve cuándo se verificó cada respuesta, puede actualizar una consulta y conoce el cupo compartido de IA.',
         ['/platform/projects', '/platform/projects/:id', '/platform/dashboard'],
         { icon: 'folder', actors: ['client', 'team'], stage: 'Proyecto' }),
       feature('platform-project-ideas', 'Conservar ideas del cliente',

@@ -30,8 +30,8 @@ test('exhausted quota prevents a new question', async () => {
 
   await wrapper.find('form').trigger('submit')
 
-  expect(wrapper.emitted('submit')).toBeUndefined()
-  expect(wrapper.get('[data-testid="appi-send"]').attributes('disabled')).toBeDefined()
+  expect(wrapper.emitted()).toEqual({})
+  expect(wrapper.get('[data-testid="appi-send"]').element.disabled).toBe(true)
 })
 
 test('reserved dictation can finish when no new quota remains', async () => {

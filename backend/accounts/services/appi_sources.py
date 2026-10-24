@@ -9,7 +9,7 @@ from django.db.models import Count
 from django.utils import timezone
 from rest_framework.exceptions import NotFound
 
-from accounts.models import BugReport, Deliverable, Project, ProjectContract
+from accounts.models import BugReport, ContractAmendment, Deliverable, Project, ProjectContract
 from accounts.services.appi_catalog import CONTRACT_TOPICS, GUIDES
 from accounts.services.platform_ai import ai_capabilities
 
@@ -40,13 +40,13 @@ def _normalized(value):
     return ''.join(char for char in unicodedata.normalize('NFKD', value.casefold()) if not unicodedata.combining(char))
 
 
-def _contract_fragments(node, topic):
+def _contract_fragments(node, topic, *, extract=True):
     """Read the exact signed artifact; never fall back to live text after signing."""
     from accounts.services.delivery_contract_sources import approval_contract_source, signed_contract_source
     from accounts.services.delivery_source_extraction import extract_prompt_source
 
     doc = node.document if node.document_id else None
-    if doc and (doc.project_id not in (None, node.project_id) or doc.client_user_id not in (None, node.project.client_id)):
+    if doc and (doc.project_id not in (None, node.project.pk) or doc.client_user_id not in (None, node.project.client_id)):
         return [], 'unavailable'
     source = signed_contract_source(node)
     if source is None and node.approval_file_id:
@@ -71,6 +71,8 @@ def _contract_fragments(node, topic):
         elif doc:
             markdown, blocks = doc.content_markdown, doc.content_json
     key = digest({'raw': hashlib.sha256(raw).hexdigest() if raw is not None else None, 'markdown': markdown, 'blocks': blocks})
+    if not extract:
+        return [], key
     extracted = cache.get('appi:contract:' + key)
     if extracted is None:
         extracted = extract_prompt_source(raw, filename, markdown, blocks)
@@ -144,7 +146,9 @@ def _project_summary(result, projects, actor, language, *, health=False):
                 _fact(result, text(language, 'La fecha estimada ya pasó y el avance registrado es menor al 100 %.',
                                    'The estimated date has passed and recorded progress is below 100%.'))
         result['sources'].append(_source(f'project:{project.pk}', project.name, f'/platform/projects/{project.pk}'))
-    result['basis'] = {'projects': values, 'today': today, 'total': len(projects)}
+    result['basis'] = {'projects': values, 'total': len(projects)}
+    if health:
+        result['basis']['today'] = today
     result['total'] = len(projects)
     return result
 
@@ -211,23 +215,25 @@ def _deliverables(result, actor, query, language):
     return result
 
 
-def _contracts(result, actor, project_id, query, language):
-    rows = list(ProjectContract.objects.filter(project__client_id=actor.pk, project_id__in=result['project_ids'], client_visible=True)
+def _contracts(result, actor, project_id, query, language, *, freshness_only=False):
+    contracts = list(ProjectContract.objects.filter(project__client_id=actor.pk, project_id__in=result['project_ids'], client_visible=True)
                 .select_related('project', 'document', 'proposal_document').prefetch_related('signature_evidence').order_by('id'))
-    result['candidates'] = [{'id': row.pk, 'title': row.title} for row in rows]
-    result['basis'] = {'contracts': [{'id': row.pk, 'title': row.title, 'version': row.version} for row in rows]}
-    selected = [row for row in rows if str(row.pk) == str(query.get('entity_id'))] if query.get('entity_id') else rows
-    for node in selected[:20]:
-        href = f'/platform/projects/{node.project_id}/delivery'
-        source_id = f'contract:{node.pk}'
+    amendments = list(ContractAmendment.objects.filter(contract__in=contracts, client_visible=True)
+        .select_related('contract__project', 'document', 'proposal_document').prefetch_related('signature_evidence').order_by('id'))
+    rows = [(f'contract:{node.pk}', node) for node in contracts] + [(f'amendment:{node.pk}', node) for node in amendments]
+    result['candidates'] = [{'id': key, 'title': node.title} for key, node in rows]
+    result['basis'] = {'contracts': [{'id': key, 'title': node.title, 'version': node.version} for key, node in rows]}
+    selected = [(key, node) for key, node in rows if key == str(query.get('entity_id'))] if query.get('entity_id') else rows
+    for source_id, node in selected[:20]:
+        href = f'/platform/projects/{node.project.pk}/delivery'
         evidence = next(iter(node.signature_evidence.all()), None)
         signed_at = evidence.signed_at if evidence else node.document.signed_at if node.document_id else None
         _fact(result, node.title + (text(language, ' — firmado: ', ' — signed: ') + signed_at.isoformat() if signed_at else text(language, ' — sin firma acreditada.', ' — no recorded signature.')))
-        result['basis'].setdefault('signatures', []).append({'id': node.pk, 'date': signed_at})
+        result['basis'].setdefault('signatures', []).append({'id': source_id, 'date': signed_at})
         result['sources'].append(_source(source_id, node.title, href))
         if query.get('topic', 'general') != 'general':
-            fragments, fingerprint = _contract_fragments(node, query['topic'])
-            result['basis'].setdefault('fragments', []).append({'id': node.pk, 'fingerprint': fingerprint, 'fragments': fragments})
+            fragments, fingerprint = _contract_fragments(node, query['topic'], extract=not freshness_only)
+            result['basis'].setdefault('fragments', []).append({'id': source_id, 'fingerprint': fingerprint})
             for fragment in fragments:
                 _fact(result, fragment.get('locator', '') + '\n' + fragment.get('text', '')[:2500])
             if not fragments:
@@ -237,7 +243,7 @@ def _contracts(result, actor, project_id, query, language):
     return result
 
 
-def snapshot(actor, project_id, query, language):
+def snapshot(actor, project_id, query, language, *, freshness_only=False):
     projects, result = _base(actor, project_id, language)
     scenario = query['scenario']
     if scenario.startswith('guide_'):
@@ -264,7 +270,7 @@ def snapshot(actor, project_id, query, language):
     elif scenario == 'deliverables':
         _deliverables(result, actor, query, language)
     elif scenario == 'contract_clause':
-        _contracts(result, actor, project_id, query, language)
+        _contracts(result, actor, project_id, query, language, freshness_only=freshness_only)
     if not result['facts'] and not result.get('needs_project'):
         _fact(result, text(language, 'No hay información publicada disponible para esta consulta.', 'No published information is available for this query.'))
     if result.get('total', 0) > 20:
