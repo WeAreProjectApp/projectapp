@@ -214,9 +214,10 @@ def turn_data(actor, turn, *, memo=None):
             current = appi_sources.snapshot(actor, turn.conversation.project_id, turn.query, turn.language, freshness_only=True)
             config, token = memo['policy']
             memo[key] = appi_answers.dependencies(turn.query, current, turn.language, config=config, cache_token=token)
+            memo[('guide_available', key)] = current.get('guide_available', True)
         except APIException:
             memo[key] = None
-    if memo[key] is None:
+    if memo[key] is None or (not memo.get(('guide_available', key), True) and turn.answer.get('actions')):
         return {**base, 'question': '', 'status': 'unavailable'}
     return {**base, 'answer': turn.answer, 'freshness': 'current' if memo[key] == turn.dependencies else 'stale'}
 
