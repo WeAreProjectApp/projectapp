@@ -28,7 +28,7 @@ freezegun==1.5.5
 
 # PDF generation
 reportlab>=5.0,<6.0
-pypdf>=6.21.1,<7.0
+pypdf>=6.21.2,<7.0
 num2words>=0.5,<0.6
 
 # Spreadsheet export
