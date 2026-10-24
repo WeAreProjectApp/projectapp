@@ -93,3 +93,8 @@ aislado desde el worktree. Las pruebas del navegador simulan las APIs, sin
 modificar datos desplegados. Los flujos y el contrato responsive se registran
 en sus fuentes declarativas; el cierre exige PR abierto y CI verde.
 Las migraciones se aplican mediante el deploy, nunca desde la sesión de trabajo.
+
+El contrato de datos de demostración conserva la configuración, los recorridos
+y sus revisiones como catálogo global. Las preferencias se inicializan al
+acceder; el generador no inventa progreso visto ni eventos de auditoría, que
+sólo nacen de acciones reales de usuarios y administradores.
