@@ -71,7 +71,7 @@ def redeem_chat_audio(actor, transcription_id, request_id, *, project_id=None):
     """Bind one successful dictation to one chatbot request without charging twice."""
     from accounts.models_ai import PlatformAIJob
     config, _ = PlatformAISettings.objects.get_or_create(pk=1)
-    PlatformAISettings.objects.select_for_update().get(pk=config.pk)
+    config = PlatformAISettings.objects.select_for_update().get(pk=config.pk)
     from accounts.services.platform_ai import require_ai_feature
     require_ai_feature(actor, 'chatbot', project_id, audio=True, require_project=False)
     job = PlatformAIJob.objects.select_for_update().filter(pk=transcription_id, actor=actor, purpose='chatbot',
@@ -85,6 +85,15 @@ def redeem_chat_audio(actor, transcription_id, request_id, *, project_id=None):
         raise AIConflict('Esta grabación ya se usó en otra consulta.')
     if PlatformAIQuotaReservation.objects.filter(actor=actor, redemption_request_id=request_id).exclude(pk=row.pk).exists():
         raise AIConflict('Esta consulta ya está asociada a otra grabación.')
+    if row.redemption_request_id:
+        return row
+    usage = snapshot(actor, config)
+    now = timezone.now()
+    if row.created_at <= now - timedelta(minutes=usage['window_minutes']):
+        # A transcript cannot bank free questions for a later quota window.
+        if not usage['remaining']:
+            raise Throttled(wait=usage['retry_after'], detail='Agotaste el cupo compartido de IA. Espera al próximo cupo o continúa manualmente.')
+        row.created_at = now
     row.redemption_request_id = request_id
-    row.save(update_fields=['redemption_request_id'])
+    row.save(update_fields=['redemption_request_id', 'created_at'])
     return row

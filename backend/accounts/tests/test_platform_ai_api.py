@@ -3,6 +3,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
+from freezegun import freeze_time
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -79,6 +80,7 @@ def test_credential_api_refuses_a_client_before_storing_a_provider_key(api_clien
     assert not PlatformAICredential.objects.filter(provider='openai').exists()
 
 
+@freeze_time('2026-10-24 15:00:00')
 def test_job_endpoint_hides_another_clients_transcript(api_client, client_user, project, admin_user):
     """Fails if a client can discover another client's AI transcription through its UUID."""
     other = get_user_model().objects.create_user(

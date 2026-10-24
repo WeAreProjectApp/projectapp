@@ -10,7 +10,7 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError, Throttled
 
 from accounts.models_ai import PlatformAIJob, PlatformAISettings
-from accounts.services.platform_ai import configuration, credential_status, require_ai_feature, AIConflict
+from accounts.services.platform_ai import cache_version, configuration, credential_status, require_ai_feature, AIConflict
 from accounts.services.platform_ai_templates import get_template
 
 
@@ -138,7 +138,7 @@ def create_report_draft(actor, project_id, values):
     template = get_template('report', values['scenario'], values['language'])
     base = get_template('report', 'voice_base', values['language'])
     policy = {'model': config.voice_report_model, 'template_id': template.pk, 'template_version': template.version,
-              'base_id': base.pk, 'base_version': base.version, 'epoch': config.cache_epoch,
+              'base_id': base.pk, 'base_version': base.version, 'epoch': cache_version('voice_report', config),
               'credentials': {provider: data['version'] for provider, data in credential_status().items()}}
     fingerprint = _digest([actor.pk, context, values['transcript'], values['scenario'], values['language'], policy])
     payload = {**{key: value for key, value in values.items() if key not in ('request_id', 'transcription_id')},
@@ -197,7 +197,8 @@ def _validate_report(text, scenario):
         for key, schema in REPORT_SCHEMA['properties'].items():
             value = result[key]
             if schema['type'] == 'string':
-                if not isinstance(value, str) or len(value) > (300 if key == 'title' else 6000):
+                maximum = 300 if key == 'title' else 200 if key == 'module_or_screen' else 6000
+                if not isinstance(value, str) or len(value) > maximum:
                     raise ValueError
             elif not isinstance(value, list) or len(value) > 20 or any(not isinstance(item, str) or len(item) > 1000 for item in value):
                 raise ValueError
