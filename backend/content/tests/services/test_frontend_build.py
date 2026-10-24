@@ -25,12 +25,12 @@ from content.models import (
     ConsultingProgramRevision,
     ExplainerVideoSettings,
     FinancingPolicyRevision,
-    HourPackage,
+    HourPackageSettings,
 )
 from content.services import frontend_build
-from content.tests.consulting_fixtures import consulting_program
 
 TWENTY_REASONS = [f'reason-{index:02d}' for index in range(20)]
+pytest_plugins = ('content.tests.consulting_fixtures',)
 
 
 @pytest.fixture
@@ -101,12 +101,15 @@ class TestRebuildNeeded:
         AdditionalModule.objects.all().delete()
         AdditionalModuleCategory.objects.all().delete()
         FinancingPolicyRevision.objects.all().delete()
-        HourPackage.objects.all().delete()
+        HourPackageSettings.objects.all().delete()
         assert frontend_build.rebuild_needed() is False
 
     def test_true_again_after_consulting_revision(self, consulting_program, admin_user, marker_path):
         """Fails if publishing consulting copy leaves the previous public page fresh."""
-        from content.services.consulting_program_service import apply_update, read_program
+        from content.services.consulting_program_service import (
+            apply_update,
+            read_program,
+        )
         from content.tests.consulting_fixtures import hero_update
 
         with freeze_time('2030-01-01T12:00:00Z'):
@@ -118,7 +121,10 @@ class TestRebuildNeeded:
 
     def test_true_again_after_on_demand_revision(self, building_on_demand_program, admin_user, marker_path):
         """Fails if publishing cell program copy leaves the old prerendered page fresh."""
-        from content.services.building_on_demand_program_service import apply_operation, read_program
+        from content.services.building_on_demand_program_service import (
+            apply_operation,
+            read_program,
+        )
         from content.tests.building_on_demand_fixtures import hero_update
 
         with freeze_time('2030-01-01T12:00:00Z'):
@@ -133,7 +139,10 @@ class TestRebuildNeeded:
 
     def test_true_again_after_program_revision(self, building_with_us_program, admin_user, marker_path):
         """Fails if publishing a presentation keeps the previous static page fresh."""
-        from content.services.building_with_us_program_service import apply_update, read_program
+        from content.services.building_with_us_program_service import (
+            apply_update,
+            read_program,
+        )
         from content.tests.building_with_us_fixtures import hero_update
 
         with freeze_time('2030-01-01T12:00:00Z'):
@@ -185,23 +194,18 @@ class TestRebuildNeeded:
 
         assert frontend_build.rebuild_needed() is True
 
-    def test_true_again_after_included_package_rename(self, db, marker_path):
-        """Fails if renaming the program's monthly package keeps the old name public."""
-        package = HourPackage.objects.get(nationality='COL', hours=60)
+    def test_true_again_after_requirement_allowance_change(self, db, marker_path):
+        """Fails if changing the public monthly allowance leaves the prerender stale."""
+        settings = HourPackageSettings.load()
         write_marker_now(marker_path)
-        package.name_es = 'Paquete Pro Plus'
-        package.save()
+        settings.alliance_xs_count = 8
+        settings.save()
 
         assert frontend_build.rebuild_needed() is True
 
-    def test_false_after_unlisted_package_edit(self, db, marker_path):
-        """Fails if a package the public program never shows forces a regeneration."""
-        package = HourPackage.objects.create(
-            nationality='EXT', name_es='Ágil', name_en='Agile', hours=20, hourly_rate=18,
-        )
+    def test_false_after_unrelated_requirement_catalog_edit(self, db, marker_path):
+        """Fails if an internal catalog edit is treated as a public program change."""
         write_marker_now(marker_path)
-        package.hourly_rate = 25
-        package.save()
 
         assert frontend_build.rebuild_needed() is False
 

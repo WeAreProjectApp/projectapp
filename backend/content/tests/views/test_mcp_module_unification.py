@@ -1,14 +1,20 @@
 """HTTP contracts for the canonical one-connector-per-module MCP catalog."""
 import json
 from dataclasses import replace
-from datetime import datetime, timezone as datetime_timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
 
 from content.mcp.connectors import CONNECTORS, TOOLS_BY_SLUG
 from content.mcp.module_catalog import INFRASTRUCTURE_TOOLS, catalog_problems
-from content.models import IncomeRecord, McpActionIntent, McpConnector, McpCredential, McpUsageDaily
+from content.models import (
+    IncomeRecord,
+    McpActionIntent,
+    McpConnector,
+    McpCredential,
+    McpUsageDaily,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -108,7 +114,7 @@ def _panel_segmentation_connectors():
     [
         ('commercial', 'description', 'relación con clientes'),
         ('commercial', 'section_note', 'Defaults'),
-        ('offerings', 'description', 'paquetes de horas'),
+        ('offerings', 'description', 'paquetes de requerimientos'),
         ('offerings', 'section_note', 'Módulos adicionales'),
         ('programs', 'description', 'Building on Demand'),
         ('programs', 'section_note', 'contratos'),
@@ -206,7 +212,7 @@ def test_pre_split_access_survives_legacy_alias_retirement(api_client):
     connector, _ = McpConnector.objects.update_or_create(
         slug='commercial', defaults={
             'name': 'Comercial', 'is_active': True, 'retired_at': None,
-            'aliases_retired_at': datetime(2026, 10, 1, tzinfo=datetime_timezone.utc),
+            'aliases_retired_at': datetime(2026, 10, 1, tzinfo=UTC),
             'pre_split_retired_at': None,
         },
     )
@@ -225,7 +231,7 @@ def test_pre_split_access_does_not_reopen_a_retired_hidden_alias(api_client):
     connector, _ = McpConnector.objects.update_or_create(
         slug='commercial', defaults={
             'name': 'Comercial', 'is_active': True, 'retired_at': None,
-            'aliases_retired_at': datetime(2026, 10, 1, tzinfo=datetime_timezone.utc),
+            'aliases_retired_at': datetime(2026, 10, 1, tzinfo=UTC),
             'pre_split_retired_at': None,
         },
     )
@@ -300,7 +306,7 @@ def test_retired_legacy_credential_returns_a_machine_readable_replacement(
         accounting_connector, 'Retired legacy', token, catalog='legacy',
         allowed_tools=['list_income'],
     )
-    accounting_connector.aliases_retired_at = datetime(2026, 10, 19, tzinfo=datetime_timezone.utc)
+    accounting_connector.aliases_retired_at = datetime(2026, 10, 19, tzinfo=UTC)
     accounting_connector.save(update_fields=['aliases_retired_at'])
 
     response = _endpoint(api_client, token, 'tools/list')
@@ -316,7 +322,7 @@ def test_retired_accounting_alias_rejects_list_income_for_a_full_canonical_crede
     """Fails if a canonical full-scope credential can keep executing an alias after alias retirement."""
     token = 'retired-canonical-alias-token'
     _credential(accounting_connector, 'Canonical full scope', token)
-    accounting_connector.aliases_retired_at = datetime(2026, 10, 19, tzinfo=datetime_timezone.utc)
+    accounting_connector.aliases_retired_at = datetime(2026, 10, 19, tzinfo=UTC)
     accounting_connector.save(update_fields=['aliases_retired_at'])
 
     response = _endpoint(
@@ -332,7 +338,7 @@ def test_retiring_pre_split_commercial_access_leaves_the_new_canonical_catalog_u
     connector, _ = McpConnector.objects.update_or_create(
         slug='commercial',
         defaults={'name': 'Comercial', 'is_active': True, 'retired_at': None,
-                  'aliases_retired_at': None, 'pre_split_retired_at': datetime(2026, 10, 20, tzinfo=datetime_timezone.utc)},
+                  'aliases_retired_at': None, 'pre_split_retired_at': datetime(2026, 10, 20, tzinfo=UTC)},
     )
     connector.credentials.all().delete()
     old_token, new_token = 'pre-split-retired-token', 'canonical-commercial-token'

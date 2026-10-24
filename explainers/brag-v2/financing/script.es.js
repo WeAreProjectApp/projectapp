@@ -30,11 +30,11 @@ export default {
       ]
     },
     "scene-package": {
-      "narration": "La opción de cinco años incluye un paquete de sesenta horas mensuales para requerimientos aprobados, desde la salida a producción.",
+      "narration": "La opción de cinco años incluye cupos mensuales XS, S y M para cambios aprobados, desde producción.",
       "captions": [
-        "La opción de cinco años incluye un paquete",
-        "de sesenta horas mensuales para requerimientos aprobados,",
-        "desde la salida a producción."
+        "La opción de cinco años incluye cupos",
+        "mensuales XS, S y M para cambios aprobados,",
+        "desde producción."
       ]
     },
     "scene-4": {

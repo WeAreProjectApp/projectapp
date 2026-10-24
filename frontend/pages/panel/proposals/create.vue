@@ -252,7 +252,7 @@
             <option value="EXT">Extranjeros</option>
             <option value="USA">Estados Unidos</option>
           </select>
-          <p class="text-xs text-text-subtle mt-1">Define qué paquetes de horas se siembran en Condiciones comerciales y sugiere la moneda.</p>
+          <p class="text-xs text-text-subtle mt-1">Define qué paquetes de requerimientos se siembran en Condiciones comerciales y sugiere la moneda.</p>
         </div>
 
         <!-- Investment + Currency -->

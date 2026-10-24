@@ -302,7 +302,7 @@ async function downloadPdf() {
           <div>
             <BaseBadge variant="success">{{ program.package.included_label }}</BaseBadge>
             <h2 id="financing-package-title" class="mt-5 text-3xl font-light text-text-brand sm:text-4xl">
-              {{ program.package.name }} · {{ program.package.hours }} h
+              {{ program.package.xs_count }} XS · {{ program.package.s_count }} S · {{ program.package.m_count }} M
             </h2>
             <p class="mt-4 text-base leading-7 text-text-subtle">{{ program.package.summary }}</p>
           </div>

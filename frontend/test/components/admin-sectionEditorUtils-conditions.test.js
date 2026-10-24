@@ -131,4 +131,30 @@ describe('commercial_conditions roundtrip', () => {
     expect('manualHourlyRate' in out).toBe(false);
     expect('manualPackageRates' in out).toBe(false);
   });
+
+  // Falla si editar el texto comercial borra el snapshot congelado de requerimientos.
+  it('keeps frozen requirement packages while the editor changes commercial copy', () => {
+    const form = buildFormFromJson({
+      ...json,
+      pricingModel: 'requirements', packagesFrozen: true, hourPackagesEnabled: false,
+      packages: [{
+        id: 8, name: 'Premium', xsCount: 30, sCount: 20, mCount: 10,
+        referencePrice: 7600000, totalPrice: 5700000, discountPercent: 25,
+        validityMonths: 12, note: 'Uso único', hours: 40, hourlyRate: 50000,
+      }],
+    }, 'commercial_conditions', { currency: 'COP' });
+    form.scopeTitle = 'Alcance actualizado';
+    form.packagesIntro = 'Los cupos se validan antes de programar.';
+
+    const out = formToJson(form, 'commercial_conditions');
+    expect(out).toMatchObject({
+      pricingModel: 'requirements', packagesFrozen: true, hourPackagesEnabled: false,
+      scopeTitle: 'Alcance actualizado', packagesIntro: 'Los cupos se validan antes de programar.',
+      packages: [expect.objectContaining({
+        xsCount: 30, sCount: 20, mCount: 10, referencePrice: 7600000, totalPrice: 5700000,
+      })],
+    });
+    expect(out.packages[0].hours).toBeUndefined();
+    expect(out.packages[0].hourlyRate).toBeUndefined();
+  });
 });

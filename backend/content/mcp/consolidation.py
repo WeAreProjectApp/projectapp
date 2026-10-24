@@ -18,7 +18,13 @@ REPLACED_INCOME_NAMES = frozenset({
     'list_expected_incomes', 'get_expected_income', 'create_expected_income',
     'update_expected_income', 'duplicate_expected_income',
 })
-CATALOG_VERSIONS = {'commercial': '6.1.0', 'accounting': '2.1.0', 'accounting-ledger': '3.1.0'}
+CATALOG_VERSIONS = {
+    'commercial': '6.2.0',
+    'offerings': '2.0.0',
+    'programs': '3.0.0',
+    'accounting': '2.1.0',
+    'accounting-ledger': '3.1.0',
+}
 
 
 def operation_id(tool):

@@ -432,12 +432,20 @@ def _schedule_markdown(schedule, currency):
 
 def _modality_terms(agreement):
     financing_months = agreement.policy_revision.financing_months
+    allowance = agreement.requirement_allowance or {}
+    package_terms = (
+        f"La alianza incluye {allowance.get('xs', 0)} XS, {allowance.get('s', 0)} S y {allowance.get('m', 0)} M "
+        'cada mes desde la salida a producción, mientras esté vigente y al día. Los cupos no usados vencen '
+        'y las tallas no se intercambian. Se acuerdan resultado y talla antes de programar. '
+        'L/XL requieren levantamiento y cotización independientes. La garantía no consume cupos. Además, permite '
+    ) if allowance else (
+        'La alianza incluye un paquete de sesenta (60) horas que se renueva '
+        'cada mes desde la salida a producción, no es acumulable y se usa '
+        'para requerimientos aprobados según disponibilidad. Además, permite '
+    )
     if agreement.modality == FinancingAgreement.Modality.FIVE_YEAR:
         return (
-            'La alianza incluye un paquete de sesenta (60) horas que se renueva '
-            'cada mes desde la salida a producción, no es acumulable y se usa '
-            'para requerimientos aprobados según disponibilidad. Además, permite '
-            f'hasta dos ciclos separados de financiación de {financing_months} '
+            package_terms + f'hasta dos ciclos separados de financiación de {financing_months} '
             'meses. El '
             'segundo sólo podrá aprobarse cuando el primero haya sido pagado en su '
             'totalidad y EL CONTRATISTA complete una nueva evaluación manual de '
@@ -466,7 +474,7 @@ def _modality_terms(agreement):
     return (
         f'La alianza permite un único ciclo de financiación de {financing_months} '
         'meses y '
-        'no incluye paquete mensual de horas. Los requerimientos posteriores se '
+        'no incluye cupos mensuales de requerimientos. Los requerimientos posteriores se '
         'evalúan y cotizan de forma independiente.'
     )
 
@@ -656,6 +664,13 @@ def _prepare_financials(
     refresh_exchange_rate=False,
 ):
     policy = policy or getattr(existing, 'policy_revision', None) or current_policy()
+    if existing is None or ('modality' in data and data['modality'] != existing.modality):
+        from content.models import HourPackageSettings
+        if data.get('modality') == FinancingAgreement.Modality.FIVE_YEAR:
+            settings = HourPackageSettings.load()
+            data['requirement_allowance'] = {size: getattr(settings, f'alliance_{size}_count') for size in ('xs', 's', 'm')}
+        else:
+            data['requirement_allowance'] = {}
     financial_changed = existing is None or any(
         key in data for key in ('total_value', 'initial_payment', 'currency')
     )
@@ -1268,6 +1283,7 @@ def create_second_cycle(agreement, *, actor):
         raise FinancingAgreementValidationError(exc.errors, code=exc.code) from exc
     now = timezone.now()
     second = FinancingAgreement.objects.create(
+        requirement_allowance=agreement.requirement_allowance,
         client=agreement.client,
         source_proposal=agreement.source_proposal,
         source_project=agreement.source_project,

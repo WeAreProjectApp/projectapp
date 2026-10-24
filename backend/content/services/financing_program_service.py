@@ -3,7 +3,7 @@
 import copy
 from urllib.parse import quote
 
-from content.models import HourPackage, Nationality
+from content.models import HourPackageSettings, Nationality
 from content.services.financing_policy_service import (
     current_policy,
     minimum_initial_payment_percent,
@@ -11,10 +11,6 @@ from content.services.financing_policy_service import (
 
 
 WHATSAPP_NUMBER = '573238122373'
-# The public program names the catalog package it includes: the active
-# Colombian package with exactly this many hours.
-INCLUDED_PACKAGE_NATIONALITY = Nationality.COL
-INCLUDED_PACKAGE_HOURS = 60
 
 
 PROGRAM_CONTENT = {
@@ -50,7 +46,7 @@ PROGRAM_CONTENT = {
                 'summary': (
                     'La opción de mayor continuidad: financiación, exclusividad, '
                     'custodia de código, calculadora de requerimientos y un paquete '
-                    'mensual de 60 horas incluido sin costo adicional. Añade exclusividad '
+                    'mensual de cupos XS, S y M incluido sin costo adicional. Añade exclusividad '
                     'conceptual de Project App. para el mismo sector, nicho y tipo '
                     'de proyecto durante la alianza. Cuando el '
                     'primer ciclo se paga por completo, puede habilitar un segundo '
@@ -63,7 +59,7 @@ PROGRAM_CONTENT = {
                 'highlights': [
                     'Hasta dos ciclos separados de 12 meses al 0% de interés ordinario.',
                     'El segundo exige pago íntegro del primero y una nueva aprobación.',
-                    '60 horas disponibles cada mes desde la salida a producción.',
+                    'cupos XS, S y M disponibles cada mes desde la salida a producción.',
                     'Exclusividad conceptual a cargo de Project App. durante los cinco años.',
                 ],
             },
@@ -74,7 +70,7 @@ PROGRAM_CONTENT = {
                 'summary': (
                     'Conserva la financiación, la exclusividad, la custodia del código '
                     'y la transparencia de la calculadora, pero no incluye el paquete '
-                    'mensual de horas ni la exclusividad conceptual a cargo de Project App.'
+                    'mensual de requerimientos ni la exclusividad conceptual a cargo de Project App.'
                 ),
                 'exclusivity_years': 3,
                 'financing_cycles': 1,
@@ -154,9 +150,9 @@ PROGRAM_CONTENT = {
                 'id': 'hour-package',
                 'number': '04',
                 'icon': '◷',
-                'title': '60 horas disponibles cada mes',
+                'title': 'cupos XS, S y M disponibles cada mes',
                 'summary': (
-                    'La alianza a cinco años incluye el Paquete Pro para implementar '
+                    'La alianza a cinco años incluye un cupo mensual propio para implementar '
                     'requerimientos aprobados después de la salida a producción.'
                 ),
                 'commercial_reason': (
@@ -165,8 +161,8 @@ PROGRAM_CONTENT = {
                     'previsible durante la operación.'
                 ),
                 'highlights': [
-                    '60 horas que se renuevan al iniciar cada mes.',
-                    'Las horas no utilizadas no se acumulan.',
+                    'cupos XS, S y M que se renuevan al iniciar cada mes.',
+                    'Los cupos no utilizados no se acumulan.',
                     'Disponible únicamente en la opción de exclusividad a cinco años.',
                 ],
             },
@@ -253,7 +249,7 @@ PROGRAM_CONTENT = {
                 'cotizarse y programarse por separado.'
             ),
             'renewal_label': 'Se renueva cada mes',
-            'rollover_label': 'No acumula horas',
+            'rollover_label': 'No acumula cupos',
             'availability_label': 'Desde producción',
             'included_label': 'Incluido sin costo adicional',
         },
@@ -339,7 +335,7 @@ PROGRAM_CONTENT = {
                 'summary': 'La capacidad existe para mantener un ritmo sostenible de evolución.',
                 'items': [
                     'Está disponible sólo en la alianza a cinco años, desde la salida a producción y mientras el acuerdo esté vigente y al día.',
-                    'Las 60 horas se reinician cada mes; el saldo no utilizado expira y no se traslada al siguiente periodo.',
+                    'Los cupos XS, S y M se reinician cada mes; el saldo no utilizado expira y no se traslada al siguiente periodo.',
                     'Cada requerimiento debe validarse, priorizarse y programarse según la capacidad disponible.',
                 ],
             },
@@ -413,7 +409,7 @@ PROGRAM_CONTENT = {
                 'badge': 'Recommended',
                 'summary': (
                     'The highest-continuity option: financing, exclusivity, code '
-                    'custody, the requirement calculator, and a monthly 60-hour package '
+                    'custody, the requirement calculator, and a monthly XS, S and M requirement package '
                     'included at no additional cost. It adds conceptual exclusivity '
                     'by Project App. for the same sector, niche, and type of project '
                     'during the partnership. Once the first cycle is fully '
@@ -426,7 +422,7 @@ PROGRAM_CONTENT = {
                 'highlights': [
                     'Up to two separate 12-month cycles at 0% ordinary interest.',
                     'The second requires full payment of the first and a new approval.',
-                    '60 hours available each month after production starts.',
+                    'XS, S and M allowances available each month after production starts.',
                     'Conceptual exclusivity by Project App. throughout the five-year term.',
                 ],
             },
@@ -436,7 +432,7 @@ PROGRAM_CONTENT = {
                 'badge': 'Alternative',
                 'summary': (
                     'Keeps financing, exclusivity, code custody, and calculator '
-                    'transparency, but does not include the monthly hour package '
+                    'transparency, but does not include the monthly requirement allowance '
                     'or conceptual exclusivity by Project App.'
                 ),
                 'exclusivity_years': 3,
@@ -517,9 +513,9 @@ PROGRAM_CONTENT = {
                 'id': 'hour-package',
                 'number': '04',
                 'icon': '◷',
-                'title': '60 hours available every month',
+                'title': 'XS, S and M allowances available every month',
                 'summary': (
-                    'The five-year partnership includes the Pro Pack to implement '
+                    'The five-year partnership includes a separate monthly allowance to implement '
                     'approved requirements after the product enters production.'
                 ),
                 'commercial_reason': (
@@ -528,8 +524,8 @@ PROGRAM_CONTENT = {
                     'throughout operations.'
                 ),
                 'highlights': [
-                    '60 hours renew at the beginning of every month.',
-                    'Unused hours do not roll over.',
+                    'XS, S and M allowances renew at the beginning of every month.',
+                    'Unused allowances do not roll over.',
                     'Available only with the five-year exclusivity option.',
                 ],
             },
@@ -615,7 +611,7 @@ PROGRAM_CONTENT = {
                 'require multiple cycles, or be quoted and scheduled separately.'
             ),
             'renewal_label': 'Renews every month',
-            'rollover_label': 'Hours do not roll over',
+            'rollover_label': 'Allowances do not roll over',
             'availability_label': 'Available from production',
             'included_label': 'Included at no additional cost',
         },
@@ -701,7 +697,7 @@ PROGRAM_CONTENT = {
                 'summary': 'The capacity supports a sustainable pace of evolution.',
                 'items': [
                     'It is available only in the five-year partnership, after production starts, while the agreement is active and current.',
-                    'The 60 hours reset each month; unused capacity expires and does not move to the next period.',
+                    'The XS, S and M allowances reset each month; unused capacity expires and does not move to the next period.',
                     'Each requirement must be validated, prioritized, and scheduled against available capacity.',
                 ],
             },
@@ -747,28 +743,13 @@ PROGRAM_CONTENT = {
 }
 
 
-def is_included_package(nationality, hours):
-    """True when a catalog package with these values feeds the public program."""
-    return nationality == INCLUDED_PACKAGE_NATIONALITY and hours == INCLUDED_PACKAGE_HOURS
-
-
 def _included_package(language):
-    package = HourPackage.objects.filter(
-        nationality=INCLUDED_PACKAGE_NATIONALITY,
-        hours=INCLUDED_PACKAGE_HOURS,
-        is_active=True,
-    ).order_by('order', 'id').first()
-    suffix = 'en' if language == 'en' else 'es'
+    settings = HourPackageSettings.load()
     return {
-        'name': (
-            getattr(package, f'name_{suffix}')
-            if package
-            else ('Pro Pack' if language == 'en' else 'Paquete Pro')
-        ),
-        'hours': INCLUDED_PACKAGE_HOURS,
-        'renews_monthly': True,
-        'rollover': False,
-        'catalog_synced': package is not None,
+        'name': 'Monthly requirement allowance' if language == 'en' else 'Cupo mensual de requerimientos',
+        'xs_count': settings.alliance_xs_count, 's_count': settings.alliance_s_count,
+        'm_count': settings.alliance_m_count,
+        'renews_monthly': True, 'rollover': False, 'catalog_synced': True,
     }
 
 
@@ -807,8 +788,7 @@ def _apply_policy_content(payload, policy, language):
         )
         five_year['summary'] = (
             'La opción de mayor continuidad: financiación, exclusividad, custodia '
-            'de código, calculadora de requerimientos y un paquete mensual de 60 '
-            'horas incluido. Añade exclusividad conceptual de Project App. para '
+            'de código, calculadora de requerimientos y cupos mensuales XS, S y M incluidos. Añade exclusividad conceptual de Project App. para '
             'el mismo sector, nicho y tipo de proyecto durante la alianza. '
             f'Al pagar el primer ciclo, puede habilitarse un segundo '
             f'ciclo de {months} meses sujeto a una nueva evaluación de riesgo.'
@@ -901,7 +881,7 @@ def _apply_policy_content(payload, policy, language):
         )
         five_year['summary'] = (
             'The highest-continuity option: financing, exclusivity, code custody, '
-            'the requirement calculator, and an included monthly 60-hour package. '
+            'the requirement calculator, and an included monthly XS, S and M requirement package. '
             'It adds conceptual exclusivity by Project App. for the same sector, '
             'niche, and type of project during the partnership. '
             f'After the first cycle is paid, a second {months}-month cycle may be '
@@ -1019,7 +999,27 @@ def serialize_financing_program(*, language):
             else '/es-co/partnership-program'
         ),
     })
-    payload['package'].update(_included_package(language))
+    included = _included_package(language)
+    payload['package'].update(included)
+    allowance = f"{included['xs_count']} XS + {included['s_count']} S + {included['m_count']} M"
+    condition = next(item for item in payload['conditions'] if item['id'] == 'hour-package')
+    condition['title'] = allowance + (' available each month' if language == 'en' else ' disponibles cada mes')
+    condition['summary'] = (
+        'A separate monthly allowance for approved requests after production starts.' if language == 'en' else
+        'Un cupo mensual propio para requerimientos aprobados después de la salida a producción.'
+    )
+    condition['highlights'] = [
+        allowance + (' renews each month.' if language == 'en' else ' se renuevan cada mes.'),
+        'Unused allowances expire; sizes cannot be exchanged.' if language == 'en' else
+        'Los cupos no usados vencen; las tallas no se intercambian.',
+        'Only in the five-year partnership, while active and current.' if language == 'en' else
+        'Sólo en la alianza de cinco años, vigente y al día.',
+    ]
+    term = next(item for item in payload['legal_terms'] if item['id'] == 'package-rules')
+    term['items'] = condition['highlights'] + [
+        'Agree on the result and size before scheduling. L/XL require separate discovery and a quote.' if language == 'en' else
+        'Acuerda resultado y talla antes de programar. L/XL requieren levantamiento y cotización independientes.'
+    ]
     payload['cta']['whatsapp_url'] = (
         f'https://wa.me/{WHATSAPP_NUMBER}?text={quote(payload["cta"]["message"])}'
     )

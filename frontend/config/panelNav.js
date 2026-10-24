@@ -61,7 +61,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       id: 'offerings',
       label: 'Nuestra oferta',
       items: [
-        { label: 'Paquetes de horas', href: lp('/panel/hour-packages'), icon: 'package' },
+        { label: 'Paquetes de requerimientos', href: lp('/panel/hour-packages'), icon: 'package' },
         { label: 'Módulos adicionales', href: lp('/panel/additional-modules'), icon: 'puzzle' },
       ],
     },

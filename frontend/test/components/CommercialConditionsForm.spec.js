@@ -52,7 +52,7 @@ describe('CommercialConditionsForm', () => {
     expect(wrapper.find('[data-testid="hour-packages-mode-manual"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="apply-base-rate-all"]').exists()).toBe(false);
     expect(wrapper.findAll('button').some((b) => b.text().includes('Agregar paquete'))).toBe(false);
-    expect(wrapper.find('[data-testid="hour-rate-tab-hint"]').text()).toContain('Tarifa por hora');
+    expect(wrapper.find('[data-testid="hour-rate-tab-hint"]').text()).toContain('Paquetes de requerimientos');
   });
 
   it('saving an edited title hands back the manual rate settings untouched', async () => {

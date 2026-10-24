@@ -92,8 +92,8 @@ Las Estrategias A/B son **preventivas** (se deciden antes de presentar). Cuando 
 
 El estimate cotiza **proyectos**; el trabajo recurrente se cotiza aparte con estas reglas:
 
-- **Bolsa de horas prepagada:** tarifa blended × horas; mínimo mensual sugerido 10 h; vigencia de la bolsa 60 días. El correctivo post-garantía consume bolsa.
-- **SLA formal: no se ofrece** — con un equipo de este tamaño sería un compromiso ficticio; lo honesto es la bolsa con prioridad de atención.
+- **Paquetes de requerimientos prepagados:** cupos XS/S/M, sin estimación de horas por solicitud; catálogo vigente en ProjectApp. Compra única, vigencia configurable (inicial: 12 meses desde el pago), sin intercambio de tallas. L/XL requieren levantamiento y cotización aparte; la garantía no consume cupos.
+- **SLA formal: no se ofrece** — con un equipo de este tamaño sería un compromiso ficticio; se acuerdan prioridades y programación para los cupos contratados.
 - **Hosting / infraestructura recurrente:** ítem aparte siempre (nunca dentro de la bolsa ni del estimate).
 
 ## Adyacencias — mapa "abre la puerta"

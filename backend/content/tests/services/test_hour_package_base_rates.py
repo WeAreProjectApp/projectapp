@@ -5,7 +5,6 @@ import pytest
 
 from content.models import HourPackage, HourPackageSettings
 from content.services.hour_package_service import (
-    DEFAULT_PACKAGES,
     apply_base_rates_to_catalog,
     restore_default_packages,
 )
@@ -73,11 +72,11 @@ class TestSettingsBaseRates:
         assert settings.base_rate_ext == Decimal('18')
         assert settings.base_rate_usa == Decimal('30')
 
-    def test_restore_defaults_resets_base_rate(self):
+    def test_restore_defaults_preserves_legacy_base_rate_configuration(self):
+        """Fails if restoring requirement tiers silently rewrites a saved rate setting."""
         settings = HourPackageSettings.load()
         settings.base_rate_col = Decimal('55000')
         settings.save()
         restore_default_packages('COL')
         settings.refresh_from_db()
-        expected = Decimal(str(DEFAULT_PACKAGES['COL'][0]['hourly_rate']))
-        assert settings.base_rate_col == expected
+        assert settings.base_rate_col == Decimal('55000')

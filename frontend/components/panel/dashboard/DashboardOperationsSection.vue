@@ -52,7 +52,7 @@
         :to="localePath('/panel/diagnostics')"
       />
       <DashboardStatTile
-        label="Paquetes de horas"
+        label="Paquetes de requerimientos"
         :value="hourPackages.active_count"
         format="number"
         sub="activos en catálogo"

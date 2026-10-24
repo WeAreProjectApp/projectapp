@@ -20,7 +20,7 @@
       @cancel="handleCancelled"
     />
     <div class="mb-6 flex flex-col gap-4 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-between">
-      <h1 class="text-2xl font-light text-text-default">Paquetes de horas</h1>
+      <h1 class="text-2xl font-light text-text-default">Paquetes de requerimientos</h1>
       <BaseButton
         v-if="activeSection === 'catalog'"
         as="NuxtLink"
@@ -57,7 +57,7 @@
 
       <div v-else>
         <div v-if="packages.length === 0" class="bg-surface rounded-xl shadow-sm border border-border-muted px-6 py-12 text-center text-text-subtle text-sm">
-          Sin paquetes para esta nacionalidad — las propuestas nuevas usarán los paquetes por defecto.
+          Sin paquetes para este mercado. Crea uno o restaura los valores por defecto.
         </div>
 
         <!-- Cards mode -->
@@ -78,7 +78,7 @@
           <BaseExploratoryList
             :columns="packageColumns"
             :rows="pagedPackages"
-            caption="Paquetes de horas y precios"
+            caption="Paquetes de requerimientos y precios"
             card-test-id-prefix="hour-package-row"
             table-min-width="64rem"
             row-actions-layout="menu-start"
@@ -87,14 +87,14 @@
               <NuxtLink :to="localePath(`/panel/hour-packages/${pkg.id}/edit`)" class="block min-w-0 max-w-full text-sm font-medium leading-tight text-text-default [overflow-wrap:anywhere] transition-colors hover:text-text-brand">{{ pkg.name_es }}</NuxtLink>
               <p class="mt-0.5 min-w-0 max-w-full text-xs text-text-subtle [overflow-wrap:anywhere]">{{ pkg.name_en }} · Orden {{ pkg.order }}</p>
             </template>
-            <template #cell-hours="{ row: pkg }">{{ pkg.hours }} h</template>
-            <template #cell-hourly_rate="{ row: pkg }">{{ formatMoney(pkg.hourly_rate, pkg.currency) }}/h</template>
+            <template #cell-composition="{ row: pkg }">{{ composition(pkg) }}<p class="text-xs text-text-subtle">{{ pkg.validity_months }} meses</p></template>
+            <template #cell-reference="{ row: pkg }"><span class="line-through">{{ formatMoney(pkg.reference_price, pkg.currency) }}</span></template>
             <template #cell-discount_percent="{ row: pkg }">
               <span v-if="Number(pkg.discount_percent) > 0" class="inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-text-brand">-{{ pkg.discount_percent }}%</span>
               <span v-else>—</span>
             </template>
-            <template #cell-effective_rate="{ row: pkg }">{{ formatMoney(effectiveRate(pkg), pkg.currency) }}/h</template>
-            <template #cell-total="{ row: pkg }"><span class="font-medium">{{ formatMoney(totalPrice(pkg), pkg.currency) }}</span></template>
+            <template #cell-savings="{ row: pkg }">{{ formatMoney(pkg.savings, pkg.currency) }}</template>
+            <template #cell-total="{ row: pkg }"><span class="font-medium">{{ formatMoney(totalPrice(pkg), pkg.currency) }} {{ pkg.currency === 'COP' ? '+ IVA' : '+ Tax' }}</span></template>
             <template #cell-status="{ row: pkg }"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadgeClass(pkg)">{{ pkg.is_active ? 'Activo' : 'Inactivo' }}</span></template>
             <template #row-actions="{ row: pkg }">
               <BaseActionButton
@@ -139,70 +139,35 @@
           />
         </section>
 
-        <section class="bg-surface rounded-xl shadow-sm border border-border-muted p-6">
-          <h2 class="text-sm font-medium text-text-default mb-1">Tarifa base por hora</h2>
-          <p class="text-xs text-text-subtle mb-4">
-            Al guardar, la tarifa se aplica a <strong>todos</strong> los paquetes de esa
-            nacionalidad (incluidos los inactivos y los que tenían tarifa personalizada).
-            Las propuestas en modo automático toman el catálogo al generar su PDF;
-            las que están en modo manual no se modifican.
-          </p>
-          <div class="mb-4 grid grid-cols-1 gap-4 panel-portrait:grid-cols-3">
-            <div>
-              <label for="hp-base-rate-col" class="block text-sm font-medium text-text-default mb-1">Colombia (COP)</label>
-              <input
-                id="hp-base-rate-col"
-                v-model.number="baseRates.COL"
-                type="number"
-                min="1"
-                step="1"
-                data-testid="hour-packages-base-rate-col"
-                class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all"
-              />
-            </div>
-            <div>
-              <label for="hp-base-rate-ext" class="block text-sm font-medium text-text-default mb-1">Extranjeros (USD)</label>
-              <input
-                id="hp-base-rate-ext"
-                v-model.number="baseRates.EXT"
-                type="number"
-                min="0.01"
-                step="0.01"
-                data-testid="hour-packages-base-rate-ext"
-                class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all"
-              />
-            </div>
-            <div>
-              <label for="hp-base-rate-usa" class="block text-sm font-medium text-text-default mb-1">USA (USD)</label>
-              <input
-                id="hp-base-rate-usa"
-                v-model.number="baseRates.USA"
-                type="number"
-                min="0.01"
-                step="0.01"
-                data-testid="hour-packages-base-rate-usa"
-                class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all"
-              />
-            </div>
+        <section class="bg-surface rounded-xl shadow-sm border border-border-muted p-6 space-y-4">
+          <h2 class="text-sm font-medium text-text-default">Valores internos y mercados</h2>
+          <p class="text-xs text-text-subtle">Los precios por talla son internos. Las nuevas ofertas toman estos valores; las ofertas emitidas conservan sus condiciones.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label v-for="field in pricingFields" :key="field.key" class="block text-sm text-text-default">
+              {{ field.label }}
+              <input v-model.number="pricingSettings[field.key]" type="number" min="0.001" :step="field.step"
+                :data-testid="`packages-setting-${field.key}`"
+                class="bg-input-bg mt-1 w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text" />
+            </label>
           </div>
-          <BaseButton
-            variant="primary"
-            size="sm"
-            :disabled="hourPackagesStore.isUpdating"
-            data-testid="hour-packages-save-base-rates"
-            @click="saveBaseRates"
-          >
-            Guardar tarifas
-          </BaseButton>
+          <p class="text-xs text-text-muted">Tasa de Contabilidad: {{ hourPackagesStore.settings?.exchange_rate }} COP por USD. Precio USD = referencia COP ÷ tasa × factor × (1 − descuento).</p>
+          <h3 class="text-sm font-medium text-text-default">Cupo mensual del Programa de Alianza</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <label v-for="size in ['xs', 's', 'm']" :key="size" class="block text-sm text-text-default">Cupos {{ size.toUpperCase() }}
+              <input v-model.number="pricingSettings[`alliance_${size}_count`]" type="number" min="0" step="1"
+                :data-testid="`packages-alliance-${size}`" class="bg-input-bg mt-1 w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text" />
+            </label>
+          </div>
+          <p class="text-xs text-text-subtle">Sólo alianza a cinco años, vigente y al día. Renovación mensual sin acumulación y sin intercambio entre tallas.</p>
+          <BaseButton variant="primary" size="sm" :disabled="hourPackagesStore.isUpdating" data-testid="hour-packages-save-base-rates" @click="saveBaseRates">Guardar configuración</BaseButton>
         </section>
 
         <section class="bg-surface rounded-xl shadow-sm border border-border-muted p-6">
           <h2 class="text-sm font-medium text-text-default mb-1">Restablecer paquetes por defecto</h2>
           <p class="text-xs text-text-subtle mb-4">
-            Reemplaza el catálogo del país elegido con la escalera por defecto:
-            1&nbsp;h, 20&nbsp;h (-10%), 60&nbsp;h (-20%) y 180&nbsp;h (-30%)
-            sobre la tarifa base (COL $30.000&nbsp;COP/h · EXT $18&nbsp;USD/h · USA $30&nbsp;USD/h).
-            Los paquetes actuales de ese país se eliminan.
+            Restaura Ágil (30 XS, −10 %), Pro (30 XS + 20 S, −15 %) y Premium
+            (30 XS + 20 S + 10 M, −25 %), con vigencia de 12 meses.
+            Conserva los valores internos configurados y los documentos históricos.
           </p>
           <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <BaseSegmented v-model="restoreNationality" :options="nationalityOptions" nowrap />
@@ -236,7 +201,7 @@ import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import HourPackagesCards from '~/components/hour-packages/PackagesCards.vue';
 import HourPackagesCompare from '~/components/hour-packages/PackagesCompare.vue';
 import { usePagination } from '~/composables/usePagination';
-import { effectiveRate, totalPrice, formatPackageMoney as formatMoney } from '~/utils/hourPackagePricing';
+import { composition, totalPrice, formatPackageMoney as formatMoney } from '~/utils/hourPackagePricing';
 
 const localePath = useLocalePath();
 
@@ -262,10 +227,10 @@ const viewModeOptions = [
 ];
 const packageColumns = [
   { key: 'name_es', label: 'Paquete', mobile: 'primary' },
-  { key: 'hours', label: 'Horas', mobile: 'secondary' },
-  { key: 'hourly_rate', label: 'Tarifa/h', mobile: 'secondary' },
+  { key: 'composition', label: 'Cupos', mobile: 'secondary' },
+  { key: 'reference', label: 'Referencia', mobile: 'secondary' },
   { key: 'discount_percent', label: 'Desc.', mobile: 'meta' },
-  { key: 'effective_rate', label: 'Tarifa efectiva', mobile: 'secondary' },
+  { key: 'savings', label: 'Ahorro', mobile: 'secondary' },
   { key: 'total', label: 'Total', mobile: 'secondary' },
   { key: 'status', label: 'Estado', mobile: 'meta' },
 ];
@@ -290,20 +255,21 @@ function packageActionItems(pkg) {
 
 const defaultViewMode = computed(() => hourPackagesStore.settings?.default_view_mode ?? 'table');
 
-const baseRates = ref({ COL: null, EXT: null, USA: null });
-// DRF serializes decimals as strings — normalize to numbers for the inputs.
-watch(
-  () => hourPackagesStore.settings,
-  (settings) => {
-    if (!settings) return;
-    baseRates.value = {
-      COL: Number(settings.base_rate_col),
-      EXT: Number(settings.base_rate_ext),
-      USA: Number(settings.base_rate_usa),
-    };
-  },
-  { immediate: true },
-);
+const pricingSettings = ref({});
+const pricingFields = [
+  { key: 'xs_price_cop', label: 'Valor XS (COP)', step: '1' },
+  { key: 's_price_cop', label: 'Valor S (COP)', step: '1' },
+  { key: 'm_price_cop', label: 'Valor M (COP)', step: '1' },
+  { key: 'foreign_multiplier', label: 'Factor extranjeros', step: '0.001' },
+  { key: 'usa_multiplier', label: 'Factor EE. UU.', step: '0.001' },
+];
+watch(() => hourPackagesStore.settings, (settings) => {
+  if (!settings) return;
+  pricingSettings.value = Object.fromEntries([
+    ...pricingFields.map((field) => field.key),
+    'alliance_xs_count', 'alliance_s_count', 'alliance_m_count',
+  ].map((key) => [key, Number(settings[key])]));
+}, { immediate: true });
 
 const nationalityLabel = computed(() =>
   ({ COL: 'de Colombia', EXT: 'del extranjero', USA: 'de Estados Unidos' }[selectedNationality.value]));
@@ -338,30 +304,12 @@ function statusBadgeClass(pkg) {
 }
 
 async function saveBaseRates() {
-  const rates = baseRates.value;
-  const invalid = Object.values(rates).some(
-    (rate) => !Number.isFinite(rate) || rate <= 0,
-  );
-  if (invalid) {
-    notify.error('Las tarifas base deben ser números mayores a 0.');
-    return;
-  }
-  const result = await hourPackagesStore.updateSettings({
-    base_rate_col: rates.COL,
-    base_rate_ext: rates.EXT,
-    base_rate_usa: rates.USA,
-  });
+  const result = await hourPackagesStore.updateSettings({ ...pricingSettings.value });
   if (!result.success) {
-    notify.error('No se pudieron guardar las tarifas base.');
+    notify.error('No se pudo guardar. Revisa valores positivos, cupos enteros y al menos un cupo para Alianza.');
     return;
   }
-  const updatedCount = Object.values(result.data?.updated_packages ?? {})
-    .reduce((sum, count) => sum + count, 0);
-  notify.success(
-    updatedCount > 0
-      ? `Tarifas base guardadas. ${updatedCount} paquete${updatedCount === 1 ? '' : 's'} actualizado${updatedCount === 1 ? '' : 's'}.`
-      : 'Tarifas base guardadas. Sin cambios en los paquetes.',
-  );
+  notify.success('Configuración guardada. Las ofertas emitidas conservan sus condiciones.');
   await hourPackagesStore.fetchAdminPackages(selectedNationality.value);
 }
 

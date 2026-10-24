@@ -208,7 +208,7 @@ def _operations_block(today, now):
         'diagnostics': _diagnostics_summary(),
         'emails': _emails_summary(now),
         'hour_packages': {
-            'active_count': HourPackage.objects.filter(is_active=True).count(),
+            'active_count': HourPackage.objects.filter(is_active=True, pricing_model='requirements').count(),
         },
     }
 

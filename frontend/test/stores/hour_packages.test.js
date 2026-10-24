@@ -25,8 +25,13 @@ const mockPackage = {
   currency: 'COP',
   name_es: 'Paquete Ágil',
   name_en: 'Agile Pack',
-  hours: 20,
-  hourly_rate: '90000.00',
+  pricing_model: 'requirements',
+  xs_count: 30,
+  s_count: 0,
+  m_count: 0,
+  validity_months: 12,
+  reference_price: '1500000.00',
+  total_price: '1350000.00',
   discount_percent: 0,
   is_active: true,
   order: 1,
@@ -106,22 +111,22 @@ describe('useHourPackagesStore', () => {
 
     it('propagates DRF field errors on failure', async () => {
       create_request.mockRejectedValue({
-        response: { data: { hours: ['Las horas deben ser al menos 1.'] } },
+        response: { data: { xs_count: ['Incluye al menos un cupo XS, S o M.'] } },
       });
-      const result = await store.createPackage({ hours: 0 });
+      const result = await store.createPackage({ xs_count: 0, s_count: 0, m_count: 0 });
       expect(result.success).toBe(false);
-      expect(result.errors).toEqual({ hours: ['Las horas deben ser al menos 1.'] });
+      expect(result.errors).toEqual({ xs_count: ['Incluye al menos un cupo XS, S o M.'] });
       expect(store.error).toBe('create_failed');
     });
   });
 
   describe('updatePackage', () => {
     it('patches a package and updates currentPackage', async () => {
-      const updated = { ...mockPackage, hours: 40 };
+      const updated = { ...mockPackage, xs_count: 40 };
       patch_request.mockResolvedValue({ data: updated });
-      const result = await store.updatePackage(1, { hours: 40 });
+      const result = await store.updatePackage(1, { xs_count: 40 });
       expect(patch_request).toHaveBeenCalledWith(
-        'hour-packages/admin/1/update/', { hours: 40 },
+        'hour-packages/admin/1/update/', { xs_count: 40 },
       );
       expect(result.success).toBe(true);
       expect(store.currentPackage).toEqual(updated);
@@ -129,12 +134,12 @@ describe('useHourPackagesStore', () => {
 
     it('propagates errors on failure', async () => {
       patch_request.mockRejectedValue({
-        response: { data: { discount_percent: ['El descuento debe estar entre 0 y 100.'] } },
+        response: { data: { non_field_errors: ['La composición debe incluir al menos un cupo.'] } },
       });
-      const result = await store.updatePackage(1, { discount_percent: 150 });
+      const result = await store.updatePackage(1, { xs_count: 0, s_count: 0, m_count: 0 });
       expect(result.success).toBe(false);
       expect(result.errors).toEqual({
-        discount_percent: ['El descuento debe estar entre 0 y 100.'],
+        non_field_errors: ['La composición debe incluir al menos un cupo.'],
       });
       expect(store.error).toBe('update_failed');
     });
@@ -226,7 +231,7 @@ describe('useHourPackagesStore', () => {
 
   describe('restoreDefaults', () => {
     it('posts the nationality and returns the fresh list', async () => {
-      const fresh = [{ ...mockPackage, id: 10, hours: 1 }];
+      const fresh = [{ ...mockPackage, id: 10, xs_count: 40, s_count: 20, m_count: 10 }];
       create_request.mockResolvedValue({ data: fresh });
       const result = await store.restoreDefaults('COL');
       expect(create_request).toHaveBeenCalledWith(

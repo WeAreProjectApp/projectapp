@@ -136,7 +136,7 @@ borrador compartido no se convierten en aprobación.
 | Bug contra comportamiento acordado | Reconocerlo, indicar estado y siguiente validación; no llamarlo requerimiento nuevo. |
 | Cambio ya acordado | Resumir la definición vigente y pedir aceptación si la nueva precisión altera la implementación. |
 | Cambio menor posiblemente de cortesía | Detenerse y preguntar al operador si se incluye como cortesía. |
-| Cambio material o fuera de alcance | Explicar el límite y encauzarlo por paquete de horas, estimación o propuesta. |
+| Cambio material o fuera de alcance | Explicar el límite y encauzarlo por paquete de requerimientos, estimación o propuesta. |
 | Duda nuestra | Formularla antes de prometer, estimar o redactar una conclusión falsa. |
 
 ### Gate de cortesía
@@ -154,7 +154,7 @@ Pregunta: **«¿Lo incluimos como cortesía, dejando claro que no crea precedent
 No le menciona al cliente la posibilidad hasta recibir la decisión del operador.
 
 Si el cambio es material, no fuerza una falsa decisión de cortesía: explica que debe
-estimarse y consumirse del paquete de horas o cotizarse por separado, de acuerdo con
+estimarse y consumirse del paquete de requerimientos o cotizarse por separado, de acuerdo con
 la fuente comercial aplicable. Nunca inventa horas, precio ni fecha.
 
 ## Fase 5 — elegir cómo guardar la respuesta

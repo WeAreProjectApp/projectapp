@@ -15,7 +15,7 @@ window.EXPLAINER_CONTENT = {
       "id": "five-year",
       "name": "Alianza a 5 años",
       "badge": "Recomendada",
-      "summary": "La opción de mayor continuidad: financiación, exclusividad, custodia de código, calculadora de requerimientos y un paquete mensual de 60 horas incluido. Al pagar el primer ciclo, puede habilitarse un segundo ciclo de 12 meses sujeto a una nueva evaluación de riesgo.",
+      "summary": "La opción de mayor continuidad: financiación, exclusividad, custodia de código, calculadora de requerimientos y un paquete mensual de cupos XS, S y M incluido. Al pagar el primer ciclo, puede habilitarse un segundo ciclo de 12 meses sujeto a una nueva evaluación de riesgo.",
       "exclusivity_years": 5,
       "financing_cycles": 2,
       "recommended": true,
@@ -23,14 +23,14 @@ window.EXPLAINER_CONTENT = {
       "highlights": [
         "Hasta dos ciclos separados de 12 meses al 0% de interés ordinario.",
         "El segundo exige pago íntegro del primero y una nueva aprobación.",
-        "60 horas disponibles cada mes desde la salida a producción."
+        "cupos XS, S y M disponibles cada mes desde la salida a producción."
       ]
     },
     {
       "id": "three-year",
       "name": "Alianza a 3 años",
       "badge": "Alternativa",
-      "summary": "Conserva la financiación, la exclusividad, la custodia del código y la transparencia de la calculadora, pero no incluye el paquete mensual de horas.",
+      "summary": "Conserva la financiación, la exclusividad, la custodia del código y la transparencia de la calculadora, pero no incluye el paquete mensual de requerimientos.",
       "exclusivity_years": 3,
       "financing_cycles": 1,
       "recommended": false,
@@ -86,11 +86,11 @@ window.EXPLAINER_CONTENT = {
       "id": "hour-package",
       "number": "04",
       "icon": "◷",
-      "title": "60 horas disponibles cada mes",
+      "title": "cupos XS, S y M disponibles cada mes",
       "summary": "La alianza a cinco años incluye el Paquete Pro para implementar requerimientos aprobados después de la salida a producción.",
       "commercial_reason": "El producto puede seguir evolucionando sin abrir una negociación desde cero por cada ajuste pequeño, manteniendo capacidad técnica previsible durante la operación.",
       "highlights": [
-        "60 horas que se renuevan al iniciar cada mes.",
+        "cupos XS, S y M que se renuevan al iniciar cada mes.",
         "Las horas no utilizadas no se acumulan.",
         "Disponible únicamente en la opción de exclusividad a cinco años."
       ]
@@ -161,7 +161,7 @@ window.EXPLAINER_CONTENT = {
     "title": "Capacidad mensual para la evolución del producto",
     "summary": "El paquete está pensado principalmente para cambios pequeños y acotados —por ejemplo, requerimientos XS o S—. Un requerimiento de mayor tamaño puede consumir más capacidad, requerir varios ciclos o cotizarse y programarse por separado.",
     "renewal_label": "Se renueva cada mes",
-    "rollover_label": "No acumula horas",
+    "rollover_label": "No acumula cupos",
     "availability_label": "Desde producción",
     "included_label": "Incluido sin costo adicional",
     "name": "Paquete Pro",
@@ -241,7 +241,7 @@ window.EXPLAINER_CONTENT = {
       "summary": "La capacidad existe para mantener un ritmo sostenible de evolución.",
       "items": [
         "Está disponible sólo en la alianza a cinco años, desde la salida a producción y mientras el acuerdo esté vigente y al día.",
-        "Las 60 horas se reinician cada mes; el saldo no utilizado expira y no se traslada al siguiente periodo.",
+        "Los cupos XS, S y M se reinician cada mes; el saldo no utilizado expira y no se traslada al siguiente periodo.",
         "Cada requerimiento debe validarse, priorizarse y programarse según la capacidad disponible."
       ]
     },

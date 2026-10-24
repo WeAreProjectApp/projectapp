@@ -11,7 +11,7 @@ const GROUP_LABELS = {
 
 const SECTION_LABELS = {
   general: 'General', sections: 'Secciones', technical: 'Detalle técnico',
-  'hour-rate': 'Tarifa por hora', prompt: 'Prompt', json: 'JSON',
+  'hour-rate': 'Paquetes de requerimientos', prompt: 'Prompt', json: 'JSON',
   emails: 'Correos', resources: 'Recursos', documents: 'Documentos',
   'project-data': 'Datos', schedule: 'Cronograma', development: 'Desarrollo', activity: 'Actividad',
   history: 'Historial', analytics: 'Analítica',

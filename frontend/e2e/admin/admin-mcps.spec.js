@@ -96,20 +96,20 @@ const SECTION_CONNECTORS = [
   {
     slug: 'commercial',
     name: 'Comercial',
-    description: 'Gestiona la relación con clientes y el proceso de venta: fichas, propuestas, diagnósticos, documentos contractuales, seguimiento, correos y valores predeterminados. Organiza sus funciones en Clientes, Propuestas y Diagnósticos, y Configuración. Para paquetes de horas y módulos adicionales usa Nuestra oferta; para alianzas y células usa Programas.',
-    section_note: 'Comercial reúne Clientes; Propuestas y Diagnósticos; y Configuración (Defaults y entregabilidad email). Paquetes de horas y módulos adicionales se administran en Nuestra oferta (offerings). Los programas y sus contratos se administran en Programas (programs).',
+    description: 'Gestiona la relación con clientes y el proceso de venta: fichas, propuestas, diagnósticos, documentos contractuales, seguimiento, correos y valores predeterminados. Organiza sus funciones en Clientes, Propuestas y Diagnósticos, y Configuración. Para paquetes de requerimientos y módulos adicionales usa Nuestra oferta; para alianzas y células usa Programas.',
+    section_note: 'Comercial reúne Clientes; Propuestas y Diagnósticos; y Configuración (Defaults y entregabilidad email). Paquetes de requerimientos y módulos adicionales se administran en Nuestra oferta (offerings). Los programas y sus contratos se administran en Programas (programs).',
   },
   {
     slug: 'offerings',
     name: 'Nuestra oferta',
-    description: 'Administra lo que ofrecemos al cliente: paquetes de horas, precios y configuración; y módulos adicionales, categorías, orden, enlaces compartidos, PDFs y videos. Las propuestas y los diagnósticos se gestionan en Comercial. Las condiciones, contratos y versiones de las alianzas y células se gestionan en Programas.',
-    section_note: 'Nuestra oferta reúne Paquetes de horas y Módulos adicionales. Clientes, propuestas, diagnósticos y Defaults están en Comercial (commercial). Programa de Alianza, Building with Us y Células están en Programas (programs).',
+    description: 'Administra lo que ofrecemos al cliente: paquetes de requerimientos, precios y configuración; y módulos adicionales, categorías, orden, enlaces compartidos, PDFs y videos. Las propuestas y los diagnósticos se gestionan en Comercial. Las condiciones, contratos y versiones de las alianzas y células se gestionan en Programas.',
+    section_note: 'Nuestra oferta reúne Paquetes de requerimientos y Módulos adicionales. Clientes, propuestas, diagnósticos y Defaults están en Comercial (commercial). Programa de Alianza, Building with Us y Células están en Programas (programs).',
   },
   {
     slug: 'programs',
     name: 'Programas',
-    description: 'Administra nuestros programas y sus condiciones. Reúne las alianzas —Programa de Alianza y Building with Us— y las Células de Building on Demand, con sus acuerdos, contratos, economía interna, documentos y versiones. Para preparar una propuesta usa Comercial; para paquetes de horas y módulos adicionales usa Nuestra oferta.',
-    section_note: 'Programas reúne las alianzas (Programa de Alianza y Building with Us) y las Células de Building on Demand, incluidos contratos, economía y versiones. Paquetes de horas y módulos adicionales están en Nuestra oferta (offerings); clientes, propuestas y diagnósticos en Comercial (commercial).',
+    description: 'Administra nuestros programas y sus condiciones. Reúne las alianzas —Programa de Alianza y Building with Us— y las Células de Building on Demand, con sus acuerdos, contratos, economía interna, documentos y versiones. Para preparar una propuesta usa Comercial; para paquetes de requerimientos y módulos adicionales usa Nuestra oferta.',
+    section_note: 'Programas reúne las alianzas (Programa de Alianza y Building with Us) y las Células de Building on Demand, incluidos contratos, economía y versiones. Paquetes de requerimientos y módulos adicionales están en Nuestra oferta (offerings); clientes, propuestas y diagnósticos en Comercial (commercial).',
   },
 ].map((connector) => ({
   ...connector,
@@ -247,7 +247,7 @@ async function assertSegmentedConnectorDescriptions(page) {
 
   await page.getByTestId('mcp-card-header-commercial').click();
   await expect(page.getByTestId('mcp-detail-commercial').filter({ hasText: 'Gestiona la relación con clientes y el proceso de venta' })).toBeVisible();
-  await expect(page.getByTestId('mcp-scope-commercial').filter({ hasText: 'Paquetes de horas y módulos adicionales se administran en Nuestra oferta' })).toBeVisible();
+  await expect(page.getByTestId('mcp-scope-commercial').filter({ hasText: 'Paquetes de requerimientos y módulos adicionales se administran en Nuestra oferta' })).toBeVisible();
 
   await page.getByTestId('mcp-card-header-offerings').click();
   await expect(page.getByTestId('mcp-detail-offerings').filter({ hasText: 'Administra lo que ofrecemos al cliente' })).toBeVisible();
