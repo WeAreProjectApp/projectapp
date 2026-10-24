@@ -57,8 +57,12 @@ def test_project_transfer_during_routing_fails_and_hides_the_turn(appi_context, 
         appi.detail(recipient, item.pk)
 
 
-def test_staff_client_cannot_create_a_chatbot_conversation_for_another_clients_project(appi_context):
-    """Fails if staff privileges let a client role bypass Appi's explicit project-owner check."""
+def test_stale_admin_profile_cannot_create_a_chatbot_conversation_for_another_clients_project(appi_context):
+    """Fails if cached admin authority bypasses Appi's fresh client-project owner check."""
+    profile = appi_context.actor.profile
+    profile.role = UserProfile.ROLE_ADMIN
+    profile.save(update_fields=['role'])
+    UserProfile.objects.filter(pk=profile.pk).update(role=UserProfile.ROLE_CLIENT)
     appi_context.actor.is_staff = True
     appi_context.actor.save(update_fields=['is_staff'])
     owner = other_client()
