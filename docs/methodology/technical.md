@@ -1760,6 +1760,25 @@ sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio
 
 Driver.js 1.10.2 se carga en navegador bajo demanda. API cliente JWT bajo /api/platform/help/; administración de sesión/CSRF y MCP con validación común, versiones y auditoría. Detalle en docs/PLATFORM_HELP.md.
 
+
+## Producción de tutoriales de plataforma — 2026-10-24
+
+Las composiciones `platform-overview`, `platform-chatbot` y
+`platform-voice-reporting` viven en `explainers/brag-v2/`. Conservan HTML,
+guiones y subtítulos medidos, con voz `es-CO-SalomeNeural`. Se validan con
+Hyperframes y se capturan desde el mismo HTML/GSAP a 30 fps; la caché de
+fotogramas se invalida al cambiar las fuentes y permite retomar capturas.
+FFmpeg mezcla narración/música y exporta H.264/AAC; los MP4 y las portadas
+versionadas se incorporan al manifiesto `useExplainerVideos`.
+
+El general dura 90 s y cada clip opcional 72 s. Son ejemplos con datos
+ficticios y subtítulos visibles, también identificados como contenido español
+en la interfaz inglesa. Los recursos subidos reutilizan la validación MP4
+existente (hasta 250 MiB), revisión optimista y restauración del predeterminado.
+No se agregan modelos, migraciones ni flags de IA desde esta funcionalidad.
+La procedencia y el procedimiento de regeneración están en el README de la
+composición general; el equipo ProjectApp actualiza solo las piezas afectadas.
+
 ## Appi — contrato de ejecución (2026-10-24)
 
 `/api/platform/chatbot/` usa exclusivamente JWT y `no-store`; las vistas delegan

@@ -1,3 +1,5 @@
+> **Video de ayuda de plataforma — 2026-10-24, en implementación:** tres piezas ES con voz colombiana y subtítulos; general independiente de IA, clips filtrados por capacidades. Ayuda, interruptores global/cliente y host coordinados con recorrido; recursos compartidos por Panel y MCP Proyectos. Trabajo aislado en `feat/24102026-platform-help-videos`; no acredita despliegue.
+
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
 
 # Appi — implementación de sesión, 2026-10-24

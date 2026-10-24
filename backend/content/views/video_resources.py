@@ -4,7 +4,8 @@ from urllib.parse import quote
 from django.conf import settings
 from django.http import Http404, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
@@ -28,12 +29,14 @@ def _admin_resource(request, module, language, proposal=None):
 
 
 @api_view(['GET', 'POST'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def admin_module_video(request, module, language):
     return _admin_resource(request, module, language)
 
 
 @api_view(['GET', 'POST'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def admin_proposal_video(request, proposal_id):
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)

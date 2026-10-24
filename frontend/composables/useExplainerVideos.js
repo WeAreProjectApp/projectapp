@@ -8,15 +8,30 @@ import financingEs from '~/assets/videos/explainers/financing-brag-v2-es.mp4'
 import financingEsPoster from '~/assets/images/explainers/financing-brag-v2-es.webp'
 import buildingOnDemandEs from '~/assets/videos/explainers/building-on-demand-brag-v2-es.mp4'
 import buildingOnDemandEsPoster from '~/assets/images/explainers/building-on-demand-brag-v2-es.webp'
+import platformOverviewEs from '~/assets/videos/explainers/platform-overview-brag-v2-es.mp4'
+import platformOverviewPoster from '~/assets/images/explainers/platform-overview-brag-v2-es.webp'
+import platformChatbotEs from '~/assets/videos/explainers/platform-chatbot-brag-v2-es.mp4'
+import platformChatbotPoster from '~/assets/images/explainers/platform-chatbot-brag-v2-es.webp'
+import platformVoiceEs from '~/assets/videos/explainers/platform-voice-reporting-brag-v2-es.mp4'
+import platformVoicePoster from '~/assets/images/explainers/platform-voice-reporting-brag-v2-es.webp'
 
 /**
- * Explainer videos produced with brag and rendered offline with HyperFrames (see explainers/README.md).
+ * Explainer videos authored with brag/HyperFrames and rendered offline (see explainers/README.md).
  * Each entry is keyed by module id and language; a missing language means the
  * surface hides the card until that render exists.
  */
-export const EXPLAINER_IDS = Object.freeze(['additional-modules', 'financing', 'proposal', 'building-on-demand'])
+export const EXPLAINER_IDS = Object.freeze(['additional-modules', 'financing', 'proposal', 'building-on-demand', 'platform-overview', 'platform-chatbot', 'platform-voice-reporting'])
 
 const EXPLAINERS = Object.freeze({
+  'platform-overview': {
+    es: { src: platformOverviewEs, poster: platformOverviewPoster, durationSeconds: 90, width: 1920, height: 1080 },
+  },
+  'platform-chatbot': {
+    es: { src: platformChatbotEs, poster: platformChatbotPoster, durationSeconds: 72, width: 1920, height: 1080 },
+  },
+  'platform-voice-reporting': {
+    es: { src: platformVoiceEs, poster: platformVoicePoster, durationSeconds: 72, width: 1920, height: 1080 },
+  },
   'building-on-demand': {
     es: { src: buildingOnDemandEs, poster: buildingOnDemandEsPoster, durationSeconds: 60, width: 1920, height: 1080 },
   },

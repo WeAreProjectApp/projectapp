@@ -14,7 +14,7 @@
       <div v-if="preview" class="space-y-3" data-testid="tour-admin-preview"><h3>{{ tr('preview') }}</h3><article v-for="step in preview.content.steps" :key="step.target" class="rounded-xl border border-border-default p-4"><h4 class="font-semibold">{{ step[`title_${language}`] }}</h4><p>{{ step[`description_${language}`] }}</p></article><BaseButton variant="ghost" @click="preview = null">{{ tr('close') }}</BaseButton></div>
       <details v-if="history.length" open><summary>{{ tr('revisions') }}</summary><article v-for="revision in history" :key="revision.number" class="mt-3 rounded-xl border border-border-default p-3"><p>{{ revision.number }} · {{ revision.content[`title_${language}`] }}</p><ol class="list-inside list-decimal"><li v-for="step in revision.content.steps" :key="step.target">{{ step[`title_${language}`] }} — {{ step[`description_${language}`] }}</li></ol></article></details>
     </section>
-    <!-- Video resources are mounted here by the video feature after integration. -->
+    <PlatformVideoResourcesManager />
     <section class="space-y-4 rounded-2xl border border-border-default bg-surface p-5">
       <h2 class="text-lg font-semibold">{{ tr('clients') }}</h2>
       <form class="flex gap-3" @submit.prevent="loadClients(1)"><BaseFormField :label="tr('search')" for="help-client-search" class="min-w-0 flex-1"><input id="help-client-search" v-model="search" type="search" class="w-full rounded-xl border border-border-default bg-surface p-3" /></BaseFormField><BaseButton type="submit">{{ tr('search') }}</BaseButton></form>
@@ -28,6 +28,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { usePlatformHelpAdminStore } from '~/stores/platform-help-admin'
 import PlatformTourEditor from '~/components/platform/PlatformTourEditor.vue'
+import PlatformVideoResourcesManager from '~/components/platform/PlatformVideoResourcesManager.vue'
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
 const { t, locale } = useI18n()
 const tr = (key) => t(`platformHelp.${key}`)

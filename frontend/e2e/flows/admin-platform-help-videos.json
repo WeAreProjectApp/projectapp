@@ -1,0 +1,16 @@
+{
+  "id": "admin-platform-help-videos",
+  "name": "Administración de videos de ayuda",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Administrar las tres piezas desde Ayuda: consultar recursos, sustituir MP4 y conservar la versión anterior ante errores; retirar o restaurar usando el ciclo compartido con MCP.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

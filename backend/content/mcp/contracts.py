@@ -1633,3 +1633,6 @@ for canonical, (_, sources) in MODULE_CONNECTORS.items():
                     if key not in writable | readonly}
         merged.append(McpModelContract(label, readonly, writable, excluded))
     MCP_MODEL_CONTRACTS[canonical] = tuple(merged)
+
+# Platform tutorial resource administration shares the validated video lifecycle.
+MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)

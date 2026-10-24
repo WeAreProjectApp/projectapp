@@ -1,0 +1,15 @@
+{
+  "id": "platform-help-videos",
+  "name": "Videos de ayuda de plataforma",
+  "module": "platform",
+  "roles": [
+    "client"
+  ],
+  "priority": "P2",
+  "description": "Abrir Ayuda desde el menú, consultar y reproducir manualmente los tutoriales disponibles; elegir clip, cerrar o reintentar ante un fallo de reproducción. Español identificado también en interfaz inglesa.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

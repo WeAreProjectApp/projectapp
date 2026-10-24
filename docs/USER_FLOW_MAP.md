@@ -6125,6 +6125,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-partnership-legacy-redirects` | admin | P2 | success,error | — |
 | `admin-platform-guided-tour-authoring` | admin | P2 | success,error,failure,display | 1 |
 | `admin-platform-help-settings` | admin | P1 | success,error,failure,display | 1 |
+| `admin-platform-help-videos` | admin | P2 | display,success,error,failure | — |
 | `admin-portfolio-create` | admin | P2 | display,success,error | 1 |
 | `admin-portfolio-delete` | admin | P2 | display,success | 1 |
 | `admin-portfolio-edit` | admin | P2 | display,success,error | 1 |
@@ -6285,6 +6286,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-guided-tour-general` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-project` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-voice` | platform | P2 | success,error,failure,display | 1 |
+| `platform-help-videos` | platform | P2 | display,success,failure | — |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
 | `platform-hosting-card-setup` | platform | P1 | success,error | 1 |
 | `platform-hosting-project-list` | platform | P2 | display,success,error | — |
@@ -8636,6 +8638,17 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   a los flujos existentes del programa y sus otrosíes.
 - **Display:** no aplica: la ruta anterior no muestra una vista propia.
 
+### FLOW: `admin-platform-help-videos`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/:locale/panel/platform/help`
+- **Interaction:** Administrar las tres piezas desde Ayuda: consultar recursos, sustituir MP4 y conservar la versión anterior ante errores; retirar o restaurar usando el ciclo compartido con MCP.
+- **Outcomes:** `display`, `success`, `error`, `failure`
+- **Evidence:** frontend/pages/panel/platform/help.vue; frontend/components/platform/PlatformVideoResourcesManager.vue; frontend/components/resources/VideoResourceManager.vue.
+- **Scope:** Se llega desde la navegación del panel y se comprueba el contenido de las tres piezas. La sustitución, la validación local de MP4 y el rechazo del servidor se ejercitan en la interfaz; los permisos, la concurrencia y el ciclo completo de carga, retirada y restauración por MCP se prueban en backend. Los interruptores compartidos pertenecen al flujo de administración de Ayuda.
+
 # Marca y recursos del proyecto
 
 - **Ruta/rol:** `/panel/projects`, admin, Acciones → Marca y recursos.
@@ -9243,6 +9256,17 @@ del cliente permanecen intactas.
 `delivery-reply-prompt.spec.js` cubre envío manual sin adjuntos, revisión del texto
 editado, rechazo de una clasificación fuera del alcance con fuentes incompletas y
 consulta de la conversación pública que originó el prompt.
+
+### FLOW: `platform-help-videos`
+
+- **Module:** platform
+- **Role:** client
+- **Priority:** P2
+- **Route:** `/:locale/platform/projects`
+- **Interaction:** Abrir Ayuda desde el menú, consultar y reproducir manualmente los tutoriales disponibles; elegir clip, cerrar o reintentar ante un fallo de reproducción. Español identificado también en interfaz inglesa.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** frontend/components/platform/PlatformHelpVideoModal.vue; frontend/components/platform/PlatformVideoResourcesManager.vue.
+- **Scope:** El catálogo filtra las capacidades efectivas; controles de acceso, concurrencia y MCP se prueban en backend. El modo cliente no tiene formulario de datos ni validación de entrada propia.
 
 ### FLOW: `platform-hosting-project-list`
 
