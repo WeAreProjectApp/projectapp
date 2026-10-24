@@ -2803,3 +2803,23 @@ Consultar el [changelog de contratos](changelog/2026-10-23-requirement-package-m
 y la [guía de configuración](REQUIREMENT_PACKAGES.md). Las huellas se regeneran
 únicamente para esos tres conectores con settings de test y se comprueban con
 sus casos de `test_connector_fingerprint_matches_versioned_lock`.
+
+## Videos de ayuda de plataforma — Proyectos
+
+Validar el mismo ciclo del panel desde el catálogo canónico de Proyectos:
+consultar `get_platform_help_video({topic: "general"})`, preparar y completar
+un upload MP4 y asignar mediante `set_platform_help_video` con su `asset_id`
+y la revisión leída. Una segunda asignación usa la revisión nueva. La URL
+anterior deja de existir. Probar los temas chatbot y voice-reporting sin
+activar sus funciones de IA.
+
+`remove_platform_help_video` devuelve confirmación y no retira nada antes de
+confirmar; después queda `none`. `restore_default_platform_help_video` exige
+revisión vigente y no modifica los controles globales ni por cliente. Una
+revisión antigua devuelve `CONFLICT`. Consultar y cambiar los interruptores
+con las herramientas compartidas de Ayuda, preservando el apagado global.
+
+Pruebas focales: `content/tests/views/test_mcp_platform_help_videos.py`,
+`test_platform_help_videos.py` y `test_platform_video_help_gates.py`. Siempre
+desde backend del worktree, settings_test y almacenamiento temporal. La
+comprobación de estas piezas no requiere claves reales ni llamadas de IA.

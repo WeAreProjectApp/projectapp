@@ -17,8 +17,7 @@ const topics = {
     <p class="text-sm text-text-muted">{{ t('platformVideos.adminDescription') }}</p>
     <p class="text-sm text-text-muted">{{ t('platformVideos.subtitleHint') }}</p>
     <section v-for="(module, topic) in topics" :key="module" :data-testid="`platform-video-resource-${topic}`">
-      <h3 class="text-lg font-medium text-text-default">{{ t(`platformVideos.${topic}`) }}</h3>
-      <VideoResourceManager :module="module" language="es" :languages="['es']" @updated="emit('updated', $event)" />
+      <VideoResourceManager :module="module" :title="t(`platformVideos.${topic}`)" :description="t('platformVideos.language')" language="es" :languages="['es']" @updated="emit('updated', $event)" />
     </section>
   </section>
 </template>

@@ -7,6 +7,35 @@ from content.mcp.video_tools import _execute
 from content.services.platform_video_service import PLATFORM_VIDEO_TOPICS
 
 
+VIDEO_RESOURCE_SCHEMA = {
+    'type': 'object', 'additionalProperties': False,
+    'properties': {
+        'visible': {'type': 'boolean'}, 'key': {'type': 'string'},
+        'module': {'type': 'string', 'enum': list(PLATFORM_VIDEO_TOPICS.values())},
+        'language': {'type': 'string', 'enum': ['es']},
+        'mode': {'type': 'string', 'enum': ['default', 'uploaded', 'none']},
+        'revision': {'type': 'integer', 'minimum': 0},
+        'video': {'anyOf': [{'type': 'null'}, {
+            'type': 'object', 'additionalProperties': False,
+            'properties': {
+                'source': {'type': 'string', 'const': 'uploaded'},
+                'src': {'type': 'string'}, 'poster': {'type': 'string'},
+                'durationSeconds': {'type': 'number', 'exclusiveMinimum': 0},
+                'width': {'type': 'integer', 'minimum': 1},
+                'height': {'type': 'integer', 'minimum': 1},
+                'language': {'type': 'string', 'enum': ['es']},
+            },
+            'required': ['source', 'src', 'poster', 'durationSeconds', 'width', 'height', 'language'],
+        }]},
+        'filename': {'type': 'string'}, 'size': {'type': 'integer', 'minimum': 0},
+        'sha256': {'type': 'string'},
+        'updated_at': {'anyOf': [{'type': 'null'}, {'type': 'string', 'format': 'date-time'}]},
+        'max_bytes': {'type': 'integer', 'minimum': 1},
+    },
+    'required': ['visible', 'key', 'module', 'language', 'mode', 'revision', 'video', 'filename', 'size', 'sha256', 'updated_at', 'max_bytes'],
+}
+
+
 def _perform(arguments, action):
     actor = mcp_actor()
     if not actor.is_active or not actor.is_staff:
@@ -42,6 +71,7 @@ def _tools():
             'requires_confirmation': action == 'remove', 'confirmation_message': description,
             'input_schema': {'type': 'object', 'properties': properties, 'required': required, 'additionalProperties': False},
             'handler': lambda arguments, action=action: _perform(arguments, action),
+            'output_schema': VIDEO_RESOURCE_SCHEMA,
         })
     return result
 

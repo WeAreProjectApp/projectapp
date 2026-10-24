@@ -16,6 +16,8 @@ const props = defineProps({
   proposalId: { type: Number, default: null },
   language: { type: String, default: 'es' },
   languages: { type: Array, default: () => ['es', 'en'] },
+  title: { type: String, default: '' },
+  description: { type: String, default: '' },
 })
 const emit = defineEmits(['updated'])
 const { t } = useI18n()
@@ -128,9 +130,9 @@ async function save(action) {
 </script>
 
 <template>
-  <section class="my-6 space-y-4 rounded-2xl border border-border-default bg-surface p-5" data-testid="video-resource-manager" :aria-label="label('title')">
-    <h2 class="text-lg font-medium text-text-default">{{ label(proposalId ? 'personalizedTitle' : 'title') }}</h2>
-    <p class="text-sm text-text-subtle">{{ label(proposalId ? 'personalizedDescription' : 'description') }}</p>
+  <section class="my-6 space-y-4 rounded-2xl border border-border-default bg-surface p-5" data-testid="video-resource-manager" :aria-label="title || label('title')">
+    <h2 class="text-lg font-medium text-text-default">{{ title || label(proposalId ? 'personalizedTitle' : 'title') }}</h2>
+    <p class="text-sm text-text-subtle">{{ description || label(proposalId ? 'personalizedDescription' : 'description') }}</p>
     <BaseFormField v-if="!proposalId" :label="label('language')">
       <BaseSelect v-model="selectedLanguage" :aria-label="label('language')">
         <option v-for="language in languages" :key="language" :value="language">{{ label(language === 'es' ? 'spanish' : 'english') }}</option>

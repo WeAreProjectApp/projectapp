@@ -39,6 +39,7 @@ describe('platform video modal', () => {
   let pause
   let play
   let registerVideo
+  let closeChat
   beforeEach(async () => {
     setActivePinia(createPinia())
     Object.keys(mockStates).forEach((key) => delete mockStates[key])
@@ -51,6 +52,9 @@ describe('platform video modal', () => {
     registerVideo = jest.fn()
     wrapper = mount(PlatformHelpVideoModal, { global: { stubs, provide: { platformHelp: { registerVideo } } } })
     await flushPromises()
+    closeChat = jest.fn()
+    mockNuxtApp._platformHelpHandlers.set('chat', closeChat)
+    mockStates['platform-help-surface'].value = 'chat'
     await store.openVideo()
     await flushPromises()
   })
@@ -84,6 +88,19 @@ describe('platform video modal', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 
+  it('recovers after the requested catalog cannot be loaded', async () => {
+    await wrapper.get('[data-testid="platform-video-close"]').trigger('click')
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockRejectedValue(new Error('Network unavailable')) })
+    await registerVideo.mock.calls.at(-1)[0]()
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('No pudimos cargar los videos')
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockResolvedValue(catalog) })
+    await wrapper.get('[role="alert"] button').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('video').exists()).toBe(true)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+  })
+
   it('stops playback when navigating to another view', async () => {
     mockRoute.fullPath = '/es-co/platform/notifications'
     await flushPromises()
@@ -92,6 +109,7 @@ describe('platform video modal', () => {
   })
 
   it('closes the previous help surface before showing video', () => {
+    expect(closeChat).toHaveBeenCalledTimes(1)
     expect(mockStates['platform-help-surface'].value).toBe('video')
     expect(registerVideo).toHaveBeenCalledWith(expect.any(Function), true)
   })
