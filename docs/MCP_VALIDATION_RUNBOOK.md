@@ -1,3 +1,37 @@
+## IA de Plataforma — projects 4.1.1 (2026-10-24)
+
+El conector projects incorpora `get/update_platform_ai_settings`,
+`list_platform_ai_clients`, `get/update_platform_ai_client`, `list_platform_ai_templates`, `get/update/preview_platform_ai_template`,
+`list_platform_ai_template_versions`, `restore_platform_ai_template`,
+`get_platform_ai_usage`, `list_platform_ai_events`, `invalidate_platform_ai_cache`
+y `set/test/delete_platform_ai_credential`. Ver nombres exactos en
+`content/mcp/platform_ai_tools.py`; son los mismos servicios de `/panel/platform/ai`.
+
+1. Leer configuración y un cliente: ambos interruptores empiezan apagados; el
+   cupo compartido inicial es 20 solicitudes/300 minutos.
+2. Actualizar con versión vigente y confirmar; repetir con versión antigua debe
+   fallar sin sobrescribir. Overrides de cupo se definen juntos o ambos null.
+3. Preparar una credencial sintética en settings_test: la confirmación persiste
+   sólo ciphertext, proveedor y versión. Ni impacto, resultado, eventos ni lectura
+   posterior contienen la clave. Nunca usar una clave real como dato de prueba.
+4. Editar y restaurar una plantilla conserva las revisiones previas; faltantes,
+   marcadores adicionales, atributos y HTML se rechazan. Preview no llama proveedor.
+5. Consultar uso/eventos e invalidar caché: sólo métricas sin audio ni transcripción.
+
+`preview_platform_ai_template` es un render local de texto con marcadores de
+ejemplo: no llama proveedores ni guarda contenido o versiones. Se documenta como
+excepción exacta de preview sin pareja de aplicación; guardar una plantilla sigue
+siendo una operación separada con control de versión y confirmación sensible.
+El test `content/tests/views/test_mcp_platform_ai_preview.py` verifica ausencia de
+escrituras y de llamadas al proveedor por la herramienta MCP publicada.
+6. Probar conexión es una acción explícita; puede hacer una llamada mínima a Jev.
+   No forma parte de los tests automáticos sin costo ni de una lectura de clave.
+
+Validación focal: `accounts/tests/test_platform_ai_services.py`,
+`test_platform_ai_jobs.py`, `test_platform_ai_quota.py`; revisión de contratos
+mediante `mcp_inventory --check` y `mcp_schema_report --slug projects`.
+Operación y aprovisionamiento privado en [platform-ai.md](platform-ai.md).
+
 > **Segmentación comercial — 2026-10-22:** Comercial 6.0.0 conserva clientes,
 > propuestas y diagnósticos; Nuestra oferta 1.0.0 (`offerings`) concentra paquetes
 > y módulos; Programas 1.0.0 (`programs`) reúne alianzas y células. Las descripciones
@@ -2803,3 +2837,23 @@ Consultar el [changelog de contratos](changelog/2026-10-23-requirement-package-m
 y la [guía de configuración](REQUIREMENT_PACKAGES.md). Las huellas se regeneran
 únicamente para esos tres conectores con settings de test y se comprueban con
 sus casos de `test_connector_fingerprint_matches_versioned_lock`.
+
+## Videos de ayuda de plataforma — Proyectos
+
+Validar el mismo ciclo del panel desde el catálogo canónico de Proyectos:
+consultar `get_platform_help_video({topic: "general"})`, preparar y completar
+un upload MP4 y asignar mediante `set_platform_help_video` con su `asset_id`
+y la revisión leída. Una segunda asignación usa la revisión nueva. La URL
+anterior deja de existir. Probar los temas chatbot y voice-reporting sin
+activar sus funciones de IA.
+
+`remove_platform_help_video` devuelve confirmación y no retira nada antes de
+confirmar; después queda `none`. `restore_default_platform_help_video` exige
+revisión vigente y no modifica los controles globales ni por cliente. Una
+revisión antigua devuelve `CONFLICT`. Consultar y cambiar los interruptores
+con las herramientas compartidas de Ayuda, preservando el apagado global.
+
+Pruebas focales: `content/tests/views/test_mcp_platform_help_videos.py`,
+`test_platform_help_videos.py` y `test_platform_video_help_gates.py`. Siempre
+desde backend del worktree, settings_test y almacenamiento temporal. La
+comprobación de estas piezas no requiere claves reales ni llamadas de IA.

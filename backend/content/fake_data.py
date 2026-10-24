@@ -199,6 +199,11 @@ DERIVED_MODELS = {
 }
 
 CATALOG_MODELS = {
+    'accounts.PlatformAISettings', 'accounts.PlatformAITemplate', 'accounts.PlatformAITemplateRevision',
+    # Help defaults and published revisions belong to the global catalog;
+    # migrations and administrators maintain them, not demo-data generation.
+    'accounts.PlatformHelpSettings', 'accounts.PlatformGuidedTour',
+    'accounts.PlatformGuidedTourRevision',
     'content.ConsultingProgram',
     'content.BuildingOnDemandProgram',
     'content.BuildingOnDemandContract',
@@ -213,6 +218,19 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Private client conversations and expiring replies reflect real requests;
+    # demo seeds must not fabricate their content or quota provenance.
+    'accounts.AppiConversation', 'accounts.AppiTurn',
+    # Client help preferences are provisioned on access and changed explicitly;
+    # demo generation must preserve defaults instead of inventing preferences.
+    'accounts.ClientPlatformHelpSettings',
+    # Seen steps and audit events require real user or administrator actions;
+    # demo generation must not suppress onboarding or fabricate its history.
+    'accounts.PlatformTourProgress', 'accounts.PlatformHelpEvent',
+    # Real provider secrets, paid activity and private expiring jobs are never fabricated.
+    'accounts.PlatformAICredential', 'accounts.PlatformAIJob',
+    'accounts.PlatformAIUsage', 'accounts.PlatformAIEvent',
+    'accounts.PlatformAIQuotaReservation',
     # Ownership receipts are created only by the migration engine, never by demo seeds.
     'content.DocumentOwnershipOperation',
     # Provenance is created only by an explicitly confirmed forced deletion;

@@ -16,6 +16,8 @@ from huey.contrib.djhuey import periodic_task, task
 logger = logging.getLogger(__name__)
 
 MAX_CHARGE_ATTEMPTS = 3
+from accounts.tasks_ai import process_ai_job, cleanup_ai_jobs  # noqa: E402,F401
+from accounts.tasks_appi import process_appi_turn, cleanup_appi_history  # noqa: E402,F401
 RETRY_INTERVAL_DAYS = 2
 
 

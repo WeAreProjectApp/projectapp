@@ -1,3 +1,12 @@
+> **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
+> reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
+> (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por
+> panel y MCP projects. Cupo común de 20 solicitudes por ventana móvil de 300
+> minutos con overrides por cliente. Trabajos Huey privados, audio temporal,
+> borradores 24 h y revisión humana antes de llenar el formulario. Chatbot/Jev se
+> integra en su propia sesión. Migraciones accounts.0083–0085, sin aplicar desde
+> este worktree. Contrato y operación: [IA de Plataforma](../platform-ai.md).
+
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
 
 > **Video de Scrum y distribución contable — 2026-10-22:** Building on Demand reutiliza los recursos de video privados, los controles compartidos y las operaciones MCP de Programas. Su visibilidad y archivo se resuelven en lectura pública, separados de las revisiones del programa. La migración aditiva content.0298 agrega el interruptor. Las tablas contables optan por distribución por contenido; las demás conservan el reparto proporcional.
@@ -2297,3 +2306,44 @@ contractual por ID; las fusiones de clientes preservan los autores de sus
 revisiones y de los recibos de migración de carpetas. Los aliases documentados
 de historial mantienen su compatibilidad. Estos contratos se registran en
 `connectors.py` y sus huellas se regeneran en `connector_contracts.json`.
+
+
+## Ayuda de plataforma — 2026-10-24
+
+La ayuda usa configuración global/cliente separada de IA, catálogo de destinos cerrado, revisiones publicadas y progreso por usuario. Panel y MCP Proyectos comparten servicios; el coordinador de superficies evita solapar tour, Appi y video.
+
+La selección de un paso actualiza el progreso de interfaz antes de la animación
+de Driver. El anfitrión sólo acusa un inicio automático que llegó a abrirse;
+observa cambios en los destinos visibles y agrupa un único reintento pendiente
+si el destino aparece durante una operación asíncrona. Desmontar desconecta la
+observación e impide reintentos tardíos.
+
+## Ayuda audiovisual de clientes — 2026-10-24
+
+El catálogo `GET /api/platform/help/videos/` usa JWT de sesión y respuesta
+`no-store`. Comparte los interruptores de Ayuda globales/por cliente; filtra
+las piezas de Appi y voz con las capacidades efectivas del servicio de IA.
+El video general no depende de proveedores ni muestra esas opciones. La
+interfaz vuelve a consultar antes de abrir y al recuperar el foco, e invalida
+respuestas que llegan después de cerrar o salir de la cuenta.
+
+Las tres piezas usan el mismo `VideoResource` que los recursos comerciales:
+predeterminado empaquetado, sustitución validada o retirada explícita. Panel y
+MCP Proyectos reutilizan validación, revisiones y almacenamiento privado.
+Cambiar un tutorial no solicita reconstruir páginas públicas. El reproductor
+se monta en el layout cliente y se registra en el coordinador común de Ayuda;
+abrirlo cierra la superficie anterior y conserva el inicio manual del video.
+
+## Appi y proyecciones privadas — 2026-10-24
+
+Appi usa Jev como clasificador tipado anterior a cualquier redacción. Las
+proyecciones del servidor filtran propietario, publicación y visibilidad; los
+modelos externos reciben pregunta y datos acotados, nunca acceso a la base.
+Guías y declinaciones usan plantillas versionadas; sólo una explicación de hechos
+propios puede invocar Haiku/Luna y su resultado se valida antes de entregarlo.
+
+Conversaciones privadas con vencimiento máximo de 90 días, índices Redis de hasta
+24 horas y dependencias de fuentes/modelo/plantilla permiten reutilizar respuestas
+sin omitir reautorización. Se comparte la cuota lógica con reportes de voz mediante
+reservas y canje único del dictado. El historial no se expone por MCP administrativo.
+Contrato completo: [Appi](../APPI.md).

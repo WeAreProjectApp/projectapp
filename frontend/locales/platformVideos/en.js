@@ -1,0 +1,15 @@
+export default {
+  title: 'How your platform works',
+  description: 'Choose a guide and press play. Come back whenever you need it.',
+  language: 'Video in Spanish · with Spanish captions',
+  close: 'Close help video',
+  general: 'Your platform essentials',
+  chatbot: 'Ask Appi for updates and guidance',
+  'voice-reporting': 'Prepare a report with your voice',
+  retry: 'Try again',
+  playbackError: 'We could not play this video. Please try again.',
+  loadError: 'We could not load the help videos. Try again from Help.',
+  adminTitle: 'Platform help videos',
+  adminDescription: 'Global and client switches control every video. Appi and voice clips only appear when those features are available to the client.',
+  subtitleHint: 'Include visible captions in the MP4. Removing a video hides it; restore brings back the video included with the application.',
+}
