@@ -123,6 +123,7 @@ export function usePlatformGuidedTour() {
         if (token !== runToken || !driver) return
         if (available.has(key) && (key === 'welcome' || element)) {
           steps[index].element = element || undefined
+          currentStep.value = key
           driver.drive(index)
           return
         }
@@ -141,7 +142,7 @@ export function usePlatformGuidedTour() {
       onCloseClick: () => { void finish('skipped') },
       onDestroyStarted: () => { if (!ending) void finish('skipped') },
       onHighlighted: (_element, step) => {
-        currentStep.value = step.targetKey
+        if (token !== runToken || !activeTour.value) return
         void store.acknowledge(tour, 'in_progress', step.targetKey, projectId, manual)
       },
       onPopoverRender: ({ wrapper, closeButton, nextButton, previousButton }) => {
@@ -159,6 +160,7 @@ export function usePlatformGuidedTour() {
     const resumeIndex = ['paused', 'in_progress'].includes(tour.status) ? steps.findIndex((step) => step.targetKey === tour.last_step) : 0
     await prepareTarget(steps[Math.max(0, resumeIndex)].targetKey)
     if (token !== runToken || !driver) return false
+    currentStep.value = steps[Math.max(0, resumeIndex)].targetKey
     driver.drive(Math.max(0, resumeIndex))
     return true
   }

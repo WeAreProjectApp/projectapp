@@ -25,9 +25,19 @@ let observer = null
 let timer = null
 let lastAutoContext = ''
 let busy = false
+let pendingAuto = false
+let visibleTargets = ''
+let disposed = false
+
+function visibleTargetSignature() {
+  const keys = new Set([...document.querySelectorAll('[data-tour]')].map((element) => element.getAttribute('data-tour')))
+  return [...keys].filter((key) => visibleTourTarget(key)).sort().join('|')
+}
 
 async function considerAuto() {
-  if (busy || !auth.isClient || !auth.hasValidatedSession || auth.needsProfileCompletion || tour.isTourActive.value || help.activeSurface.value) return
+  if (disposed) return
+  if (busy) { pendingAuto = true; return }
+  if (!auth.isClient || !auth.hasValidatedSession || auth.needsProfileCompletion || tour.isTourActive.value || help.activeSurface.value) return
   const voice = Boolean(visibleTourTarget('voice-report'))
   help.voiceVisible.value = voice
   const contextKey = `${route.path}:${voice}`
@@ -40,10 +50,13 @@ async function considerAuto() {
       || eligible.find((item) => item.context === 'general')
       || eligible.find((item) => projectId.value && item.context === 'project')
     if (selected) {
-      lastAutoContext = contextKey
-      await tour.start(selected.id, { projectId: projectId.value, manual: false })
+      const started = await tour.start(selected.id, { projectId: projectId.value, manual: false })
+      if (started) lastAutoContext = contextKey
     }
-  } finally { busy = false }
+  } finally {
+    busy = false
+    if (pendingAuto && !disposed) { pendingAuto = false; void considerAuto() }
+  }
 }
 
 async function refresh() {
@@ -62,10 +75,14 @@ watch(() => [auth.hasValidatedSession, auth.needsProfileCompletion], async ([val
 })
 onMounted(() => {
   void refresh()
-  observer = new MutationObserver(() => { if (Boolean(visibleTourTarget('voice-report')) !== help.voiceVisible.value) void considerAuto() })
+  visibleTargets = visibleTargetSignature()
+  observer = new MutationObserver(() => {
+    const signature = visibleTargetSignature()
+    if (signature !== visibleTargets) { visibleTargets = signature; void considerAuto() }
+  })
   observer.observe(document.body, { childList: true, subtree: true })
   window.addEventListener('focus', refresh)
   timer = window.setInterval(() => { if (tour.isTourActive.value) void refresh() }, 30000)
 })
-onBeforeUnmount(() => { observer?.disconnect(); window.clearInterval(timer); window.removeEventListener('focus', refresh) })
+onBeforeUnmount(() => { disposed = true; observer?.disconnect(); window.clearInterval(timer); window.removeEventListener('focus', refresh) })
 </script>
