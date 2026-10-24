@@ -1,10 +1,12 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from '#imports'
 import { storeToRefs } from 'pinia'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseModal from '~/components/base/BaseModal.vue'
 import { usePlatformHelpVideosStore } from '~/stores/platform-help-videos'
+import { usePlatformHelpSurface } from '~/composables/usePlatformHelpSurface'
 import { usePlatformVideoCopy } from '~/composables/usePlatformVideoCopy'
 import { formatExplainerDuration } from '~/composables/useExplainerVideos'
 
@@ -12,6 +14,10 @@ const emit = defineEmits(['open', 'close'])
 const store = usePlatformHelpVideosStore()
 const { videos, selectedVideo, isOpen } = storeToRefs(store)
 const { t } = usePlatformVideoCopy()
+const help = inject('platformHelp', null)
+const surface = usePlatformHelpSurface()
+const route = useRoute()
+const unregister = surface.registerSurface('video', () => store.closeVideo())
 const player = ref(null)
 const failed = ref(false)
 const playbackRevision = ref(0)
@@ -19,15 +25,20 @@ const playbackRevision = ref(0)
 function pause() { player.value?.pause() }
 function close() { pause(); store.closeVideo() }
 function onVisibility() { if (document.visibilityState === 'hidden') pause() }
-function onFocus() { if (store.isOpen) store.fetchVideos() }
+function onFocus() { store.fetchVideos() }
 function retry() { failed.value = false; playbackRevision.value += 1 }
 watch(() => selectedVideo.value?.src, () => { pause(); failed.value = false }, { flush: 'sync' })
 watch(isOpen, (open) => {
-  if (!open) pause()
+  if (open) surface.requestSurface('video')
+  else { pause(); surface.releaseSurface('video') }
   emit(open ? 'open' : 'close')
 }, { flush: 'sync' })
+watch(() => route.fullPath, close)
+watch(() => store.videoAvailable, (available) => help?.registerVideo(() => store.openVideo(), available))
 onMounted(() => {
-  if (store.isOpen) emit('open')
+  help?.registerVideo(() => store.openVideo(), store.videoAvailable)
+  store.fetchVideos()
+  if (store.isOpen) { surface.requestSurface('video'); emit('open') }
   window.addEventListener('blur', pause)
   window.addEventListener('pagehide', pause)
   window.addEventListener('focus', onFocus)
@@ -35,6 +46,9 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   pause()
+  unregister()
+  help?.registerVideo(null, false)
+  store.reset()
   window.removeEventListener('blur', pause)
   window.removeEventListener('pagehide', pause)
   window.removeEventListener('focus', onFocus)

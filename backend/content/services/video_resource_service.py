@@ -64,8 +64,14 @@ def public_resource(module, language, proposal=None):
 def resource_payload(module, language, proposal=None):
     resource = get_resource(module, language, proposal)
     from content.services.explainer_video_service import explainer_video_visible
+    if proposal is not None:
+        visible = bool(video_descriptor(resource))
+    elif module in PLATFORM_VIDEO_MODULES:
+        visible = not resource or resource.mode != 'none'
+    else:
+        visible = explainer_video_visible(module)
     return {
-        'visible': (not resource or resource.mode != 'none') if module in PLATFORM_VIDEO_MODULES else explainer_video_visible(module) if proposal is None else bool(video_descriptor(resource)),
+        'visible': visible,
         'key': resource_key(module, language, proposal),
         'module': module, 'language': language,
         'mode': resource.mode if resource else ('none' if proposal else 'default'),
@@ -74,7 +80,7 @@ def resource_payload(module, language, proposal=None):
         'filename': resource.filename if resource else '',
         'size': resource.size if resource else 0,
         'sha256': resource.sha256 if resource else '',
-        'updated_at': resource.updated_at if resource else None,
+        'updated_at': resource.updated_at.isoformat() if resource else None,
         'max_bytes': VIDEO_MAX_BYTES,
     }
 
