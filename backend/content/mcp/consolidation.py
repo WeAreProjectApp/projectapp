@@ -23,7 +23,7 @@ CATALOG_VERSIONS = {
     'blog': '2.1.1', 'documents': '8.1.1', 'communications': '3.1.2',
     'diagnostics': '2.1.1', 'proposals': '6.1.1', 'content': '3.1.1',
     'building-with-us': '3.1.1', 'building-on-demand': '4.1.1',
-    'additional-modules': '4.1.2', 'offerings': '2.1.0', 'programs': '3.1.0',
+    'additional-modules': '4.1.2', 'offerings': '2.1.1', 'programs': '3.1.0',
 }
 
 

@@ -40,6 +40,10 @@ def _editorial_catalog_op(name, description, route, serializer_class, *, partial
         'is_active': 'Indica si el módulo o paquete está disponible en el catálogo.',
         'hours': 'Cantidad de horas de servicio que incluye el paquete.',
         'hourly_rate': 'Tarifa por hora usada para calcular el valor del paquete.',
+        'xs_count': 'Cantidad de requerimientos XS incluidos; los cupos no se intercambian entre tallas.',
+        's_count': 'Cantidad de requerimientos S incluidos; los cupos no se intercambian entre tallas.',
+        'm_count': 'Cantidad de requerimientos M incluidos; los cupos no se intercambian entre tallas.',
+        'validity_months': 'Meses desde el pago para solicitar y validar requerimientos; mínimo uno, sin renovación automática.',
         'discount_percent': 'Porcentaje de descuento del paquete respecto a su tarifa.',
         'nationality': 'Mercado del paquete: determina las reglas de moneda y tarifa.',
     }

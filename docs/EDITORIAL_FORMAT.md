@@ -153,7 +153,7 @@ Se verifica la paridad entre `initialize`, `server/discover`, `tools/list` y
 Versiones de esta entrega: Documentos 8.1.1, Comunicaciones 3.1.2, Comercial
 6.3.0, Propuestas 6.1.1, Diagnósticos 2.1.1, Blog 2.1.1, Contenido 3.1.1,
 Building with Us 3.1.1, Building on Demand 4.1.1, Módulos adicionales 4.1.2,
-Oferta 2.1.0 y Programas 3.1.0. Los esquemas explícitos de módulos y paquetes
+Oferta 2.1.1 y Programas 3.1.0. Los esquemas explícitos de módulos y paquetes
 describen también sus argumentos y dejan de usar la excepción de esquema genérico.
 
 ## Pruebas y operación
