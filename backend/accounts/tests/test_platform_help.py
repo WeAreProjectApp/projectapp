@@ -3,6 +3,8 @@ from copy import deepcopy
 from unittest.mock import patch
 
 import pytest
+from content.models import McpConnector, McpCredential
+from content.tests.mcp_parity import assert_no_writes, call_tool_inprocess
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.test import APIClient
 
@@ -14,8 +16,6 @@ from accounts.models_platform_help import (
 from accounts.services import platform_help as help_service
 from accounts.services.project_collaboration_access import CollaborationConflict
 from accounts.tests.project_collaboration_helpers import context
-from content.models import McpConnector, McpCredential
-from content.tests.mcp_parity import assert_no_writes, call_tool_inprocess
 
 pytestmark = pytest.mark.django_db
 
