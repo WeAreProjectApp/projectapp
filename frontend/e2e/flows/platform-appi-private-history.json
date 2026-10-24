@@ -1,0 +1,17 @@
+{
+  "id": "platform-appi-private-history",
+  "name": "Appi Private Conversation History",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Cliente abre sus conversaciones privadas de Appi, cambia entre ellas, carga mensajes anteriores y puede borrar una conversación tras confirmarlo. El historial conserva sólo sus consultas durante 90 días, no aparece después de vencer y nunca revela conversaciones, preguntas ni respuestas de otra cuenta o de un proyecto que dejó de pertenecerle.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

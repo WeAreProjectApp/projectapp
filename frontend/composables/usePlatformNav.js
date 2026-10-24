@@ -21,14 +21,14 @@ export function usePlatformNav() {
 
   const primaryItems = computed(() => {
     const items = [
-      { label: 'Notificaciones', href: lp('/platform/notifications'), icon: 'bell', badge: notifStore.unreadCount },
-      { label: 'Proyectos',      href: lp('/platform/projects'),      icon: 'folder' },
-      { label: t('platformBilling.accounts'), href: lp('/platform/collection-accounts'), icon: 'file' },
-      { label: t('platformBilling.hosting'), href: lp('/platform/payments'), icon: 'credit-card' },
+      { label: 'Notificaciones', href: lp('/platform/notifications'), tourTarget: 'notifications', icon: 'bell', badge: notifStore.unreadCount },
+      { label: 'Proyectos',      href: lp('/platform/projects'), tourTarget: 'projects',      icon: 'folder' },
+      { label: t('platformBilling.accounts'), href: lp('/platform/collection-accounts'), tourTarget: 'collection-accounts', icon: 'file' },
+      { label: t('platformBilling.hosting'), href: lp('/platform/payments'), tourTarget: 'hosting', icon: 'credit-card' },
     ]
     if (authStore.isClient) {
       // Client-facing document portal (view/download/sign). Admins use /panel/documents.
-      items.push({ label: 'Documentos', href: lp('/platform/documents'), icon: 'file' })
+      items.push({ label: 'Documentos', href: lp('/platform/documents'), tourTarget: 'documents', icon: 'file' })
     }
     if (authStore.isAdmin) {
       items.push({ label: 'Clientes', href: lp('/platform/clients'), icon: 'users' })
@@ -37,7 +37,7 @@ export function usePlatformNav() {
   })
 
   const accountItems = computed(() => [
-    { label: 'Configuración', href: lp('/platform/profile'), icon: 'settings' },
+    { label: 'Configuración', href: lp('/platform/profile'), tourTarget: 'profile', icon: 'settings' },
   ])
 
   const adminItems = computed(() => [

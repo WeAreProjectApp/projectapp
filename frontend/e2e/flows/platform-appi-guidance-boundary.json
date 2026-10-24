@@ -1,0 +1,17 @@
+{
+  "id": "platform-appi-guidance-boundary",
+  "name": "Appi Platform Guidance and Scope Boundary",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Cliente usa Appi para pedir pasos de la plataforma, como reportar un bug, y recibe una guía editable con enlace interno permitido. Las guías globales funcionan sin proyecto; las guías de un proyecto piden seleccionarlo. Preguntas fuera del universo de proyecto y uso de la plataforma reciben la respuesta respetuosa de alcance, sin ofrecer información general ni enlaces externos.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

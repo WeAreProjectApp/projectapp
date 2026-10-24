@@ -35,6 +35,9 @@ RETAINED_MODELS = {
     'accounts.deliverypromptcontext', 'accounts.deliverypromptsource',
     'accounts.deliveryevidenceemail', 'accounts.deliveryevidenceemailfile',
     'accounts.deliveryevidenceemailattempt',
+    # Content-free usage accounting is independent of the deleted project.
+    # SET_NULL preserves the counters without retaining private AI drafts.
+    'accounts.platformaiusage',
 }
 
 RETENTION_BLOCK_MESSAGES = {

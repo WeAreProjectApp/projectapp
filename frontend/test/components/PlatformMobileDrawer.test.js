@@ -28,6 +28,7 @@ function mountPlatformMobileDrawer(props = {}) {
     props: { isOpen: true, ...props },
     global: {
       stubs: {
+        PlatformHelpMenu: { template: '<div data-testid="platform-help-menu-stub" />' },
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
         SidebarItem: { template: '<div class="sidebar-item-stub" />' },

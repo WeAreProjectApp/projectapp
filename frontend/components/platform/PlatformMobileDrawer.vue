@@ -62,6 +62,7 @@
               :disabled="item.disabled"
               @click="$emit('close')"
             />
+            <PlatformHelpMenu />
             <BaseButton variant="secondary" size="md" class="w-full" @click="$emit('close'); $emit('openThemePicker')">
               <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="10.5" r="2.5" /><circle cx="8.5" cy="7.5" r="2.5" /><circle cx="6.5" cy="12.5" r="2.5" />
@@ -135,6 +136,7 @@
 </template>
 
 <script setup>
+import PlatformHelpMenu from '~/components/platform/PlatformHelpMenu.vue'
 import { computed } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import SidebarItem from '~/components/platform/SidebarItem.vue'

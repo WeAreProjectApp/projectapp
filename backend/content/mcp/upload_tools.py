@@ -18,7 +18,7 @@ from content.models import McpUpload
 
 UPLOAD_TTL_MINUTES = 15
 VIDEO_UPLOAD_TTL_MINUTES = 60
-VIDEO_CONNECTORS = {'partnership-program', 'additional-modules', 'building-on-demand', 'proposals', 'commercial', 'offerings', 'programs'}
+VIDEO_CONNECTORS = {'projects', 'partnership-program', 'additional-modules', 'building-on-demand', 'proposals', 'commercial', 'offerings', 'programs'}
 MAX_CHUNK_BYTES = 1024 * 1024
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 SHA256_PATTERN = re.compile(r'^[0-9a-f]{64}$')

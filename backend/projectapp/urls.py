@@ -2,6 +2,7 @@ import os
 
 from django.conf import settings
 from django.http import HttpResponseNotFound, JsonResponse
+from accounts.views_platform_videos import platform_videos
 from django.urls import path, include, re_path
 from django.views.generic import RedirectView
 from content.admin import admin_site
@@ -53,13 +54,17 @@ urlpatterns = [
     path('api/monitoring/', include('monitoring.urls')),
     path('api/secure-links/', include('secure_links.urls')),
     path('api/health/', health_check, name='health-check'),
+    path('api/platform/ai/', include('accounts.ai_urls')),
     # /admin without the trailing slash would fall through to the SPA
     # catch-all and 404 — APPEND_SLASH never kicks in because the URL
     # technically resolves. Redirect it explicitly.
     path('admin', RedirectView.as_view(url='/admin/', permanent=False)),
     path('admin/', admin_site.urls),
     path('api/', include('content.urls')),
+    path('api/platform/help/videos/', platform_videos, name='platform-help-videos'),
     path('api/accounts/', include('accounts.urls')),
+    path('api/platform/chatbot/', include('accounts.appi_urls')),
+    path('api/platform/help/', include('accounts.platform_help_urls')),
     path('sitemap.xml', serve_sitemap_xml, name='sitemap-xml'),
     path('t/<uuid:card_id>/', qr_card_redirect, name='qr-card-redirect'),
     # Clean shareable linktree URL without locale prefix: /lk/@handle

@@ -21,6 +21,7 @@ def _keys(text):
 
 
 AUTHORSHIP_RELATIONS = _keys('''
+accounts.AppiConversation.actor accounts.AppiTurn.actor
 admin.LogEntry.user
 content.AccountingChangeLog.actor
 content.Document.created_by content.Document.updated_by content.Document.signed_by
@@ -67,11 +68,19 @@ accounts.ProjectIdeaCollection.created_by accounts.ProjectClientAccessPolicy.upd
 accounts.ProjectClientAccessEvent.actor accounts.BillingContextEvent.actor accounts.IssueResponse.actor accounts.IssueEvent.actor
 accounts.DeliveryEvidenceEmail.prepared_by accounts.DeliveryEvidenceEmailAttempt.actor
 accounts.DeliveryNotificationEvent.actor accounts.DeliveryNotificationAttempt.requested_by
+accounts.PlatformAIEvent.actor accounts.PlatformAIJob.actor accounts.PlatformAIQuotaReservation.actor
+accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
 monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
 secure_links.SecureLinkEvent.actor
 ''')
 
 RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
+# Help state belongs to the person, not the commercial client being merged.
+# Keep both account preferences and historical authorship on their original user.
+RELATION_POLICIES.update(dict.fromkeys(_keys('''
+accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
+accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor
+'''), NEVER))
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 content.CommunicationFolder.client content.CommunicationThread.client
 content.DocumentFolder.client_user accounts.Project.client

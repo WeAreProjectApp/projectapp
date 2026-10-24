@@ -1,3 +1,14 @@
+> **Videos de uso de plataforma — 2026-10-24:** tres piezas publicadas en la rama de sesión: general (90 s), Appi y reporte por voz (72 s cada una), con narración colombiana y subtítulos. Acceso desde Ayuda y una invitación al terminar el recorrido, reproducción manual, controles globales/por cliente y administración de recursos por panel/MCP. Los clips de IA siguen las capacidades disponibles. Catorce casos propios de navegador y cinco pruebas de permisos con migraciones de test aprobados; entrega consultable en PR #540 y despliegue separado. El equipo ProjectApp mantiene las fuentes por funcionalidad.
+
+> **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
+> reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
+> (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por
+> panel y MCP projects. Cupo común de 20 solicitudes por ventana móvil de 300
+> minutos con overrides por cliente. Trabajos Huey privados, audio temporal,
+> borradores 24 h y revisión humana antes de llenar el formulario. Chatbot/Jev se
+> integra en su propia sesión. Migraciones accounts.0083–0085, sin aplicar desde
+> este worktree. Contrato y operación: [IA de Plataforma](../docs/platform-ai.md).
+
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
 
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
@@ -794,3 +805,18 @@ Implementado en el PR #517: un modal y escritor común para uno o varios ingreso
 participaciones globales, diferencia con deducciones proporcionales y saldos
 reprogramados, IVA heredado y revisión de correos dentro del modal. Incluye
 corrección y reversa integrales. Ver `docs/accounting-settlement.md`.
+
+
+## 2026-10-24 — Recorrido guiado
+
+En validación: guías ES/EN por usuario, Help compartido, borradores y novedades; administración Panel/MCP y vistos persistidos. PR #539 sigue en curso; sin merge ni deploy.
+
+## 2026-10-24 — Appi, asistente de proyectos
+
+Implementación en PR #541: alcance finito, proyecciones autorizadas, Jev antes
+del redactor, guías bilingües editables, caché revalidada e historial privado de
+hasta 90 días. Configuración/credenciales/cuota/audio se integran desde PR #538;
+superficies de Ayuda desde PR #539. Las pruebas locales de servidor, interfaz y
+navegador están aprobadas; catálogos y flujos actualizados. Evidencia en
+`docs/audits/2026-10-24-appi-qa.md`. El cierre aún requiere CI verde del PR final.
+La integración final pertenece al orquestador; no hay migraciones aplicadas ni deploy.
