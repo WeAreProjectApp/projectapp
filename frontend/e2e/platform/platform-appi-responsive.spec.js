@@ -6,12 +6,7 @@ import {
   PLATFORM_APPI_AVAILABILITY, PLATFORM_APPI_GUIDANCE_BOUNDARY, PLATFORM_APPI_PRIVATE_HISTORY,
   PLATFORM_APPI_PROJECT_STATUS, PLATFORM_APPI_SHARED_QUOTA_AUDIO,
 } from '../helpers/flow-tags.js'
-import { conversation, detail, openAppi, readyMessage, setupAppi, visitClientProject } from '../helpers/appi.js'
-
-const appiFlows = [
-  ...PLATFORM_APPI_AVAILABILITY, ...PLATFORM_APPI_GUIDANCE_BOUNDARY, ...PLATFORM_APPI_PRIVATE_HISTORY,
-  ...PLATFORM_APPI_PROJECT_STATUS, ...PLATFORM_APPI_SHARED_QUOTA_AUDIO,
-]
+import { conversation, detail, openAppi, readyMessage, setupAppi } from '../helpers/appi.js'
 
 for (const alias of Object.keys(VIEWPORTS)) {
   test.describe(`Platform Appi responsive ${alias}`, () => {
@@ -19,12 +14,16 @@ for (const alias of Object.keys(VIEWPORTS)) {
     test.setTimeout(60_000)
 
     test('keeps the completed Appi conversation reachable', {
-      tag: [...appiFlows, '@role:platform-client', '@outcome:display', '@responsive:platform-appi', `@viewport:${alias}`],
+      tag: [...PLATFORM_APPI_AVAILABILITY, ...PLATFORM_APPI_GUIDANCE_BOUNDARY, ...PLATFORM_APPI_PRIVATE_HISTORY,
+        ...PLATFORM_APPI_PROJECT_STATUS, ...PLATFORM_APPI_SHARED_QUOTA_AUDIO, '@role:platform-client', '@outcome:display', '@responsive:platform-appi', `@viewport:${alias}`],
     }, async ({ page }) => {
+      // quality: allow-deep-link (authenticated project list is the Appi shell entry; the test clicks an owned project before exercising the Appi widget)
       // Bug caught: Appi clips its selectors, quota meter or final send control at this viewport.
       const row = readyMessage({ answer: { text: 'El portal está listo para revisión.', verified_at: '2026-10-24T12:00:00Z', sources: [], actions: [] } })
       await setupAppi(page, { conversations: [conversation()], details: { 42: detail([row]) } })
-      await visitClientProject(page)
+      await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
+      await page.getByTestId('project-row-7').or(page.getByTestId('project-card-7')).click()
+      await page.waitForURL(/\/platform\/projects\/7$/)
       const panel = await openAppi(page)
       await page.getByTestId('appi-project').selectOption('7')
       await page.getByTestId('appi-history').selectOption('42')

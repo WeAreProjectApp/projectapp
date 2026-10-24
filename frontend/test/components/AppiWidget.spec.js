@@ -149,6 +149,14 @@ describe('AppiWidget', () => {
 
     expect(wrapper.get('[role="alert"]').text()).toBe(APPI_COPY.es.error)
     expect(api.delete).toHaveBeenCalledTimes(0)
+    expect(wrapper.get('[data-testid="appi-question"]').element.value).toBe('¿Qué bloquea Atlas?')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(api.post).toHaveBeenLastCalledWith('/api/platform/chatbot/conversations/conversation-7/messages/', {
+      request_id: 'request-appi-7', question: '¿Qué bloquea Atlas?', transcription_id: 'receipt-7',
+    }, { baseURL: '' })
+    expect(global.crypto.randomUUID).toHaveBeenCalledTimes(2)
   })
 
   test.each([

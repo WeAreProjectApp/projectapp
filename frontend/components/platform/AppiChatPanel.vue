@@ -64,7 +64,7 @@ function send() {
         <BaseButton v-if="store.nextBefore" variant="ghost" size="sm" :loading="store.isLoading" @click="store.loadOlder()">{{ copy.older }}</BaseButton>
         <div v-if="!store.messages.length" class="space-y-4 py-4 text-center"><AppiAvatar class="mx-auto h-24 w-24" /><p class="font-medium">{{ copy.empty }}</p></div>
         <article v-for="row in store.messages" :key="row.id" class="space-y-2" :data-testid="`appi-message-${row.status}`">
-          <p v-if="row.question" class="ml-6 whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-primary p-3 text-sm text-on-primary">{{ row.question }}</p>
+          <p v-if="row.question && row.status !== 'unavailable'" class="ml-6 whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-primary p-3 text-sm text-on-primary">{{ row.question }}</p>
           <div v-if="row.status === 'ready' && row.answer" class="space-y-3 rounded-2xl rounded-tl-sm border border-border-default bg-surface-muted p-3">
             <p v-if="row.freshness === 'stale'" class="text-xs font-semibold text-text-muted">{{ copy.stale }}</p>
             <p class="whitespace-pre-wrap break-words text-sm" data-testid="appi-answer">{{ row.answer.text }}</p>

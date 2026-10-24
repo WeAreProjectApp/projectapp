@@ -92,7 +92,8 @@ def test_malformed_jev_probabilities_fail_the_routing_usage(appi_context, monkey
     """Fails if malformed closed choices are accepted and reach project-answer routing."""
     malformed = routing_payload()
     malformed['answers']['scope']['probabilities'] = {'in_scope': 1}
-    monkeypatch.setattr(appi_jev.requests, 'post', Mock(return_value=ProviderReply(malformed)))
+    provider = Mock(return_value=ProviderReply(malformed))
+    monkeypatch.setattr(appi_jev.requests, 'post', provider)
     item = conversation(appi_context)
     turn = appi.submit(appi_context.actor, item.pk, {'question': 'Estado', 'request_id': uuid.uuid4()})
 
@@ -103,13 +104,15 @@ def test_malformed_jev_probabilities_fail_the_routing_usage(appi_context, monkey
     routing = PlatformAIUsage.objects.get(actor=appi_context.actor, operation='routing')
     assert turn.status == 'failed'
     assert routing.status == 'failed'
+    provider.assert_called_once()
 
 
 def test_unknown_jev_choice_fails_the_routing_usage(appi_context, monkeypatch):
     """Fails if Jev can select a scenario outside the closed Appi routing schema."""
     malformed = routing_payload()
     malformed['answers']['scenario']['choice'] = 'invented_scenario'
-    monkeypatch.setattr(appi_jev.requests, 'post', Mock(return_value=ProviderReply(malformed)))
+    provider = Mock(return_value=ProviderReply(malformed))
+    monkeypatch.setattr(appi_jev.requests, 'post', provider)
     item = conversation(appi_context)
     turn = appi.submit(appi_context.actor, item.pk, {'question': 'Estado', 'request_id': uuid.uuid4()})
 
@@ -120,3 +123,4 @@ def test_unknown_jev_choice_fails_the_routing_usage(appi_context, monkeypatch):
     routing = PlatformAIUsage.objects.get(actor=appi_context.actor, operation='routing')
     assert turn.status == 'failed'
     assert routing.status == 'failed'
+    provider.assert_called_once()

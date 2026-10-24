@@ -54,15 +54,16 @@ test('answer content is rendered as escaped text', () => {
   expect(wrapper.find('[data-testid="appi-answer"] img').exists()).toBe(false)
 })
 
-test('guide offers only an internal platform destination', () => {
+test('guide refuses a backslash in a platform action path', () => {
   const store = makeStore()
   store.messages = [{ id: 'one', status: 'ready', freshness: 'current', answer: {
     text: '1. Abre Proyectos.', verified_at: '2026-10-24T12:00:00Z',
-    actions: [{ label: 'Reportar bug', href: '/platform/projects/7/bugs', target_key: 'project-bugs' }, { label: 'Unsafe', href: 'https://outside.test', target_key: 'bad' }],
+    actions: [{ label: 'Unsafe', href: '/platform/projects/7\\escape', target_key: 'bad' }],
   } }]
   const wrapper = render(store)
 
-  expect(wrapper.findAll('[role="link"]').map((link) => link.attributes('href'))).toEqual(['/platform/projects/7/bugs'])
+  expect(wrapper.get('[data-testid="appi-answer"]').text()).toBe('1. Abre Proyectos.')
+  expect(wrapper.findAll('[role="link"]')).toHaveLength(0)
 })
 
 test('historical answer is visibly marked stale', () => {
@@ -131,14 +132,13 @@ test('dictation retry keeps its bound question readonly', () => {
   expect(buttonNamed(wrapper, APPI_COPY.es.suggestionStatus).element.disabled).toBe(true)
 })
 
-test('unavailable historical rows omit their retained answer', () => {
+test('unavailable historical rows omit their retained private content', () => {
   // Falla si una respuesta que quedó en memoria reaparece después de que el servidor retiró su disponibilidad.
   const store = makeStore()
   store.messages = [{ id: 'hidden-7', question: '¿Qué falta?', status: 'unavailable', answer: { text: 'Respuesta retirada', verified_at: '2026-10-24T12:00:00Z' } }]
   const wrapper = render(store)
 
-  expect(wrapper.get('[data-testid="appi-messages"]').text()).toContain(APPI_COPY.es.hidden)
-  expect(wrapper.text()).not.toContain('Respuesta retirada')
+  expect(wrapper.get('[data-testid="appi-messages"]').text()).toBe(APPI_COPY.es.hidden)
 })
 
 test('guide links retain only platform destinations', () => {

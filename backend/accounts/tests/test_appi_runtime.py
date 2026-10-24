@@ -13,7 +13,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import Project, UserProfile
 from accounts.models_ai import PlatformAIJob, PlatformAIQuotaReservation
-from accounts.models_appi import AppiTurn
+from accounts.models_appi import AppiConversation, AppiTurn
 from accounts.services import appi, appi_jev
 from accounts.services.platform_ai import AIConflict
 
@@ -55,6 +55,24 @@ def test_project_transfer_during_routing_fails_and_hides_the_turn(appi_context, 
         appi.detail(appi_context.actor, item.pk)
     with pytest.raises(NotFound):
         appi.detail(recipient, item.pk)
+
+
+def test_staff_client_cannot_create_a_chatbot_conversation_for_another_clients_project(appi_context):
+    """Fails if staff privileges let a client role bypass Appi's explicit project-owner check."""
+    appi_context.actor.is_staff = True
+    appi_context.actor.save(update_fields=['is_staff'])
+    owner = other_client()
+    foreign_project = Project.objects.create(client=owner, name='Owner-only project')
+
+    with pytest.raises(NotFound, match='Proyecto no disponible'):
+        appi.create_conversation(
+            appi_context.actor,
+            {'project_id': foreign_project.pk, 'language': 'es'},
+        )
+
+    assert AppiConversation.objects.filter(actor=appi_context.actor).count() == 0
+    assert AppiTurn.objects.filter(actor=appi_context.actor).count() == 0
+    assert PlatformAIQuotaReservation.objects.filter(actor=appi_context.actor).count() == 0
 
 
 def test_chatbot_quota_rejects_a_session_only_identity(appi_context):

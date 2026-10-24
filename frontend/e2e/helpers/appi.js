@@ -46,7 +46,10 @@ export async function setupAppi(page, { user = mockPlatformClient, appiCapabilit
     if (apiPath === 'platform/chatbot/conversations/' && method === 'GET') return json({ results: conversations })
     const detail = apiPath.match(/^platform\/chatbot\/conversations\/(\d+)\/$/)
     if (detail && method === 'GET') return json(details[detail[1]] || { conversation: conversation({ id: Number(detail[1]) }), messages: [], quota: appiCapabilities.quota, next_before: null })
-    if (apiPath === 'platform/chatbot/conversations/' && method === 'POST') return json(conversation())
+    if (apiPath === 'platform/chatbot/conversations/' && method === 'POST') {
+      const body = JSON.parse(route.request().postData() || '{}')
+      return json(conversation({ project_id: body.project_id ?? null, language: body.language || 'es' }))
+    }
     return null
   })
 }
@@ -54,6 +57,7 @@ export async function setupAppi(page, { user = mockPlatformClient, appiCapabilit
 export async function visitClientProject(page) {
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
   await page.getByTestId(`project-row-${project.id}`).or(page.getByTestId(`project-card-${project.id}`)).click()
+  await page.waitForURL(/\/platform\/projects\/7$/)
 }
 
 export async function openAppi(page) {
