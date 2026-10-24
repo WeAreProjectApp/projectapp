@@ -3039,7 +3039,10 @@ MCP Proyectos. Completar o saltar impide otra apertura automática; Ayuda permit
 repetir. Los destinos pertenecen a un catálogo cerrado y no ejecutan acciones
 de negocio. Appi y Video consumen el contrato de superficies sin imports
 inversos; Voz está integrada mediante merges de sus commits publicados hasta
-`ffa55890d`, incluidas ambas excepciones de previsualización sin escrituras.
+`1d8eebdef`, incluidas ambas excepciones de previsualización sin escrituras,
+la comprobación de propiedad de proyectos de IA y las exenciones precisas de
+borradores privados y contadores de consumo. El contrato combinado conserva
+85 herramientas con sus nombres y serializers explícitos.
 
 La validación focal acredita 22 pruebas backend, 31 unitarias de interfaz y
 navegación, siete controles de contratos/relaciones y 18 casos únicos de
