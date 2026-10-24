@@ -90,6 +90,11 @@ for (const profile of RESPONSIVE_PROFILES) {
       await setup(page)
       // quality: allow-deep-link (the authenticated panel shell is the entry point; responsive navigation reaches the AI settings link).
       const panel = await openUsage(page, profile)
+      const limit = panel.getByRole('spinbutton', { name: 'Solicitudes compartidas por ventana', exact: true })
+      await expect(limit).toHaveValue('20')
+      await expect(panel.getByRole('spinbutton', { name: 'Ventana móvil (minutos)', exact: true })).toHaveValue('300')
+      await limit.fill('19')
+      await expect(limit).toHaveValue('19')
       await assertResponsiveScenario(page, testInfo, scenario, { profile, priorityLocator: panel })
     })
   })

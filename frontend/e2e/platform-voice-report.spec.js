@@ -162,6 +162,7 @@ test.describe('Voice report for bugs', () => {
     tag: ['@flow:platform-voice-report', '@outcome:display'],
   }, async ({ page }) => {
     await setup(page, { quota: { limit: 20, used: 20, remaining: 0, window_minutes: 300, next_available_at: '2026-10-24T15:00:00Z' } })
+    // quality: allow-deep-link (the authenticated project list is the Platform entry; the test reaches Bugs through the project before displaying its quota).
     await openBugFormFromProjectList(page)
 
     const voice = page.getByTestId('voice-report-input')
