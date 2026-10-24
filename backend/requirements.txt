@@ -3,7 +3,7 @@ Django==6.1.2
 django-cors-headers==4.9.0
 django-dbbackup>=4.0.0
 django-silk>=5.5.2
-djangorestframework==3.18.0
+djangorestframework==3.18.3
 djangorestframework-simplejwt>=5.5.1,<6.0
 Faker==40.37.0
 huey>=3.3.4
