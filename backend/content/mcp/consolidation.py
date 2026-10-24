@@ -25,6 +25,7 @@ CATALOG_VERSIONS = {
     'building-with-us': '3.1.1', 'building-on-demand': '4.1.1',
     'additional-modules': '4.1.2', 'offerings': '2.1.1', 'programs': '3.1.0',
     'projects': '4.4.0',
+
 }
 
 

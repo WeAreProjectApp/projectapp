@@ -861,6 +861,16 @@ export const viewCatalogSections = [
         viewType: 'config',
       },
       {
+        label: 'Ayuda de la plataforma',
+        url: '/panel/platform/help',
+        group: 'Plataforma',
+        file: 'frontend/pages/panel/platform/help.vue',
+        reference: 'administración de recorridos bilingües, novedades, videos y vistos por usuario',
+        audience: 'admin',
+        viewType: 'config',
+        notes: 'Interruptores globales y por cliente; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos y el progreso se conserva por usuario.',
+      },
+      {
         label: 'Monitoreo de proyectos y servidores',
         url: '/panel/monitoring',
         group: 'Plataforma',

@@ -1,0 +1,18 @@
+export default {
+  help: 'Ayuda', next: 'Siguiente', previous: 'Anterior', done: 'Finalizar', skip: 'Saltar recorrido',
+  progress: '{current} de {total}', video: 'Ver video', dismiss: 'Cerrar',
+  videoInvitation: 'También puedes ver un video para conocer la plataforma.',
+  adminTitle: 'Ayuda de la plataforma', globalSettings: 'Disponibilidad global', tours: 'Recorridos',
+  clients: 'Clientes', tourEnabled: 'Recorridos habilitados', videoEnabled: 'Videos habilitados',
+  save: 'Guardar', publish: 'Publicar', preview: 'Vista previa', revisions: 'Revisiones',
+  create: 'Crear novedad', slug: 'Identificador', context: 'Contexto', priority: 'Prioridad',
+  active: 'Activo', titleEs: 'Título en español', titleEn: 'Título en inglés',
+  descriptionEs: 'Explicación en español', descriptionEn: 'Explicación en inglés', target: 'Destino',
+  addStep: 'Agregar paso', removeStep: 'Quitar paso', up: 'Subir paso', down: 'Bajar paso',
+  saved: 'Cambios guardados.', error: 'No se pudo guardar. Actualiza los datos e inténtalo de nuevo.',
+  loading: 'Cargando…', search: 'Buscar cliente', previousPage: 'Página anterior', nextPage: 'Página siguiente',
+  progressTitle: 'Estado por usuario', user: 'Usuario', status: 'Estado', tour: 'Recorrido',
+  published: 'Revisión publicada', draft: 'Borrador', empty: 'No hay resultados.',
+  contextGeneral: 'Navegación general', contextProject: 'Dentro de un proyecto', contextVoice: 'Formulario con voz',
+  selectTour: 'Seleccionar recorrido', archive: 'Archivar', close: 'Cerrar',
+}
