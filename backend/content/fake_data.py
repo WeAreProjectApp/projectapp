@@ -218,6 +218,9 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Private client conversations and expiring replies reflect real requests;
+    # demo seeds must not fabricate their content or quota provenance.
+    'accounts.AppiConversation', 'accounts.AppiTurn',
     # Client help preferences are provisioned on access and changed explicitly;
     # demo generation must preserve defaults instead of inventing preferences.
     'accounts.ClientPlatformHelpSettings',
