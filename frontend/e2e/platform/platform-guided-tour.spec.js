@@ -30,7 +30,7 @@ const project = {
 
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) })
 
-function tour({ id, slug, context, status = '', target, title }) {
+function tour({ id, slug, context, status = '', target, title, steps }) {
   return {
     id,
     slug,
@@ -42,7 +42,7 @@ function tour({ id, slug, context, status = '', target, title }) {
     content: {
       title_es: title,
       title_en: title,
-      steps: [{
+      steps: steps || [{
         target,
         title_es: title,
         title_en: title,
@@ -55,6 +55,16 @@ function tour({ id, slug, context, status = '', target, title }) {
 
 async function setupClient(page, { globalTours = [], projectTours = [], helpStatus = 200, progressStatus = 200 } = {}) {
   const progress = []
+  const terminal = new Set(['completed', 'skipped'])
+  const persisted = new Map(
+    [...globalTours, ...projectTours]
+      .filter((item) => item.status)
+      .map((item) => [item.id, { status: item.status, last_step: item.last_step }]),
+  )
+  const catalog = (tours) => tours.map((item) => {
+    const state = persisted.get(item.id)
+    return state ? { ...item, ...state } : { ...item }
+  })
   await setPlatformAuth(page, { user: mockPlatformClient })
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return json(mockPlatformClient)
@@ -65,17 +75,24 @@ async function setupClient(page, { globalTours = [], projectTours = [], helpStat
     if (apiPath === 'platform/help/' && method === 'GET') {
       if (helpStatus >= 400) return json({ detail: 'Ayuda no disponible.' }, helpStatus)
       const hasProject = new URL(route.request().url()).searchParams.has('project_id')
-      return json({ tour_enabled: true, video_enabled: false, tours: hasProject ? projectTours : globalTours })
+      return json({ tour_enabled: true, video_enabled: false, tours: catalog(hasProject ? projectTours : globalTours) })
     }
     const progressMatch = apiPath.match(/^platform\/help\/tours\/(\d+)\/progress\/$/)
     if (progressMatch && method === 'POST') {
-      progress.push({ id: Number(progressMatch[1]), body: JSON.parse(route.request().postData() || '{}') })
-      return json({ status: progressStatus >= 400 ? 'rejected' : progress.at(-1).body.status }, progressStatus)
+      const id = Number(progressMatch[1])
+      const body = JSON.parse(route.request().postData() || '{}')
+      progress.push({ id, body })
+      if (progressStatus >= 400) return json({ status: 'rejected' }, progressStatus)
+      const current = persisted.get(id)
+      if (!terminal.has(current?.status)) persisted.set(id, { status: body.status, last_step: body.last_step || '' })
+      return json({ status: persisted.get(id)?.status || body.status })
     }
     return null
   })
   return progress
 }
+
+const latestProgress = (progress, id) => progress.filter((item) => item.id === id).at(-1)
 
 async function openProjects(page) {
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
@@ -104,8 +121,8 @@ test.describe('Platform guided tour', () => {
     await expect(popover).toContainText('Conoce tu plataforma')
     await page.getByTestId('platform-tour-skip').click()
 
-    await expect.poll(() => progress.find((item) => item.id === general.id)?.body.status).toBe('skipped')
-    await expect(progress.find((item) => item.id === general.id)?.body).toMatchObject({ revision: 1, manual: false, last_step: 'welcome' })
+    await expect.poll(() => latestProgress(progress, general.id)?.body.status).toBe('skipped')
+    await expect(latestProgress(progress, general.id)?.body).toMatchObject({ revision: 1, manual: false, last_step: 'welcome' })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('platform-help-trigger')).toBeVisible()
@@ -125,11 +142,45 @@ test.describe('Platform guided tour', () => {
 
     await openProjects(page)
     await page.getByTestId('platform-tour-skip').click()
-    await expect.poll(() => progress.find((item) => item.id === general.id)?.body.status).toBe('skipped')
+    await expect.poll(() => latestProgress(progress, general.id)?.body.status).toBe('skipped')
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('platform-help-trigger')).toBeVisible()
     await expect(page.getByTestId('platform-tour-popover')).toHaveCount(0)
+  })
+
+  test('completing the general guide stays hidden after reload', {
+    tag: [...PLATFORM_GUIDED_TOUR_GENERAL, '@role:platform-client', '@outcome:success'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the authenticated project list is the client entry point; the tour itself advances through visible controls)
+    // Bug caught: a completed multi-step guide is saved as in-progress and restarts after the next sign-in.
+    const general = tour({
+      id: 408,
+      slug: 'general',
+      context: 'general',
+      title: 'Bienvenida',
+      steps: [
+        { target: 'welcome', title_es: 'Bienvenida', title_en: 'Welcome', description_es: 'Conoce tu espacio.', description_en: 'Get to know your space.' },
+        { target: 'projects', title_es: 'Proyectos', title_en: 'Projects', description_es: 'Aquí está tu trabajo.', description_en: 'Your work is here.' },
+        { target: 'help', title_es: 'Ayuda', title_en: 'Help', description_es: 'Repite el recorrido aquí.', description_en: 'Replay the tour here.' },
+      ],
+    })
+    const progress = await setupClient(page, { globalTours: [general] })
+
+    await openProjects(page)
+    const popover = page.getByTestId('platform-tour-popover')
+    await expect(popover).toContainText('Bienvenida')
+    await page.getByTestId('platform-tour-next').click()
+    await expect(popover).toContainText('Proyectos')
+    await page.getByTestId('platform-tour-next').click()
+    await expect(popover).toContainText('Ayuda')
+    await page.getByTestId('platform-tour-next').click()
+
+    await expect.poll(() => latestProgress(progress, general.id)?.body.status).toBe('completed')
+    await expect(latestProgress(progress, general.id)?.body).toMatchObject({ revision: 1, manual: false, last_step: 'help' })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('platform-help-trigger')).toBeVisible()
+    await expect(popover).toHaveCount(0)
   })
 
   test('an unseen project guide starts after the completed general guide', {
@@ -156,8 +207,9 @@ test.describe('Platform guided tour', () => {
   })
 
   test('Help hides the voice guide while the project has no voice control', {
-    tag: [...PLATFORM_GUIDED_TOUR_VOICE, '@role:platform-client', '@outcome:error'],
+    tag: [...PLATFORM_GUIDED_TOUR_VOICE, '@role:platform-client', '@outcome:display'],
   }, async ({ page }) => {
+    // quality: allow-deep-link (the authenticated project list is the client entry point; this display flow reaches the owned project by clicking its row)
     // Bug caught: Help offers a voice walkthrough for a control the client cannot use.
     const general = tour({ id: 405, slug: 'general', context: 'general', status: 'completed', target: 'welcome', title: 'General completado' })
     const completedProject = tour({ id: 406, slug: 'project-overview', context: 'project', status: 'completed', target: 'project-summary', title: 'Resumen completado' })
