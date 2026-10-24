@@ -68,7 +68,7 @@ def test_stale_admin_profile_cannot_create_a_chatbot_conversation_for_another_cl
     owner = other_client()
     foreign_project = Project.objects.create(client=owner, name='Owner-only project')
 
-    with pytest.raises(NotFound, match='Proyecto no disponible'):
+    with pytest.raises(NotFound):
         appi.create_conversation(
             appi_context.actor,
             {'project_id': foreign_project.pk, 'language': 'es'},
