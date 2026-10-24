@@ -54,7 +54,7 @@ describe('Delivery workspace failed submissions', () => {
   async function renderWorkspace() {
     wrapper = mount(DeliveryWorkspace, {
       props: { projectId: 7 }, attachTo: document.body,
-      global: { stubs: { teleport: true, NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } } },
+      global: { stubs: { teleport: true, VoiceReportInput: true, NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } } },
     })
     await flushPromises()
     return wrapper

@@ -171,3 +171,25 @@ def make_reservations(actor, count):
     from accounts.models_ai import PlatformAIQuotaReservation
     return [PlatformAIQuotaReservation(actor=actor, request_id=UUID(int=index + 1),
             purpose='chatbot', fingerprint=str(index), status='consumed') for index in range(count)]
+
+
+def test_invalidating_voice_preserves_the_chatbot_cache_version(staff_admin):
+    """Falla si vaciar la caché de voz obliga a pagar de nuevo respuestas del chatbot."""
+    chat_before = platform_ai.cache_version('chatbot')
+    voice_before = platform_ai.cache_version('voice_report')
+
+    platform_ai.invalidate_cache(staff_admin, 'voice_report')
+
+    assert platform_ai.cache_version('chatbot') == chat_before
+    assert platform_ai.cache_version('voice_report') != voice_before
+
+
+def test_invalidating_all_refreshes_each_function_cache(staff_admin):
+    """Falla si vaciar ambas cachés deja reutilizable una respuesta anterior."""
+    chat_before = platform_ai.cache_version('chatbot')
+    voice_before = platform_ai.cache_version('voice_report')
+
+    platform_ai.invalidate_cache(staff_admin, 'all')
+
+    assert platform_ai.cache_version('chatbot') != chat_before
+    assert platform_ai.cache_version('voice_report') != voice_before

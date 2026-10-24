@@ -3,6 +3,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
+from freezegun import freeze_time
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.exceptions import NotFound
@@ -61,6 +62,7 @@ def test_owned_job_hides_a_ready_transcription_from_another_client(client_user, 
         platform_ai_jobs.owned_job(other, job.pk)
 
 
+@freeze_time('2026-10-24 15:00:00')
 def test_owned_job_rejects_an_expired_transcript_even_for_its_owner(client_user, project):
     """Fails if an owner can recover a voice transcript after its 24-hour expiry."""
     configure_voice(client_user)
@@ -110,6 +112,7 @@ def test_report_draft_returns_the_original_job_for_a_retried_request_id(client_u
     assert PlatformAIJob.objects.filter(actor=client_user, operation='draft').count() == 1
 
 
+@freeze_time('2026-10-24 15:00:00')
 def test_cleanup_expiry_erases_private_report_content(client_user, project):
     """Fails if expired AI drafts retain transcripts or generated report content."""
     job = PlatformAIJob.objects.create(
@@ -133,6 +136,7 @@ def test_cleanup_expiry_erases_private_report_content(client_user, project):
     assert job.result == {}
 
 
+@freeze_time('2026-10-24 15:00:00')
 def test_worker_marks_a_queued_job_failed_when_voice_is_disabled_before_processing(client_user, project):
     """Fails if a queued voice job reaches processing after its feature is switched off."""
     configure_voice(client_user)

@@ -881,6 +881,17 @@ Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Cliente
 
 # Active Context — ProjectApp
 
+> **En implementación — IA de Plataforma y reportes por voz (2026-10-24):**
+> configuración compartida con PA-164 en `/panel/platform/ai`, controles independientes
+> globales/cliente apagados inicialmente, claves cifradas, Haiku predeterminado/Luna
+> configurable, transcripción externa y plantillas ES/EN versionadas. Esta sesión es
+> dueña de la base compartida; el chatbot y sus consultas los implementa la otra sesión.
+> El audio es temporal, los borradores duran 24 horas y aceptar un texto no aprueba una entrega.
+> Cupo compartido inicial: 20 solicitudes/300 minutos móviles, con overrides por
+> cliente y canje único del dictado del chatbot. Backend 28 casos y frontend 20
+> casos nuevos verificados localmente; navegador y CI final se verifican en el PR #538.
+> Políticas de fusión conservan autores y los esquemas MCP projects 4.1.1 son cerrados.
+
 **2026-10-01 — seguimiento contractual de Platform en implementación:** la rama
 `feat/01102026-platform-review-workflow` reemplaza el Kanban por contrato/otrosí,
 alcance, fases de ejecución, etapas y guías de validación. Publicación por etapa,
