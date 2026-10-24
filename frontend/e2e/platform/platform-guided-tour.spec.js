@@ -8,6 +8,7 @@
 import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
 import { setPlatformAuth, mockPlatformClient } from '../helpers/platform-auth.js'
+import { waitForNuxtApp } from '../helpers/navigation.js'
 import {
   PLATFORM_GUIDED_TOUR_GENERAL,
   PLATFORM_GUIDED_TOUR_PROJECT,
@@ -53,7 +54,9 @@ function tour({ id, slug, context, status = '', target, title, steps }) {
   }
 }
 
-async function setupClient(page, { globalTours = [], projectTours = [], helpStatus = 200, progressStatus = 200 } = {}) {
+async function setupClient(page, {
+  globalTours = [], projectTours = [], helpStatus = 200, progressStatus = 200, prohibitedRequests = [],
+} = {}) {
   const progress = []
   const terminal = new Set(['completed', 'skipped'])
   const persisted = new Map(
@@ -71,7 +74,16 @@ async function setupClient(page, { globalTours = [], projectTours = [], helpStat
     if (apiPath === 'accounts/projects/' && method === 'GET') return json([project])
     if (apiPath === `accounts/projects/${project.id}/` && method === 'GET') return json(project)
     if (apiPath === `accounts/projects/${project.id}/phases/` && method === 'GET') return json([])
+    if (apiPath === `accounts/projects/${project.id}/bug-reports/` && method === 'GET') return json([])
+    if (apiPath === `accounts/projects/${project.id}/issue-reports/context-options/` && method === 'GET') return json({ requirements: [] })
     if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') return json({ unread_count: 0 })
+    if (apiPath === 'platform/ai/capabilities/' && method === 'GET') {
+      return json({
+        chatbot: { enabled: false, available: false, voice_available: false },
+        voice_reporting: { enabled: true, available: true },
+        quota: { limit: 20, used: 0, remaining: 20, window_minutes: 300, next_available_at: null },
+      })
+    }
     if (apiPath === 'platform/help/' && method === 'GET') {
       if (helpStatus >= 400) return json({ detail: 'Ayuda no disponible.' }, helpStatus)
       const hasProject = new URL(route.request().url()).searchParams.has('project_id')
@@ -87,6 +99,11 @@ async function setupClient(page, { globalTours = [], projectTours = [], helpStat
       if (!terminal.has(current?.status)) persisted.set(id, { status: body.status, last_step: body.last_step || '' })
       return json({ status: persisted.get(id)?.status || body.status })
     }
+    if (method === 'POST' && [
+      'platform/ai/transcriptions/',
+      `platform/ai/projects/${project.id}/report-drafts/`,
+      `accounts/projects/${project.id}/bug-reports/`,
+    ].includes(apiPath)) prohibitedRequests.push(apiPath)
     return null
   })
   return progress
@@ -96,6 +113,7 @@ const latestProgress = (progress, id) => progress.filter((item) => item.id === i
 
 async function openProjects(page) {
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
+  await waitForNuxtApp(page)
   await expect(page.getByRole('heading', { name: 'Mis proyectos' })).toHaveText('Mis proyectos')
 }
 
@@ -104,6 +122,13 @@ async function openOwnedProject(page) {
   await page.getByTestId(`project-row-${project.id}`).click()
   await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}$`))
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name)
+}
+
+async function openBugFormFromProject(page) {
+  await openOwnedProject(page)
+  await page.getByRole('link', { name: 'Bugs', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Reporte de bugs', exact: true })).toHaveText('Reporte de bugs')
+  await page.getByRole('button', { name: 'Reportar bug', exact: true }).click()
 }
 
 test.describe('Platform guided tour', () => {
@@ -152,7 +177,6 @@ test.describe('Platform guided tour', () => {
   test('completing the general guide stays hidden after reload', {
     tag: [...PLATFORM_GUIDED_TOUR_GENERAL, '@role:platform-client', '@outcome:success'],
   }, async ({ page }) => {
-    // quality: allow-deep-link (the authenticated project list is the client entry point; the tour itself advances through visible controls)
     // Bug caught: a completed multi-step guide is saved as in-progress and restarts after the next sign-in.
     const general = tour({
       id: 408,
@@ -221,5 +245,37 @@ test.describe('Platform guided tour', () => {
 
     await expect(page.getByTestId('platform-help-menu')).toContainText('Resumen completado')
     await expect(page.getByTestId('platform-help-tour-voice-report')).toHaveCount(0)
+  })
+
+  test('the voice guide explains the real bug-report control without starting a report', {
+    tag: [...PLATFORM_GUIDED_TOUR_VOICE, '@role:platform-client', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: voice onboarding is omitted from the real bug form, or it starts recording and sends AI requests by itself.
+    const general = tour({ id: 409, slug: 'general', context: 'general', status: 'completed', target: 'welcome', title: 'General completado' })
+    const voice = tour({
+      id: 410,
+      slug: 'voice-report',
+      context: 'voice',
+      target: 'voice-report',
+      title: 'Describe un bug por voz',
+      steps: [{
+        target: 'voice-report',
+        title_es: 'Describe un bug por voz',
+        title_en: 'Describe a bug by voice',
+        description_es: 'Graba una nota y revísala antes de usarla en el formulario.',
+        description_en: 'Record a note and review it before using it in the form.',
+      }],
+    })
+    const prohibitedRequests = []
+    await setupClient(page, { globalTours: [general], projectTours: [voice], prohibitedRequests })
+
+    await openBugFormFromProject(page)
+
+    const voiceInput = page.getByTestId('voice-report-input')
+    await expect(voiceInput.getByRole('button', { name: 'Describir con una nota de voz', exact: true })).toHaveText('Describir con una nota de voz')
+    await expect(page.getByTestId('platform-tour-popover')).toContainText('Graba una nota y revísala antes de usarla en el formulario.')
+    await expect(voiceInput.getByRole('button', { name: 'Grabar o volver a grabar', exact: true })).toHaveCount(0)
+    await expect(voiceInput.getByLabel('Escuchar grabación', { exact: true })).toHaveCount(0)
+    expect(prohibitedRequests).toEqual([])
   })
 })
