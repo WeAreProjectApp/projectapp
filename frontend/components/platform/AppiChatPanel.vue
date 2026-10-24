@@ -5,7 +5,7 @@ import PlatformAIQuotaMeter from './PlatformAIQuotaMeter.vue'
 
 const props = defineProps({
   modelValue: Boolean, store: { type: Object, required: true }, copy: { type: Object, required: true },
-  hasReceipt: Boolean, voiceBusy: Boolean,
+  hasReceipt: Boolean, voiceBusy: Boolean, receiptRequestId: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue', 'submit', 'project', 'retry', 'history', 'new'])
 const localePath = useLocalePath()
@@ -65,7 +65,7 @@ function send() {
         <div v-if="!store.messages.length" class="space-y-4 py-4 text-center"><AppiAvatar class="mx-auto h-24 w-24" /><p class="font-medium">{{ copy.empty }}</p></div>
         <article v-for="row in store.messages" :key="row.id" class="space-y-2" :data-testid="`appi-message-${row.status}`">
           <p v-if="row.question" class="ml-6 whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-primary p-3 text-sm text-on-primary">{{ row.question }}</p>
-          <div v-if="row.answer" class="space-y-3 rounded-2xl rounded-tl-sm border border-border-default bg-surface-muted p-3">
+          <div v-if="row.status === 'ready' && row.answer" class="space-y-3 rounded-2xl rounded-tl-sm border border-border-default bg-surface-muted p-3">
             <p v-if="row.freshness === 'stale'" class="text-xs font-semibold text-text-muted">{{ copy.stale }}</p>
             <p class="whitespace-pre-wrap break-words text-sm" data-testid="appi-answer">{{ row.answer.text }}</p>
             <div v-if="row.answer.actions?.length" class="flex flex-wrap gap-2"><template v-for="action in row.answer.actions" :key="action.target_key"><NuxtLink v-if="destination(action.href)" :to="destination(action.href)" class="rounded-lg border border-border-default px-3 py-2 text-sm font-medium text-text-brand" @click="emit('update:modelValue', false)">{{ action.label }}</NuxtLink></template></div>
@@ -73,7 +73,7 @@ function send() {
             <p class="text-xs text-text-muted">{{ copy.checked }}: {{ new Date(row.answer.verified_at).toLocaleString() }}</p>
             <BaseButton variant="ghost" size="sm" :disabled="disabled || hasReceipt" :disabled-reason="hasReceipt ? copy.review : reason" @click="emit('retry', row.question)">{{ copy.requery }}</BaseButton>
           </div>
-          <div v-else-if="row.status === 'failed'" class="space-y-2 rounded-xl border border-border-default p-3 text-sm" role="status"><p>{{ copy.failed }}</p><BaseButton variant="secondary" size="sm" :disabled="disabled || hasReceipt" :disabled-reason="hasReceipt ? copy.review : reason" @click="emit('retry', row.question)">{{ copy.retry }}</BaseButton></div>
+          <div v-else-if="row.status === 'failed'" class="space-y-2 rounded-xl border border-border-default p-3 text-sm" role="status"><p>{{ copy.failed }}</p><BaseButton variant="secondary" size="sm" :disabled="disabled || (hasReceipt && row.request_id !== receiptRequestId)" :disabled-reason="hasReceipt ? copy.retryDictation : reason" @click="emit('retry', row.question)">{{ copy.retry }}</BaseButton></div>
           <p v-else-if="row.status === 'unavailable'" class="text-sm text-text-muted">{{ copy.hidden }}</p>
           <p v-else class="text-sm text-text-muted" role="status">{{ copy.sending }}</p>
         </article>
@@ -82,10 +82,10 @@ function send() {
       <form class="shrink-0 space-y-3 border-t border-border-default bg-surface p-4" @submit.prevent="send">
         <PlatformAIQuotaMeter :quota="store.quota" />
         <p v-if="store.error" role="alert" class="text-sm text-danger-strong">{{ copy.error }}</p>
-        <div v-if="!store.waiting" class="flex gap-2 overflow-x-auto pb-1"><BaseButton v-for="suggestion in suggestions" :key="suggestion" variant="secondary" size="sm" class="shrink-0" @click="store.draft = suggestion; input?.focus()">{{ suggestion }}</BaseButton></div>
+        <div v-if="!store.waiting" class="flex gap-2 overflow-x-auto pb-1"><BaseButton v-for="suggestion in suggestions" :key="suggestion" variant="secondary" size="sm" class="shrink-0" :disabled="disabled || !!receiptRequestId" :disabled-reason="receiptRequestId ? copy.retryDictation : reason" @click="store.draft = suggestion; input?.focus()">{{ suggestion }}</BaseButton></div>
         <slot name="voice" />
         <label class="sr-only" for="appi-question">{{ copy.placeholder }}</label>
-        <textarea id="appi-question" ref="input" v-model="store.draft" required rows="2" maxlength="2000" :placeholder="copy.placeholder" :disabled="store.isSubmitting || store.waiting || voiceBusy" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted p-3 text-sm text-text-default" data-testid="appi-question" />
+        <textarea id="appi-question" ref="input" v-model="store.draft" required rows="2" maxlength="2000" :placeholder="copy.placeholder" :readonly="!!receiptRequestId" :disabled="store.isSubmitting || store.waiting || voiceBusy" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted p-3 text-sm text-text-default" data-testid="appi-question" />
         <p v-if="store.draft.length > 2000" role="alert" class="text-xs text-danger-strong">{{ copy.tooLong }}</p>
         <div class="flex items-center justify-between gap-3"><p class="text-xs text-text-muted">{{ copy.private }}</p><BaseButton type="submit" variant="primary" :disabled="disabled" :disabled-reason="reason" :loading="store.isSubmitting" data-testid="appi-send">{{ copy.send }}</BaseButton></div>
       </form>

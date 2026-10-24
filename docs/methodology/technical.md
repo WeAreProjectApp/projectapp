@@ -1759,3 +1759,17 @@ sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio
 ## Contrato de ayuda — 2026-10-24
 
 Driver.js 1.10.2 se carga en navegador bajo demanda. API cliente JWT bajo /api/platform/help/; administración de sesión/CSRF y MCP con validación común, versiones y auditoría. Detalle en docs/PLATFORM_HELP.md.
+
+## Appi — contrato de ejecución (2026-10-24)
+
+`/api/platform/chatbot/` usa exclusivamente JWT y `no-store`; las vistas delegan
+en servicios y las consultas procesan en Huey con idempotencia por actor/request.
+El widget comparte stores/servicios de capacidades, cuota y transcripción de IA,
+y usa el coordinador de superficies de Ayuda. Rutas absolutas de IA/chatbot
+requieren `baseURL: ''` en el cliente HTTP de plataforma.
+
+Jev `jev-1.14.0` valida decisiones cerradas y confianza mínima antes de seleccionar
+un escenario. Los secretos usan el almacén compartido; instrucciones inmutables,
+schema y comprobación de respaldo restringen al redactor. Caché exacta y por
+consulta tipada incluyen `cache_version('chatbot')`; revalidar historial nunca
+consume cupo ni vuelve a llamar al modelo. Ver [APPI.md](../APPI.md).

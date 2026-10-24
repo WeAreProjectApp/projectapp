@@ -16,6 +16,8 @@ const { locale } = useI18n(), route = useRoute()
 const language = computed(() => locale.value.startsWith('en') ? 'en' : 'es')
 const copy = computed(() => APPI_COPY[language.value])
 const open = ref(false), hint = ref(false), voiceBusy = ref(false), voiceError = ref(''), transcriptionId = ref('')
+const receiptRequestId = computed(() => transcriptionId.value && store.lastRequest?.transcriptionId === transcriptionId.value ? store.lastRequest.id : '')
+const failedDictation = computed(() => receiptRequestId.value && store.messages.at(-1)?.status === 'failed')
 const { recording, seconds, audio, audioUrl, start, stop, clear } = useVoiceRecorder()
 let unregister, hintTimer, capabilitiesTimer, disposed = false, voiceController, delayTimer, finishDelay, voiceRequestId = ''
 const close = () => { open.value = false; stop(); store.stopPolling(); surface.releaseSurface('chat') }
@@ -61,7 +63,7 @@ async function transcribe() {
 async function submit(question = store.draft) {
   const receipt = transcriptionId.value
   const sent = await store.send(question.trim(), language.value, receipt || null)
-  if (sent && receipt) await discardVoice()
+  if (sent && receipt && store.messages.at(-1)?.status === 'ready') await discardVoice()
 }
 onMounted(async () => {
   unregister = surface.registerSurface('chat', close)
@@ -73,6 +75,12 @@ onMounted(async () => {
   }, 8000)
 })
 watch(() => store.enabled, (enabled) => { if (!enabled) { close(); discardVoice() } })
+watch(() => store.waiting, (waiting, previous) => {
+  if (!previous || waiting || !transcriptionId.value) return
+  const latest = store.messages.at(-1)
+  if (latest?.status === 'ready') discardVoice()
+  else if (latest?.status === 'failed' && !store.draft.trim()) store.draft = latest.question
+})
 watch([() => store.capabilities, () => store.quota], ([capabilities, quota]) => {
   ai.capabilities = capabilities ? { ...capabilities, quota } : null
 })
@@ -90,7 +98,7 @@ onBeforeUnmount(() => { disposed = true; clearTimeout(hintTimer); clearInterval(
       <p v-if="hint" class="max-w-64 rounded-2xl border border-border-default bg-surface p-3 text-sm text-text-default shadow-lg" role="status">{{ copy.welcomeHint }}</p>
       <BaseButton variant="secondary" :aria-label="copy.open" :disabled="!store.available" :disabled-reason="copy.unavailable" class="flex items-center gap-2 rounded-full shadow-lg" data-tour="platform-appi-launcher" data-testid="appi-launcher" @click="setOpen(true)"><AppiAvatar class="h-12 w-12" /><span class="pr-2 font-semibold">Appi</span></BaseButton>
     </div>
-    <AppiChatPanel :model-value="open" :store="store" :copy="copy" :has-receipt="!!transcriptionId" :voice-busy="voiceBusy || recording" @update:model-value="setOpen" @project="changeProject" @submit="submit()" @retry="submit($event)" @history="openHistory" @new="newChat">
+    <AppiChatPanel :model-value="open" :store="store" :copy="copy" :has-receipt="!!transcriptionId" :receipt-request-id="receiptRequestId" :voice-busy="voiceBusy || recording" @update:model-value="setOpen" @project="changeProject" @submit="submit()" @retry="submit($event)" @history="openHistory" @new="newChat">
       <template #voice>
         <div v-if="store.voiceAvailable" class="space-y-2">
           <p v-if="voiceError" role="alert" class="text-xs text-danger-strong">{{ voiceError }}</p>
@@ -101,7 +109,7 @@ onBeforeUnmount(() => { disposed = true; clearTimeout(hintTimer); clearInterval(
             <BaseButton v-if="audio || transcriptionId" variant="ghost" size="sm" @click="discardVoice">{{ copy.discard }}</BaseButton>
           </div>
           <audio v-if="audioUrl" :src="audioUrl" controls class="w-full" :aria-label="copy.recording" />
-          <p class="text-xs text-text-muted">{{ transcriptionId && !voiceBusy ? copy.review : copy.voiceHint }}</p>
+          <p class="text-xs text-text-muted">{{ failedDictation ? copy.retryDictation : transcriptionId && !voiceBusy ? copy.review : copy.voiceHint }}</p>
         </div>
       </template>
     </AppiChatPanel>
