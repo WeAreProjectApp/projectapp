@@ -132,6 +132,9 @@ _decide(covered('AC1', 'PJ1', 'PJ3', 'PJ2'), 'content.HostingRecord.project')
 _decide(covered('AC1', 'AC2', 'AC10', 'PJ1', 'PJ3', 'PJ2'), 'content.IncomeRecord.project')
 _decide(covered('CM5', 'PJ2'), 'secure_links.SecureLink.project')
 _decide(exempt('Evento de auditoría de solo-anexar.'), 'accounts.BillingContextEvent.project')
+_decide(exempt('Historial privado con caducidad, ligado a su actor original: no se reasigna ni se conserva '
+               'al borrar el proyecto. Appi revalida la pertenencia antes de mostrarlo.'),
+        'accounts.AppiConversation.project')
 _decide(gap('Copia del proyecto del nivel de entrega al que pertenece (delivery_workflow.link_document); '
             'ENT-02 y H5.'), 'accounts.DeliveryDocumentLink.project')
 _decide(gap('La suscripción y las fuentes contables deben ser del mismo proyecto y cliente '

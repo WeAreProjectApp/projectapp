@@ -89,13 +89,14 @@ export const usePlatformChatbotStore = defineStore('platform-chatbot', {
         const conversation = await this.ensureConversation(language)
         if (!conversation || token !== epoch(this)) return false
         const signature = JSON.stringify([conversation.id, question, transcriptionId])
-        if (this.lastRequest?.signature !== signature) this.lastRequest = { signature, id: crypto.randomUUID() }
+        if (this.lastRequest?.signature !== signature) this.lastRequest = { signature, id: crypto.randomUUID(), transcriptionId }
         const body = { request_id: this.lastRequest.id, question, ...(transcriptionId ? { transcription_id: transcriptionId } : {}) }
         const { data } = await usePlatformApi().post(`${base}conversations/${conversation.id}/messages/`, body, config)
         if (token !== epoch(this)) return false
-        this.upsert(data); this.draft = ''
+        this.upsert(data)
+        if (data.status !== 'failed') this.draft = ''
         if (['pending', 'processing'].includes(data.status)) this.poll(data.id)
-        else this.lastRequest = null
+        else if (data.status !== 'failed') this.lastRequest = null
         return true
       } catch {
         if (token === epoch(this)) { this.error = true; await this.refreshCapabilities() }
@@ -118,7 +119,7 @@ export const usePlatformChatbotStore = defineStore('platform-chatbot', {
           const { data } = await usePlatformApi().get(`${base}conversations/${conversationId}/messages/${id}/`, { ...config, signal: controller.signal })
           if (controller.signal.aborted || this.conversation?.id !== conversationId) return
           this.upsert(data)
-          if (!['pending', 'processing'].includes(data.status)) { this.lastRequest = null; return }
+          if (!['pending', 'processing'].includes(data.status)) { if (data.status !== 'failed') this.lastRequest = null; return }
         }
         if (!controller.signal.aborted) this.error = true
       } catch { if (!controller.signal.aborted) { this.error = true; await this.refreshCapabilities() } }

@@ -1298,3 +1298,15 @@ colombiana en español y subtítulos integrados, con la marca solo en pantalla.
 La nota de voz prepara contenido editable: aplicar el texto al formulario
 no envía un reporte. El equipo ProjectApp mantiene los videos al cambiar el
 flujo correspondiente.
+
+## Appi — asistencia del cliente (2026-10-24)
+
+El cliente consulta estado, salud y fuentes de sus proyectos y recibe pasos para
+usar funciones reales de la plataforma. Appi declina preguntas generales y pide
+aclaración ante ambigüedad. Guías y respuestas de alcance son plantillas editables
+en español e inglés; no ejecutan acciones del cliente ni alteran contratos.
+
+Panel y MCP comparten configuración de IA, claves cifradas, modelos por función,
+plantillas versionadas e invalidación. La política inicial es 20 solicitudes por
+cliente cada cinco horas móviles, común con voz y configurable. El cliente ve
+su cupo y un historial privado limitado a 90 días, con fuentes y vigencia visible.

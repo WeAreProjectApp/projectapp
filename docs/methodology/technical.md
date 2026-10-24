@@ -1778,3 +1778,17 @@ existente (hasta 250 MiB), revisión optimista y restauración del predeterminad
 No se agregan modelos, migraciones ni flags de IA desde esta funcionalidad.
 La procedencia y el procedimiento de regeneración están en el README de la
 composición general; el equipo ProjectApp actualiza solo las piezas afectadas.
+
+## Appi — contrato de ejecución (2026-10-24)
+
+`/api/platform/chatbot/` usa exclusivamente JWT y `no-store`; las vistas delegan
+en servicios y las consultas procesan en Huey con idempotencia por actor/request.
+El widget comparte stores/servicios de capacidades, cuota y transcripción de IA,
+y usa el coordinador de superficies de Ayuda. Rutas absolutas de IA/chatbot
+requieren `baseURL: ''` en el cliente HTTP de plataforma.
+
+Jev `jev-1.14.0` valida decisiones cerradas y confianza mínima antes de seleccionar
+un escenario. Los secretos usan el almacén compartido; instrucciones inmutables,
+schema y comprobación de respaldo restringen al redactor. Caché exacta y por
+consulta tipada incluyen `cache_version('chatbot')`; revalidar historial nunca
+consume cupo ni vuelve a llamar al modelo. Ver [APPI.md](../APPI.md).

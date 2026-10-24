@@ -7,6 +7,7 @@ from collections import Counter
 from django.core.cache import cache
 from django.db.models import Count
 from django.utils import timezone
+from redis.exceptions import RedisError
 from rest_framework.exceptions import NotFound
 
 from accounts.models import BugReport, ContractAmendment, Deliverable, Project, ProjectContract
@@ -73,10 +74,17 @@ def _contract_fragments(node, topic, *, extract=True):
     key = digest({'raw': hashlib.sha256(raw).hexdigest() if raw is not None else None, 'markdown': markdown, 'blocks': blocks})
     if not extract:
         return [], key
-    extracted = cache.get('appi:contract:' + key)
+    cache_key = 'appi:contract:' + digest({'actor': node.project.client_id, 'project': node.project.pk, 'source': key})
+    try:
+        extracted = cache.get(cache_key)
+    except (RedisError, OSError, ValueError, TypeError):
+        extracted = None
     if extracted is None:
         extracted = extract_prompt_source(raw, filename, markdown, blocks)
-        cache.set('appi:contract:' + key, extracted, 3600)
+        try:
+            cache.set(cache_key, extracted, 3600)
+        except (RedisError, OSError, ValueError, TypeError):
+            pass
     terms = [_normalized(term) for term in CONTRACT_TOPICS.get(topic, ())]
     fragments = [item for item in extracted.get('fragments', []) if not terms or any(
         term in _normalized(item.get('locator', '') + ' ' + item.get('text', '')) for term in terms)]

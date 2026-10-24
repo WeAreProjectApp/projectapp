@@ -19,7 +19,10 @@ RETENTION = timedelta(days=90)
 
 
 def require_appi(actor, project_id=None):
-    return require_ai_feature(actor, 'chatbot', project_id, require_project=False)
+    project = require_ai_feature(actor, 'chatbot', project_id, require_project=False)
+    if project is not None and project.client_id != actor.pk:
+        raise NotFound('Proyecto no disponible.')
+    return project
 
 
 def _conversations(actor):

@@ -2328,3 +2328,17 @@ MCP Proyectos reutilizan validación, revisiones y almacenamiento privado.
 Cambiar un tutorial no solicita reconstruir páginas públicas. El reproductor
 se monta en el layout cliente y se registra en el coordinador común de Ayuda;
 abrirlo cierra la superficie anterior y conserva el inicio manual del video.
+
+## Appi y proyecciones privadas — 2026-10-24
+
+Appi usa Jev como clasificador tipado anterior a cualquier redacción. Las
+proyecciones del servidor filtran propietario, publicación y visibilidad; los
+modelos externos reciben pregunta y datos acotados, nunca acceso a la base.
+Guías y declinaciones usan plantillas versionadas; sólo una explicación de hechos
+propios puede invocar Haiku/Luna y su resultado se valida antes de entregarlo.
+
+Conversaciones privadas con vencimiento máximo de 90 días, índices Redis de hasta
+24 horas y dependencias de fuentes/modelo/plantilla permiten reutilizar respuestas
+sin omitir reautorización. Se comparte la cuota lógica con reportes de voz mediante
+reservas y canje único del dictado. El historial no se expone por MCP administrativo.
+Contrato completo: [Appi](../APPI.md).
