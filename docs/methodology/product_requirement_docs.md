@@ -1281,3 +1281,20 @@ El equipo administrativo puede corregir single/split en cualquier estado. Fuera 
 ## Recorridos de clientes — 2026-10-24
 
 Guía general, contextual del primer proyecto y explicación de voz sólo al abrir el formulario; estado por usuario entre dispositivos, repetición desde Ayuda y novedades bilingües administrables.
+
+
+## Videos de uso de la plataforma — 2026-10-24
+
+Ayuda ofrece una guía breve de lo principal y clips separados de Appi y
+reportes por voz. Los clips solo aparecen cuando la función está disponible
+para ese cliente; el general permanece útil sin IA. La apertura es voluntaria,
+sin reproducción automática, y la ayuda se puede consultar de nuevo desde la
+navegación de escritorio o móvil y desde la invitación final del recorrido.
+
+Los controles globales y por cliente comparten la administración de Ayuda;
+ambos deben permitir el video. Los recursos se pueden sustituir, retirar y
+restaurar desde el panel y desde MCP Proyectos. Esta entrega usa narración
+colombiana en español y subtítulos integrados, con la marca solo en pantalla.
+La nota de voz prepara contenido editable: aplicar el texto al formulario
+no envía un reporte. El equipo ProjectApp mantiene los videos al cambiar el
+flujo correspondiente.

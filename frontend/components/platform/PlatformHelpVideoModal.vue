@@ -12,7 +12,7 @@ import { formatExplainerDuration } from '~/composables/useExplainerVideos'
 
 const emit = defineEmits(['open', 'close'])
 const store = usePlatformHelpVideosStore()
-const { videos, selectedVideo, isOpen } = storeToRefs(store)
+const { videos, selectedVideo } = storeToRefs(store)
 const { t } = usePlatformVideoCopy()
 const help = inject('platformHelp', null)
 const surface = usePlatformHelpSurface()
@@ -26,12 +26,24 @@ const playbackRevision = ref(0)
 
 function pause() { player.value?.pause() }
 function close() { pause(); catalogFailed.value = false; store.closeVideo() }
-async function open() { await store.openVideo(); catalogFailed.value = store.error }
+async function open() {
+  // The menu item disappears before the response arrives. Give BaseModal a
+  // stable focus origin for keyboard users and for the tour's final CTA.
+  const entry = [...document.querySelectorAll('[data-testid="platform-help-trigger"]')]
+    .find((element) => element.getClientRects().length)
+  entry?.focus({ preventScroll: true })
+  await store.openVideo()
+  catalogFailed.value = store.error
+}
 function onVisibility() { if (document.visibilityState === 'hidden') pause() }
 async function onFocus() {
   const wasOpen = visible.value
+  const version = store.requestVersion + 1
   await store.fetchVideos()
-  if (wasOpen && store.error) catalogFailed.value = true
+  if (wasOpen && version === store.requestVersion) {
+    catalogFailed.value = store.error
+    if (!store.error && store.selectedVideo) store.isOpen = true
+  }
 }
 function retry() { failed.value = false; playbackRevision.value += 1 }
 watch(() => selectedVideo.value?.src, () => { pause(); failed.value = false }, { flush: 'sync' })

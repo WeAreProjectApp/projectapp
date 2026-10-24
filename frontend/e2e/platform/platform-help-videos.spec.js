@@ -29,6 +29,7 @@ async function openHelpVideo(page) {
 test.describe('Platform help videos', () => {
   test.setTimeout(60_000)
   test('opens an available topic from Help', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:display'] }, async ({ page }) => {
+    // quality: allow-deep-link (the localized project list is the authenticated landing; Help -> Watch video -> topic is navigated through visible controls)
     await setup(page)
     await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
     await openHelpVideo(page)
@@ -49,6 +50,7 @@ test.describe('Platform help videos', () => {
     await expect.poll(() => player.evaluate((element) => element.paused)).toBe(false)
     await page.getByTestId('platform-video-close').click()
     await expect(player).toHaveCount(0)
+    await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toBeFocused()
   })
 
   test('offers recovery after a media request fails', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:failure'] }, async ({ page }) => {
@@ -64,6 +66,7 @@ test.describe('Platform help videos', () => {
   })
 
   test('identifies Spanish content in the English interface', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:display'] }, async ({ page }) => {
+    // quality: allow-deep-link (the localized project list is the authenticated landing; the English Help menu opens the video through its visible action)
     await setup(page, { videos: [general] })
     await page.goto('/en-us/platform/projects', { waitUntil: 'domcontentloaded' })
     await openHelpVideo(page)

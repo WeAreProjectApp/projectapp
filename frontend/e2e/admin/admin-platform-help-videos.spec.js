@@ -8,6 +8,7 @@ async function setup(page, scenario = {}) {
   await setAuthLocalStorage(page, { token: 'test-token', userAuth: { is_staff: true, is_superuser: true } })
   await mockApi(page, ({ apiPath, method }) => {
     if (apiPath === 'auth/check/') return json({ user: { is_staff: true, is_superuser: true } })
+    if (apiPath === 'panel/dashboard/') return json({ finance: null, proposals: {}, additional_modules: {}, operations: {}, attention: [] })
     if (apiPath === 'platform/help/settings/') return json({ version: 1, tour_enabled: true, video_enabled: true })
     if (apiPath === 'platform/help/admin/tours/') return json({ results: [], targets: {} })
     if (apiPath === 'platform/help/clients/' || apiPath === 'platform/help/admin/progress/') return json({ results: [], page: 1, count: 0 })
@@ -16,13 +17,15 @@ async function setup(page, scenario = {}) {
     if (method === 'POST') return scenario.reject ? json({ detail: 'No se pudo validar el video.' }, 400) : json({ key: `${match[1]}:es`, module: match[1], language: 'es', revision: 1, mode: 'uploaded', filename: 'tutorial.mp4', video: { src: '/tutorial-replaced.mp4', durationSeconds: 45 } })
     return json({ key: `${match[1]}:es`, module: match[1], language: 'es', revision: 0, mode: 'default', video: null })
   })
-  await page.goto('/es-co/panel/platform/help', { waitUntil: 'domcontentloaded' })
+  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('link', { name: 'Ayuda de la plataforma', exact: true }).click()
   return page.getByTestId('platform-video-resource-general')
 }
 
 test.describe('Platform tutorial administration', () => {
   test.setTimeout(60_000)
   test('lists the three managed tutorial pieces', { tag: [...ADMIN_PLATFORM_HELP_VIDEOS, '@outcome:display'] }, async ({ page }) => {
+    // quality: allow-deep-link (the localized panel root is the admin entry; setup reaches Help by clicking its sidebar link before asserting managed resources)
     const general = await setup(page)
     await expect(general.getByRole('heading', { name: 'Lo principal de tu plataforma' })).toBeVisible()
     await expect(page.getByTestId('platform-video-resource-chatbot')).toContainText('Appi')

@@ -74,7 +74,7 @@ writeFileSync(list, frames.map(({ file, count }) => `file '${quoted(file)}'\ndur
 const output = resolve(directory, 'renders', `${video}-es.intermediate.mp4`)
 const encoded = spawnSync('ffmpeg', [
   '-nostdin', '-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list,
-  '-vf', 'fps=30', '-t', String(totalDuration), '-an', '-c:v', 'libx264', '-preset', 'veryfast',
+  '-vf', 'fps=30', '-t', String(totalDuration), '-an', '-c:v', 'libx264', '-preset', 'ultrafast',
   '-crf', '18', '-threads', '2', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output,
 ], { stdio: 'inherit' })
 if (encoded.status !== 0) process.exit(encoded.status ?? 1)

@@ -152,7 +152,7 @@ if (audioLabel) {
   ffmpegArgs.push('-map', '0:v:0', '-an')
 }
 ffmpegArgs.push(
-  '-c:v', 'libx264', '-preset', options.draft ? 'veryfast' : 'slow', '-crf', String(options.draft ? 28 : options.crf),
+  '-c:v', 'libx264', '-preset', options.draft ? 'veryfast' : video.startsWith('platform-') ? 'medium' : 'slow', '-crf', String(options.draft ? 28 : options.crf),
   '-threads', '2', '-tune', 'animation', '-profile:v', 'high', '-level', '4.1', '-pix_fmt', 'yuv420p',
   '-movflags', '+faststart', '-t', String(totalDuration), output,
 )

@@ -108,6 +108,17 @@ describe('platform video modal', () => {
     expect(wrapper.find('video').exists()).toBe(false)
   })
 
+  it('keeps the modal closed when a focus refresh finishes late', async () => {
+    let finishRefresh
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockImplementation(() => new Promise((resolve) => { finishRefresh = resolve })) })
+    window.dispatchEvent(new Event('focus'))
+    await wrapper.get('[data-testid="platform-video-close"]').trigger('click')
+    finishRefresh(catalog)
+    await flushPromises()
+    expect(wrapper.find('video').exists()).toBe(false)
+    expect(store.isOpen).toBe(false)
+  })
+
   it('closes the previous help surface before showing video', () => {
     expect(closeChat).toHaveBeenCalledTimes(1)
     expect(mockStates['platform-help-surface'].value).toBe('video')
