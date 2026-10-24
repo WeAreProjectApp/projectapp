@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from content.models import Document
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -13,19 +14,22 @@ from rest_framework.exceptions import NotFound, Throttled
 from rest_framework.test import APIClient
 
 from accounts.models import BugReport, Project, ProjectContract, UserProfile
-from accounts.models_ai import PlatformAICredential, PlatformAISettings, PlatformAITemplate
+from accounts.models_ai import (
+    PlatformAICredential,
+    PlatformAISettings,
+)
 from accounts.models_appi import AppiConversation, AppiTurn
 from accounts.services import appi, appi_answers, appi_jev
 from accounts.services.platform_ai import AIUnavailable
 from accounts.services.platform_ai_cipher import encrypt
 from accounts.services.platform_ai_quota import consume, reserve, snapshot
-from content.models import Document
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def client_context(settings, monkeypatch):
+    """Build an enabled client context with deterministic Appi provider boundaries."""
     settings.PLATFORM_AI_CIPHER_KEY = Fernet.generate_key()
     actor = get_user_model().objects.create_user('appi-client', email='appi@example.test')
     UserProfile.objects.update_or_create(user=actor, defaults={'role': 'client', 'chatbot_enabled': True})
@@ -46,6 +50,7 @@ def client_context(settings, monkeypatch):
 
 @pytest.fixture
 def ask(client_context):
+    """Submit and process one complete Appi question for the fixture client."""
     def perform(question='Estado del proyecto', *, project=True, conversation=None, request_id=None):
         conversation = conversation or appi.create_conversation(client_context.actor, {
             'project_id': client_context.project.pk if project else None, 'language': 'es'})
@@ -57,6 +62,7 @@ def ask(client_context):
 
 
 def test_anonymous_client_cannot_read_conversations():
+    """Fails if an anonymous browser can retrieve private chatbot history."""
     response = APIClient().get('/api/platform/chatbot/conversations/')
 
     assert response.status_code in (401, 403)
@@ -64,6 +70,7 @@ def test_anonymous_client_cannot_read_conversations():
 
 
 def test_global_off_blocks_queries(client_context):
+    """Fails if the global chatbot switch permits a new conversation."""
     client_context.config.chatbot_enabled = False
     client_context.config.save()
 
@@ -74,6 +81,7 @@ def test_global_off_blocks_queries(client_context):
 
 
 def test_outside_question_never_calls_writer(client_context, ask):
+    """Fails if an out-of-scope question reaches the explanatory writer."""
     client_context.router.return_value = {'scenario': 'out_of_scope', 'topic': 'general', 'explain': True}
 
     turn = ask('¿Qué clima hace hoy?')
@@ -85,6 +93,7 @@ def test_outside_question_never_calls_writer(client_context, ask):
 
 
 def test_exact_repetition_reuses_verified_answer(client_context, ask):
+    """Fails if the exact same current question skips its verified cache response."""
     first = ask()
 
     second = ask(conversation=first.conversation)
@@ -96,6 +105,7 @@ def test_exact_repetition_reuses_verified_answer(client_context, ask):
 
 
 def test_changed_progress_refreshes_template_without_routing_again(client_context, ask):
+    """Fails if a cached answer keeps obsolete project progress after an update."""
     first = ask()
     Project.objects.filter(pk=client_context.project.pk).update(progress=75)
 
@@ -108,6 +118,7 @@ def test_changed_progress_refreshes_template_without_routing_again(client_contex
 
 
 def test_new_bug_invalidates_previously_empty_result(client_context, ask):
+    """Fails if a newly reported bug is omitted after an empty result was cached."""
     client_context.router.return_value = {'scenario': 'bugs', 'topic': 'general', 'explain': False}
     first = ask('Bugs del proyecto')
     BugReport.objects.create(project=client_context.project, reported_by=client_context.actor, title='Checkout fails')
@@ -119,6 +130,7 @@ def test_new_bug_invalidates_previously_empty_result(client_context, ask):
 
 
 def test_all_projects_excludes_another_client(client_context, ask):
+    """Fails if an all-project answer leaks another client's project."""
     other = get_user_model().objects.create_user('other-client')
     Project.objects.create(client=other, name='OTHER CLIENT CONFIDENTIAL')
 
@@ -129,6 +141,7 @@ def test_all_projects_excludes_another_client(client_context, ask):
 
 
 def test_revoked_project_hides_historical_answer(client_context, ask):
+    """Fails if a transferred project remains visible in historical Appi output."""
     turn = ask(project=False)
     other = get_user_model().objects.create_user('new-owner')
     Project.objects.filter(pk=client_context.project.pk).update(client=other)
@@ -141,6 +154,7 @@ def test_revoked_project_hides_historical_answer(client_context, ask):
 
 
 def test_another_client_cannot_open_conversation(client_context, ask):
+    """Fails if another client can enumerate a private conversation UUID."""
     turn = ask()
     other = get_user_model().objects.create_user('guessing-client')
     UserProfile.objects.update_or_create(user=other, defaults={'role': 'client', 'chatbot_enabled': True})
@@ -150,6 +164,7 @@ def test_another_client_cannot_open_conversation(client_context, ask):
 
 
 def test_guide_does_not_require_assigned_project(client_context, ask):
+    """Fails if an account guide disappears when the user has no owned project."""
     other = get_user_model().objects.create_user('unassigned-project-owner')
     Project.objects.filter(pk=client_context.project.pk).update(client=other)
     client_context.router.return_value = {'scenario': 'guide_profile', 'topic': 'general', 'explain': True}
@@ -162,6 +177,7 @@ def test_guide_does_not_require_assigned_project(client_context, ask):
 
 
 def test_report_bug_guide_links_to_owned_project(client_context, ask):
+    """Fails if the bug guide cannot link to the client's selected project."""
     client_context.router.return_value = {'scenario': 'guide_report_bug', 'topic': 'general', 'explain': False}
 
     turn = ask('Necesito reportar un bug')
@@ -172,6 +188,7 @@ def test_report_bug_guide_links_to_owned_project(client_context, ask):
 
 
 def test_report_guide_requests_project_selection(client_context, ask):
+    """Fails if a project-specific guide invents an action without a project."""
     client_context.router.return_value = {'scenario': 'guide_report_bug', 'topic': 'general', 'explain': False}
 
     turn = ask('Necesito reportar un bug', project=False)
@@ -181,6 +198,7 @@ def test_report_guide_requests_project_selection(client_context, ask):
 
 
 def test_shared_voice_consumption_blocks_chat_before_models(client_context):
+    """Fails if prior voice use can bypass the shared chatbot quota."""
     client_context.config.ai_request_limit = 1
     client_context.config.save()
     receipt = reserve(client_context.actor, uuid.uuid4(), 'voice_report', 'voice-fingerprint')
@@ -194,6 +212,7 @@ def test_shared_voice_consumption_blocks_chat_before_models(client_context):
 
 
 def test_retry_uses_one_logical_request(client_context, ask):
+    """Fails if retrying a request creates another Appi turn or quota charge."""
     request_id = uuid.uuid4()
     turn = ask(request_id=request_id)
 
@@ -205,6 +224,7 @@ def test_retry_uses_one_logical_request(client_context, ask):
 
 
 def test_provider_failure_refunds_unused_reservation(client_context):
+    """Fails if a provider failure leaves an unused chatbot quota reservation charged."""
     client_context.router.side_effect = AIUnavailable()
     conversation = appi.create_conversation(client_context.actor, {'language': 'es'})
     turn = appi.submit(client_context.actor, conversation.pk, {'question': 'Estado', 'request_id': uuid.uuid4()})
@@ -218,6 +238,7 @@ def test_provider_failure_refunds_unused_reservation(client_context):
 
 
 def test_signed_contract_never_uses_new_live_text(client_context, ask):
+    """Fails if Appi substitutes edited live contract text for signed evidence."""
     document = Document.objects.create(title='Contract', project=client_context.project, client_user=client_context.actor,
         requires_signature=True, signed_at=timezone.now(), signed_by=client_context.actor, content_markdown='NEW PRIVATE DRAFT: propiedad intelectual nueva')
     ProjectContract.objects.create(project=client_context.project, document=document, title='Signed contract', key='contract', client_visible=True)
@@ -230,6 +251,7 @@ def test_signed_contract_never_uses_new_live_text(client_context, ask):
 
 
 def test_expired_history_is_deleted(client_context, ask):
+    """Fails if cleanup retains conversations past their expiration."""
     turn = ask()
     AppiConversation.objects.filter(pk=turn.conversation_id).update(expires_at=timezone.now() - timedelta(seconds=1))
 
@@ -239,6 +261,7 @@ def test_expired_history_is_deleted(client_context, ask):
 
 
 def test_deleting_history_does_not_restore_quota(client_context, ask):
+    """Fails if deleting private history refunds an already consumed request."""
     turn = ask()
 
     appi.delete_conversation(client_context.actor, turn.conversation_id)

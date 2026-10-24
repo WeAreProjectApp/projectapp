@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-24 — app not running)
 /** Responsive Appi surface: launcher, selectors, history, quota and send action stay reachable. */
 import { test, expect } from '../helpers/test.js'
 import { VIEWPORTS, viewportUse } from '../helpers/viewports.js'
@@ -36,7 +35,7 @@ for (const alias of Object.keys(VIEWPORTS)) {
       await expect(panel.getByTestId('platform-ai-quota')).toContainText('4 disponibles')
       await expect(panel.getByTestId('appi-question')).toHaveAttribute('placeholder', 'Pregunta por tu proyecto o cómo usar la plataforma…')
       await expect(panel.getByTestId('appi-send')).toHaveText('Enviar pregunta')
-      await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
       const send = await panel.getByTestId('appi-send').boundingBox()
       expect(send).not.toBeNull()
       expect(send.y + send.height).toBeLessThanOrEqual(VIEWPORTS[alias].height + 1)

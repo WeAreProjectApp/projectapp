@@ -92,6 +92,8 @@ reutilizarse tras revalidación aunque haya vencido el índice Redis. Cambios en
 hechos, publicación, firma, plantilla, modelo o política invalidan la respuesta.
 Cambios temporales relevantes para salud también forman parte de las dependencias.
 Las plantillas pueden actualizar el mensaje sin otra llamada al redactor.
+Si se revoca una capacidad necesaria para una guía, su respuesta histórica pasa a
+no disponible y deja de exponer sus pasos y enlaces; el registro original no se reescribe.
 
 Los botones de invalidación de voz, chatbot y ambas funciones son independientes.
 Appi utiliza `cache_version('chatbot')`; invalidar voz no cambia su versión.

@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-24 — app not running)
 /** Appi client journeys. Each test states the user-visible regression it catches. */
 import { test, expect } from '../helpers/test.js'
 import {
