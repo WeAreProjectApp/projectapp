@@ -200,6 +200,10 @@ DERIVED_MODELS = {
 
 CATALOG_MODELS = {
     'accounts.PlatformAISettings', 'accounts.PlatformAITemplate', 'accounts.PlatformAITemplateRevision',
+    # Help defaults and published revisions belong to the global catalog;
+    # migrations and administrators maintain them, not demo-data generation.
+    'accounts.PlatformHelpSettings', 'accounts.PlatformGuidedTour',
+    'accounts.PlatformGuidedTourRevision',
     'content.ConsultingProgram',
     'content.BuildingOnDemandProgram',
     'content.BuildingOnDemandContract',
@@ -214,6 +218,12 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Client help preferences are provisioned on access and changed explicitly;
+    # demo generation must preserve defaults instead of inventing preferences.
+    'accounts.ClientPlatformHelpSettings',
+    # Seen steps and audit events require real user or administrator actions;
+    # demo generation must not suppress onboarding or fabricate its history.
+    'accounts.PlatformTourProgress', 'accounts.PlatformHelpEvent',
     # Real provider secrets, paid activity and private expiring jobs are never fabricated.
     'accounts.PlatformAICredential', 'accounts.PlatformAIJob',
     'accounts.PlatformAIUsage', 'accounts.PlatformAIEvent',
