@@ -1,5 +1,16 @@
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
 
+# Appi — implementación de sesión, 2026-10-24
+
+Plan aprobado: asistente cliente ES/EN para seguimiento y guías finitas, con Jev
+antes del redactor, historial privado de 90 días, revalidación de fuentes y cuota
+compartida 20/300 minutos con Voz. Configuración, claves, plantillas, STT y ledger
+pertenecen a la sesión voice-reporting-ai; destinos y host Ayuda a
+platform-guided-tour. Se verificaron los 20 recorridos de Appi y cinco perfiles
+responsive, sin omisiones; pruebas adicionales de permisos/componentes y CI siguen
+en curso. Las guías históricas dejan de mostrarse si se revoca su capacidad, sin
+reescribir el registro privado. Este registro no acredita despliegue ni entrega del PR.
+
 # Tablas contables y video de Células Scrum — 2026-10-22
 
 > **Paquetes de requerimientos — implementados en rama de sesión, 2026-10-23:** Ágil30XS/10%, Pro30XS+20S/15%, Premium30XS+20S+10M/25% ($5.700.000 COP + IVA). Vigencia12meses; precios por mercado con tasa contable, snapshots y transición explícita de borradores. Alianza4XS+2S+1M mensual independiente. Condiciones: `docs/REQUIREMENT_PACKAGES.md`. Entrega mediante PR #533; las migraciones 0301/0302 se aplican durante el despliegue, sin escrituras de esta sesión sobre la base del servicio.

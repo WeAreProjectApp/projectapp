@@ -1,0 +1,17 @@
+{
+  "id": "platform-appi-availability",
+  "name": "Appi Availability and Readiness",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Cliente ve el lanzador de Appi sólo cuando chatbot está habilitado globalmente y para su cuenta. Si faltan las claves o el proveedor necesario, el lanzador explica que no está disponible y no abre un chat; al recuperar disponibilidad, puede abrir Appi sin mezclar el estado privado de otra sesión.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}
