@@ -868,7 +868,7 @@ export const viewCatalogSections = [
         reference: 'recorridos bilingües, novedades, tutorial general y clips de Appi/voz, con recursos sustituibles y controles globales/por cliente',
         audience: 'admin',
         viewType: 'config',
-        notes: 'Interruptores globales y por cliente; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos y el progreso se conserva por usuario.',
+        notes: 'Interruptores globales y por cliente; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos y el progreso se conserva por usuario. Los tres tutoriales en español se previsualizan y pueden sustituirse, retirarse o restaurarse desde el panel o MCP; los cambios concurrentes requieren recargar el recurso.',
       },
       {
         label: 'Configuración de IA de Plataforma',
@@ -1216,6 +1216,7 @@ export const viewCatalogSections = [
         reference: 'perfil de plataforma y Ayuda compartida con videos y recorridos',
         audience: 'client',
         viewType: 'config',
+        notes: 'Ayuda está disponible en el menú de clientes y abre los videos a petición, también después de completar un recorrido. Indica el idioma español y los subtítulos en ambas interfaces; los clips de Appi y voz sólo aparecen con su capacidad disponible.',
       },
       {
         label: 'Proyectos',

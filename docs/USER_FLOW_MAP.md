@@ -8644,7 +8644,7 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 - **Role:** admin
 - **Priority:** P2
 - **Route:** `/:locale/panel/platform/help`
-- **Interaction:** Administrar las tres piezas desde Ayuda: consultar recursos, sustituir MP4 y conservar la versión anterior ante errores; retirar o restaurar usando el ciclo compartido con MCP.
+- **Interaction:** Llegar desde el menú del panel a Ayuda y previsualizar las piezas general, Appi y voz en español. Sustituir un MP4, rechazar archivos incompatibles y conservar la versión anterior ante un error del servidor; retirar o restaurar usando el ciclo compartido con MCP.
 - **Outcomes:** `display`, `success`, `error`, `failure`
 - **Evidence:** frontend/pages/panel/platform/help.vue; frontend/components/platform/PlatformVideoResourcesManager.vue; frontend/components/resources/VideoResourceManager.vue.
 - **Scope:** Se llega desde la navegación del panel y se comprueba el contenido de las tres piezas. La sustitución, la validación local de MP4 y el rechazo del servidor se ejercitan en la interfaz; los permisos, la concurrencia y el ciclo completo de carga, retirada y restauración por MCP se prueban en backend. Los interruptores compartidos pertenecen al flujo de administración de Ayuda.
@@ -9263,10 +9263,11 @@ consulta de la conversación pública que originó el prompt.
 - **Role:** client
 - **Priority:** P2
 - **Route:** `/:locale/platform/projects`
-- **Interaction:** Abrir Ayuda desde el menú, consultar y reproducir manualmente los tutoriales disponibles; elegir clip, cerrar o reintentar ante un fallo de reproducción. Español identificado también en interfaz inglesa.
+- **Interaction:** Abrir Ayuda desde el menú y elegir un tutorial disponible en un modal con subtítulos. Al completar un recorrido ofrece una invitación sin abrir el video automáticamente. La reproducción empieza sólo a petición; cerrar devuelve el foco a Ayuda. Permite reintentar un fallo de reproducción e identifica el contenido español también en la interfaz inglesa.
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidence:** frontend/components/platform/PlatformHelpVideoModal.vue; frontend/components/platform/PlatformVideoResourcesManager.vue.
 - **Scope:** El catálogo filtra las capacidades efectivas; controles de acceso, concurrencia y MCP se prueban en backend. El modo cliente no tiene formulario de datos ni validación de entrada propia.
+- **Validation:** Los diez casos de navegador de esta pieza verifican el acceso por controles visibles, las fuentes de video, la invitación después del recorrido, reproducción explícita, cierre, recuperación de reproducción, idioma y cinco anchos. La invitación se prueba con el host completo: el video permanece cerrado hasta elegir verlo y abre pausado. La recuperación del catálogo y las respuestas tardías se comprueban en pruebas de store/componente.
 
 ### FLOW: `platform-hosting-project-list`
 
