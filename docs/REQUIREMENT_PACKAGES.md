@@ -85,6 +85,20 @@ contractuales vigentes y sus espejos, MCP, defaults, fake data y guías de
 operación. Las migraciones se aplican mediante el despliegue, nunca desde el
 worktree de una sesión contra la base del servicio.
 
+## Operación y pruebas de migración
+
+La migración `0302_seed_requirement_packages` usa `RunPython.noop` al retroceder:
+conserva las decisiones comerciales guardadas y no convierte cupos XS/S/M en
+horas. El catálogo nuevo tiene `hours=NULL`; volver al esquema horario, que exige
+ese valor, requiere una estrategia explícita de datos. La ejecución aislada de
+las pruebas históricas confirmó ese límite mediante un error de restricción
+`NOT NULL`.
+
+Las pruebas de migración histórica vacían únicamente su base temporal de pytest
+antes de retroceder y crean después los datos antiguos que verifican. Esa
+preparación permite ejecutarlas de forma independiente; no constituye un
+procedimiento de reversión de datos reales.
+
 ## Programa de Alianza
 
 La alianza de cinco años incluye un cupo mensual independiente, inicialmente
