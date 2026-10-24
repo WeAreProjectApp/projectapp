@@ -16,3 +16,7 @@ class QuestionSerializer(serializers.Serializer):
         if any(ord(char) < 32 and char not in '\n\t' for char in value):
             raise serializers.ValidationError('Usa una pregunta de texto sin caracteres de control.')
         return value
+
+
+class HistorySerializer(serializers.Serializer):
+    before = serializers.UUIDField(required=False)

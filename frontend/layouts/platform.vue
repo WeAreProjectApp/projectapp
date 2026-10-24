@@ -77,6 +77,8 @@
       </div>
     </main>
 
+    <ClientOnly><AppiWidget /></ClientOnly>
+
     <!-- Theme picker popover -->
     <Teleport to="body">
       <Transition name="theme-popover">
@@ -117,6 +119,7 @@ import { usePlatformTheme } from '~/composables/usePlatformTheme'
 import { usePlatformSidebar } from '~/composables/usePlatformSidebar'
 import { usePlatformCustomTheme } from '~/composables/usePlatformCustomTheme'
 import PlatformSidebar from '~/components/platform/PlatformSidebar.vue'
+import AppiWidget from '~/components/platform/AppiWidget.vue'
 import PlatformMobileDrawer from '~/components/platform/PlatformMobileDrawer.vue'
 import ThemePicker from '~/components/platform/ThemePicker.vue'
 

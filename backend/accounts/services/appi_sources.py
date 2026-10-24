@@ -253,7 +253,8 @@ def snapshot(actor, project_id, query, language):
         _project_summary(result, projects, actor, language, health=scenario == 'project_health')
         if scenario == 'project_health' and project_id:
             delivery = _delivery({**result, 'facts': [], 'sources': [], 'basis': {}}, actor, project_id, {}, language)
-            result['facts'].extend({'id': f'f{len(result["facts"]) + index + 1}', 'text': item['text']} for index, item in enumerate(delivery['facts']))
+            for item in delivery['facts']:
+                _fact(result, item['text'])
             result['basis']['delivery'] = delivery['basis']
             result['sources'].extend(delivery['sources'])
     elif scenario == 'bugs':
