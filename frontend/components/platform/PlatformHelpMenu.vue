@@ -1,5 +1,5 @@
 <template>
-  <div v-if="auth.isClient && (store.tourEnabled || store.videoEnabled)" class="relative">
+  <div v-if="auth.isClient && (availableTours.length || (store.videoEnabled && help?.videoAvailable.value))" class="relative">
     <BaseButton unstyled type="button" data-tour="help" data-testid="platform-help-trigger" :aria-label="t('platformHelp.help')" :aria-expanded="open" :title="t('platformHelp.help')"
       class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-text-brand hover:bg-primary-soft dark:text-white"
       @click="open = !open">
