@@ -88,14 +88,14 @@ function saveClientQuota(client, inherit = false) { return run(async () => {
       </template>
       <template v-else-if="tab === 'providers'">
         <section class="space-y-4 rounded-xl border border-border-muted bg-surface p-4">
-          <BaseFormField v-for="field in ['chatbot_model', 'voice_report_model']" :key="field" :label="t(`platformAI.settings.${field}`)"><BaseSelect v-model="form[field]" :options="modelOptions" /></BaseFormField>
+          <BaseFormField v-for="field in ['chatbot_model', 'voice_report_model']" :key="field" :label="t(`platformAI.settings.${field}`)" :for="`ai-model-${field}`"><BaseSelect :id="`ai-model-${field}`" v-model="form[field]" :options="modelOptions" /></BaseFormField>
           <BaseButton :loading="busy" @click="saveSettings">{{ t('platformAI.save') }}</BaseButton>
           <p class="text-sm text-text-muted">{{ t('platformAI.providerHint') }}</p>
         </section>
         <article v-for="provider in providers" :key="provider" class="space-y-3 rounded-xl border border-border-muted bg-surface p-4">
           <h2 class="font-semibold text-text-default">{{ provider === 'jev' ? 'Jev' : provider === 'openai' ? 'OpenAI' : 'Anthropic' }}</h2>
           <p class="text-sm text-text-muted">{{ t(store.settings.credentials[provider].configured ? 'platformAI.keyConfigured' : 'platformAI.keyMissing') }} · {{ store.settings.credentials[provider].last_test_status || t('platformAI.notTested') }}</p>
-          <BaseFormField :label="t('platformAI.apiKey')"><BaseInput v-model="keys[provider]" type="password" autocomplete="new-password" :data-testid="`ai-key-${provider}`" /></BaseFormField>
+          <BaseFormField :label="t('platformAI.apiKey')" :for="`ai-key-${provider}`"><BaseInput :id="`ai-key-${provider}`" v-model="keys[provider]" type="password" autocomplete="new-password" :data-testid="`ai-key-${provider}`" /></BaseFormField>
           <div class="flex flex-wrap gap-2">
             <BaseButton :loading="busy" :disabled="!keys[provider].trim()" :disabled-reason="t('platformAI.keyRequired')" @click="saveKey(provider)">{{ t('platformAI.saveKey') }}</BaseButton>
             <BaseButton variant="secondary" :disabled="busy || !store.settings.credentials[provider].configured" :disabled-reason="t('platformAI.keyRequired')" @click="run(() => store.testKey(provider))">{{ t('platformAI.testKey') }}</BaseButton>
@@ -105,11 +105,11 @@ function saveClientQuota(client, inherit = false) { return run(async () => {
       </template>
       <template v-else-if="tab === 'templates'">
         <section class="space-y-4 rounded-xl border border-border-muted bg-surface p-4">
-          <BaseFormField :label="t('platformAI.templateFamily')"><BaseSelect v-model="family" :options="familyOptions" /></BaseFormField>
-          <BaseFormField :label="t('platformAI.template')"><BaseSelect v-model="selectedTemplateId" :options="[{ value: '', label: t('platformAI.chooseTemplate') }, ...templateOptions]" /></BaseFormField>
+          <BaseFormField :label="t('platformAI.templateFamily')" for="ai-template-family"><BaseSelect id="ai-template-family" v-model="family" :options="familyOptions" /></BaseFormField>
+          <BaseFormField :label="t('platformAI.template')" for="ai-template-scenario"><BaseSelect id="ai-template-scenario" v-model="selectedTemplateId" :options="[{ value: '', label: t('platformAI.chooseTemplate') }, ...templateOptions]" /></BaseFormField>
           <template v-if="selectedTemplate">
             <p class="text-sm text-text-muted">{{ t('platformAI.version') }} {{ selectedTemplate.version }} · {{ t('platformAI.placeholders') }}: {{ selectedTemplate.placeholders.join(', ') || '—' }}</p>
-            <BaseFormField :label="t('platformAI.templateContent')"><BaseTextarea v-model="templateContent" :rows="10" maxlength="12000" data-testid="ai-template-content" /></BaseFormField>
+            <BaseFormField :label="t('platformAI.templateContent')" for="ai-template-content"><BaseTextarea id="ai-template-content" v-model="templateContent" :rows="10" maxlength="12000" data-testid="ai-template-content" /></BaseFormField>
             <p class="text-sm text-text-muted">{{ t('platformAI.templateHint') }}</p>
             <div class="flex flex-wrap gap-2">
               <BaseButton :loading="busy" @click="run(() => store.saveTemplate(selectedTemplate, templateContent))">{{ t('platformAI.saveVersion') }}</BaseButton>
@@ -128,7 +128,7 @@ function saveClientQuota(client, inherit = false) { return run(async () => {
         <section class="space-y-4 rounded-xl border border-border-muted bg-surface p-4">
           <h2 class="text-lg font-semibold text-text-default">{{ t('platformAI.limits') }}</h2>
           <p class="text-sm text-text-muted">{{ t('platformAI.sharedQuotaHint') }}</p>
-          <BaseFormField v-for="field in ['ai_request_limit', 'ai_window_minutes', 'monthly_audio_limit', 'daily_user_audio_limit', 'max_output_tokens', 'report_cache_hours', 'chatbot_cache_hours']" :key="field" :label="t(`platformAI.settings.${field}`)"><BaseInput :model-value="form[field]" type="number" min="1" @update:model-value="form[field] = Number($event)" /></BaseFormField>
+          <BaseFormField v-for="field in ['ai_request_limit', 'ai_window_minutes', 'monthly_audio_limit', 'daily_user_audio_limit', 'max_output_tokens', 'report_cache_hours', 'chatbot_cache_hours']" :key="field" :label="t(`platformAI.settings.${field}`)" :for="`ai-setting-${field}`"><BaseInput :id="`ai-setting-${field}`" :model-value="form[field]" type="number" min="1" @update:model-value="form[field] = Number($event)" /></BaseFormField>
           <div v-for="field in ['report_cache_enabled', 'chatbot_cache_enabled']" :key="field" class="flex items-center justify-between gap-3"><span class="text-sm text-text-default">{{ t(`platformAI.settings.${field}`) }}</span><BaseToggle v-model="form[field]" :aria-label="t(`platformAI.settings.${field}`)" /></div>
           <BaseButton :loading="busy" @click="saveSettings">{{ t('platformAI.save') }}</BaseButton>
           <div class="flex flex-wrap gap-2"><BaseButton v-for="fn in ['voice_report', 'chatbot', 'all']" :key="fn" variant="secondary" :loading="busy" @click="run(() => store.invalidate(fn))">{{ t('platformAI.invalidate') }} · {{ t(`platformAI.functions.${fn}`) }}</BaseButton></div>
