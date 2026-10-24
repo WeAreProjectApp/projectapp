@@ -1,0 +1,17 @@
+{
+  "id": "platform-appi-shared-quota-audio",
+  "name": "Appi Shared Quota and Dictated Question",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próximo restablecimiento. Una pregunta escrita, una respuesta reutilizada o una consulta fuera de alcance consume una unidad; una pregunta dictada reserva una unidad al transcribir y la canjea una sola vez al enviarla. Al agotar el límite, la interfaz bloquea nuevas consultas y muestra cuándo podrá continuar, sin duplicar el cobro al reintentar.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

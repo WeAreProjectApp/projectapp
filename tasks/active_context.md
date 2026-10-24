@@ -1,5 +1,18 @@
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
 
+# Appi — implementación de sesión, 2026-10-24
+
+Plan aprobado: asistente cliente ES/EN para seguimiento y guías finitas, con Jev
+antes del redactor, historial privado de 90 días, revalidación de fuentes y cuota
+compartida 20/300 minutos con Voz. Configuración, claves, plantillas, STT y ledger
+pertenecen a la sesión voice-reporting-ai; destinos y host Ayuda a
+platform-guided-tour. QA local aprobado: servidor, componentes, los 20 recorridos
+de Appi y cinco perfiles responsive, sin omisiones. La guía de bugs también abre
+el formulario real en su revalidación focal. Las guías históricas dejan de
+mostrarse si se revoca su capacidad, sin reescribir el registro privado. Evidencia
+y límites en `docs/audits/2026-10-24-appi-qa.md`; el CI final del PR sigue pendiente.
+Este registro no acredita despliegue ni entrega del PR.
+
 # Tablas contables y video de Células Scrum — 2026-10-22
 
 > **Paquetes de requerimientos — implementados en rama de sesión, 2026-10-23:** Ágil30XS/10%, Pro30XS+20S/15%, Premium30XS+20S+10M/25% ($5.700.000 COP + IVA). Vigencia12meses; precios por mercado con tasa contable, snapshots y transición explícita de borradores. Alianza4XS+2S+1M mensual independiente. Condiciones: `docs/REQUIREMENT_PACKAGES.md`. Entrega mediante PR #533; las migraciones 0301/0302 se aplican durante el despliegue, sin escrituras de esta sesión sobre la base del servicio.
@@ -880,6 +893,17 @@ Nivel 2 sobre `main` actualizado: paquetes ZIP/archivos, Mustache escapado, recu
 Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Clientes y todo Contable: versiones consultables/comparables, autor, conservación sin vencimiento, PDFs históricos y secretos cifrados. Comunicaciones y restauración quedan fuera. Validación focal: 44 casos backend, 5 del visor y 15 E2E aprobados; regresiones de accesos, propuestas, CRUD contable, correo fallido, PWA, migración de credenciales y eliminación de alias aprobadas, al igual que el contrato de fake data y la compilación Nuxt. El despliegue requiere las migraciones 0250/0251 y el inicializador idempotente descrito en `docs/ENTITY_HISTORY.md`; no se ejecutaron contra una base real.
 
 # Active Context — ProjectApp
+
+> **En implementación — IA de Plataforma y reportes por voz (2026-10-24):**
+> configuración compartida con PA-164 en `/panel/platform/ai`, controles independientes
+> globales/cliente apagados inicialmente, claves cifradas, Haiku predeterminado/Luna
+> configurable, transcripción externa y plantillas ES/EN versionadas. Esta sesión es
+> dueña de la base compartida; el chatbot y sus consultas los implementa la otra sesión.
+> El audio es temporal, los borradores duran 24 horas y aceptar un texto no aprueba una entrega.
+> Cupo compartido inicial: 20 solicitudes/300 minutos móviles, con overrides por
+> cliente y canje único del dictado del chatbot. Backend 28 casos y frontend 20
+> casos nuevos verificados localmente; navegador y CI final se verifican en el PR #538.
+> Políticas de fusión conservan autores y los esquemas MCP projects 4.1.1 son cerrados.
 
 **2026-10-01 — seguimiento contractual de Platform en implementación:** la rama
 `feat/01102026-platform-review-workflow` reemplaza el Kanban por contrato/otrosí,
@@ -3007,3 +3031,28 @@ Changelogs con ejemplos antes/después y runbook de guards/slices preparados:
 Los controles compartidos y `*_history` de PR #503 quedan fuera del barrido.
 El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
 entrada documental no declara terminados esos pasos ni operaciones en producción.
+
+
+## 2026-10-24 — Ayuda y recorridos de la plataforma
+
+PR #539 implementa guías general, contextual y de voz por usuario, ES/EN,
+novedades editables y administración común por Panel y las 14 herramientas del
+MCP Proyectos. Completar o saltar impide otra apertura automática; Ayuda permite
+repetir. Los destinos pertenecen a un catálogo cerrado y no ejecutan acciones
+de negocio. Appi y Video consumen el contrato de superficies sin imports
+inversos; Voz está integrada mediante merges de sus commits publicados hasta
+`1d8eebdef`, incluidas ambas excepciones de previsualización sin escrituras,
+la comprobación de propiedad de proyectos de IA y las exenciones precisas de
+borradores privados y contadores de consumo. El contrato combinado conserva
+85 herramientas con sus nombres y serializers explícitos.
+
+La validación focal acredita 22 pruebas backend, 31 unitarias de interfaz y
+navegación, siete controles de contratos/relaciones y 18 casos únicos de
+navegador aprobados, sin omisiones ni reintentos. Incluye el control real de voz,
+la entrada al proyecto, la restauración del menú móvil y cinco perfiles
+responsive. El caso contextual final espera la hidratación real antes de
+navegar. Nuxt completó la compilación local. Catálogos y mapa de flujos están
+actualizados; la auditoría conserva las brechas de clases de resultado sin
+reducir el contrato para simular cobertura completa. La comprobación MCP nueva
+de ausencia de escrituras y la entrega del head final se verifican en el CI del
+PR. Esta nota no acredita merge, despliegue ni cambios en datos desplegados.

@@ -1,3 +1,12 @@
+> **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
+> reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
+> (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por
+> panel y MCP projects. Cupo común de 20 solicitudes por ventana móvil de 300
+> minutos con overrides por cliente. Trabajos Huey privados, audio temporal,
+> borradores 24 h y revisión humana antes de llenar el formulario. Chatbot/Jev se
+> integra en su propia sesión. Migraciones accounts.0083–0085, sin aplicar desde
+> este worktree. Contrato y operación: [IA de Plataforma](../platform-ai.md).
+
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
 
 > **Video explicativo de Building on Demand — 2026-10-22:** Pipeline brag v2: 60 s, 1080p/30 fps, voz es-CO-SalomeNeural, MP4 H.264 y portada WebP. edge-tts 7.3.1 permite producir con el endpoint vigente del proveedor. Células administra el recurso por idioma usando sesión/CSRF; el MCP Programas comparte operaciones. El documento y su PDF conservan su contenido comercial.
@@ -1745,3 +1754,22 @@ sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio
 ## Guardas de integración de proyectos (2026-10-02)
 
 `ensure_unused_onboarding_project` comparte el inventario bloqueante de eliminación. Sólo descuenta el stub propio sin archivo, descripción, claves de epic, archivo lógico, versiones ni hijos salvo su BusinessProposal exacta. Documentos con proyecto distinto o nulo también bloquean por su relación al Deliverable. `teardown_platform_for_proposal` valida el vínculo vigente antes de escribir y convierte ambos rechazos del inventario en `PlatformRelaunchConflict` (409), propagados fuera de atomic. `launch_to_platform` exige sesión Panel; preview/DELETE de proyectos no aceptan JWT como sesión. No se aplicaron migraciones ni cambios a bases del servicio.
+
+
+## Contrato de ayuda — 2026-10-24
+
+Driver.js 1.10.2 se carga en navegador bajo demanda. API cliente JWT bajo /api/platform/help/; administración de sesión/CSRF y MCP con validación común, versiones y auditoría. Detalle en docs/PLATFORM_HELP.md.
+
+## Appi — contrato de ejecución (2026-10-24)
+
+`/api/platform/chatbot/` usa exclusivamente JWT y `no-store`; las vistas delegan
+en servicios y las consultas procesan en Huey con idempotencia por actor/request.
+El widget comparte stores/servicios de capacidades, cuota y transcripción de IA,
+y usa el coordinador de superficies de Ayuda. Rutas absolutas de IA/chatbot
+requieren `baseURL: ''` en el cliente HTTP de plataforma.
+
+Jev `jev-1.14.0` valida decisiones cerradas y confianza mínima antes de seleccionar
+un escenario. Los secretos usan el almacén compartido; instrucciones inmutables,
+schema y comprobación de respaldo restringen al redactor. Caché exacta y por
+consulta tipada incluyen `cache_version('chatbot')`; revalidar historial nunca
+consume cupo ni vuelve a llamar al modelo. Ver [APPI.md](../APPI.md).

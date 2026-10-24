@@ -77,6 +77,9 @@
       </div>
     </main>
 
+    <ClientOnly><AppiWidget /></ClientOnly>
+    <PlatformHelpHost />
+
     <!-- Theme picker popover -->
     <Teleport to="body">
       <Transition name="theme-popover">
@@ -117,8 +120,12 @@ import { usePlatformTheme } from '~/composables/usePlatformTheme'
 import { usePlatformSidebar } from '~/composables/usePlatformSidebar'
 import { usePlatformCustomTheme } from '~/composables/usePlatformCustomTheme'
 import PlatformSidebar from '~/components/platform/PlatformSidebar.vue'
+import AppiWidget from '~/components/platform/AppiWidget.vue'
 import PlatformMobileDrawer from '~/components/platform/PlatformMobileDrawer.vue'
 import ThemePicker from '~/components/platform/ThemePicker.vue'
+import '~/assets/styles/platform-guided-tour.css'
+import PlatformHelpHost from '~/components/platform/PlatformHelpHost.vue'
+import { usePlatformHelp } from '~/composables/usePlatformHelp'
 
 const route = useRoute()
 const localePath = useLocalePath()
@@ -144,6 +151,9 @@ const {
   isCoverDark,
   hydrate: hydrateCustomTheme,
 } = usePlatformCustomTheme()
+
+const platformHelp = usePlatformHelp()
+provide('platformHelp', platformHelp)
 
 const showThemePicker = ref(false)
 
