@@ -75,6 +75,11 @@ el bug, la solicitud de cambio o el mensaje de la entrega enviado por el cliente
 Aceptar la propuesta sólo llena el formulario; nunca envía el reporte ni aprueba
 o rechaza una etapa. El servidor vuelve a validar propiedad y contexto.
 
+La eliminación forzada de un proyecto exige seleccionar sus borradores privados
+de IA; no se trasladan a los registros conservados. El audio se elimina sólo al
+confirmarse la transacción. Las métricas sin contenido permanecen sin vínculo al
+proyecto y el cupo compartido del cliente no se reinicia al borrar un proyecto.
+
 Las plantillas de voz incluyen instrucciones comunes, bug, cambio y observación.
 Las del chatbot contienen escenarios y marcadores finitos. Editar o restaurar
 crea una versión nueva; la seguridad y las autorizaciones no son texto editable.
