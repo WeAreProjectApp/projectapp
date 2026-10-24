@@ -14,6 +14,13 @@ jest.mock('../../composables/usePlatformGuidedTour', () => ({
 
 const generalTour = { id: 11, context: 'general', status: '' }
 const voiceTour = { id: 12, context: 'voice', status: '' }
+const projectTour = { id: 13, context: 'project', status: '' }
+
+function deferred() {
+  let resolve
+  const promise = new Promise((resolvePromise) => { resolve = resolvePromise })
+  return { promise, resolve }
+}
 
 function restoreGlobal(name, value) {
   if (value === undefined) delete globalThis[name]
@@ -29,6 +36,7 @@ describe('PlatformHelpHost', () => {
   let route
   let originalUseRoute
   let originalUseI18n
+  let projectTarget
 
   function mountHost() {
     wrapper = mount(PlatformHelpHost, {
@@ -37,6 +45,12 @@ describe('PlatformHelpHost', () => {
         stubs: { BaseButton: { template: '<button><slot /></button>' } },
       },
     })
+  }
+
+  function mountProjectTarget() {
+    projectTarget = document.createElement('section')
+    projectTarget.setAttribute('data-tour', 'project-summary')
+    document.body.appendChild(projectTarget)
   }
 
   beforeEach(() => {
@@ -69,6 +83,8 @@ describe('PlatformHelpHost', () => {
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
+    projectTarget?.remove()
+    projectTarget = null
     restoreGlobal('useRoute', originalUseRoute)
     restoreGlobal('useI18n', originalUseI18n)
     jest.clearAllMocks()
@@ -136,5 +152,42 @@ describe('PlatformHelpHost', () => {
     await flushPromises()
 
     expect(guidedTour.start).toHaveBeenCalledWith(11, { projectId: '71', manual: false })
+  })
+
+  it('retries an automatic guide when its target mounts late', async () => {
+    store.tours = [projectTour]
+    visibleTourTarget.mockImplementation((key) => document.querySelector(`[data-tour="${key}"]`) || undefined)
+    guidedTour.start.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    mountHost()
+    await flushPromises()
+
+    expect(guidedTour.start).toHaveBeenCalledTimes(1)
+
+    mountProjectTarget()
+    await flushPromises()
+
+    expect(guidedTour.start).toHaveBeenCalledTimes(2)
+    expect(guidedTour.start).toHaveBeenLastCalledWith(13, { projectId: '71', manual: false })
+  })
+
+  it('preserves a target-triggered retry while automatic startup is busy', async () => {
+    const firstStart = deferred()
+    store.tours = [projectTour]
+    visibleTourTarget.mockImplementation((key) => document.querySelector(`[data-tour="${key}"]`) || undefined)
+    guidedTour.start.mockImplementationOnce(() => firstStart.promise).mockResolvedValueOnce(true)
+    mountHost()
+    await flushPromises()
+
+    expect(guidedTour.start).toHaveBeenCalledTimes(1)
+
+    mountProjectTarget()
+    await flushPromises()
+    expect(guidedTour.start).toHaveBeenCalledTimes(1)
+
+    firstStart.resolve(false)
+    await flushPromises()
+
+    expect(guidedTour.start).toHaveBeenCalledTimes(2)
+    expect(guidedTour.start).toHaveBeenLastCalledWith(13, { projectId: '71', manual: false })
   })
 })
