@@ -3048,12 +3048,18 @@ la comprobación de propiedad de proyectos de IA y las exenciones precisas de
 borradores privados y contadores de consumo. El contrato combinado conserva
 85 herramientas con sus nombres y serializers explícitos.
 
-La validación focal acredita 22 pruebas backend, 31 unitarias de interfaz y
+La validación focal acredita 22 pruebas backend, 35 unitarias de interfaz y
 navegación, siete controles de contratos/relaciones y 18 casos únicos de
 navegador aprobados, sin omisiones ni reintentos. Incluye el control real de voz,
 la entrada al proyecto, la restauración del menú móvil y cinco perfiles
-responsive. El caso contextual final espera la hidratación real antes de
-navegar. Nuxt completó la compilación local. Catálogos y mapa de flujos están
+responsive. Tras detectar dos carreras en CI se repitieron cuatro casos sobre
+el layout combinado y se validó la invitación a abrir el video en pausa:
+cinco aprobados, sin omisiones ni reintentos. El destino actual se guarda antes
+de animar la tarjeta; el inicio contextual sólo se acusa después de abrir y
+se reintenta cuando aparece un destino que terminó de montarse tarde. Las
+cuatro regresiones nuevas y doce casos vecinos pasaron. La fuente de Ayuda
+del servidor combinado coincide con `d15001691`, y los JSON/XML recibieron
+revisión independiente. Nuxt completó la compilación local. Catálogos y mapa de flujos están
 actualizados; la auditoría conserva las brechas de clases de resultado sin
 reducir el contrato para simular cobertura completa. La comprobación MCP nueva
 de ausencia de escrituras y la entrega del head final se verifican en el CI del
