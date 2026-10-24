@@ -29,6 +29,8 @@ accounts.changerequest|Solicitudes de cambio|Change requests
 accounts.changerequestcomment|Comentarios de solicitudes de cambio|Change request comments
 accounts.bugreport|Reportes de errores|Bug reports
 accounts.bugcomment|Comentarios de reportes de errores|Bug report comments
+accounts.platformaijob|Borradores privados de IA|Private AI drafts
+accounts.platformaiusage|Métricas de consumo de IA|AI usage metrics
 accounts.issuecontext|Origen de reportes y solicitudes|Issue source context
 accounts.issueresponse|Respuestas a reportes y solicitudes|Issue responses
 accounts.issueevent|Historial de reportes y solicitudes|Issue history
@@ -125,6 +127,8 @@ _KEYS = {
 _HELP = {
     'accounts.appiconversation': ('Historial privado vinculado al proyecto. Para eliminar el proyecto también debes seleccionar sus conversaciones y consultas de Appi.', 'Private history bound to the project. Deleting the project also requires selecting its Appi conversations and queries.'),
     'accounts.appiturn': ('Preguntas y respuestas privadas del cliente. Se eliminan junto con su conversación; no se trasladan al archivo administrativo.', 'Private client questions and answers. They are deleted with their conversation, without moving them to the administrative archive.'),
+    'accounts.platformaijob': ('Transcripciones y borradores privados temporales. Debes elegir eliminarlos para borrar el proyecto; su audio se elimina al confirmar la operación.', 'Temporary private transcripts and drafts. Select their deletion before deleting the project; their audio is removed after the operation commits.'),
+    'accounts.platformaiusage': ('Contadores sin mensajes ni grabaciones. Se conservan sin vínculo al proyecto para mantener el control de consumo.', 'Counters without messages or recordings. They are retained without a project link to preserve usage accounting.'),
     'accounts.projectphase': ('Fases creadas desde propuestas. Las propuestas comerciales se conservan.', 'Phases created from proposals. Commercial proposals are retained.'),
     'accounts.datamodelentity': ('Describe la información prevista en una entrega, como clientes o pedidos; no contiene sus registros reales.', 'Describes planned information, such as customers or orders; it does not contain their actual records.'),
     'accounts.projectdatamodelentity': ('Describe cómo se organiza la información del sistema; no son los datos reales de sus usuarios.', 'Describes how system information is organized, not actual user records.'),

@@ -7,6 +7,7 @@ const { t } = useI18n()
 const store = usePlatformAIAdminStore()
 const tab = ref('activation'), busy = ref(false), error = ref(''), saved = ref(false), search = ref('')
 const form = reactive({}), keys = reactive({ anthropic: '', openai: '', jev: '' })
+const formVersion = ref(null)
 const selectedTemplateId = ref(''), family = ref('report'), templateContent = ref(''), preview = ref(''), versions = ref([])
 const fields = ['chatbot_enabled', 'voice_reporting_enabled', 'chatbot_model', 'voice_report_model', 'monthly_audio_limit', 'daily_user_audio_limit', 'ai_request_limit', 'ai_window_minutes', 'max_output_tokens', 'report_cache_enabled', 'chatbot_cache_enabled', 'report_cache_hours', 'chatbot_cache_hours']
 const quotaOverrides = reactive({})
@@ -16,7 +17,7 @@ const providers = ['anthropic', 'openai', 'jev']
 const familyOptions = computed(() => ['report', 'chatbot'].map((value) => ({ value, label: t(`platformAI.family.${value}`) })))
 const templateOptions = computed(() => store.templates.filter((item) => item.family === family.value).map((item) => ({ value: String(item.id), label: `${t(`platformAI.scenarios.${item.scenario}`)} · ${item.language.toUpperCase()}` })))
 const selectedTemplate = computed(() => store.templates.find((item) => String(item.id) === String(selectedTemplateId.value)))
-function resetForm() { fields.forEach((field) => { form[field] = store.settings[field] }) }
+function resetForm() { fields.forEach((field) => { form[field] = store.settings[field] }); formVersion.value = store.settings.version }
 function resetClientQuotas() { Object.keys(quotaOverrides).forEach((key) => { delete quotaOverrides[key] }) }
 async function run(action) {
   busy.value = true; error.value = ''; saved.value = false
@@ -27,7 +28,7 @@ async function run(action) {
 onMounted(() => run(async () => { await store.load(); resetForm(); await store.loadClients(); await store.loadTemplates(); await store.loadUsage() }))
 watch(family, () => { selectedTemplateId.value = '' })
 watch(selectedTemplate, (item) => { templateContent.value = item?.content || ''; preview.value = ''; versions.value = [] })
-function saveSettings() { return run(async () => { await store.saveSettings({ ...form, expected_version: store.settings.version }); resetForm() }) }
+function saveSettings() { return run(async () => { await store.saveSettings({ ...form, expected_version: formVersion.value }); resetForm() }) }
 function saveKey(provider) { return run(async () => { try { await store.saveKey(provider, keys[provider]) } finally { keys[provider] = '' } }) }
 function reload() { return run(async () => { await store.load(); resetForm(); await store.loadClients(search.value); resetClientQuotas(); await store.loadTemplates(); await store.loadUsage() }) }
 function clientQuota(client) { return quotaOverrides[client.user_id] || (quotaOverrides[client.user_id] = { limit: client.ai_request_limit ?? '', minutes: client.ai_window_minutes ?? '' }) }

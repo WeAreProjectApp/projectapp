@@ -17,6 +17,13 @@ y `set/test/delete_platform_ai_credential`. Ver nombres exactos en
 4. Editar y restaurar una plantilla conserva las revisiones previas; faltantes,
    marcadores adicionales, atributos y HTML se rechazan. Preview no llama proveedor.
 5. Consultar uso/eventos e invalidar caché: sólo métricas sin audio ni transcripción.
+
+`preview_platform_ai_template` es un render local de texto con marcadores de
+ejemplo: no llama proveedores ni guarda contenido o versiones. Se documenta como
+excepción exacta de preview sin pareja de aplicación; guardar una plantilla sigue
+siendo una operación separada con control de versión y confirmación sensible.
+El test `content/tests/views/test_mcp_platform_ai_preview.py` verifica ausencia de
+escrituras y de llamadas al proveedor por la herramienta MCP publicada.
 6. Probar conexión es una acción explícita; puede hacer una llamada mínima a Jev.
    No forma parte de los tests automáticos sin costo ni de una lectura de clave.
 
