@@ -2311,3 +2311,9 @@ de historial mantienen su compatibilidad. Estos contratos se registran en
 ## Ayuda de plataforma — 2026-10-24
 
 La ayuda usa configuración global/cliente separada de IA, catálogo de destinos cerrado, revisiones publicadas y progreso por usuario. Panel y MCP Proyectos comparten servicios; el coordinador de superficies evita solapar tour, Appi y video.
+
+La selección de un paso actualiza el progreso de interfaz antes de la animación
+de Driver. El anfitrión sólo acusa un inicio automático que llegó a abrirse;
+observa cambios en los destinos visibles y agrupa un único reintento pendiente
+si el destino aparece durante una operación asíncrona. Desmontar desconecta la
+observación e impide reintentos tardíos.
