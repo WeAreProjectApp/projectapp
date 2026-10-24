@@ -253,6 +253,8 @@ UNPAIRED_PREVIEWS = {
         'Read-only redacted projection of current access; it has no corresponding apply tool.',
     ('projects', 'preview_project_data_model'):
         'Model preview and confirmed replacement are separate tests; no single preview/import scenario.',
+    ('projects', 'preview_platform_guided_tour'):
+        'Read-only rendering of saved bilingual draft cards; it builds no apply plan or mutation payload. Publication is a separate versioned command.',
 }
 
 

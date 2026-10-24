@@ -28,6 +28,7 @@ function mountPlatformSidebar(props = {}) {
     props,
     global: {
       stubs: {
+        PlatformHelpMenu: { template: '<div data-testid="platform-help-menu-stub" />' },
         SidebarItem: { template: '<div class="sidebar-item-stub" />' },
         NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
       },

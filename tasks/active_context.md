@@ -3039,4 +3039,4 @@ acredita pruebas, entrega ni despliegue.
 
 ## 2026-10-24 — Ayuda y recorridos, validación en curso
 
-Núcleo e interfaz publicados en PR #539. Se integró sólo el baseline autorizado c92279d94 de Voz. Dieciocho pruebas backend y nueve unitarias pasaron; QA amplía publicación, permisos y navegador. Appi y Video consumen el contrato de superficies y destinos sin imports inversos. Esta nota no acredita entrega final, merge ni deploy.
+Núcleo e interfaz publicados en PR #539, con la UI de Voz publicada en `6d0a79424` integrada mediante merge. Se validaron 22 pruebas backend, 20 unitarias y siete controles de contratos MCP y relaciones de usuario. El navegador acredita 16 de 17 casos únicos, incluidos el botón real de voz y los cinco perfiles responsive; falta repetir un caso contextual después de corregir su espera de hidratación. Appi y Video consumen el contrato de superficies y destinos sin imports inversos. La sesión no toca datos desplegados y esta nota no acredita entrega final, merge ni deploy.

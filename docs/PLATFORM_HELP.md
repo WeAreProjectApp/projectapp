@@ -59,6 +59,9 @@ catálogo (`list_platform_guided_tours`, `get_platform_guided_tour`,
 `archive_platform_guided_tour` y `list_platform_guided_tour_revisions`) y progreso (`list_platform_tour_progress`).
 Panel y MCP comparten validación, control de versión y auditoría. Los cambios de
 disponibilidad y publicaciones usan la confirmación sensible del MCP.
+La vista previa sólo presenta las tarjetas del borrador guardado; publicar es
+un comando versionado independiente. Una prueba MCP verifica que esa lectura
+no escriba en ninguna tabla, incluso si una escritura terminara revertida.
 
 ## Integración con las otras funciones
 

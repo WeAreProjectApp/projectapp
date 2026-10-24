@@ -3,6 +3,8 @@ from copy import deepcopy
 from unittest.mock import patch
 
 import pytest
+from content.models import McpConnector, McpCredential
+from content.tests.mcp_parity import assert_no_writes, call_tool_inprocess
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.test import APIClient
 
@@ -131,9 +133,14 @@ def test_unavailable_chatbot_is_removed(actors):
     assert 'platform-appi-launcher' not in [step['target'] for step in result['tours'][0]['content']['steps']]
 
 
-def test_admin_preview_does_not_write_progress(actors):
-    """Breaks when previewing a draft gives a user a completed state."""
-    result = help_service.preview_tour(actors.admin, general().pk)
+def test_mcp_preview_performs_no_writes(actors):
+    """Breaks when rendering draft cards through MCP mutates persisted state."""
+    connector, _ = McpConnector.objects.get_or_create(slug='projects', defaults={'name': 'Projects'})
+    credential = McpCredential.objects.create(connector=connector, actor=actors.admin, label='Guided tour preview witness')
+    result = assert_no_writes(
+        call_tool_inprocess, 'projects', 'preview_platform_guided_tour',
+        {'tour_id': general().pk}, credential=credential,
+    )
     assert result['preview'] is True
     assert PlatformTourProgress.objects.count() == 0
 
