@@ -199,6 +199,7 @@
 
               <form class="space-y-4" @submit.prevent="handleCreate">
                 <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="bug-source" />
+                <VoiceReportInput :project-id="projectId" scenario="bug" :requirement-id="createForm.source_requirement_id" @apply="applyVoiceReport" />
                 <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
@@ -562,6 +563,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
 import { useIsMobile } from '~/composables/useIsMobile'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
+import VoiceReportInput from '~/components/platform/VoiceReportInput.vue'
 import { usePlatformBugReportsStore } from '~/stores/platform-bug-reports'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 import { usePlatformIssueReportsStore } from '~/stores/platform-issue-reports'
@@ -725,6 +727,10 @@ function removeScreenshot() {
   screenshotFile.value = null
   if (screenshotPreview.value) URL.revokeObjectURL(screenshotPreview.value)
   screenshotPreview.value = null
+}
+
+function applyVoiceReport(proposal) {
+  for (const field of ['title', 'description', 'expected_behavior', 'actual_behavior', 'steps_to_reproduce']) createForm[field] = proposal[field]
 }
 
 async function handleCreate() {

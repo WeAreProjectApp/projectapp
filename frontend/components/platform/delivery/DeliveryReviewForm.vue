@@ -8,8 +8,10 @@ import BaseSelect from '~/components/base/BaseSelect.vue'
 import BaseTextarea from '~/components/base/BaseTextarea.vue'
 import BaseCheckbox from '~/components/base/BaseCheckbox.vue'
 import DeliveryDocumentPicker from './DeliveryDocumentPicker.vue'
+import VoiceReportInput from '~/components/platform/VoiceReportInput.vue'
 
 const props = defineProps({
+  projectId: { type: [Number, String], required: true },
   stage: { type: Object, required: true }, documents: { type: Array, default: () => [] },
   historical: { type: Boolean, default: false }, loading: { type: Boolean, default: false }, error: { type: String, default: '' },
   evidenceMessages: { type: Array, default: () => [] },
@@ -89,6 +91,7 @@ function submit() {
         <BaseFormField :label="t('platformDelivery.decision')" :for="`review-decision-${requirement.id}`">
           <BaseSelect :id="`review-decision-${requirement.id}`" v-model="decisions[requirement.id].decision" :options="decisionOptions()" :data-testid="`delivery-review-decision-${requirement.id}`" />
         </BaseFormField>
+        <VoiceReportInput v-if="!historical" :project-id="projectId" :stage-id="stage.id" :requirement-id="requirement.id" scenario="stage_observation" @apply="decisions[requirement.id].message = $event.message" />
         <template v-if="decisions[requirement.id].decision">
           <BaseFormField :label="t('platformDelivery.reviewEnvironment')" :for="`review-environment-${requirement.id}`">
             <BaseInput :id="`review-environment-${requirement.id}`" v-model="decisions[requirement.id].environment" />

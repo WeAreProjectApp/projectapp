@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.103.0
+// Registry version: 2.104.0
 
 // ── admin ──
 export const ADMIN_ACCOUNTING_ADS = ['@flow:admin-accounting-ads', '@module:admin', '@priority:P3'];
@@ -315,6 +315,7 @@ export const ADMIN_TASK_ALERT_MANAGEMENT = ['@flow:admin-task-alert-management',
 export const ADMIN_TASK_DEADLINE_NOTIFICATION = ['@flow:admin-task-deadline-notification', '@module:admin', '@priority:P2'];
 export const ADMIN_VIEW_MAP = ['@flow:admin-view-map', '@module:admin', '@priority:P4'];
 export const ADMIN_WHATSAPP_SUGGESTION = ['@flow:admin-whatsapp-suggestion', '@module:admin', '@priority:P2'];
+export const PANEL_PLATFORM_AI_SETTINGS = ['@flow:panel-platform-ai-settings', '@module:admin', '@priority:P1'];
 export const PROPOSAL_PRE_EXPIRATION_DISCOUNT_SUGGESTION = ['@flow:proposal-pre-expiration-discount-suggestion', '@module:admin', '@priority:P2'];
 
 // ── auth ──
@@ -408,6 +409,7 @@ export const PLATFORM_SECURE_LINK_MANAGE = ['@flow:platform-secure-link-manage',
 export const PLATFORM_SECURE_LINK_REPLACE = ['@flow:platform-secure-link-replace', '@module:platform', '@priority:P1'];
 export const PLATFORM_SIDEBAR_NAVIGATION = ['@flow:platform-sidebar-navigation', '@module:platform', '@priority:P2'];
 export const PLATFORM_VERIFY_ONBOARDING = ['@flow:platform-verify-onboarding', '@module:platform', '@priority:P1'];
+export const PLATFORM_VOICE_REPORT = ['@flow:platform-voice-report', '@module:platform', '@priority:P1'];
 
 // ── proposal ──
 export const PROPOSAL_CLOSING_CONTACT = ['@flow:proposal-closing-contact', '@module:proposal', '@priority:P2'];
