@@ -341,6 +341,16 @@
         "admin-building-on-demand-economics",
         "admin-building-on-demand-contract"
       ]
+    },
+    {
+      "title": "Platform Help and Guided Tours",
+      "flows": [
+        "platform-guided-tour-general",
+        "platform-guided-tour-project",
+        "platform-guided-tour-voice",
+        "admin-platform-help-settings",
+        "admin-platform-guided-tour-authoring"
+      ]
     }
   ]
 }
