@@ -2,7 +2,7 @@
 from copy import deepcopy
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from accounts.models_platform_help import (
     ClientPlatformHelpSettings, PlatformGuidedTour, PlatformGuidedTourRevision,
@@ -208,7 +208,8 @@ def client_catalog(user, project_id=None):
     capabilities = _capabilities(user)
     tours = list(PlatformGuidedTour.objects.filter(is_active=True, published_revision__gt=0).order_by('priority', 'pk'))
     progress = {item.tour_id: item for item in PlatformTourProgress.objects.filter(user=user, tour__in=tours)}
-    published = {(item.tour_id, item.number): item.content for item in PlatformGuidedTourRevision.objects.filter(tour__in=tours)}
+    published = {(item.tour_id, item.number): item.content for item in PlatformGuidedTourRevision.objects.filter(
+        tour__in=tours, number=F('tour__published_revision'))}
     result = []
     for tour in tours:
         if tour.context != 'general' and project_id is None:
