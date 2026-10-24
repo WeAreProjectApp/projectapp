@@ -6,10 +6,12 @@ Plan aprobado: asistente cliente ES/EN para seguimiento y guías finitas, con Je
 antes del redactor, historial privado de 90 días, revalidación de fuentes y cuota
 compartida 20/300 minutos con Voz. Configuración, claves, plantillas, STT y ledger
 pertenecen a la sesión voice-reporting-ai; destinos y host Ayuda a
-platform-guided-tour. Se verificaron los 20 recorridos de Appi y cinco perfiles
-responsive, sin omisiones; pruebas adicionales de permisos/componentes y CI siguen
-en curso. Las guías históricas dejan de mostrarse si se revoca su capacidad, sin
-reescribir el registro privado. Este registro no acredita despliegue ni entrega del PR.
+platform-guided-tour. QA local aprobado: servidor, componentes, los 20 recorridos
+de Appi y cinco perfiles responsive, sin omisiones. La guía de bugs también abre
+el formulario real en su revalidación focal. Las guías históricas dejan de
+mostrarse si se revoca su capacidad, sin reescribir el registro privado. Evidencia
+y límites en `docs/audits/2026-10-24-appi-qa.md`; el CI final del PR sigue pendiente.
+Este registro no acredita despliegue ni entrega del PR.
 
 # Tablas contables y video de Células Scrum — 2026-10-22
 

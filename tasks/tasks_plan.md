@@ -814,6 +814,7 @@ En validación: guías ES/EN por usuario, Help compartido, borradores y novedade
 Implementación en PR #541: alcance finito, proyecciones autorizadas, Jev antes
 del redactor, guías bilingües editables, caché revalidada e historial privado de
 hasta 90 días. Configuración/credenciales/cuota/audio se integran desde PR #538;
-superficies de Ayuda desde PR #539. El cierre requiere pruebas específicas de
-backend, interfaz y navegador, catálogos/registro de flujos al día y CI verde.
+superficies de Ayuda desde PR #539. Las pruebas locales de servidor, interfaz y
+navegador están aprobadas; catálogos y flujos actualizados. Evidencia en
+`docs/audits/2026-10-24-appi-qa.md`. El cierre aún requiere CI verde del PR final.
 La integración final pertenece al orquestador; no hay migraciones aplicadas ni deploy.
