@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-24 — app not running)
 /**
  * Platform help journeys.
  *
@@ -9,6 +8,7 @@ import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
 import { setPlatformAuth, mockPlatformClient } from '../helpers/platform-auth.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
+import { viewportUse } from '../helpers/viewports.js'
 import {
   PLATFORM_GUIDED_TOUR_GENERAL,
   PLATFORM_GUIDED_TOUR_PROJECT,
@@ -277,5 +277,44 @@ test.describe('Platform guided tour', () => {
     await expect(voiceInput.getByRole('button', { name: 'Grabar o volver a grabar', exact: true })).toHaveCount(0)
     await expect(voiceInput.getByLabel('Escuchar grabación', { exact: true })).toHaveCount(0)
     expect(prohibitedRequests).toEqual([])
+  })
+})
+
+test.describe('Platform guided tour on compact screens', () => {
+  test.use(viewportUse('compact'))
+  test.setTimeout(60_000)
+
+  test('restores the compact navigation drawer after the guided tour', {
+    tag: [...PLATFORM_GUIDED_TOUR_GENERAL, '@role:platform-client', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: a compact guided tour leaves navigation closed while it highlights links, or leaves the drawer covering the platform after completion.
+    const general = tour({
+      id: 411,
+      slug: 'general',
+      context: 'general',
+      title: 'Guía móvil',
+      steps: [
+        { target: 'welcome', title_es: 'Guía móvil', title_en: 'Mobile guide', description_es: 'Empieza aquí.', description_en: 'Start here.' },
+        { target: 'projects', title_es: 'Proyectos', title_en: 'Projects', description_es: 'Tus proyectos están en la navegación.', description_en: 'Your projects are in navigation.' },
+        { target: 'help', title_es: 'Ayuda', title_en: 'Help', description_es: 'Repite la guía desde Ayuda.', description_en: 'Replay the guide from Help.' },
+      ],
+    })
+    const progress = await setupClient(page, { globalTours: [general] })
+
+    await openProjects(page)
+    await expect(page.getByTestId('platform-tour-popover')).toContainText('Guía móvil')
+    await expect(page.getByRole('button', { name: 'Cerrar navegación', exact: true })).toHaveCount(0)
+
+    await page.getByTestId('platform-tour-next').click()
+    const drawerClose = page.getByRole('button', { name: 'Cerrar navegación', exact: true })
+    await expect(drawerClose).toHaveAttribute('aria-label', 'Cerrar navegación')
+    await expect(page.getByRole('link', { name: 'Proyectos', exact: true })).toHaveText('Proyectos')
+
+    await page.getByTestId('platform-tour-next').click()
+    await page.getByTestId('platform-tour-next').click()
+
+    await expect.poll(() => latestProgress(progress, general.id)?.body.status).toBe('completed')
+    await expect(latestProgress(progress, general.id)?.body).toMatchObject({ last_step: 'help', manual: false })
+    await expect(drawerClose).toHaveCount(0)
   })
 })

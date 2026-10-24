@@ -3031,15 +3031,23 @@ El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
 entrada documental no declara terminados esos pasos ni operaciones en producción.
 
 
-## 2026-10-24 — Recorrido guiado de clientes (en implementación)
+## 2026-10-24 — Ayuda y recorridos de la plataforma
 
-Plan aprobado: guías general/contextual/voz por usuario, ES/EN, novedades
-editables y administración común por Panel y MCP Proyectos. Ayuda comparte
-coordinación con las sesiones Appi, reportes por voz y videos; los destinos
-son un catálogo cerrado y no ejecutan acciones de negocio. Esta entrada no
-acredita pruebas, entrega ni despliegue.
+PR #539 implementa guías general, contextual y de voz por usuario, ES/EN,
+novedades editables y administración común por Panel y las 14 herramientas del
+MCP Proyectos. Completar o saltar impide otra apertura automática; Ayuda permite
+repetir. Los destinos pertenecen a un catálogo cerrado y no ejecutan acciones
+de negocio. Appi y Video consumen el contrato de superficies sin imports
+inversos; Voz está integrada mediante merges de sus commits publicados hasta
+`ffa55890d`, incluidas ambas excepciones de previsualización sin escrituras.
 
-
-## 2026-10-24 — Ayuda y recorridos, validación en curso
-
-Núcleo e interfaz publicados en PR #539, con la UI de Voz publicada en `6d0a79424` integrada mediante merge. Se validaron 22 pruebas backend, 20 unitarias y siete controles de contratos MCP y relaciones de usuario. El navegador acredita 16 de 17 casos únicos, incluidos el botón real de voz y los cinco perfiles responsive; falta repetir un caso contextual después de corregir su espera de hidratación. Appi y Video consumen el contrato de superficies y destinos sin imports inversos. La sesión no toca datos desplegados y esta nota no acredita entrega final, merge ni deploy.
+La validación focal acredita 22 pruebas backend, 31 unitarias de interfaz y
+navegación, siete controles de contratos/relaciones y 18 casos únicos de
+navegador aprobados, sin omisiones ni reintentos. Incluye el control real de voz,
+la entrada al proyecto, la restauración del menú móvil y cinco perfiles
+responsive. El caso contextual final espera la hidratación real antes de
+navegar. Nuxt completó la compilación local. Catálogos y mapa de flujos están
+actualizados; la auditoría conserva las brechas de clases de resultado sin
+reducir el contrato para simular cobertura completa. La comprobación MCP nueva
+de ausencia de escrituras y la entrega del head final se verifican en el CI del
+PR. Esta nota no acredita merge, despliegue ni cambios en datos desplegados.
