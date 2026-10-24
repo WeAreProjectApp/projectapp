@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-24 — app not running)
 /**
  * R-platform-ai-01: AI limits must remain reachable with their concrete
  * shared-quota values at each supported panel width.
