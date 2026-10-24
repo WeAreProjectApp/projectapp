@@ -63,6 +63,7 @@ urlpatterns = [
     path('api/', include('content.urls')),
     path('api/platform/help/videos/', platform_videos, name='platform-help-videos'),
     path('api/accounts/', include('accounts.urls')),
+    path('api/platform/chatbot/', include('accounts.appi_urls')),
     path('api/platform/help/', include('accounts.platform_help_urls')),
     path('sitemap.xml', serve_sitemap_xml, name='sitemap-xml'),
     path('t/<uuid:card_id>/', qr_card_redirect, name='qr-card-redirect'),

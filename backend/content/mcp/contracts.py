@@ -1601,6 +1601,10 @@ MCP_MODEL_CONTRACTS['projects'] += (
               'id actor project purpose operation request_id fingerprint status audio_name audio_seconds payload result error_code created_at updated_at expires_at')),
     _contract('accounts.PlatformAIQuotaReservation', excluded=_excluded('Reserva interna atómica de una solicitud; el panel/MCP administran la política sin alterar el historial de consumo.',
               'id actor request_id purpose fingerprint status redemption_request_id created_at')),
+    _contract('accounts.AppiConversation', excluded=_excluded('Historial privado exclusivo de su autor JWT; el MCP administra configuración, no conversaciones del cliente.',
+              'id actor project language title created_at expires_at')),
+    _contract('accounts.AppiTurn', excluded=_excluded('Pregunta, respuesta y caché privados del cliente; sin lectura ni escritura administrativa por MCP.',
+              'id conversation actor request_id request_fingerprint question language status query answer dependencies context_key exact_key quota_id created_at verified_at expires_at')),
 )
 
 MCP_MODEL_CONTRACTS['commercial'] = (
