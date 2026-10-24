@@ -28,13 +28,13 @@ BASE_RATE_FIELD_BY_NATIONALITY = {
 
 class HourPackage(EditorialTextModel, models.Model):
     """
-    Catalog entry for a post-delivery development hour package.
+    Catalog entry for a requirement package or a historical hour offer.
 
     Each package belongs to one nationality (COL/EXT/USA); the pricing
     currency is derived from it (COL→COP, EXT/USA→USD). Active packages
     seed the ``commercial_conditions`` section of newly created proposals
-    matching the proposal's nationality; when the catalog is empty for a
-    nationality, proposal creation falls back to the hardcoded defaults.
+    matching the proposal's nationality. An empty requirement catalog does
+    not invent capacity; historical hour sections retain their snapshots.
     """
 
     nationality = models.CharField(
@@ -47,8 +47,17 @@ class HourPackage(EditorialTextModel, models.Model):
     name_en = models.CharField(max_length=255, verbose_name='Name (English)')
     note_es = models.TextField(blank=True, default='')
     note_en = models.TextField(blank=True, default='')
-    hours = models.PositiveIntegerField()
-    hourly_rate = models.DecimalField(max_digits=14, decimal_places=2)
+    # Old rows remain readable for historical proposals. New catalog writes
+    # explicitly use requirements; never infer a conversion from hours.
+    pricing_model = models.CharField(max_length=12, default='hours', choices=[
+        ('hours', 'Historical hours'), ('requirements', 'Requirements'),
+    ], db_index=True)
+    xs_count = models.PositiveIntegerField(default=0)
+    s_count = models.PositiveIntegerField(default=0)
+    m_count = models.PositiveIntegerField(default=0)
+    validity_months = models.PositiveIntegerField(default=12)
+    hours = models.PositiveIntegerField(null=True, blank=True)
+    hourly_rate = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     discount_percent = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0, help_text='Manual sort order (lower first).')
@@ -57,11 +66,13 @@ class HourPackage(EditorialTextModel, models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['nationality', 'order', 'hours']
-        verbose_name = 'Hour Package'
-        verbose_name_plural = 'Hour Packages'
+        ordering = ['nationality', 'order', 'pk']
+        verbose_name = 'Requirement Package'
+        verbose_name_plural = 'Requirement Packages'
 
     def __str__(self):
+        if self.pricing_model == 'requirements':
+            return f'{self.name_es} ({self.nationality}, {self.xs_count} XS / {self.s_count} S / {self.m_count} M)'
         return f'{self.name_es} ({self.nationality}, {self.hours}h)'
 
     @property
@@ -71,15 +82,14 @@ class HourPackage(EditorialTextModel, models.Model):
 
 class HourPackageSettings(models.Model):
     """
-    Singleton storing hour-packages panel preferences.
+    Singleton storing requirement prices, market factors and panel preferences.
 
     Usage:
         settings = HourPackageSettings.load()
         settings.default_view_mode  # → 'table' | 'cards' | 'compare'
-        settings.base_rate_col      # → base hourly rate applied to COL packages
+        settings.xs_price_cop       # → internal COP reference value for XS
 
-    Saving a base rate through the panel propagates it to every package of
-    that nationality (see ``hour_package_service.apply_base_rates_to_catalog``).
+    Legacy base-rate fields remain for historical integration compatibility.
     """
 
     class ViewMode(models.TextChoices):
@@ -90,6 +100,15 @@ class HourPackageSettings(models.Model):
     default_view_mode = models.CharField(
         max_length=10, choices=ViewMode.choices, default=ViewMode.TABLE,
     )
+
+    xs_price_cop = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('50000'))
+    s_price_cop = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('125000'))
+    m_price_cop = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('360000'))
+    foreign_multiplier = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal('1.4'))
+    usa_multiplier = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal('1.8'))
+    alliance_xs_count = models.PositiveIntegerField(default=4)
+    alliance_s_count = models.PositiveIntegerField(default=2)
+    alliance_m_count = models.PositiveIntegerField(default=1)
 
     # Base hourly rate per nationality. Defaults mirror the July 2026 ladder
     # in hour_package_service.DEFAULT_PACKAGES — keep both in lockstep.
@@ -107,8 +126,8 @@ class HourPackageSettings(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Hour package settings'
-        verbose_name_plural = 'Hour package settings'
+        verbose_name = 'Requirement package settings'
+        verbose_name_plural = 'Requirement package settings'
 
     def __str__(self):
         return f'HourPackageSettings — vista {self.default_view_mode}'

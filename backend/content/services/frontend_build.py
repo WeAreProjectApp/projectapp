@@ -112,12 +112,8 @@ def latest_published_change():
         ConsultingProgramRevision,
         ExplainerVideoSettings,
         FinancingPolicyRevision,
-        HourPackage,
+        HourPackageSettings,
         VideoResource,
-    )
-    from content.services.financing_program_service import (
-        INCLUDED_PACKAGE_HOURS,
-        INCLUDED_PACKAGE_NATIONALITY,
     )
 
     candidates = []
@@ -136,13 +132,7 @@ def latest_published_change():
         (ConsultingProgramRevision.objects.all(), 'created_at'),
         # Building on Demand publishes append-only presentation revisions.
         (BuildingOnDemandProgramRevision.objects.all(), 'created_at'),
-        (
-            HourPackage.objects.filter(
-                nationality=INCLUDED_PACKAGE_NATIONALITY,
-                hours=INCLUDED_PACKAGE_HOURS,
-            ),
-            'updated_at',
-        ),
+        (HourPackageSettings.objects.all(), 'updated_at'),
     ):
         row = queryset.order_by(f'-{field}').first()
         if row:

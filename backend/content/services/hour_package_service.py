@@ -14,10 +14,8 @@ import copy
 from django.utils import timezone
 
 from content.models import (
-    BASE_RATE_FIELD_BY_NATIONALITY,
     CURRENCY_BY_NATIONALITY,
     HourPackage,
-    HourPackageSettings,
 )
 
 # Canonical catalog defaults per nationality. The «restore defaults» panel
@@ -50,25 +48,13 @@ for _nat, _rate in (('EXT', 18), ('USA', 30)):
 
 
 def restore_default_packages(nationality):
-    """Replace the ``nationality`` catalog with :data:`DEFAULT_PACKAGES` rows.
-
-    Destructive on purpose: the panel action asks for confirmation before
-    calling this. Also resets that nationality's base rate in
-    :class:`HourPackageSettings` so the Configuración inputs stay consistent
-    with the restored catalog. Returns the freshly created packages.
-    """
-    HourPackage.objects.filter(nationality=nationality).delete()
+    """Restore the three requirement tiers, preserving pricing settings/history."""
+    from content.services.requirement_package_service import DEFAULT_PACKAGES as REQUIREMENTS
+    HourPackage.objects.filter(nationality=nationality, pricing_model="requirements").delete()
     created = HourPackage.objects.bulk_create(
-        HourPackage(nationality=nationality, is_active=True, **fields)
-        for fields in DEFAULT_PACKAGES[nationality]
+        HourPackage(nationality=nationality, pricing_model='requirements', is_active=True, **fields)
+        for fields in REQUIREMENTS
     )
-    settings = HourPackageSettings.load()
-    setattr(
-        settings,
-        BASE_RATE_FIELD_BY_NATIONALITY[nationality],
-        DEFAULT_PACKAGES[nationality][0]['hourly_rate'],
-    )
-    settings.save()
     return created
 
 
@@ -85,7 +71,7 @@ def apply_base_rates_to_catalog(changed_rates):
     """
     now = timezone.now()
     return {
-        nationality: HourPackage.objects.filter(nationality=nationality).update(
+        nationality: HourPackage.objects.filter(nationality=nationality, pricing_model="hours").update(
             hourly_rate=rate, updated_at=now,
         )
         for nationality, rate in changed_rates.items()
@@ -106,9 +92,14 @@ def seed_commercial_conditions_from_catalog(content_json, *, nationality, langua
     texts, effort badge and scope clause are never modified — they belong to
     the language defaults, not to the catalog.
     """
+    if content_json.get('packagesFrozen'):
+        return content_json
+    if content_json.get('pricingModel') == 'requirements':
+        from content.services.requirement_package_service import seed_requirement_packages
+        return seed_requirement_packages(content_json, nationality=nationality, language=language)
     packages = list(
         HourPackage.objects.filter(
-            nationality=nationality, is_active=True,
+            nationality=nationality, is_active=True, pricing_model="hours",
         ).order_by('order', 'hours')
     )
     if not packages:

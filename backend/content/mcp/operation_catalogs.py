@@ -50,7 +50,7 @@ def _editorial_catalog_op(name, description, route, serializer_class, *, partial
             ('problems_solved', 'Lista de problemas que resuelve el módulo'),
             ('integrations', 'Lista de integraciones del módulo'),
             ('implementation_requirements', 'Lista de requisitos para implementar el módulo'),
-            ('note', 'Nota comercial del paquete de horas'),
+            ('note', 'Nota comercial del paquete de requerimientos'),
         ):
             descriptions[f'{field}_{locale}'] = f'{label} en {language}.'
     payload = writable_schema(serializer_class, partial=partial)
@@ -62,7 +62,7 @@ def _editorial_catalog_op(name, description, route, serializer_class, *, partial
     for schema_name in ('input_schema', 'accepted_arguments_schema'):
         for field in path:
             tool[schema_name]['properties'][field]['description'] = (
-                'Id del módulo que se modifica.' if field == 'module_id' else 'Id del paquete de horas que se modifica.'
+                'Id del módulo que se modifica.' if field == 'module_id' else 'Id del paquete de requerimientos que se modifica.'
             )
     return tool
 
@@ -255,13 +255,13 @@ COMMERCIAL_PARITY_TOOLS = [
     _op('get_explainer_video_settings', 'Obtiene si el catálogo y el Programa de Alianza muestran su video explicativo a los clientes.', 'explainer-video-settings'),
     _op('update_explainer_video_settings', 'Muestra u oculta el video explicativo del catálogo o del Programa de Alianza en la vista pública.', 'update-explainer-video-settings', 'PATCH', risk='write'),
     _op('render_additional_modules_pdf', 'Genera el catálogo de módulos como asset temporal.', 'admin-additional-module-catalog-pdf', 'POST'),
-    _op('list_hour_packages', 'Lista paquetes de horas y sus precios.', 'list-admin-hour-packages'),
-    _op('get_hour_package', 'Abre un paquete de horas.', 'retrieve-admin-hour-package', path=('package_id',)),
-    _editorial_catalog_op('create_hour_package', 'Crea un paquete de horas.', 'create-hour-package', HourPackageCreateUpdateSerializer),
-    _editorial_catalog_op('update_hour_package', 'Actualiza un paquete de horas.', 'update-hour-package', HourPackageCreateUpdateSerializer, partial=True, path=('package_id',)),
-    _op('delete_hour_package', 'Elimina un paquete de horas permitido.', 'delete-hour-package', 'DELETE', ('package_id',), 'sensitive', True),
-    _op('get_hour_package_settings', 'Obtiene ajustes de paquetes de horas.', 'hour-package-settings'),
-    _op('update_hour_package_settings', 'Actualiza ajustes de paquetes de horas.', 'update-hour-package-settings', 'PATCH', risk='write'),
+    _op('list_hour_packages', 'Lista paquetes de requerimientos y sus precios.', 'list-admin-hour-packages'),
+    _op('get_hour_package', 'Abre un paquete de requerimientos.', 'retrieve-admin-hour-package', path=('package_id',)),
+    _editorial_catalog_op('create_hour_package', 'Crea un paquete de requerimientos.', 'create-hour-package', HourPackageCreateUpdateSerializer),
+    _editorial_catalog_op('update_hour_package', 'Actualiza un paquete de requerimientos.', 'update-hour-package', HourPackageCreateUpdateSerializer, partial=True, path=('package_id',)),
+    _op('delete_hour_package', 'Elimina un paquete de requerimientos permitido.', 'delete-hour-package', 'DELETE', ('package_id',), 'sensitive', True),
+    _op('get_hour_package_settings', 'Obtiene ajustes de paquetes de requerimientos.', 'hour-package-settings'),
+    _op('update_hour_package_settings', 'Actualiza ajustes de paquetes de requerimientos.', 'update-hour-package-settings', 'PATCH', risk='write'),
     _op('restore_default_hour_packages', 'Restaura el catálogo inicial de paquetes.', 'restore-default-hour-packages', 'POST', risk='sensitive', confirm=True),
     _op('get_financing_program', 'Obtiene el Programa de Alianza: financiación, custodia, paquete mensual y exclusividad conceptual de Project App. sólo en la modalidad de cinco años.', 'public-financing-program'),
     _op('render_financing_program_pdf', 'Genera el PDF del Programa de Alianza como asset temporal.', 'public-financing-program-pdf'),

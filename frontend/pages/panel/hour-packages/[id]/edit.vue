@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="flex items-center gap-4 mb-8">
-      <BaseActionButton as="NuxtLink" :to="localePath('/panel/hour-packages')" action="back" label="Volver a paquetes de horas" />
-      <h1 class="text-2xl font-light text-text-default">Editar paquete de horas</h1>
+      <BaseActionButton as="NuxtLink" :to="localePath('/panel/hour-packages')" action="back" label="Volver a paquetes de requerimientos" />
+      <h1 class="text-2xl font-light text-text-default">Editar paquete de requerimientos</h1>
     </div>
 
     <!-- Loading -->
@@ -70,30 +70,7 @@
         </div>
       </fieldset>
 
-      <!-- Pricing -->
-      <fieldset class="border border-border-default rounded-xl p-5 space-y-4">
-        <legend class="text-sm font-medium text-text-default px-2">Precio</legend>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label for="hp-hours" class="block text-sm font-medium text-text-default mb-1">Horas</label>
-            <input id="hp-hours" v-model.number="form.hours" type="number" min="1" required class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
-            <p v-if="fieldErrors.hours" class="text-xs text-danger-strong mt-1">{{ fieldErrors.hours }}</p>
-          </div>
-          <div>
-            <label for="hp-hourly-rate" class="block text-sm font-medium text-text-default mb-1">Tarifa por hora ({{ derivedCurrency }})</label>
-            <BaseCurrencyInput id="hp-hourly-rate" v-model="form.hourly_rate" :decimals="2" required />
-            <p v-if="fieldErrors.hourly_rate" class="text-xs text-danger-strong mt-1">{{ fieldErrors.hourly_rate }}</p>
-          </div>
-          <div>
-            <label for="hp-discount" class="block text-sm font-medium text-text-default mb-1">Descuento (%)</label>
-            <input id="hp-discount" v-model.number="form.discount_percent" type="number" min="0" max="100" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
-            <p v-if="fieldErrors.discount_percent" class="text-xs text-danger-strong mt-1">{{ fieldErrors.discount_percent }}</p>
-          </div>
-        </div>
-        <div class="bg-primary-soft rounded-lg px-4 py-3 text-sm text-text-brand">
-          Tarifa efectiva: <strong>{{ formatMoney(effectiveRate) }}/h</strong> · Total del paquete: <strong>{{ formatMoney(totalPrice) }}</strong>
-        </div>
-      </fieldset>
+      <PackageCompositionFields :model-value="form" :field-errors="fieldErrors" @update:model-value="Object.assign(form, $event)" />
 
       <!-- Order + active -->
       <div class="flex items-end gap-6">
@@ -139,6 +116,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import PackageCompositionFields from '~/components/hour-packages/PackageCompositionFields.vue';
 import { useHourPackagesStore } from '~/stores/hour_packages';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useUnsavedGuard } from '~/composables/useUnsavedGuard';
@@ -166,8 +144,10 @@ const form = reactive({
   name_en: '',
   note_es: '',
   note_en: '',
-  hours: 1,
-  hourly_rate: null,
+  xs_count: 30,
+  s_count: 0,
+  m_count: 0,
+  validity_months: 12,
   discount_percent: 0,
   order: 0,
   is_active: true,
@@ -192,8 +172,7 @@ const {
     name_en: 'nombre (EN)',
     note_es: 'nota (ES)',
     note_en: 'nota (EN)',
-    hours: 'horas',
-    hourly_rate: 'tarifa por hora',
+    xs_count: 'cupos XS', s_count: 'cupos S', m_count: 'cupos M', validity_months: 'vigencia',
     discount_percent: 'descuento',
     order: 'orden',
     is_active: 'estado',
@@ -201,9 +180,7 @@ const {
 });
 
 const derivedCurrency = computed(() => CURRENCY_BY_NATIONALITY[form.nationality]);
-const effectiveRate = computed(() =>
-  Number(form.hourly_rate || 0) * (1 - Number(form.discount_percent || 0) / 100));
-const totalPrice = computed(() => Number(form.hours || 0) * effectiveRate.value);
+
 
 onMounted(async () => {
   const result = await hourPackagesStore.fetchAdminPackage(packageId);
@@ -218,8 +195,10 @@ onMounted(async () => {
   form.text_formats = { ...pkg.text_formats };
   form.note_es = pkg.note_es;
   form.note_en = pkg.note_en;
-  form.hours = pkg.hours;
-  form.hourly_rate = Number(pkg.hourly_rate);
+  form.xs_count = pkg.xs_count;
+  form.s_count = pkg.s_count;
+  form.m_count = pkg.m_count;
+  form.validity_months = pkg.validity_months;
   form.discount_percent = pkg.discount_percent;
   form.order = pkg.order;
   form.is_active = pkg.is_active;

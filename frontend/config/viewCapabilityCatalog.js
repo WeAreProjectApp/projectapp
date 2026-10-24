@@ -102,11 +102,11 @@ const panelCapabilities = [
   ),
   capability(
     'panel-offerings', 'Nuestra oferta',
-    'Paquetes de horas y módulos adicionales que ofrecemos al cliente.',
+    'Paquetes de requerimientos y módulos adicionales que ofrecemos al cliente.',
     'Mantiene las opciones reutilizables para preparar propuestas.',
     [
-      feature('panel-hour-packages', 'Administrar paquetes de horas',
-        'Gestiona paquetes, precios y configuración de las horas disponibles. Las notas admiten formato visual y Fuente Markdown.',
+      feature('panel-hour-packages', 'Administrar paquetes de requerimientos',
+        'Gestiona cupos XS/S/M, vigencia, descuentos y valores internos; convierte precios por mercado y configura el cupo mensual de Alianza. Las notas admiten formato visual y Fuente Markdown.',
         'Permite reutilizar las condiciones de servicio en nuevas oportunidades.',
         ['/panel/hour-packages', '/panel/hour-packages/create', '/panel/hour-packages/:id/edit'],
         { icon: 'package', stage: 'Venta' }),
@@ -507,7 +507,7 @@ const publicCapabilities = [
     'Ayuda al prospecto a evaluar una alianza de largo plazo antes de formalizar una propuesta.',
     [
       feature('public-financing', 'Comprender el Programa de Alianza',
-        'Presenta dos opciones de alianza, ocho condiciones con exclusividad conceptual y paquete mensual de horas sólo a cinco años, reglas expandibles, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos, PDF y un diálogo para compartir el programa. El video inicia manualmente, se pausa al salir y no se reanuda al volver.',
+        'Presenta dos opciones de alianza, ocho condiciones con exclusividad conceptual y cupo mensual de requerimientos sólo a cinco años, reglas expandibles, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos, PDF y un diálogo para compartir el programa. El video inicia manualmente, se pausa al salir y no se reanuda al volver.',
         'Convierte condiciones técnicas y legales en una explicación comercial clara y compartible.',
         ['/partnership-program'],
         { icon: 'credit-card', actors: ['prospect'], stage: 'Evaluación' }),

@@ -263,7 +263,7 @@ class FinancingPdfService:
             Spacer(1, 8 * mm),
             editorial_paragraph(package['title'], styles['section']),
             cls._text_card(
-                f'{package["name"]} · {package["hours"]} h',
+                f'{package["xs_count"]} XS · {package["s_count"]} S · {package["m_count"]} M',
                 package['summary'],
                 styles,
                 background=ESMERALD_LIGHT,
@@ -274,7 +274,7 @@ class FinancingPdfService:
                     'Renews monthly · no rollover · available from production · '
                     'included only in the five-year option'
                 ) if english else (
-                    'Renovación mensual · no acumula horas · disponible desde '
+                    'Renovación mensual · no acumula cupos · disponible desde '
                     'producción · incluido sólo en la opción de cinco años'
                 ),
                 styles['muted'],

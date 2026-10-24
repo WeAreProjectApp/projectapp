@@ -89,7 +89,7 @@ describe('getPanelNavSections', () => {
       { label: 'Entregabilidad email', href: '/panel/proposals/email-deliverability', icon: 'mail' },
     ]);
     expect(offerings.items).toEqual([
-      { label: 'Paquetes de horas', href: '/panel/hour-packages', icon: 'package' },
+      { label: 'Paquetes de requerimientos', href: '/panel/hour-packages', icon: 'package' },
       { label: 'Módulos adicionales', href: '/panel/additional-modules', icon: 'puzzle' },
     ]);
     expect(programs.items).toEqual([

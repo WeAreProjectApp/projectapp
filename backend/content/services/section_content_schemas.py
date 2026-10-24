@@ -356,6 +356,8 @@ SECTION_CONTENT_SCHEMAS = {
     },
     # PDF-only section (no web component): hour packages + scope-exclusion text.
     'commercial_conditions': {
+        'pricingModel': str,
+        'packagesFrozen': bool,
         'title': str,
         'packagesTitle': str,
         'packagesIntro': str,
@@ -396,6 +398,9 @@ SECTION_CONTENT_SCHEMAS = {
             'name': str,
             'hours': NUMERIC,
             'discountPercent': NUMERIC,
+            'xsCount': NUMERIC, 'sCount': NUMERIC, 'mCount': NUMERIC,
+            'validityMonths': NUMERIC, 'referencePrice': NUMERIC,
+            'totalPrice': NUMERIC, 'terms': str,
             'note': str,
             # Optional per-package rate (catalog-seeded); falls back to the
             # section-level hourlyRate when absent.

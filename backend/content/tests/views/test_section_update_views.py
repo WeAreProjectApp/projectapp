@@ -584,6 +584,7 @@ class TestUpdateCommercialConditionsSection:
             'content_json': {
                 'index': '17',
                 'title': 'Condiciones comerciales',
+                'pricingModel': 'hours',
                 'hourlyRate': 90000,
                 'currency': 'COP',
                 'hourPackagesMode': 'manual',
@@ -607,6 +608,7 @@ class TestUpdateCommercialConditionsSection:
             'content_json': {
                 'index': '17',
                 'title': 'Condiciones comerciales',
+                'pricingModel': 'hours',
                 'hourPackagesMode': 'manual',
                 'manualHourlyRate': 45000,
                 'manualCurrency': 'COP',

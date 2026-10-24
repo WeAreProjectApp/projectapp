@@ -1,3 +1,5 @@
+"""Behavior tests for financing agreements and frozen monthly allowances."""
+
 import hashlib
 from datetime import date
 from decimal import Decimal
@@ -7,6 +9,9 @@ import pytest
 from pypdf import PdfReader
 
 from content.models import FinancingAgreement, FinancingAgreementTemplate
+from content.services.financing_agreement_pdf_service import (
+    FinancingAgreementPdfService,
+)
 from content.services.financing_agreement_service import (
     DEFAULT_FINANCING_TEMPLATE_MARKDOWN,
     FinancingAgreementTransitionError,
@@ -22,8 +27,6 @@ from content.services.financing_agreement_service import (
     update_draft,
     validate_template_markdown,
 )
-from content.services.financing_agreement_pdf_service import FinancingAgreementPdfService
-
 
 pytestmark = pytest.mark.django_db
 
@@ -56,6 +59,13 @@ def _agreement_data(client, template, **overrides):
     }
     data.update(overrides)
     return data
+
+
+def _current_policy(actor):
+    from content.models import FinancingPolicyRevision
+    return FinancingPolicyRevision.get_current() or FinancingPolicyRevision.objects.create(
+        version=1, created_by=actor,
+    )
 
 
 def test_schedule_rounding_preserves_exact_financed_balance():
@@ -205,13 +215,84 @@ def test_second_cycle_update_preserves_original_partnership_end(
     assert 'Un segundo ciclo no reinicia ni amplía esta restricción' in resolve_agreement_markdown(updated, draft=True)
 
 
+def test_five_year_agreement_freezes_the_current_monthly_requirement_allowance(
+    make_client_profile, admin_user, company_settings,
+):
+    """Fails if changing the allowance settings rewrites a signed commercial commitment."""
+    from content.models import HourPackageSettings
+
+    settings = HourPackageSettings.load()
+    settings.alliance_xs_count = 4
+    settings.alliance_s_count = 2
+    settings.alliance_m_count = 1
+    settings.save()
+    _current_policy(admin_user)
+    template = _template()
+    first = create_agreement(
+        _agreement_data(make_client_profile(nit='9011'), template), actor=admin_user,
+    )
+    settings.alliance_xs_count = 8
+    settings.alliance_s_count = 3
+    settings.alliance_m_count = 2
+    settings.save()
+    second = create_agreement(
+        _agreement_data(make_client_profile(nit='9012'), template), actor=admin_user,
+    )
+
+    assert first.requirement_allowance == {'xs': 4, 's': 2, 'm': 1}
+    assert second.requirement_allowance == {'xs': 8, 's': 3, 'm': 2}
+    assert '4 XS, 2 S y 1 M cada mes' in resolve_agreement_markdown(first, draft=True)
+
+
+def test_legacy_empty_allowance_keeps_its_historical_hours_clause(
+    make_client_profile, admin_user, company_settings,
+):
+    """Fails if an old financing agreement is retroactively rewritten as a size package."""
+    _current_policy(admin_user)
+    agreement = create_agreement(
+        _agreement_data(make_client_profile(nit='9013'), _template()), actor=admin_user,
+    )
+    FinancingAgreement.objects.filter(pk=agreement.pk).update(requirement_allowance={})
+    agreement.refresh_from_db()
+
+    assert 'sesenta (60) horas' in resolve_agreement_markdown(agreement, draft=True)
+
+
+def test_three_year_agreement_does_not_offer_monthly_requirement_allowances(
+    make_client_profile, admin_user, company_settings,
+):
+    """Fails if the shorter agreement starts promising the five-year allowance."""
+    _current_policy(admin_user)
+    agreement = create_agreement(
+        _agreement_data(
+            make_client_profile(nit='9014'), _template(), modality=FinancingAgreement.Modality.THREE_YEAR,
+        ), actor=admin_user,
+    )
+
+    text = resolve_agreement_markdown(agreement, draft=True)
+
+    assert agreement.requirement_allowance == {}
+    assert 'no incluye cupos mensuales de requerimientos' in text
+    assert 'cada mes desde la salida a producción' not in text
+
+    from content.models import HourPackageSettings
+    settings = HourPackageSettings.load()
+    settings.alliance_xs_count = 8
+    settings.alliance_s_count = 3
+    settings.alliance_m_count = 2
+    settings.save()
+    revised = update_draft(agreement, {'modality': FinancingAgreement.Modality.FIVE_YEAR}, actor=admin_user)
+
+    assert revised.requirement_allowance == {'xs': 8, 's': 3, 'm': 2}
+
+
 @pytest.mark.parametrize(
     ('total', 'initial', 'field'),
-    (
+    [
         ('-1.00', '0.00', 'total_value'),
         ('100.00', '-1.00', 'initial_payment'),
         ('100.00', '101.00', 'initial_payment'),
-    ),
+    ],
 )
 def test_financed_balance_rejects_invalid_values(total, initial, field):
     with pytest.raises(FinancingAgreementValidationError) as exc_info:
@@ -222,12 +303,12 @@ def test_financed_balance_rejects_invalid_values(total, initial, field):
 
 @pytest.mark.parametrize(
     ('invalid_item', 'message'),
-    (
+    [
         (None, 'formato inválido'),
         ({'due_date': 'invalid', 'amount': '100.00'}, 'fecha'),
         ({'due_date': '2026-03-05', 'amount': 'invalid'}, 'valor'),
         ({'due_date': '2026-03-05', 'amount': '0.00'}, 'valor positivo'),
-    ),
+    ],
 )
 def test_installment_schedule_rejects_malformed_item(invalid_item, message):
     schedule = build_installment_schedule(Decimal('1200.00'), date(2026, 3, 5))
@@ -261,12 +342,12 @@ def test_installment_schedule_rejects_inexact_total():
 
 @pytest.mark.parametrize(
     ('markdown', 'message'),
-    (
+    [
         ('', 'no puede estar vacío'),
         ('Texto con {unknown_placeholder}', 'no reconocidos'),
         ('Texto con una llave {', 'llaves inválidas'),
         ('Texto sin marcadores', 'marcadores obligatorios'),
-    ),
+    ],
 )
 def test_contract_template_rejects_invalid_markdown(markdown, message):
     with pytest.raises(FinancingAgreementValidationError) as exc_info:

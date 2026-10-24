@@ -78,7 +78,9 @@ test.describe('Public financing program', () => {
     await expect(page.getByTestId('financing-option-three-year')).toContainText('Sin el compromiso adicional de exclusividad conceptual')
     await expect(page.getByTestId('financing-condition-conceptual-exclusivity')).toContainText('proyectos competidores del mismo sector y nicho')
     await expect(page.getByTestId('financing-calculator-input-output')).toContainText('Qué se obtiene')
-    await expect(page.getByTestId('financing-package-facts')).toContainText('No acumula horas')
+    // Bug caught: the alliance still promises retired monthly hours.
+    await expect(page.getByTestId('financing-package-facts')).toContainText('No acumula cupos')
+    await expect(page.getByRole('heading', { name: '4 XS · 2 S · 1 M' })).toBeVisible()
     await expect(page.getByTestId('financing-whatsapp-cta')).toHaveAttribute('href', /wa\.me\/573238122373/)
     await expect(page.locator('nav[aria-label="Main navigation"]')).toHaveCount(0)
   })

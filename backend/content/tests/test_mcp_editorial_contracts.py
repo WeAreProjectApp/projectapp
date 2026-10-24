@@ -1,6 +1,5 @@
 """Published editorial MCP contracts and real writes through their handlers."""
 
-from decimal import Decimal
 from datetime import UTC, datetime
 
 import pytest
@@ -150,7 +149,7 @@ def mcp_write_case(request, superuser):
         'communication': lambda: (_communication(superuser), 'communications', 'update_message', 'content', 'message_id', None, 'get_thread'),
         'proposal': lambda: (request.getfixturevalue('proposal'), 'commercial', 'update_proposal', 'email_intro', 'proposal_id', None, 'get_proposal'),
         'blog': lambda: (request.getfixturevalue('draft_blog_post'), 'content', 'update_blog_post', 'excerpt_es', 'post_id', None, 'get_blog_post'),
-        'hour_package': lambda: (HourPackage.objects.create(name_es='Horas', name_en='Hours', hours=5, hourly_rate=Decimal('30000'), note_es=INITIAL), 'offerings', 'update_hour_package', 'note_es', 'package_id', 'data', 'get_hour_package'),
+        'hour_package': lambda: (HourPackage.objects.create(name_es='Paquete', name_en='Package', pricing_model='requirements', xs_count=1, note_es=INITIAL), 'offerings', 'update_hour_package', 'note_es', 'package_id', 'data', 'get_hour_package'),
         'additional_module': lambda: (_additional_module(), 'offerings', 'update_additional_module', 'summary_es', 'module_id', 'data', 'get_additional_modules_catalog'),
     }
     instance, slug, tool, field, identity, envelope, read_tool = factories[request.param]()

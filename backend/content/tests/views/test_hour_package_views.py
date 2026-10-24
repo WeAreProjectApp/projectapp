@@ -1,4 +1,4 @@
-"""Tests for the hour-package catalog admin CRUD endpoints."""
+"""Admin API tests for the size-based requirement package catalog."""
 import pytest
 from django.urls import reverse
 
@@ -7,360 +7,226 @@ from content.models import HourPackage, HourPackageSettings
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def requirement_catalog():
+    from content.services.hour_package_service import restore_default_packages
+    restore_default_packages('COL')
+    restore_default_packages('EXT')
+    restore_default_packages('USA')
+
+
 @pytest.fixture
-def ext_package(db):
+def ext_package():
+    HourPackage.objects.filter(nationality='EXT', pricing_model='requirements').delete()
     return HourPackage.objects.create(
-        nationality='EXT',
-        name_es='Paquete Ágil MX',
-        name_en='Agile Pack MX',
-        hours=20,
-        hourly_rate=45,
-        discount_percent=0,
-        order=1,
+        nationality='EXT', pricing_model='requirements',
+        name_es='Paquete Ágil MX', name_en='Agile Pack MX',
+        xs_count=30, s_count=0, m_count=0, validity_months=12,
+        discount_percent=10, order=1,
     )
 
 
-class TestAdminHourPackageList:
-    def test_returns_403_for_unauthenticated(self, api_client):
-        response = api_client.get(reverse('list-admin-hour-packages'))
+def _payload(**changes):
+    return {
+        'nationality': 'EXT', 'name_es': 'Paquete Pro MX', 'name_en': 'Pro Pack MX',
+        'xs_count': 30, 's_count': 20, 'm_count': 0,
+        'validity_months': 12, 'discount_percent': 15, **changes,
+    }
+
+
+class TestRequirementPackageCatalog:
+    def test_list_requires_admin(self, api_client):
+        """Fails if the editable commercial catalog becomes public."""
+        assert api_client.get(reverse('list-admin-hour-packages')).status_code in (401, 403)
+
+    @pytest.mark.parametrize(
+        ('method', 'url_name', 'kwargs', 'payload'),
+        [
+            ('post', 'create-hour-package', None, _payload()),
+            ('get', 'retrieve-admin-hour-package', {'package_id': 999999}, {}),
+            ('patch', 'update-hour-package', {'package_id': 999999}, {'xs_count': 30}),
+            ('delete', 'delete-hour-package', {'package_id': 999999}, {}),
+            ('get', 'hour-package-settings', None, {}),
+            ('patch', 'update-hour-package-settings', None, {'alliance_xs_count': 8}),
+            ('post', 'restore-default-hour-packages', None, {'nationality': 'COL'}),
+        ],
+    )
+    def test_each_catalog_management_endpoint_requires_admin(self, api_client, method, url_name, kwargs, payload):
+        """Fails if one independently protected catalog endpoint becomes writable without staff access."""
+        response = getattr(api_client, method)(reverse(url_name, kwargs=kwargs), payload, format='json')
+
         assert response.status_code in (401, 403)
+        assert not HourPackage.objects.filter(name_es='Paquete Pro MX').exists()
 
-    def test_lists_migration_seeded_col_packages(self, admin_client):
-        response = admin_client.get(reverse('list-admin-hour-packages'))
+    def test_list_returns_only_three_active_requirement_tiers(self, admin_client):
+        """Fails if historical hour rows reappear in the active size catalog."""
+        HourPackage.objects.create(
+            nationality='COL', pricing_model='hours', name_es='Histórico', name_en='Historical',
+            hours=60, hourly_rate=30000, is_active=False,
+        )
+
+        response = admin_client.get(reverse('list-admin-hour-packages'), {'nationality': 'COL'})
+
         assert response.status_code == 200
-        col = [p for p in response.data if p['nationality'] == 'COL']
-        assert len(col) == 4
-        assert all(p['currency'] == 'COP' for p in col)
-        # July 2026 ladder starts with a 1-hour package at 30.000 COP/h.
-        assert col[0]['hours'] == 1
-        assert float(col[0]['hourly_rate']) == 30000.0
+        assert [(row['xs_count'], row['s_count'], row['m_count']) for row in response.data] == [
+            (30, 0, 0), (30, 20, 0), (30, 20, 10),
+        ]
+        assert all(row['pricing_model'] == 'requirements' for row in response.data)
 
-    def test_filters_by_nationality(self, admin_client, ext_package):
-        response = admin_client.get(
-            reverse('list-admin-hour-packages'), {'nationality': 'EXT'}
-        )
+    def test_list_filters_requirement_catalog_by_market(self, admin_client, ext_package):
+        """Fails if the market filter leaks a package into another commercial market."""
+        response = admin_client.get(reverse('list-admin-hour-packages'), {'nationality': 'EXT'})
+
         assert response.status_code == 200
-        ids = [p['id'] for p in response.data]
-        assert ext_package.id in ids
-        assert all(p['nationality'] == 'EXT' for p in response.data)
-        assert all(p['currency'] == 'USD' for p in response.data)
+        assert [row['id'] for row in response.data] == [ext_package.pk]
+        assert response.data[0]['currency'] == 'USD'
 
-    def test_rejects_invalid_nationality_filter(self, admin_client):
-        response = admin_client.get(
-            reverse('list-admin-hour-packages'), {'nationality': 'BRA'}
-        )
-        assert response.status_code == 400
+    def test_list_rejects_unknown_market_filter(self, admin_client):
+        """Fails if a typo can bypass the market catalog boundary."""
+        response = admin_client.get(reverse('list-admin-hour-packages'), {'nationality': 'BRA'})
 
-
-class TestAdminHourPackageCreate:
-    def test_returns_403_for_unauthenticated(self, api_client):
-        response = api_client.post(reverse('create-hour-package'), {}, format='json')
-        assert response.status_code in (401, 403)
-
-    def test_creates_package_with_derived_currency(self, admin_client):
-        payload = {
-            'nationality': 'EXT',
-            'name_es': 'Paquete Pro MX',
-            'name_en': 'Pro Pack MX',
-            'hours': 60,
-            'hourly_rate': '40.00',
-            'discount_percent': 10,
-        }
-        response = admin_client.post(
-            reverse('create-hour-package'), payload, format='json'
-        )
-        assert response.status_code == 201
-        assert response.data['currency'] == 'USD'
-        assert HourPackage.objects.filter(
-            nationality='EXT', name_es='Paquete Pro MX').count() == 1
-
-    def test_rejects_zero_hours(self, admin_client):
-        payload = {
-            'nationality': 'COL', 'name_es': 'X', 'name_en': 'X',
-            'hours': 0, 'hourly_rate': '90000',
-        }
-        response = admin_client.post(
-            reverse('create-hour-package'), payload, format='json'
-        )
-        assert response.status_code == 400
-        assert 'hours' in response.data
-
-    def test_rejects_discount_above_100(self, admin_client):
-        payload = {
-            'nationality': 'COL', 'name_es': 'X', 'name_en': 'X',
-            'hours': 10, 'hourly_rate': '90000', 'discount_percent': 150,
-        }
-        response = admin_client.post(
-            reverse('create-hour-package'), payload, format='json'
-        )
-        assert response.status_code == 400
-        assert 'discount_percent' in response.data
-
-    def test_rejects_invalid_nationality(self, admin_client):
-        payload = {
-            'nationality': 'BRA', 'name_es': 'X', 'name_en': 'X',
-            'hours': 10, 'hourly_rate': '90000',
-        }
-        response = admin_client.post(
-            reverse('create-hour-package'), payload, format='json'
-        )
         assert response.status_code == 400
         assert 'nationality' in response.data
 
+    def test_create_persists_size_counts_and_derived_currency(self, admin_client):
+        """Fails if a new offer loses its size composition or market currency."""
+        response = admin_client.post(reverse('create-hour-package'), _payload(), format='json')
 
-class TestAdminHourPackageRetrieveUpdate:
-    def test_returns_403_for_unauthenticated(self, api_client, ext_package):
-        url = reverse('update-hour-package', args=[ext_package.id])
-        response = api_client.patch(url, {}, format='json')
-        assert response.status_code in (401, 403)
-
-    def test_retrieves_detail(self, admin_client, ext_package):
-        url = reverse('retrieve-admin-hour-package', args=[ext_package.id])
-        response = admin_client.get(url)
-        assert response.status_code == 200
-        assert response.data['name_es'] == 'Paquete Ágil MX'
+        assert response.status_code == 201
+        assert (response.data['xs_count'], response.data['s_count'], response.data['m_count']) == (30, 20, 0)
         assert response.data['currency'] == 'USD'
+        assert HourPackage.objects.get(pk=response.data['id']).pricing_model == 'requirements'
 
-    def test_partial_update(self, admin_client, ext_package):
-        url = reverse('update-hour-package', args=[ext_package.id])
-        response = admin_client.patch(
-            url, {'hourly_rate': '50.00', 'discount_percent': 5}, format='json'
+    @pytest.mark.parametrize(
+        ('payload', 'field'),
+        [
+            (_payload(xs_count=0, s_count=0, m_count=0), 'non_field_errors'),
+            (_payload(validity_months=0), 'validity_months'),
+            (_payload(discount_percent=100), 'discount_percent'),
+        ],
+    )
+    def test_create_rejects_invalid_requirement_commitment(self, admin_client, payload, field):
+        """Fails if the admin API accepts an unusable commercial commitment."""
+        response = admin_client.post(reverse('create-hour-package'), payload, format='json')
+
+        assert response.status_code == 400
+        assert field in response.data
+        assert not HourPackage.objects.filter(name_es='Paquete Pro MX').exists()
+
+    def test_legacy_package_is_read_only_and_cannot_be_deleted_through_active_catalog(self, admin_client):
+        """Fails if historical hour commitments can be modified or erased as live packages."""
+        legacy = HourPackage.objects.create(
+            nationality='COL', pricing_model='hours', name_es='Histórico', name_en='Historical',
+            hours=60, hourly_rate=30000, is_active=False,
         )
+
+        update = admin_client.patch(reverse('update-hour-package', args=[legacy.pk]), {'xs_count': 30}, format='json')
+        delete = admin_client.delete(reverse('delete-hour-package', args=[legacy.pk]))
+
+        assert update.status_code == 400
+        assert delete.status_code == 404
+        assert HourPackage.objects.filter(pk=legacy.pk).exists()
+
+    def test_update_changes_requirement_composition(self, admin_client, ext_package):
+        """Fails if a saved package ignores its edited S allowance."""
+        response = admin_client.patch(
+            reverse('update-hour-package', args=[ext_package.pk]), {'s_count': 20}, format='json',
+        )
+
         assert response.status_code == 200
         ext_package.refresh_from_db()
-        assert float(ext_package.hourly_rate) == 50.0
-        assert ext_package.discount_percent == 5
-
-    def test_update_returns_404_for_missing(self, admin_client):
-        url = reverse('update-hour-package', args=[999999])
-        response = admin_client.patch(url, {'hours': 5}, format='json')
-        assert response.status_code == 404
+        assert ext_package.s_count == 20
 
 
-class TestAdminHourPackageDelete:
-    def test_returns_403_for_unauthenticated(self, api_client, ext_package):
-        url = reverse('delete-hour-package', args=[ext_package.id])
-        response = api_client.delete(url)
-        assert response.status_code in (401, 403)
-
-    def test_deletes_package(self, admin_client, ext_package):
-        url = reverse('delete-hour-package', args=[ext_package.id])
-        response = admin_client.delete(url)
-        assert response.status_code == 204
-        assert not HourPackage.objects.filter(pk=ext_package.id).exists()
-
-
-class TestHourPackageSettings:
-    def test_returns_403_for_unauthenticated(self, api_client):
-        response = api_client.get(reverse('hour-package-settings'))
-        assert response.status_code in (401, 403)
-
-    def test_get_returns_table_default(self, admin_client):
-        response = admin_client.get(reverse('hour-package-settings'))
-        assert response.status_code == 200
-        assert response.data['default_view_mode'] == 'table'
-
-    def test_patch_updates_view_mode(self, admin_client):
-        response = admin_client.patch(
-            reverse('update-hour-package-settings'),
-            {'default_view_mode': 'cards'}, format='json',
+class TestRequirementPackageSettings:
+    def test_settings_returns_and_updates_the_selected_view_mode(self, admin_client):
+        """Fails if the panel loses its persisted catalog display preference."""
+        current = admin_client.get(reverse('hour-package-settings'))
+        updated = admin_client.patch(
+            reverse('update-hour-package-settings'), {'default_view_mode': 'cards'}, format='json',
         )
-        assert response.status_code == 200
+
+        assert current.data['default_view_mode'] == 'table'
+        assert updated.status_code == 200
         assert HourPackageSettings.load().default_view_mode == 'cards'
 
-    def test_patch_rejects_unknown_mode(self, admin_client):
+    def test_settings_reject_unknown_view_mode(self, admin_client):
+        """Fails if the persisted panel preference accepts a layout the UI cannot render."""
         response = admin_client.patch(
-            reverse('update-hour-package-settings'),
-            {'default_view_mode': 'carousel'}, format='json',
+            reverse('update-hour-package-settings'), {'default_view_mode': 'carousel'}, format='json',
         )
+
         assert response.status_code == 400
         assert 'default_view_mode' in response.data
-
-    def test_get_exposes_base_rates(self, admin_client):
-        response = admin_client.get(reverse('hour-package-settings'))
-        assert response.status_code == 200
-        assert float(response.data['base_rate_col']) == 30000.0
-        assert float(response.data['base_rate_ext']) == 18.0
-        assert float(response.data['base_rate_usa']) == 30.0
-
-    def test_patch_base_rate_propagates_to_catalog(self, admin_client):
+    def test_settings_reject_empty_alliance_allowance(self, admin_client):
+        """Fails if the public five-year benefit can be configured with no monthly capacity."""
         response = admin_client.patch(
             reverse('update-hour-package-settings'),
-            {'base_rate_col': '35000'}, format='json',
+            {'alliance_xs_count': 0, 'alliance_s_count': 0, 'alliance_m_count': 0}, format='json',
         )
-        assert response.status_code == 200
-        assert response.data['updated_packages'] == {'COL': 4}
-        rates = set(
-            HourPackage.objects.filter(nationality='COL')
-            .values_list('hourly_rate', flat=True)
-        )
-        assert {float(r) for r in rates} == {35000.0}
 
-    def test_patch_unchanged_base_rate_skips_propagation(self, admin_client):
-        pkg = HourPackage.objects.filter(nationality='COL').first()
-        pkg.hourly_rate = 99999  # per-package exception must survive
-        pkg.save()
-        response = admin_client.patch(
-            reverse('update-hour-package-settings'),
-            {'base_rate_col': '30000'}, format='json',
-        )
-        assert response.status_code == 200
-        assert response.data['updated_packages'] == {}
-        pkg.refresh_from_db()
-        assert float(pkg.hourly_rate) == 99999.0
-
-    def test_patch_view_mode_only_does_not_touch_packages(self, admin_client):
-        before = list(
-            HourPackage.objects.order_by('id')
-            .values_list('hourly_rate', 'updated_at')
-        )
-        response = admin_client.patch(
-            reverse('update-hour-package-settings'),
-            {'default_view_mode': 'compare'}, format='json',
-        )
-        assert response.status_code == 200
-        assert response.data['updated_packages'] == {}
-        after = list(
-            HourPackage.objects.order_by('id')
-            .values_list('hourly_rate', 'updated_at')
-        )
-        assert after == before
-
-    def test_patch_rejects_zero_base_rate(self, admin_client):
-        response = admin_client.patch(
-            reverse('update-hour-package-settings'),
-            {'base_rate_ext': '0'}, format='json',
-        )
         assert response.status_code == 400
-        assert 'base_rate_ext' in response.data
+        assert 'non_field_errors' in response.data
 
-    def test_patch_rejects_negative_base_rate(self, admin_client):
-        response = admin_client.patch(
-            reverse('update-hour-package-settings'),
-            {'base_rate_usa': '-5'}, format='json',
-        )
-        assert response.status_code == 400
-        assert 'base_rate_usa' in response.data
-
-
-class TestRestoreDefaultHourPackages:
-    def test_returns_403_for_unauthenticated(self, api_client):
-        response = api_client.post(
-            reverse('restore-default-hour-packages'), {}, format='json'
-        )
-        assert response.status_code in (401, 403)
-
-    def test_rejects_invalid_nationality(self, admin_client):
-        response = admin_client.post(
-            reverse('restore-default-hour-packages'),
-            {'nationality': 'BRA'}, format='json',
-        )
-        assert response.status_code == 400
-
-    def test_replaces_catalog_with_defaults(self, admin_client):
-        HourPackage.objects.filter(nationality='COL').delete()
-        custom = HourPackage.objects.create(
-            nationality='COL', name_es='Custom', name_en='Custom',
-            hours=7, hourly_rate=99999, discount_percent=1, order=1,
-        )
-        response = admin_client.post(
-            reverse('restore-default-hour-packages'),
-            {'nationality': 'COL'}, format='json',
-        )
-        assert response.status_code == 200
-        assert not HourPackage.objects.filter(pk=custom.id).exists()
-        col = HourPackage.objects.filter(nationality='COL').order_by('order')
-        assert col.count() == 4
-        assert col.first().hours == 1
-        assert float(col.first().hourly_rate) == 30000.0
-        # The response returns the fresh list for the store to swap in.
-        assert len(response.data) == 4
-
-
-class TestHourPackageProgramRebuild:
-    """The public Partnership Program is prerendered with its monthly package."""
-
-    @pytest.fixture
-    def rebuild_calls(self, monkeypatch):
+    def test_settings_change_schedules_public_program_rebuild(self, admin_client, monkeypatch):
+        """Fails if changing the public allowance leaves the prerendered program stale."""
         calls = []
         monkeypatch.setattr(
             'content.views.hour_packages.schedule_rebuild_after_publish',
             lambda **kwargs: calls.append(kwargs),
         )
-        return calls
 
-    @pytest.fixture
-    def program_package(self, db):
-        return HourPackage.objects.get(nationality='COL', hours=60)
-
-    def test_renaming_program_package_requests_rebuild(
-        self, admin_client, program_package, rebuild_calls,
-    ):
-        """Fails if the prerendered program keeps the old monthly package name."""
-        url = reverse('update-hour-package', args=[program_package.id])
-        response = admin_client.patch(url, {'name_es': 'Paquete Pro Plus'}, format='json')
+        response = admin_client.patch(
+            reverse('update-hour-package-settings'), {'alliance_xs_count': 8}, format='json',
+        )
 
         assert response.status_code == 200
-        assert response.data['name_es'] == 'Paquete Pro Plus'
-        assert rebuild_calls == [{'reason': 'partnership-program'}]
+        assert HourPackageSettings.load().alliance_xs_count == 8
+        assert calls == [{'reason': 'partnership-program'}]
 
-    def test_moving_program_package_off_sixty_hours_requests_rebuild(
-        self, admin_client, program_package, rebuild_calls,
-    ):
-        """Fails if a package leaving the program only triggers on its new values."""
-        url = reverse('update-hour-package', args=[program_package.id])
-        response = admin_client.patch(url, {'hours': 50}, format='json')
 
-        assert response.status_code == 200
-        assert response.data['hours'] == 50
-        assert rebuild_calls == [{'reason': 'partnership-program'}]
+class TestRestoreRequirementPackageDefaults:
+    def test_restore_with_missing_usd_rate_keeps_existing_catalog(self, admin_client):
+        """Fails if a rejected foreign restore deletes its current requirement tiers first."""
+        before = list(HourPackage.objects.filter(
+            nationality='EXT', pricing_model='requirements',
+        ).values_list('pk', flat=True))
+        from content.models import AccountingSettings
+        accounting = AccountingSettings.load()
+        accounting.usd_exchange_rate = 0
+        accounting.save(update_fields=['usd_exchange_rate'])
 
-    def test_editing_unlisted_package_skips_rebuild(
-        self, admin_client, ext_package, rebuild_calls,
-    ):
-        """Fails if a package the program never shows forces a regeneration."""
-        url = reverse('update-hour-package', args=[ext_package.id])
-        response = admin_client.patch(url, {'hourly_rate': '50.00'}, format='json')
+        response = admin_client.post(
+            reverse('restore-default-hour-packages'), {'nationality': 'EXT'}, format='json',
+        )
 
-        assert response.status_code == 200
-        assert float(response.data['hourly_rate']) == 50.0
-        assert rebuild_calls == []
+        assert response.status_code == 400
+        assert list(HourPackage.objects.filter(
+            nationality='EXT', pricing_model='requirements',
+        ).values_list('pk', flat=True)) == before
 
-    def test_deleting_program_package_requests_rebuild(
-        self, admin_client, program_package, rebuild_calls,
-    ):
-        url = reverse('delete-hour-package', args=[program_package.id])
-        response = admin_client.delete(url)
+    def test_restore_rejects_unknown_market(self, admin_client):
+        """Fails if default restoration can target a non-existent commercial market."""
+        response = admin_client.post(
+            reverse('restore-default-hour-packages'), {'nationality': 'BRA'}, format='json',
+        )
 
-        assert response.status_code == 204
-        assert not HourPackage.objects.filter(pk=program_package.id).exists()
-        assert rebuild_calls == [{'reason': 'partnership-program'}]
+        assert response.status_code == 400
+        assert 'nationality' in response.data
 
-    def test_creating_program_package_requests_rebuild(self, admin_client, rebuild_calls):
-        payload = {
-            'nationality': 'COL', 'name_es': 'Paquete Socio', 'name_en': 'Partner Pack',
-            'hours': 60, 'hourly_rate': '30000', 'order': 0,
-        }
-        response = admin_client.post(reverse('create-hour-package'), payload, format='json')
+    def test_restore_replaces_only_requirement_catalog_with_three_default_tiers(self, admin_client):
+        """Fails if restoring defaults deletes history or recreates hourly offers."""
+        legacy = HourPackage.objects.create(
+            nationality='COL', pricing_model='hours', name_es='Histórico', name_en='Historical',
+            hours=60, hourly_rate=30000, is_active=False,
+        )
+        HourPackage.objects.filter(nationality='COL', pricing_model='requirements').delete()
 
-        assert response.status_code == 201
-        assert response.data['name_es'] == 'Paquete Socio'
-        assert rebuild_calls == [{'reason': 'partnership-program'}]
-
-    def test_restoring_colombian_defaults_requests_rebuild(self, admin_client, rebuild_calls):
         response = admin_client.post(
             reverse('restore-default-hour-packages'), {'nationality': 'COL'}, format='json',
         )
 
         assert response.status_code == 200
-        assert [row['hours'] for row in response.data] == [1, 20, 60, 180]
-        assert rebuild_calls == [{'reason': 'partnership-program'}]
-
-    def test_restoring_foreign_defaults_skips_rebuild(self, admin_client, rebuild_calls):
-        response = admin_client.post(
-            reverse('restore-default-hour-packages'), {'nationality': 'EXT'}, format='json',
-        )
-
-        assert response.status_code == 200
-        assert len(response.data) == 4
-        assert rebuild_calls == []
+        assert len(response.data) == 3
+        assert [row['xs_count'] for row in response.data] == [30, 30, 30]
+        assert HourPackage.objects.filter(pk=legacy.pk).exists()

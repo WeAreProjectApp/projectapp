@@ -30,6 +30,7 @@ STALE_CLAUSE = [
 
 STALE_SECTION = {
     'title': 'Condiciones comerciales',
+    'pricingModel': 'hours',
     'hourlyRate': 123456,
     'packages': [
         {'name': 'Paquete propio', 'hours': 7, 'discountPercent': 5, 'note': 'n'},

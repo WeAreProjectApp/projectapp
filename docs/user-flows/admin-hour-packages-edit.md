@@ -3,13 +3,12 @@
 - **Module:** admin
 - **Role:** admin
 - **Priority:** P2
-- **Routes:** `/panel/hour-packages/:id/edit`
-- **Description:** Edit an existing hour package; form prefilled from the detail endpoint, preview recalculates and a partial PATCH persists the changes.
+- **Routes:** `/panel/hour-packages`
+- **Description:** Admin edita cupos XS/S/M, vigencia, nombres, descuento y estado de un paquete; conserva el borrador ante errores del servidor.
 - **Steps:**
-  1. Admin navigates to `/panel/hour-packages/:id/edit`.
-  2. Package data loads from API (`GET /api/hour-packages/admin/:id/detail/`).
-  3. Admin edits rate/discount/fields; preview recalculates.
-  4. Admin saves → `PATCH /api/hour-packages/admin/:id/update/`.
-  5. On success, admin returns to the list.
-- **Coverage:** ✅ Covered
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
 - **E2E Spec:** `e2e/admin/admin-hour-packages-edit.spec.js`

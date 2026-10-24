@@ -1661,6 +1661,10 @@ def _render_commercial_conditions(c, data, _proposal, ps=None, y=None):
     # against them, so on its own it references a table that is not there.
     packages_enabled = data.get('hourPackagesEnabled') is not False
 
+    if data.get('pricingModel') == 'requirements':
+        from content.services.requirement_package_pdf import render_requirement_packages
+        return render_requirement_packages(c, y, data, currency, packages_enabled, ps)
+
     # ── Hour packages ──────────────────────────────────────────
     packages_title = _safe(data, 'packagesTitle')
     if packages_enabled and packages_title:
@@ -2055,12 +2059,15 @@ class ProposalPdfService:
                                 language=ps['_pdf_lang'],
                             )
                     except Exception:
+                        if data.get('pricingModel') == 'requirements':
+                            raise
                         logger.warning(
                             'Hour-package re-seed failed for proposal %s; '
                             'using stored snapshot', proposal.pk,
                             exc_info=True,
                         )
 
+                data = editorial_projection({'content_json': data}, sec.text_formats)['content_json']
                 if 'title' not in data or not data['title']:
                     data['title'] = sec.title
                 is_paste = (

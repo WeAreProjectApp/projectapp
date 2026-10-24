@@ -17,27 +17,11 @@ from content.serializers.hour_packages import (
     HourPackageCreateUpdateSerializer,
     HourPackageSettingsSerializer,
 )
-from content.services.financing_program_service import (
-    INCLUDED_PACKAGE_NATIONALITY,
-    is_included_package,
-)
 from content.services.frontend_build import schedule_rebuild_after_publish
 from content.services.hour_package_service import (
     apply_base_rates_to_catalog,
     restore_default_packages,
 )
-
-
-def _request_program_rebuild(*packages):
-    """Request a regeneration when a change touches the public program's package.
-
-    The prerendered Partnership Program names its included monthly package
-    (see financing_program_service), so only a package that matched it before
-    or after the change can alter that page. ``packages`` are
-    ``(nationality, hours)`` pairs.
-    """
-    if any(is_included_package(nationality, hours) for nationality, hours in packages):
-        schedule_rebuild_after_publish(reason='partnership-program')
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +32,7 @@ def _request_program_rebuild(*packages):
 @permission_classes([IsAdminUser])
 def list_admin_hour_packages(request):
     """List hour packages, optionally filtered by ?nationality=COL|EXT|USA."""
-    qs = HourPackage.objects.all()
+    qs = HourPackage.objects.filter(pricing_model='requirements')
     nationality = request.query_params.get('nationality')
     if nationality:
         if nationality not in Nationality.values:
@@ -69,7 +53,6 @@ def create_hour_package(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     package = serializer.save()
-    _request_program_rebuild((package.nationality, package.hours))
     detail = HourPackageAdminDetailSerializer(package)
     return Response(detail.data, status=status.HTTP_201_CREATED)
 
@@ -88,14 +71,12 @@ def retrieve_admin_hour_package(request, package_id):
 def update_hour_package(request, package_id):
     """Update an hour package's fields."""
     package = get_object_or_404(HourPackage, pk=package_id)
-    before = (package.nationality, package.hours)
     serializer = HourPackageCreateUpdateSerializer(
         package, data=request.data, partial=True
     )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     serializer.save()
-    _request_program_rebuild(before, (package.nationality, package.hours))
     detail = HourPackageAdminDetailSerializer(package)
     return Response(detail.data, status=status.HTTP_200_OK)
 
@@ -104,10 +85,8 @@ def update_hour_package(request, package_id):
 @permission_classes([IsAdminUser])
 def delete_hour_package(request, package_id):
     """Delete an hour package."""
-    package = get_object_or_404(HourPackage, pk=package_id)
-    removed = (package.nationality, package.hours)
+    package = get_object_or_404(HourPackage, pk=package_id, pricing_model='requirements')
     package.delete()
-    _request_program_rebuild(removed)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -148,6 +127,8 @@ def update_hour_package_settings(request):
     with transaction.atomic():
         serializer.save()
         updated_packages = apply_base_rates_to_catalog(changed_rates)
+        if any(key.startswith('alliance_') for key in serializer.validated_data):
+            schedule_rebuild_after_publish(reason='partnership-program')
     return Response(
         {**serializer.data, 'updated_packages': updated_packages},
         status=status.HTTP_200_OK,
@@ -164,9 +145,11 @@ def restore_default_hour_packages(request):
             {'nationality': ['Nacionalidad inválida. Usa COL, EXT o USA.']},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    restore_default_packages(nationality)
-    if nationality == INCLUDED_PACKAGE_NATIONALITY:
-        schedule_rebuild_after_publish(reason='partnership-program')
-    qs = HourPackage.objects.filter(nationality=nationality)
-    serializer = HourPackageAdminListSerializer(qs, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    from content.services.requirement_package_service import price_context
+
+    price_context(nationality)
+    with transaction.atomic():
+        restore_default_packages(nationality)
+        qs = HourPackage.objects.filter(nationality=nationality, pricing_model='requirements')
+        data = HourPackageAdminListSerializer(qs, many=True).data
+    return Response(data, status=status.HTTP_200_OK)

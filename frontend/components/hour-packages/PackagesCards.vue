@@ -25,30 +25,28 @@
         </span>
       </div>
 
-      <p class="mt-4 text-3xl font-light text-text-default">
-        {{ pkg.hours }}<span class="text-base text-text-muted ml-1">h</span>
-      </p>
-
-      <dl class="mt-3 space-y-1.5 text-sm flex-1">
-        <div class="flex items-center justify-between">
-          <dt class="text-text-muted">Tarifa efectiva</dt>
-          <dd class="font-medium text-text-default">{{ money(effectiveRate(pkg), pkg.currency) }}/h</dd>
+      <p class="mt-4 text-lg font-medium text-text-default">{{ composition(pkg) }}</p>
+      <p class="mt-1 text-xs text-text-muted">Vigencia: {{ pkg.validity_months }} meses desde el pago</p>
+      <dl class="mt-3 space-y-2 text-sm flex-1">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <dt class="text-text-muted">Referencia</dt>
+          <dd class="text-text-muted line-through">{{ money(pkg.reference_price, pkg.currency) }}</dd>
         </div>
-        <div v-if="Number(pkg.discount_percent) > 0" class="flex items-center justify-between">
-          <dt class="text-text-muted">Sobre {{ money(pkg.hourly_rate, pkg.currency) }}/h</dt>
-          <dd>
-            <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-primary-soft text-text-brand">
-              -{{ pkg.discount_percent }}%
-            </span>
-          </dd>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <dt class="text-text-muted">Descuento</dt>
+          <dd class="font-medium text-text-brand">-{{ pkg.discount_percent }} %</dd>
         </div>
-        <div class="flex items-center justify-between border-t border-border-muted pt-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <dt class="text-text-muted">Ahorro</dt>
+          <dd class="font-medium text-text-brand">{{ money(pkg.savings, pkg.currency) }}</dd>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border-muted pt-2">
           <dt class="text-text-muted">Total</dt>
-          <dd class="font-medium text-text-default">{{ money(totalPrice(pkg), pkg.currency) }}</dd>
+          <dd class="font-medium text-text-default">{{ money(totalPrice(pkg), pkg.currency) }} {{ pkg.currency === 'COP' ? '+ IVA' : '+ Tax' }}</dd>
         </div>
       </dl>
 
-      <p v-if="pkg.note_es" class="mt-3 text-xs text-text-subtle">{{ pkg.note_es }}</p>
+      <BaseRichTextContent v-if="pkg.note_es" :source="pkg.note_es" :format="pkg.text_formats?.['/note_es'] || 'plain'" class="mt-3 text-xs text-text-subtle" />
 
       <div class="mt-4 pt-3 border-t border-border-muted flex items-center gap-3">
         <NuxtLink
@@ -66,7 +64,8 @@
 </template>
 
 <script setup>
-import { effectiveRate, totalPrice, formatPackageMoney as money } from '~/utils/hourPackagePricing';
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
+import { composition, totalPrice, formatPackageMoney as money } from '~/utils/hourPackagePricing';
 
 defineProps({
   packages: { type: Array, required: true },

@@ -2,6 +2,8 @@
 
 > **Video explicativo de Building on Demand — 2026-10-22:** Pipeline brag v2: 60 s, 1080p/30 fps, voz es-CO-SalomeNeural, MP4 H.264 y portada WebP. edge-tts 7.3.1 permite producir con el endpoint vigente del proveedor. Células administra el recurso por idioma usando sesión/CSRF; el MCP Programas comparte operaciones. El documento y su PDF conservan su contenido comercial.
 
+> **Paquetes por talla — 2026-10-23:** Precios por talla en COP, descuentos 10/15/25 y factores iniciales EXT1.4/USA1.8; el servicio convierte con AccountingSettings.usd_exchange_rate y redondea al final. Los renderizadores respetan totalPrice congelado para evitar diferencias de un centavo al descontar referencias USD redondeadas. Las migraciones nuevas preservan legacy y versiones contractuales; no se modifica historial emitido. El video predeterminado de Alianza se regeneró con la narración por tallas, 60 s a 1080p/30 fps.
+
 > **Consultoría y asesoría — 2026-10-23:** Consultoría: rutas públicas localizadas /consulting y /panel/consulting con admin-auth. API /api/consulting/public/ y public/pdf/ acepta lang=es|en; admin/ y admin/program/versions/ exigen IsAdminUser. Nuevas tablas y contenido inicial mediante content.0300; la base de despliegue se migra solo en deploy.
 
 > **Captura de IVA con centavos — 2026-10-22:** cambiar únicamente entre base y total incluido conserva el pago y su reparto automático. La captura monetaria se emite al editar importe o tasa; no se reconstruye el total desde una base redondeada.

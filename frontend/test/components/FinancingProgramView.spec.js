@@ -55,9 +55,9 @@ const program = {
       highlights: ['Resultado orientativo'],
     },
     {
-      id: 'hour-package', number: '04', icon: '◷', title: '60 horas',
-      summary: 'Capacidad mensual.', commercial_reason: 'Mantiene la evolución.',
-      highlights: ['No acumula horas'],
+      id: 'requirement-package', number: '04', icon: '◷', title: 'Cupos mensuales',
+      summary: 'Capacidad mensual por talla.', commercial_reason: 'Mantiene la evolución.',
+      highlights: ['No acumula cupos'],
     },
     {
       id: 'payment-discipline', number: '05', icon: '%', title: 'Pagos claros',
@@ -74,9 +74,9 @@ const program = {
     disclaimer: 'La cotización formal prevalece.',
   },
   package: {
-    name: 'Paquete Pro', hours: 60, included_label: 'Incluido',
+    name: 'Paquete Pro', xs_count: 4, s_count: 2, m_count: 1, included_label: 'Incluido',
     title: 'Capacidad mensual', summary: 'Para requerimientos acotados.',
-    renewal_label: 'Se renueva cada mes', rollover_label: 'No acumula horas',
+    renewal_label: 'Se renueva cada mes', rollover_label: 'Los cupos no se acumulan',
     availability_label: 'Desde producción',
   },
   legal_terms: [
@@ -166,6 +166,24 @@ describe('FinancingProgramView', () => {
 
     expect(wrapper.get('[data-testid="financing-option-five-year"]').text())
       .toContain('Hasta dos ciclos de financiación')
+  })
+
+  // Falla si la Alianza vuelve a prometer horas o pierde la combinación mensual de tallas.
+  it('shows the five-year monthly allowance with renewal and no rollover', () => {
+    const wrapper = mountProgram()
+
+    expect(wrapper.get('[data-testid="financing-package-facts"]').text())
+      .toBe('financing.packageFactsSe renueva cada mesLos cupos no se acumulanDesde producción')
+    expect(wrapper.get('[data-testid="financing-package-facts"]').element.parentElement.textContent)
+      .toContain('4 XS · 2 S · 1 M')
+  })
+
+  // Falla si la opción de tres años comunica que incluye el beneficio exclusivo de la alianza de cinco años.
+  it('keeps the three-year option outside the monthly allowance benefit', () => {
+    const wrapper = mountProgram()
+
+    expect(wrapper.get('[data-testid="financing-option-three-year"]').text())
+      .toContain('financing.packageNotIncluded')
   })
 
   it('reveals an agreement rule from its accordion', async () => {
@@ -306,7 +324,8 @@ describe('FinancingProgramView guided tour', () => {
   it('marks the tour targets on the conditions index and the rules list', () => {
     const wrapper = mountProgram({ language: 'es' })
 
-    expect(wrapper.find('nav.financing-conditions-nav').exists()).toBe(true)
-    expect(wrapper.find('.financing-terms [data-testid^="financing-term-"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="financing-term-approval"]').text()).toContain('Saldo aprobado')
+    expect(wrapper.get('[data-testid="financing-term-trigger-approval"]').attributes('aria-controls'))
+      .toBe('financing-term-panel-approval')
   })
 })

@@ -238,6 +238,7 @@ class FinancingAgreement(RetainedProjectModel, models.Model):
         choices=(('COP', 'COP'), ('USD', 'USD')),
         default='COP',
     )
+    requirement_allowance = models.JSONField(default=dict, blank=True, help_text='Frozen monthly XS/S/M benefit; empty means historical hours terms.')
     eligibility_exchange_rate = models.DecimalField(
         max_digits=10,
         decimal_places=2,

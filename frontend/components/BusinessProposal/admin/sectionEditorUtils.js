@@ -184,6 +184,9 @@ function buildFormValues(json, type, proposalData) {
         // by the catalog; this form no longer renders them. They stay on the
         // form purely so formToJson can hand them back untouched — dropping
         // them here would wipe the proposal's packages on the next save.
+        pricingModel: j.pricingModel || 'hours',
+        packagesFrozen: Boolean(j.packagesFrozen),
+        hourPackagesEnabled: j.hourPackagesEnabled !== false,
         hourPackagesMode: j.hourPackagesMode === 'manual' ? 'manual' : 'auto',
         hourlyRate: j.hourlyRate ?? '',
         currency: j.currency || proposalData?.currency || 'COP',
@@ -196,6 +199,7 @@ function buildFormValues(json, type, proposalData) {
           }))
           : [],
         packages: packages.map((p) => ({
+          ...p,
           id: p.id,
           name: p.name || '',
           hours: p.hours ?? '',
@@ -358,6 +362,18 @@ function formValuesToJson(formData, type) {
     }
     case 'commercial_conditions': {
       const packages = Array.isArray(f.packages) ? f.packages : [];
+      if (f.pricingModel === 'requirements') {
+        return {
+          index: f.index, title: f.title, packagesTitle: f.packagesTitle || '',
+          packagesIntro: f.packagesIntro || '', pricingModel: 'requirements',
+          packagesFrozen: Boolean(f.packagesFrozen), hourPackagesEnabled: f.hourPackagesEnabled !== false,
+          hourPackagesMode: f.hourPackagesMode === 'manual' ? 'manual' : 'auto',
+          currency: f.currency || 'COP', manualCurrency: f.manualCurrency || f.currency || 'COP',
+          packages: packages.map(({ hours, hourlyRate, ...row }) => row),
+          effortBadge: f.effortBadge || '', scopeTitle: f.scopeTitle || '',
+          scopeParagraphs: textToArr(f.scopeParagraphs || ''),
+        };
+      }
       return {
         index: f.index,
         title: f.title,

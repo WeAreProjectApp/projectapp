@@ -1,12 +1,12 @@
 {
   "id": "admin-hour-packages-delete",
-  "name": "Admin Hour Packages Delete",
+  "name": "Eliminar paquete de requerimientos",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P2",
-  "description": "Delete an hour package with confirmation modal.",
+  "description": "Admin confirma o cancela la eliminación de un paquete del catálogo vigente. Los documentos históricos conservan sus condiciones.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

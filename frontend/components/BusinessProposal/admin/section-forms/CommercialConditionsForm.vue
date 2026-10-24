@@ -4,22 +4,22 @@
     <FieldInput v-model="form.title" label="Título" />
   </div>
 
-  <!-- Paquetes de horas -->
+  <!-- Paquetes de requerimientos -->
   <div class="mt-2">
     <FieldInput v-model="form.packagesTitle" label="Título de los paquetes" />
     <FieldTextarea v-model="form.packagesIntro" :format="form.text_formats?.['/packagesIntro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/packagesIntro': $event }" label="Intro de los paquetes" :rows="2" :isSingle="true" class="mt-2" />
 
     <p data-testid="hour-rate-tab-hint" class="text-[11px] text-text-subtle mt-3">
-      Los paquetes, las horas y los descuentos vienen del catálogo de Paquetes por horas.
-      La tarifa de esta propuesta se configura en la pestaña
-      <span class="font-medium text-text-muted">«Tarifa por hora»</span>, que además
+      Los paquetes, los cupos y los descuentos vienen del catálogo de Paquetes de requerimientos.
+      La composición y el precio de esta propuesta se configuran en la pestaña
+      <span class="font-medium text-text-muted">«Paquetes de requerimientos»</span>, que además
       muestra la tabla tal como se imprime en el PDF.
     </p>
 
     <FieldTextarea
       v-model="form.effortBadge" :format="form.text_formats?.['/effortBadge'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/effortBadge': $event }"
-      label="Badge de esfuerzo"
-      help="Aclara que requerimientos de esfuerzo medio o superior se cotizan como requerimiento independiente."
+      label="Tallas incluidas y condiciones"
+      help="Aclara el uso de cupos XS/S/M, la cotización independiente de L/XL y las correcciones cubiertas por garantía."
       :rows="2"
       :isSingle="true"
       class="mt-3"
@@ -42,7 +42,7 @@
 
 <script setup>
 // Rates, currency and the package list are deliberately absent from this form:
-// the catalog owns the package structure and the «Tarifa por hora» tab owns the
+// the catalog owns the package structure and the «Paquetes de requerimientos» tab owns the
 // per-proposal rate. They still round-trip through buildFormFromJson/formToJson
 // as untouched carry-through fields, so saving here never disturbs them.
 import { FieldInput, FieldTextarea } from './fields.js';

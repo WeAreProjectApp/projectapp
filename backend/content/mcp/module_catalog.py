@@ -29,12 +29,12 @@ COMMERCIAL_MEMBERS = (
 SECTION_NOTES = {
     'commercial': (
         'Comercial reúne Clientes; Propuestas, Diagnósticos y Consultoría y asesoría; y Configuración '
-        '(Defaults y entregabilidad email). Paquetes de horas y módulos adicionales '
+        '(Defaults y entregabilidad email). Paquetes de requerimientos y módulos adicionales '
         'se administran en Nuestra oferta (offerings). Los programas y sus '
         'contratos se administran en Programas (programs).'
     ),
     'offerings': (
-        'Nuestra oferta reúne Paquetes de horas y Módulos adicionales. '
+        'Nuestra oferta reúne Paquetes de requerimientos y Módulos adicionales. '
         'Clientes, propuestas, diagnósticos y Defaults están en Comercial '
         '(commercial). Programa de Alianza, Building with Us y Células están '
         'en Programas (programs).'
@@ -43,7 +43,7 @@ SECTION_NOTES = {
         'Programas reúne las alianzas (Programa de Alianza y Building with Us) '
         'y las Células de Building on Demand, incluidos contratos, economía y '
         'versiones y videos por idioma (consultar, cargar, sustituir, quitar, restaurar y mostrar). '
-        'Paquetes de horas y módulos adicionales están en Nuestra '
+        'Paquetes de requerimientos y módulos adicionales están en Nuestra '
         'oferta (offerings); clientes, propuestas y diagnósticos en Comercial '
         '(commercial).'
     ),

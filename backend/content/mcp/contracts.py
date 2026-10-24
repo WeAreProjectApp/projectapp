@@ -564,7 +564,7 @@ MCP_MODEL_CONTRACTS = {
                 )
                 | _excluded(
                     'Instantánea interna de precios históricos; sólo la migración y la edición financiera la gestionan.',
-                    'legacy_pricing_snapshot',
+                    'legacy_pricing_snapshot package_pricing_context',
                 )
                 | _excluded(
                     'Manifiesto privado e inmutable del cierre; MCP usa la revisión autorizada y no escribe su JSON interno.',
@@ -1160,16 +1160,16 @@ COMMERCIAL_CATALOG_CONTRACTS = (
     ),
     _contract(
         'content.HourPackage',
-        read_only='id created_at updated_at',
+        read_only='id created_at updated_at pricing_model hours hourly_rate',
         read_write=(
-            'nationality name_es name_en note_es note_en hours hourly_rate '
+            'nationality name_es name_en note_es note_en xs_count s_count m_count validity_months '
             'discount_percent is_active order'
         ),
     ),
     _contract(
         'content.HourPackageSettings',
         read_only='id created_at updated_at',
-        read_write='default_view_mode base_rate_col base_rate_ext base_rate_usa',
+        read_write='default_view_mode base_rate_col base_rate_ext base_rate_usa xs_price_cop s_price_cop m_price_cop foreign_multiplier usa_multiplier alliance_xs_count alliance_s_count alliance_m_count',
     ),
 )
 
@@ -1432,7 +1432,7 @@ PARTNERSHIP_CONTRACTS = (
             'status completion_note cancellation_reason is_archived policy_revision'
         ),
         read_only=(
-            'id uuid number cycle_number previous_agreement partnership_end_date eligibility_exchange_rate '
+            'id uuid number cycle_number previous_agreement partnership_end_date eligibility_exchange_rate requirement_allowance '
             'financed_balance template_version resolved_contract_markdown resolved_contract_sha256 '
             'signed_document_sha256 signed_document_size ready_at ready_by activated_at activated_by '
             'completed_at completed_by cancelled_at cancelled_by second_cycle_approved_at second_cycle_approved_by '

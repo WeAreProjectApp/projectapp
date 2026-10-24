@@ -20,7 +20,7 @@ const json = (body) => ({ status: 200, contentType: 'application/json', body: JS
 const proposal = { id: 1, uuid: 'commercial-responsive-proposal', title: 'Propuesta de implementación', client_name: 'Acme Comercial', client_email: 'acme@test.com', status: 'draft', total_investment: 5000000, currency: 'COP', sections: [], heat_score: 72, view_count: 3, engagement_summary: { views: 3, investment_time_sec: 120, technical_time_sec: 0, technical_viewed: false, unique_devices: 1, skipped_sections: [] } };
 const diagnostic = { id: 1, title: 'Diagnóstico responsive', client_name: 'Acme Comercial', client_email: 'acme@test.com', status: 'draft', uuid: 'diagnostic-1', sections: [] };
 const diagnosticClient = { id: 101, name: 'Acme Comercial', company: 'Acme', email: 'acme@test.com' };
-const hourPackage = { id: 1, name_es: 'Paquete 20 horas', name_en: '20 hour package', nationality: 'COL', currency: 'COP', hours: 20, hourly_rate: '100000.00', discount_percent: 0, is_active: true };
+const hourPackage = { id: 1, pricing_model: 'requirements', name_es: 'Paquete Ágil', name_en: 'Agile package', nationality: 'COL', currency: 'COP', xs_count: 30, s_count: 0, m_count: 0, validity_months: 12, reference_price: '1500000', total_price: '1350000', savings: '150000', discount_percent: 10, is_active: true };
 const moduleCategory = { id: 1, slug: 'analytics', name_es: 'Analítica', name_en: 'Analytics', is_active: true, order: 1 };
 const moduleFixture = { id: 1, category: 1, slug: 'analitica-comercial', name_es: 'Analítica comercial', name_en: 'Commercial analytics', summary_es: 'Módulo con una acción visible.', summary_en: 'Module with a visible action.', is_active: true, order: 1 };
 const proposalDefaults = { id: 1, language: 'es', sections_json: [], default_slug_pattern: '{client_name}', default_expiration_days: 21, default_reminder_days: 7, default_urgency_reminder_days: 14, created_at: null, updated_at: null };
@@ -107,9 +107,9 @@ async function exerciseCommercialView(page, scenario) {
     'frontend/pages/panel/proposals/create.vue': { action: async () => { await page.getByRole('button', { name: 'Manual' }).click(); await page.getByLabel('Título', { exact: true }).fill('Propuesta manual responsive'); }, value: null },
     'frontend/pages/panel/proposals/[id]/edit.vue': { action: async () => { await selectProposalDestination(page, 'communication', 'emails'); await page.getByTestId('edit-email-preview-btn').click(); await expect(page.getByRole('heading', { name: 'Vista previa del correo', exact: true })).toBeVisible(); }, value: null },
     'frontend/pages/panel/defaults.vue': { action: async () => { await page.getByRole('button', { name: 'Diagnóstico', exact: true }).click(); await expect(page).toHaveURL(/mode=diagnostic/); }, value: 'Valores por Defecto' },
-    'frontend/pages/panel/hour-packages/index.vue': { action: () => page.getByTestId('hour-packages-view-cards').click(), value: 'Paquete 20 horas' },
+    'frontend/pages/panel/hour-packages/index.vue': { action: () => page.getByTestId('hour-packages-view-cards').click(), value: 'Paquete Ágil' },
     'frontend/pages/panel/hour-packages/create.vue': { action: () => page.getByLabel('Nombre (ES)').fill('Paquete responsive'), value: 'Paquete responsive' },
-    'frontend/pages/panel/hour-packages/[id]/edit.vue': { action: () => page.getByLabel('Horas', { exact: true }).fill('24'), value: '24' },
+    'frontend/pages/panel/hour-packages/[id]/edit.vue': { action: () => page.getByTestId('package-xs-count').fill('31'), value: '31' },
     'frontend/pages/panel/diagnostics/index.vue': { action: () => page.getByTestId('diagnostic-actions-1').click(), value: 'Diagnóstico responsive' },
     'frontend/pages/panel/diagnostics/create.vue': { action: async () => { await page.getByTestId('diagnostic-client-autocomplete').fill('Acme'); await page.getByTestId('client-autocomplete-option-101').click(); }, value: null },
     'frontend/pages/panel/diagnostics/[id]/edit.vue': { action: () => page.getByTestId('diagnostic-edit-title').fill('Diagnóstico responsive editado'), value: null },
@@ -167,13 +167,13 @@ async function exerciseCommercialView(page, scenario) {
     await expect(content).toHaveValue('{client_name}');
   } else if (scenario.catalogKey === 'frontend/pages/panel/hour-packages/index.vue') {
     content = page.getByTestId('hour-package-card-1');
-    await expect(content).toContainText('Paquete 20 horas');
+    await expect(content).toContainText('Paquete Ágil');
   } else if (scenario.catalogKey === 'frontend/pages/panel/hour-packages/create.vue') {
     content = page.getByLabel('Nombre (ES)');
     await expect(content).toHaveValue('Paquete responsive');
   } else if (scenario.catalogKey === 'frontend/pages/panel/hour-packages/[id]/edit.vue') {
-    content = page.getByLabel('Horas', { exact: true });
-    await expect(content).toHaveValue('24');
+    content = page.getByTestId('package-xs-count');
+    await expect(content).toHaveValue('31');
   } else {
     content = page.getByText(entry.value, { exact: true });
     await expect(content).toHaveCount(1);

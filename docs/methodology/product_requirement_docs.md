@@ -2,6 +2,8 @@
 
 > **Células Scrum y legibilidad contable — 2026-10-22:** Células ofrece video explicativo español en el panel y la página pública, con visibilidad, sustitución, retirada y restauración. Sin recurso en inglés se omite la tarjeta. Bolsillo, Ingresos y Gastos aprovechan el ancho sobrante para Concepto y mantienen importes completos a la derecha.
 
+> **Paquetes por talla — 2026-10-23:** La oferta de cambios sobre productos existentes vende paquetes Ágil, Pro y Premium con cupos XS/S/M, vigencia configurable (inicial: 12 meses desde el pago) y descuento visible. No hay intercambio de tallas; L/XL requieren levantamiento aparte y garantía no consume cupos. La primera versión no registra compras ni consumos. Condiciones y precios iniciales: docs/REQUIREMENT_PACKAGES.md.
+
 > **Consultoría y asesoría — 2026-10-23:** Consultoría y asesoría presenta análisis de salud económica, financiera, comercial, operativa y administrativa. Áreas a elección, equipo propio, precio y duración por propuesta. Ofrece informe priorizado y rangos de impacto separando ahorro, capacidad y caja para evitar duplicaciones; implementación posterior con proyectos, Células o Building with Us.
 
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.

@@ -1,12 +1,12 @@
 {
   "id": "admin-hour-packages-config",
-  "name": "Admin Hour Packages — Configuración",
+  "name": "Configurar paquetes de requerimientos",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P3",
-  "description": "Admin opens the Configuración section of /panel/hour-packages: edits the per-nationality base hourly rates (COL/EXT/USA) and saves — PATCH /api/hour-packages/admin/settings/update/ propagates the rate to every package of that nationality and the catalog reflects it; invalid rates (<= 0) are rejected client-side and a server failure surfaces an error toast. Also saves the default view mode and restores one nationality's catalog to the canonical DEFAULT_PACKAGES ladder behind a ConfirmModal (POST /api/hour-packages/admin/restore-defaults/, destructive replace; restore also resets that nationality's base rate).",
+  "description": "Admin configura valores internos XS/S/M en COP, factores extranjeros/EE. UU. y cupos mensuales de Alianza; guarda cambios, valida errores, elige vista y restaura los tres paquetes sin reiniciar los valores internos.",
   "outcomes": [
     "success",
     "error",

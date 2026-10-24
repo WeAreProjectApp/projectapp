@@ -124,7 +124,7 @@ borrador enriquecido conserva su canal para evitar reinterpretar su fuente.
 | Contratos | Fuentes Markdown editables de propuestas y adjuntos; contratos predeterminados mediante su flujo versionado | HTML limitado en lectura y PDF; espejos y revisiones conservan sus restricciones |
 | Diagnósticos | Narrativas y elementos de secciones | Lectores públicos, PDF y MCP |
 | Blog y portafolio | Blog visual/fuente y JSON editorial; el portafolio mantiene su autoría JSON | Lectura pública segura de campos y elementos; metadatos SEO siguen planos |
-| Oferta | Notas de paquetes de horas y descripciones/listas de módulos | Catálogo, detalle y PDF; límites de resumen y elementos se calculan sobre texto visible |
+| Oferta | Notas de paquetes de requerimientos XS/S/M y descripciones/listas de módulos | Catálogo, detalle y PDF; límites de resumen y elementos se calculan sobre texto visible |
 | Programas | Contenido bilingüe editado por MCP de Building with Us, Células y Consultoría | Lectores y PDFs; límites comerciales y alineación de idiomas conservados |
 
 Se conservan como texto o código: JSON, prompts, diagramas, asuntos, títulos,
@@ -151,9 +151,9 @@ Se verifica la paridad entre `initialize`, `server/discover`, `tools/list` y
 `backend/content/mcp/connector_contracts.json`.
 
 Versiones de esta entrega: Documentos 8.1.1, Comunicaciones 3.1.2, Comercial
-6.2.1, Propuestas 6.1.1, Diagnósticos 2.1.1, Blog 2.1.1, Contenido 3.1.1,
+6.3.0, Propuestas 6.1.1, Diagnósticos 2.1.1, Blog 2.1.1, Contenido 3.1.1,
 Building with Us 3.1.1, Building on Demand 4.1.1, Módulos adicionales 4.1.2,
-Oferta 1.1.2 y Programas 2.1.1. Los esquemas explícitos de módulos y paquetes
+Oferta 2.1.0 y Programas 3.1.0. Los esquemas explícitos de módulos y paquetes
 describen también sus argumentos y dejan de usar la excepción de esquema genérico.
 
 ## Pruebas y operación

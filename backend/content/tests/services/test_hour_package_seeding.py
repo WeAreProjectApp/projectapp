@@ -21,6 +21,7 @@ BASE_CONTENT = {
     'packagesTitle': 'Paquetes de horas',
     'packagesIntro': 'intro',
     'hourlyRate': 90000,
+    'pricingModel': 'hours',
     'currency': 'COP',
     'packages': [
         {'name': 'Default', 'hours': 20, 'discountPercent': 0, 'note': 'n'},
@@ -36,14 +37,42 @@ def _ext_packages():
     # package lists stay deterministic.
     HourPackage.objects.filter(nationality='EXT').delete()
     HourPackage.objects.create(
-        nationality='EXT', name_es='Ágil MX', name_en='Agile MX',
+        nationality='EXT', pricing_model='hours', name_es='Ágil MX', name_en='Agile MX',
         note_es='nota es', note_en='note en',
         hours=20, hourly_rate=45, discount_percent=0, order=2,
     )
     HourPackage.objects.create(
-        nationality='EXT', name_es='Pro MX', name_en='Pro MX',
+        nationality='EXT', pricing_model='hours', name_es='Pro MX', name_en='Pro MX',
         hours=60, hourly_rate=40, discount_percent=10, order=1,
     )
+
+
+def _ext_requirement_packages():
+    """Seed the catalog used by newly created proposals after the size migration."""
+    HourPackage.objects.filter(nationality='EXT').delete()
+    HourPackage.objects.create(
+        nationality='EXT', pricing_model='requirements', name_es='Ágil MX', name_en='Agile MX',
+        xs_count=30, s_count=0, m_count=0, discount_percent=10, order=2,
+    )
+    HourPackage.objects.create(
+        nationality='EXT', pricing_model='requirements', name_es='Pro MX', name_en='Pro MX',
+        xs_count=30, s_count=20, m_count=0, discount_percent=15, order=1,
+    )
+
+
+def _legacy_proposal_snapshot(*, title, language='es'):
+    """Create the unfrozen hours snapshot expected by legacy PDF re-seeding tests."""
+    content = seed_commercial_conditions_from_catalog(
+        BASE_CONTENT, nationality='EXT', language=language,
+    )
+    proposal, _ = build_proposal_from_json({
+        'title': title,
+        'client_name': 'Cliente',
+        'nationality': 'EXT',
+        'language': language,
+        'sections': {'commercialConditions': content},
+    })
+    return proposal
 
 
 class TestSeedService:
@@ -104,7 +133,7 @@ class TestSeedService:
 
 class TestProposalCreationSeeding:
     def test_panel_create_seeds_from_catalog(self, admin_client):
-        _ext_packages()
+        _ext_requirement_packages()
         payload = {
             'title': 'Propuesta MX', 'client_name': 'Cliente',
             'client_email': 'c@test.com', 'language': 'es',
@@ -123,8 +152,11 @@ class TestProposalCreationSeeding:
         content = section['content_json']
         assert content['currency'] == 'USD'
         assert [p['name'] for p in content['packages']] == ['Pro MX', 'Ágil MX']
+        assert [(p['xsCount'], p['sCount'], p['mCount']) for p in content['packages']] == [
+            (30, 20, 0), (30, 0, 0),
+        ]
 
-    def test_panel_create_falls_back_to_defaults(self, admin_client):
+    def test_panel_create_with_empty_catalog_has_no_packages(self, admin_client):
         HourPackage.objects.all().delete()
         payload = {
             'title': 'Propuesta COL', 'client_name': 'Cliente',
@@ -141,13 +173,11 @@ class TestProposalCreationSeeding:
         )
         content = section['content_json']
         assert content['currency'] == 'COP'
-        assert [p['name'] for p in content['packages']] == [
-            'Hora Puntual', 'Paquete Ágil',
-            'Paquete Pro', 'Paquete Premium',
-        ]
+        assert content['pricingModel'] == 'requirements'
+        assert content['packages'] == []
 
     def test_from_json_seeds_when_section_not_in_payload(self):
-        _ext_packages()
+        _ext_requirement_packages()
         proposal, _ = build_proposal_from_json({
             'title': 'JSON MX', 'client_name': 'Cliente',
             'nationality': 'EXT', 'language': 'es',
@@ -156,11 +186,13 @@ class TestProposalCreationSeeding:
         section = proposal.sections.get(section_type='commercial_conditions')
         assert section.content_json['currency'] == 'USD'
         assert section.content_json['packages'][0]['name'] == 'Pro MX'
+        assert section.content_json['packages'][0]['sCount'] == 20
 
     def test_from_json_respects_explicit_section_payload(self):
         _ext_packages()
         explicit = {
             'title': 'Custom', 'hourlyRate': 123, 'currency': 'COP',
+            'pricingModel': 'hours',
             'packages': [{'name': 'Custom Pack', 'hours': 5,
                           'discountPercent': 0, 'note': ''}],
         }
@@ -174,13 +206,13 @@ class TestProposalCreationSeeding:
         assert section.content_json['hourlyRate'] == 123
 
     def test_create_section_for_proposal_seeds(self):
-        _ext_packages()
+        _ext_requirement_packages()
         proposal = BusinessProposal.objects.create(
             title='Sin sección', client_name='Cliente', nationality='EXT',
         )
         section = create_section_for_proposal(proposal, 'commercial_conditions')
         assert section.content_json['currency'] == 'USD'
-        assert section.content_json['packages'][0]['hourlyRate'] == 40.0
+        assert section.content_json['packages'][0]['xsCount'] == 30
 
 
 class TestBaseRatePropagationReachesNewProposals:
@@ -204,11 +236,7 @@ class TestBaseRatePropagationReachesNewProposals:
             apply_base_rates_to_catalog,
         )
         _ext_packages()
-        proposal, _ = build_proposal_from_json({
-            'title': 'Snapshot MX', 'client_name': 'Cliente',
-            'nationality': 'EXT', 'language': 'es',
-            'sections': {},
-        })
+        proposal = _legacy_proposal_snapshot(title='Snapshot MX')
         section = proposal.sections.get(section_type='commercial_conditions')
         snapshot = section.content_json
         assert snapshot['hourlyRate'] == 40.0
@@ -237,13 +265,10 @@ class TestPdfLiveReseed:
         return captured
 
     def _proposal_with_snapshot(self, **overrides):
-        payload = {
-            'title': 'Live MX', 'client_name': 'Cliente',
-            'nationality': 'EXT', 'language': 'es', 'sections': {},
-        }
-        payload.update(overrides)
-        proposal, _ = build_proposal_from_json(payload)
-        return proposal
+        return _legacy_proposal_snapshot(
+            title=overrides.get('title', 'Live MX'),
+            language=overrides.get('language', 'es'),
+        )
 
     def test_pdf_uses_current_catalog_rate_not_snapshot(self, monkeypatch):
         from content.services.hour_package_service import (

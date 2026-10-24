@@ -710,6 +710,10 @@ class ProposalSectionUpdateSerializer(EditorialModelSerializer):
             )
             if schema_errors:
                 raise serializers.ValidationError(schema_errors)
+        if self.instance and self.instance.section_type == 'commercial_conditions':
+            from content.services.requirement_package_service import normalize_section
+            old = self.instance.content_json or {}
+            return normalize_section(value, self.instance.proposal, old)
         if (
             self.instance
             and self.instance.section_type == ProposalSection.SectionType.TECHNICAL_DOCUMENT
