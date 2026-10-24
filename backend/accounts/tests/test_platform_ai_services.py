@@ -2,6 +2,7 @@
 
 import pytest
 from cryptography.fernet import Fernet
+from django.contrib.auth import get_user_model
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.models import UserProfile
@@ -77,6 +78,24 @@ def test_feature_gate_reloads_client_flag_before_a_worker_uses_voice(client_user
 
     with pytest.raises(PermissionDenied, match='apagada'):
         platform_ai.require_ai_feature(client_user, 'voice_reporting')
+
+
+@pytest.mark.parametrize('feature', ['chatbot', 'voice_reporting'])
+def test_ai_feature_rejects_foreign_project_with_stale_admin_profile(client_user, admin_user, feature):
+    """Fails if a stale administrative role lets a client process another project's data."""
+    from accounts.models import Project
+    from rest_framework.exceptions import NotFound
+
+    configure_voice(client_user)
+    other = get_user_model().objects.create_user(username='other-ai-owner', email='other-ai-owner@test.com')
+    UserProfile.objects.create(user=other, role=UserProfile.ROLE_CLIENT, created_by=admin_user)
+    foreign = Project.objects.create(name='Other AI project', client=other)
+    client_user.is_staff = True
+    client_user.save(update_fields=['is_staff'])
+    client_user.profile.role = UserProfile.ROLE_ADMIN  # Stale in-memory role; the database still says client.
+
+    with pytest.raises(NotFound, match='Proyecto no encontrado'):
+        platform_ai.require_ai_feature(client_user, feature, foreign.pk)
 
 
 def test_admin_credential_projection_excludes_the_saved_secret(staff_admin, ai_cipher):

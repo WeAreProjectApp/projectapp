@@ -36,6 +36,8 @@ _SERVICE_SERIALIZERS = {
     'restore_project_idea': 'accounts.serializers_project_ideas.IdeaArchiveSerializer',
     'create_project_idea_collection': 'accounts.serializers_project_ideas.IdeaCollectionSerializer',
     'set_project_client_access_policy': 'accounts.serializers_project_client_access.ClientAccessPolicySerializer',
+    'update_platform_ai_settings': 'accounts.serializers_ai.SettingsSerializer',
+    'update_platform_ai_client': 'accounts.serializers_ai.ClientFlagsSerializer',
 }
 _VIEW_PAYLOAD_FIELDS = {'create_project_state': {'confirm_similar'}}
 _CREATE_DEFAULT_FIELDS = {'create_project_state': {'group'}}
