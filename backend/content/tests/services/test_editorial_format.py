@@ -134,6 +134,52 @@ def test_plain_text_discards_executable_historical_markup():
     assert rendered == 'Resumen\n\nFinal'
 
 
+@pytest.mark.parametrize(('source', 'expected'), [
+    (
+        '<p>Antes <legacy>texto <strong>destacado</strong> final</legacy> después</p>',
+        '<p>Antes texto <strong>destacado</strong> final después</p>',
+    ),
+    (
+        '<p><legacy>Inicio</legacy> fin <em>visible</em></p>',
+        '<p>Inicio fin <em>visible</em></p>',
+    ),
+    (
+        '<p><strong>Uno</strong><legacy> dos <em>tres</em> cuatro</legacy> cinco</p>',
+        '<p><strong>Uno</strong> dos <em>tres</em> cuatro cinco</p>',
+    ),
+])
+def test_render_source_preserves_text_in_unsupported_historical_wrappers(source, expected):
+    """Falla si retirar una etiqueta histórica desconocida pierde o reordena su texto."""
+    rendered = render_source(source, strict=False)
+
+    assert rendered.strip() == expected
+
+
+@pytest.mark.parametrize(('style', 'expected'), [
+    ('text-align:right; position:fixed', '<p style="text-align: right">Alcance</p>'),
+    ('text-align:right !important', '<p>Alcance</p>'),
+    (
+        'text-align:sideways; background-image:url(https://tracker.example/pixel)',
+        '<p>Alcance</p>',
+    ),
+])
+def test_render_source_removes_unsafe_historical_style(style, expected):
+    """Falla si una lectura histórica conserva CSS inseguro o elimina el texto válido."""
+    source = f'<p style="{style}">Alcance</p>'
+
+    rendered = render_source(source, strict=False)
+
+    assert rendered.strip() == expected
+
+
+def test_render_source_rejects_conflicting_color_declarations():
+    """Falla si se guarda un color ambiguo que los modos Visual y Fuente interpretan distinto."""
+    source = '<p><span style="color:red; color:blue">Oferta</span></p>'
+
+    with pytest.raises(ValidationError, match='Atributo editorial no permitido: style'):
+        render_source(source)
+
+
 def test_style_properties_accepts_only_declared_visual_properties():
     """Falla si el parser pierde color o alineación que la barra editorial puede producir."""
     properties = style_properties('color: rgb(12, 34, 56); text-align: justify')
