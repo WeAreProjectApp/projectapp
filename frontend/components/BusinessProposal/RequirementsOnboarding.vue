@@ -65,7 +65,7 @@
 
           <!-- Step content -->
           <h4 class="text-sm font-bold text-text-default mb-1">{{ currentStepData.title }}</h4>
-          <p class="text-xs text-text-muted leading-relaxed mb-4">{{ currentStepData.description }}</p>
+          <BaseRichTextContent class="text-xs text-text-muted leading-relaxed mb-4" :source="currentStepData.description" :format="currentStepData.text_formats?.['/description'] || 'plain'" />
 
           <!-- Actions -->
           <div class="flex items-center justify-between">

@@ -1,3 +1,4 @@
+from content.models.editorial_text import EditorialTextModel
 import uuid
 
 from django.conf import settings
@@ -10,7 +11,7 @@ from content.utils import (
 )
 
 
-class WebAppDiagnostic(models.Model):
+class WebAppDiagnostic(EditorialTextModel, models.Model):
     """Diagnóstico técnico ofrecido a clientes que ya tienen una aplicación web.
 
     Cada diagnóstico se ata a un cliente (UserProfile, role='client') y

@@ -13,7 +13,7 @@
       </div>
 
       <div data-animate="fade-up" class="investment-intro mb-12">
-        <p class="text-text-brand/80 font-light leading-relaxed text-lg md:text-xl" v-html="linkify(introText)" />
+        <div class="text-text-brand/80 font-light leading-relaxed text-lg md:text-xl" v-html="linkify(introText, text_formats?.['/introText'])" />
       </div>
 
       <!-- F5: Value proposition — why this investment is worth it -->
@@ -28,7 +28,7 @@
               </svg>
             </div>
             <div>
-              <p class="text-sm text-white leading-relaxed" v-html="linkify(reason)" />
+              <div class="text-sm text-white leading-relaxed" v-html="linkify(reason, text_formats?.['/normalizedReasons/' + index])" />
             </div>
           </div>
         </div>
@@ -58,7 +58,7 @@
             <div v-for="(option, idx) in computedPaymentOptions" :key="idx"
                  class="payment-option-card flex flex-col gap-1 rounded-xl bg-surface/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-4">
               <span data-testid="payment-option-label" class="min-w-0 flex-1 text-sm text-on-primary/80">{{ option.label }}</span>
-              <span data-testid="payment-option-amount" class="shrink-0 whitespace-nowrap text-lg font-bold tabular-nums text-on-primary">{{ option.description }}</span>
+              <BaseRichTextContent data-testid="payment-option-amount" class="shrink-0 whitespace-nowrap text-lg font-bold tabular-nums text-on-primary" :source="option.description" :format="option.text_formats?.['/description'] || 'plain'" />
             </div>
           </div>
           <!-- Total as secondary line -->
@@ -83,7 +83,7 @@
                class="text-center p-4 bg-surface/10 backdrop-blur-sm rounded-xl">
             <div class="text-3xl mb-2">{{ item.icon }}</div>
             <div class="font-bold text-on-primary mb-1">{{ item.title }}</div>
-            <div class="text-sm text-on-primary/70">{{ item.description }}</div>
+            <BaseRichTextContent class="text-sm text-on-primary/70" :source="item.description" :format="item.text_formats?.['/description'] || 'plain'" />
           </div>
         </div>
         <!-- Customize investment + Contact CTA buttons -->
@@ -165,7 +165,7 @@
           </div>
           <h3 class="text-2xl font-bold text-text-brand">{{ hostingPlan.title }}</h3>
         </div>
-        <p v-if="hostingPlan.description" class="text-text-brand/70 font-light leading-relaxed mb-6 pl-0 sm:pl-16">{{ hostingPlan.description }}</p>
+        <BaseRichTextContent v-if="hostingPlan.description" class="text-text-brand/70 font-light leading-relaxed mb-6 pl-0 sm:pl-16" :source="hostingPlan.description" :format="hostingPlan.text_formats?.['/description'] || 'plain'" />
 
         <div class="mb-6 pl-0 sm:pl-16">
           <div class="grid sm:grid-cols-3 gap-4">
@@ -173,7 +173,7 @@
                  class="bg-primary/5 border border-primary/10 rounded-xl p-5 text-center">
               <div class="text-3xl mb-3">{{ card.icon }}</div>
               <div class="font-bold text-text-brand text-sm mb-1">{{ card.title }}</div>
-              <p class="text-xs text-text-brand/60 leading-relaxed">{{ card.description }}</p>
+              <BaseRichTextContent class="text-xs text-text-brand/60 leading-relaxed" :source="card.description" :format="card.text_formats?.['/description'] || 'plain'" />
             </div>
           </div>
         </div>
@@ -318,6 +318,7 @@ const btnPulse = ref(false);
 let customizeObserver = null;
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   preview: { type: Boolean, default: false },
   language: {
     type: String,

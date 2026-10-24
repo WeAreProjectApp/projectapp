@@ -1,6 +1,6 @@
-{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %},
 
-{{ body|default:"Tu propuesta está por vencer. Si confirmas esta semana aplicamos un descuento sobre la inversión original." }}
+{% editorial_plain_value body|default:"Tu propuesta está por vencer. Si confirmas esta semana aplicamos un descuento sobre la inversión original." "body" %}
 
 Oferta especial · -{{ discount_percent }}%
 Original: $ {{ total_investment }} {{ currency|default:"COP" }}
@@ -8,7 +8,7 @@ Con descuento: $ {{ discounted_investment }} {{ currency|default:"COP" }}
 
 {% if days_remaining %}Esta propuesta expira en {{ days_remaining }} día{{ days_remaining|pluralize }}.{% endif %}
 
-{{ cta_text|default:"Aceptar la oferta" }}: {{ proposal_url }}
+{% editorial_plain_value cta_text|default:"Aceptar la oferta" "cta_text" %}: {{ proposal_url }}
 
 —
 {{ signature_name }}

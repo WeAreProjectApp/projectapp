@@ -1,6 +1,6 @@
-🔴 ETAPA DE {{ stage_label|upper }} VENCIDA — {{ proposal_title }}
+{% load editorial %}🔴 ETAPA DE {{ stage_label|upper }} VENCIDA — {{ proposal_title }}
 
-{{ intro }}
+{% editorial_plain_value intro "intro" %}
 
 Detalles:
 - Cliente: {{ client_name }}

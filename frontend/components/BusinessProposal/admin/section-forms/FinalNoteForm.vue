@@ -3,8 +3,8 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="10" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.message" label="Mensaje" :rows="5" :isSingle="true" />
-  <FieldTextarea v-model="form.personalNote" label="Nota personal" :rows="3" :isSingle="true" />
+  <FieldTextarea v-model="form.message" :format="form.text_formats?.['/message'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/message': $event }" label="Mensaje" :rows="5" :isSingle="true" />
+  <FieldTextarea v-model="form.personalNote" :format="form.text_formats?.['/personalNote'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/personalNote': $event }" label="Nota personal" :rows="3" :isSingle="true" />
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
     <FieldInput v-model="form.teamName" label="Nombre del equipo" />
     <FieldInput v-model="form.teamRole" label="Rol" />
@@ -33,8 +33,8 @@
     </draggable>
     <button type="button" class="inline-flex items-center gap-1 text-xs text-text-brand font-medium" @click="form.commitmentBadges.push({ icon: '', title: '', description: '' })"><BaseActionIcon action="create" /> Agregar badge</button>
   </div>
-  <FieldTextarea v-model="form.validityMessage" label="Mensaje de vigencia" :rows="2" :isSingle="true" />
-  <FieldTextarea v-model="form.thankYouMessage" label="Mensaje de agradecimiento" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.validityMessage" :format="form.text_formats?.['/validityMessage'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/validityMessage': $event }" label="Mensaje de vigencia" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.thankYouMessage" :format="form.text_formats?.['/thankYouMessage'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/thankYouMessage': $event }" label="Mensaje de agradecimiento" :rows="2" :isSingle="true" />
 </template>
 
 <script setup>

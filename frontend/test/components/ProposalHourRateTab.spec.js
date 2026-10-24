@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import ProposalHourRateTab from '../../components/panel/proposal/ProposalHourRateTab.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import { useProposalStore } from '../../stores/proposals';
 import { useHourPackagesStore } from '../../stores/hour_packages';
 
@@ -21,17 +22,19 @@ function buildSection(content = {}) {
   } };
 }
 
-async function mountTab({ content = {}, catalog = CATALOG, fetchResult = { success: true } } = {}) {
+async function mountTab({ content = {}, catalog = CATALOG, fetchResult = { success: true }, textFormats = {} } = {}) {
   setActivePinia(createPinia());
   const proposalStore = useProposalStore();
   const packageStore = useHourPackagesStore();
-  proposalStore.currentProposal = { ...PROPOSAL, sections: [buildSection(content)] };
+  proposalStore.currentProposal = { ...PROPOSAL, sections: [{ ...buildSection(content), text_formats: textFormats }] };
   proposalStore.updateSection = jest.fn().mockResolvedValue({ success: true });
   packageStore.fetchAdminPackages = jest.fn().mockImplementation(async () => {
     packageStore.packages = catalog;
     return fetchResult;
   });
-  const wrapper = mount(ProposalHourRateTab, { props: { proposal: PROPOSAL } });
+  const wrapper = mount(ProposalHourRateTab, {
+    props: { proposal: PROPOSAL }, global: { components: { BaseSegmented } },
+  });
   await flushPromises();
   return { wrapper, proposalStore };
 }
@@ -39,7 +42,39 @@ async function mountTab({ content = {}, catalog = CATALOG, fetchResult = { succe
 const savedJson = (store) => store.updateSection.mock.calls[0][1].content_json;
 
 describe('ProposalHourRateTab', () => {
-  afterEach(() => jest.clearAllMocks());
+  beforeEach(() => { global.useI18n = () => ({ t: (key) => key }); });
+  afterEach(() => { delete global.useI18n; jest.clearAllMocks(); });
+
+  it('renders a formatted catalog note in the requirement preview', async () => {
+    const { wrapper } = await mountTab({ catalog: [{ ...CATALOG[0],
+      note_es: '<p><strong>Nota enriquecida</strong></p>',
+      text_formats: { '/note_es': 'markdown_html_v1' },
+    }] });
+
+    expect(wrapper.get('[data-testid="requirement-package-0"] strong').text()).toBe('Nota enriquecida');
+  });
+
+  it('replaces an MCP note format alias when saving a source edit', async () => {
+    const { wrapper, proposalStore } = await mountTab({
+      textFormats: { '/content_json/packages/0/note': 'markdown' },
+      content: { hourPackagesMode: 'manual', packages: [{
+        id: 7, name: 'Ágil', note: '**Nota anterior**', xsCount: 30, sCount: 0, mCount: 0,
+        validityMonths: 12, referencePrice: 1500000, discountPercent: 10, totalPrice: 1350000,
+      }] },
+    });
+    const row = wrapper.get('[data-testid="requirement-package-0"]');
+
+    await row.findAll('button').find(button => button.text() === 'richText.source').trigger('click');
+    await row.get('[data-testid="rich-text-source-input"]').setValue('<p><strong>Nota nueva</strong></p>');
+    await wrapper.get('[data-testid="hour-rate-save"]').trigger('click');
+    await flushPromises();
+
+    expect(savedJson(proposalStore).packages[0]).toMatchObject({
+      note: '<p><strong>Nota nueva</strong></p>', xsCount: 30,
+      text_formats: { '/note': 'markdown_html_v1' },
+    });
+    expect(proposalStore.updateSection.mock.calls[0][1].text_formats).toEqual({});
+  });
 
   // Falla si el catálogo vuelve a mostrar horas en lugar de composición, vigencia y precio congelable.
   it('shows the active requirements catalog with composition, twelve-month validity, and package prices', async () => {

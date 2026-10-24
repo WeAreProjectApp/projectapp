@@ -82,6 +82,8 @@ def seed_requirement_packages(content, *, nationality, language):
         seeded['packages'].append({
             'id': pkg.pk, 'name': pkg.name_en if language == 'en' else pkg.name_es,
             'note': pkg.note_en if language == 'en' else pkg.note_es,
+            **({'text_formats': {'/note': pkg.text_formats['/note_' + language]}}
+               if '/note_' + language in pkg.text_formats else {}),
             'xsCount': pkg.xs_count, 'sCount': pkg.s_count, 'mCount': pkg.m_count,
             'validityMonths': pkg.validity_months, 'discountPercent': pkg.discount_percent,
             'referencePrice': price['reference_price'], 'totalPrice': price['total_price'],

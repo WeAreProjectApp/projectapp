@@ -70,6 +70,18 @@ def _contract(model_label, *, read_only='', read_write='', excluded=None):
     if model_label.lower() in _RETENTION_MODELS:
         excluded = {**(excluded or {}), 'retention_context': 'Propiedad histórica de datos sin proyecto: la fija la eliminación forzada del panel y sólo la libera el traslado auditado; nunca se edita directamente por MCP.'}
 
+    from content.services.editorial_format import EDITORIAL_ROOTS
+    roots = set(EDITORIAL_ROOTS.get(model_label.split('.')[-1].lower(), ()))
+    if roots:
+        if model_label.split('.')[-1].lower() in ('contracttemplate', 'confidentialitytemplate'):
+            excluded = {**(excluded or {}), 'text_formats': 'Los campos content_markdown son fuente markdown_html_v1 nativa; formato y contenido se editan juntos mediante el servicio versionado.'}
+        elif roots & set(read_write.split()):
+            read_write += ' text_formats'
+        elif roots & set(read_only.split()):
+            read_only += ' text_formats'
+        else:
+            excluded = {**(excluded or {}), 'text_formats': 'Formato de contenido editorial que no pertenece a este flujo.'}
+
     return McpModelContract(
         model_label=model_label,
         read_only=_names(read_only),

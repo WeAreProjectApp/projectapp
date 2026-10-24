@@ -1,5 +1,16 @@
 import { mount } from '@vue/test-utils'
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue'
+import BaseSegmented from '../../components/base/BaseSegmented.vue'
 import RadiographyForm from '../../components/WebAppDiagnostic/admin/sections/RadiographyForm.vue'
+
+const originalUseI18n = global.useI18n
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }) })
+afterAll(() => { global.useI18n = originalUseI18n })
+
+async function editIntroSource(wrapper, value) {
+  await wrapper.findAll('[role="tab"]').find((tab) => tab.text() === 'richText.source').trigger('click')
+  await wrapper.get('[data-testid="rich-text-source-input"]').setValue(value)
+}
 
 const baseModel = () => ({
   index: '2',
@@ -15,6 +26,7 @@ const baseModel = () => ({
 function mountForm(modelValue = baseModel()) {
   return mount(RadiographyForm, {
     props: { modelValue },
+    global: { components: { BaseRichTextEditor, BaseSegmented } },
   })
 }
 
@@ -47,8 +59,7 @@ describe('RadiographyForm', () => {
 
   it('emits update:modelValue when intro textarea is changed', async () => {
     const wrapper = mountForm()
-    const textareas = wrapper.findAll('textarea')
-    await textareas[0].setValue('Nuevo intro')
+    await editIntroSource(wrapper, 'Nuevo intro')
     const emitted = wrapper.emitted('update:modelValue')
     expect(emitted).toBeTruthy()
     expect(emitted[emitted.length - 1][0].intro).toBe('Nuevo intro')

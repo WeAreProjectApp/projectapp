@@ -7,6 +7,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { fillRichTextSource } from '../helpers/editorial.js';
 import {
   ADMIN_DOCUMENT_STATE_FILTERS,
   ADMIN_DOCUMENT_STATE_WORKFLOW,
@@ -278,13 +279,14 @@ test.describe('Admin Document State Workflow', () => {
 
     await page.getByTestId('doc-client-note-open').click();
     await page.getByTestId('document-observation-title').fill('Corregir subtotal');
-    await page.getByTestId('document-observation-content').fill('El subtotal está duplicado.');
+    await fillRichTextSource(page.getByTestId('document-observation-content'), 'El subtotal está duplicado.');
     await page.getByTestId('document-observation-add').click();
 
     await expect.poll(() => noteBody).not.toBeNull();
     expect(noteBody).toEqual({
       title: 'Corregir subtotal',
       content: 'El subtotal está duplicado.',
+      text_formats: { '/content': 'markdown_html_v1' },
       mark_needs_fix: true,
     });
     await expect(page.getByTestId('document-observation-list')).toContainText('El subtotal está duplicado.');

@@ -1,3 +1,4 @@
+import { withEditorialFormats } from '~/utils/editorialMetadata';
 /**
  * Pure utility functions for SectionEditor.vue.
  *
@@ -57,7 +58,7 @@ export function resolveFreeMonthsVisible(hostingPlan) {
  * @param {object} [proposalData] - Optional parent proposal data for defaults.
  * @returns {object}
  */
-export function buildFormFromJson(json, type, proposalData) {
+function buildFormValues(json, type, proposalData) {
   const j = json || {};
   switch (type) {
     case 'greeting':
@@ -250,7 +251,7 @@ export function buildFormFromJson(json, type, proposalData) {
  * @param {string} type - The section_type.
  * @returns {object}
  */
-export function formToJson(formData, type) {
+function formValuesToJson(formData, type) {
   const f = formData;
   switch (type) {
     case 'greeting':
@@ -653,4 +654,11 @@ export function buildSavePayload(form, sectionType, pasteMode, pasteText, sectio
       content_json: contentJson,
     },
   };
+}
+
+export function buildFormFromJson(json, type, proposalData) {
+  return withEditorialFormats(json, buildFormValues(json, type, proposalData));
+}
+export function formToJson(formData, type) {
+  return withEditorialFormats(formData, formValuesToJson(formData, type));
 }

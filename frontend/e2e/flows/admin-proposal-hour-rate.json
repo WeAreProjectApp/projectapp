@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin revisa composición y precios del catálogo o edita paquetes manuales para una propuesta. Puede ocultarlos del PDF y adoptar explícitamente la oferta nueva en un borrador histórico; los precios emitidos quedan congelados hasta preparar una revisión.",
+  "description": "Admin revisa composición y precios del catálogo o edita paquetes manuales para una propuesta. Puede ocultarlos del PDF y adoptar explícitamente la oferta nueva en un borrador histórico; los precios emitidos quedan congelados hasta preparar una revisión. Las notas conservan el formato del catálogo y permiten edición Visual o Fuente Markdown al preparar un paquete manual.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

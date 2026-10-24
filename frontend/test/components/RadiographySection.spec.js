@@ -6,6 +6,7 @@ jest.mock('../../components/WebAppDiagnostic/public/SectionHeader.vue', () => ({
 
 import { mount } from '@vue/test-utils'
 import RadiographySection from '../../components/WebAppDiagnostic/public/RadiographySection.vue'
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue'
 
 function baseContent(overrides = {}) {
   return {
@@ -30,14 +31,15 @@ describe('RadiographySection', () => {
     expect(wrapper.find('[data-testid="section-header"]').text()).toBe('Análisis de sistema')
   })
 
-  it('renders intro paragraph when content.intro is provided', () => {
+  it('renders intro content when content.intro is provided', () => {
     const wrapper = mountSection({ intro: 'Este diagnóstico evalúa la arquitectura.' })
-    expect(wrapper.find('p').text()).toBe('Este diagnóstico evalúa la arquitectura.')
+    expect(wrapper.getComponent(BaseRichTextContent).text()).toBe('Este diagnóstico evalúa la arquitectura.')
   })
 
-  it('hides intro paragraph when content.intro is absent', () => {
+  it('hides intro content when content.intro is absent', () => {
     const wrapper = mountSection({ intro: '' })
-    expect(wrapper.find('p').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="section-header"]').text()).toBe('Radiografía del sistema')
+    expect(wrapper.findAllComponents(BaseRichTextContent)).toHaveLength(0)
   })
 
   it('renders includes list when content.includes has items', () => {

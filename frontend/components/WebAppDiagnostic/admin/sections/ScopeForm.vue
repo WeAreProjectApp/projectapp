@@ -12,7 +12,7 @@
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Consideraciones (una por línea)</label>
-      <textarea v-model="form.considerationsText" rows="6" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default"></textarea>
+      <BaseRichTextListEditor v-model="form.considerationsText" rows="6" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default" format-path="/considerations" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
     </div>
   </div>
 </template>

@@ -46,7 +46,7 @@
         </div>
       </dl>
 
-      <p v-if="pkg.note_es" class="mt-3 text-xs text-text-subtle">{{ pkg.note_es }}</p>
+      <BaseRichTextContent v-if="pkg.note_es" :source="pkg.note_es" :format="pkg.text_formats?.['/note_es'] || 'plain'" class="mt-3 text-xs text-text-subtle" />
 
       <div class="mt-4 pt-3 border-t border-border-muted flex items-center gap-3">
         <NuxtLink
@@ -64,6 +64,7 @@
 </template>
 
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { composition, totalPrice, formatPackageMoney as money } from '~/utils/hourPackagePricing';
 
 defineProps({

@@ -154,12 +154,12 @@
                         </BaseButton>
                       </div>
                     </div>
-                    <textarea
-                      v-model="section.text"
+                    <BaseRichTextEditor
+                      v-model="section.text" :format="section.markdown ? 'markdown_html_v1' : 'plain'" @update:format="section.markdown = true"
                       rows="3"
                       placeholder="Escribe el contenido de esta sección..."
                       class="bg-input-bg w-full px-3 py-2 border border-border-default rounded-lg text-sm text-text-default focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-y"
-                    />
+                     />
                   </div>
                 </div>
                 <BaseButton variant="secondary" size="sm" class="mt-3" @click="addSection">
@@ -171,12 +171,12 @@
               <!-- Footer text -->
               <div>
                 <label class="block text-xs text-text-muted mb-1">Pie de correo</label>
-                <textarea
-                  v-model="footer"
+                <BaseRichTextEditor
+                  v-model="footer" :format="textFormats['/footer'] || 'plain'" @update:format="textFormats['/footer'] = $event"
                   rows="2"
                   placeholder="Saludos cordiales..."
                   class="bg-input-bg w-full px-3 py-2 border border-border-default rounded-lg text-sm text-text-default focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-y"
-                />
+                 />
               </div>
 
               <!-- Attachments -->
@@ -261,16 +261,13 @@
               <div class="text-xs text-text-subtle mb-4"><strong>Asunto:</strong> {{ subject || '—' }}</div>
               <hr class="border-border-muted mb-4" />
               <p v-if="greeting" class="mb-3 text-sm">{{ greeting }}</p>
-              <p
+              <BaseRichTextContent
                 v-for="section in sections"
                 :key="`prev-${section.id}`"
                 class="mb-3 text-sm whitespace-pre-wrap"
-              >
-                {{ section.text }}
-              </p>
-              <p v-if="footer" class="mt-4 pt-3 border-t border-border-muted text-sm whitespace-pre-wrap text-text-muted">
-                {{ footer }}
-              </p>
+                :source="section.text" :format="section.markdown ? 'markdown_html_v1' : 'plain'"
+              />
+              <BaseRichTextContent v-if="footer" class="mt-4 pt-3 border-t border-border-muted text-sm whitespace-pre-wrap text-text-muted" :source="footer" :format="textFormats['/footer'] || 'plain'" />
               <div v-if="selectedDocIds.length" class="mt-4 pt-3 border-t border-border-muted">
                 <p class="text-xs text-text-subtle mb-1.5">Adjuntos:</p>
                 <ul class="space-y-1">
@@ -354,6 +351,7 @@ const ccRecipients = ref([]);
 const subject = ref('');
 const greeting = ref('');
 const footer = ref('');
+const textFormats = ref({});
 const sections = ref([{ id: 1, text: '' }]);
 const selectedDocIds = ref([]);
 const showPicker = ref(false);
@@ -398,6 +396,7 @@ watch(
     if (result.success && result.data) {
       greeting.value = result.data.greeting || '';
       footer.value = result.data.footer || '';
+      textFormats.value = Object.fromEntries(Object.entries(result.data.editorial_formats || {}).map(([key, format]) => ['/' + key, format]));
       if (!subject.value && result.data.subject) {
         subject.value = result.data.subject;
       }
@@ -449,7 +448,8 @@ async function send() {
     subject: subject.value.trim(),
     greeting: greeting.value.trim(),
     footer: footer.value.trim(),
-    sections: sections.value.map((s) => s.text).filter((t) => t.trim().length > 0),
+    text_formats: { ...textFormats.value },
+    sections: sections.value.filter(s => s.text.trim()).map(s => ({ text: s.text, markdown: !!s.markdown })),
     document_ids: selectedDocIds.value,
   };
   const result = await documentStore.sendDocumentEmail(payload);

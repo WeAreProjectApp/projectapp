@@ -1319,6 +1319,8 @@ durante el envío bloquea nuevos envíos y el cierre.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-email.spec.js`
 
+- **Formato editorial:** Las secciones, saludo y despedida admiten modos Visual y Fuente Markdown, con el mismo formato en la vista previa, el guardado y el envío.
+
 #### FLOW: `admin-standalone-email-composer`
 
 - **Module:** admin
@@ -1999,6 +2001,8 @@ No active browser flow is registered for client profile editing at this time.
 ---
 
 ### 15.3 Diagnostic Delete
+
+- **Formato editorial:** Las narrativas y listas admiten modos Visual y Fuente Markdown, con formato conservado en la presentación pública, el correo y el PDF.
 
 #### FLOW: `admin-diagnostic-delete`
 

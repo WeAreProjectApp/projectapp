@@ -5,6 +5,7 @@ import logging
 from rest_framework.schemas.openapi import AutoSchema
 
 from content.mcp.protocol import ToolError
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 from content.serializers.proposal import (
     ContractParamsSerializer,
     EmailTemplateConfigSerializer,
@@ -51,6 +52,8 @@ def writable_schema(serializer_class, *, partial=False, exclude=(), open_fields=
         key: _json_schema(value) for key, value in schema['properties'].items()
         if not serializer.fields[key].read_only and key not in exclude
     }
+    if 'text_formats' in properties:
+        properties['text_formats'] = deepcopy(TEXT_FORMATS_SCHEMA)
     for name, (description, reason) in (open_fields or {}).items():
         properties[name] = {
             'type': 'object', 'additionalProperties': True,
@@ -146,7 +149,7 @@ COMPOSED_EMAIL = object_schema({
     'recipient_email': {**EMAIL, 'description': 'Alias obsoleto de recipient_emails; se sigue aceptando.'},
     'recipient_emails': {'type': 'array', 'items': EMAIL, 'maxItems': 10},
     'cc_emails': {'type': 'array', 'items': EMAIL, 'maxItems': 10},
-    'subject': TEXT, 'greeting': TEXT, 'footer': TEXT,
+    'subject': TEXT, 'greeting': TEXT, 'footer': TEXT, 'text_formats': TEXT_FORMATS_SCHEMA,
     'sections': {'oneOf': [
         {'type': 'array', 'items': {'oneOf': [TEXT, object_schema({'text': TEXT, 'markdown': FLAG})]}},
         TEXT,

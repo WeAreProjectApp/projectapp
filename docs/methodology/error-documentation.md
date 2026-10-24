@@ -1,3 +1,5 @@
+> **Formato editorial — 2026-10-23:** compactar con `>\s+<` quitaba espacios entre marcas inline; devolver la versión HTML normalizada al editor de listas reiniciaba su historial. Las entradas conservan un borrador local y sólo codifican saltos físicos al almacenar; las pruebas de continuidad reproducen ambos fallos. Las familias de fuentes PDF registran variantes reales para que negrita/cursiva no se dibujen como regular. Ver `frontend/test/components/editorialListContinuity.spec.js` y `backend/content/tests/services/test_editorial_pdf_integration.py`.
+
 ## Propuesta con entregable conservado de un proyecto eliminado (2026-10-07)
 
 > **Paquetes por talla — 2026-10-23:** Paquetes USD: con tasa 3.900, Ágil y factor1.4, referencia538.46 y total484.62. Reaplicar10% a538.46 produce484.61; PDF y panel deben usar totalPrice servido. Las pruebas de regresión cubren esta frontera.

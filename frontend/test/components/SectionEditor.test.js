@@ -15,6 +15,8 @@ import {
   groupToReadableText,
   buildSavePayload,
 } from '../../components/BusinessProposal/admin/sectionEditorUtils.js';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import SectionEditor from '../../components/BusinessProposal/admin/SectionEditor.vue';
 
 jest.mock('vuedraggable', () => ({
@@ -352,11 +354,23 @@ function mountSectionEditor(props = {}) {
       ...props,
     },
     global: {
+      components: { BaseRichTextEditor, BaseSegmented },
       stubs: {
+        NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
       },
     },
   });
 }
+
+const originalUseI18n = global.useI18n;
+
+beforeEach(() => {
+  global.useI18n = () => ({ t: (key) => key });
+});
+
+afterAll(() => {
+  global.useI18n = originalUseI18n;
+});
 
 describe('SectionEditor component', () => {
   it('renders the technical document branch and forwards its save event', async () => {

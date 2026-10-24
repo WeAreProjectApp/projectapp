@@ -323,6 +323,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent } from '~/utils/editorialMetadata';
 import { ref, computed, nextTick, onBeforeUnmount, onMounted, toRef, watch } from 'vue';
 import { useProposalTracking } from '~/composables/useProposalTracking';
 import PreloaderAnimation from '~/components/animations/PreloaderAnimation.vue';
@@ -421,7 +422,7 @@ const sectionComponentMap = {
 };
 
 const proposal = computed(() => proposalStore.currentProposal);
-const enabledSections = computed(() => proposalStore.enabledSections);
+const enabledSections = computed(() => proposalStore.enabledSections.map(section => ({ ...section, content_json: resolveEditorialContent(section.content_json, section.text_formats, '/content_json') })));
 
 // Once the client's decision is settled (accepted/rejected/finished), urgency
 // notices (expiration countdown, limited-time discount) no longer make sense.

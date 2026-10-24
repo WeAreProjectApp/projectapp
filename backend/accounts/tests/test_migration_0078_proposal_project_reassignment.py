@@ -1,5 +1,6 @@
 """Data migration coverage for conservative technical-resource ownership adoption."""
 import pytest
+from django.core.management import call_command
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 
@@ -24,6 +25,7 @@ def test_0078_adopts_only_a_unique_proposal_technical_key():
     latest = executor.loader.graph.leaf_nodes()
     old_targets = _before_0078_targets(executor.loader.graph)
     try:
+        call_command('flush', interactive=False, verbosity=0)
         executor.migrate(old_targets)
         old = executor.loader.project_state(old_targets).apps
         User = old.get_model('auth', 'User')

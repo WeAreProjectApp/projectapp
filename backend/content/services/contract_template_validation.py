@@ -46,6 +46,12 @@ def validate_markdown(markdown, variant):
     variant_key(variant)
     if not isinstance(markdown, str) or not markdown.strip() or len(markdown) > MAX_MARKDOWN:
         raise ContractTemplateError('markdown debe ser texto no vacío de hasta 250000 caracteres.')
+    from rest_framework.exceptions import ValidationError
+    from content.services.editorial_format import render_source
+    try:
+        render_source(markdown)
+    except ValidationError as error:
+        raise ContractTemplateError('El contenido utiliza HTML o estilos no admitidos.') from error
     fields = placeholders(markdown)
     required = CORE_FIELDS | (SERVICE_FIELDS if variant in {'combined', 'service'} else set())
     if variant == 'service':

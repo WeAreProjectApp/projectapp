@@ -129,6 +129,7 @@ class DiagnosticEmailService:
         greeting: str = '',
         sections: list = (),
         footer: str = '',
+        text_formats=None,
         attachments: list | None = None,
         cc_emails=None,
         recipient_email=None,
@@ -162,6 +163,7 @@ class DiagnosticEmailService:
             'greeting': greeting,
             'sections': normalized_sections,
             'footer': footer,
+            **({'text_formats': text_formats} if text_formats else {}),
             'attachment_names': attachment_names,
             'to_recipients': to_recipients,
             'cc_recipients': cc_recipients,
@@ -181,7 +183,7 @@ class DiagnosticEmailService:
         try:
             html_body, text_body = ProposalEmailService.render_composed_email(
                 'branded_email', None, subject, greeting,
-                normalized_sections, footer, attachment_names,
+                normalized_sections, footer, attachment_names, text_formats=text_formats,
             )
             email = EmailMultiAlternatives(
                 subject=subject,

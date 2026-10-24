@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 from rest_framework import serializers
 
 from accounts.models import UserProfile
@@ -10,10 +11,10 @@ from content.models import (
 
 
 class StringListField(serializers.ListField):
-    child = serializers.CharField(max_length=500, trim_whitespace=True)
+    child = serializers.CharField(max_length=500000, trim_whitespace=True)
 
 
-class AdditionalModuleCategorySerializer(serializers.ModelSerializer):
+class AdditionalModuleCategorySerializer(EditorialModelSerializer):
     module_count = serializers.SerializerMethodField()
     active_module_count = serializers.SerializerMethodField()
 
@@ -38,7 +39,7 @@ class AdditionalModuleCategorySerializer(serializers.ModelSerializer):
         )
 
 
-class AdditionalModuleAdminSerializer(serializers.ModelSerializer):
+class AdditionalModuleAdminSerializer(EditorialModelSerializer):
     problems_solved_es = StringListField()
     problems_solved_en = StringListField()
     integrations_es = StringListField()
@@ -66,12 +67,20 @@ class AdditionalModuleAdminSerializer(serializers.ModelSerializer):
         validators = []
 
     def validate(self, attrs):
+        from content.services.editorial_format import plain_text
+        formats = attrs.get('text_formats', getattr(self.instance, 'text_formats', {})) or {}
+        for field in ('summary_es', 'summary_en'):
+            if field in attrs and len(plain_text(attrs[field], format=formats.get('/' + field, 'plain'))) > 360:
+                raise serializers.ValidationError({field: 'Usa hasta 360 caracteres visibles.'})
         for field in (
             'problems_solved_es', 'problems_solved_en', 'integrations_es',
             'integrations_en', 'implementation_requirements_es',
             'implementation_requirements_en',
         ):
             value = attrs.get(field)
+            for index, item in enumerate(value or []):
+                if len(plain_text(item, format=formats.get(f'/{field}/{index}', 'plain'))) > 500:
+                    raise serializers.ValidationError({field: 'Cada elemento admite hasta 500 caracteres visibles.'})
             if value is not None and not value:
                 raise serializers.ValidationError({
                     field: 'Incluye al menos un elemento.',
@@ -114,7 +123,7 @@ class AdditionalModuleShareCreateSerializer(serializers.Serializer):
         return share_link
 
 
-class AdditionalModuleShareAdminSerializer(serializers.ModelSerializer):
+class AdditionalModuleShareAdminSerializer(EditorialModelSerializer):
     client_name = serializers.SerializerMethodField()
     selected_modules = serializers.SerializerMethodField()
     public_path = serializers.SerializerMethodField()
@@ -151,7 +160,7 @@ class AdditionalModuleShareAdminSerializer(serializers.ModelSerializer):
         return f'/{locale}/additional-modules/share/{obj.uuid}'
 
 
-class AdditionalModuleShareVideoSerializer(serializers.ModelSerializer):
+class AdditionalModuleShareVideoSerializer(EditorialModelSerializer):
     """Only the explainer switch is editable once a link has been shared."""
 
     class Meta:

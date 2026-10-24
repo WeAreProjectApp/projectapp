@@ -8,6 +8,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { fillRichTextSource } from '../helpers/editorial.js';
 import { ADMIN_PROPOSAL_SEND } from '../helpers/flow-tags.js';
 
 const PROPOSAL_ID = 1;
@@ -153,7 +154,7 @@ test.describe('Admin Proposal Send', () => {
 
     const intro = page.getByTestId('proposal-email-intro');
     await intro.waitFor({ state: 'visible', timeout: 15000 });
-    await intro.fill('Esta propuesta centraliza los pedidos para reducir errores y acelerar las entregas.');
+    await fillRichTextSource(intro, 'Esta propuesta centraliza los pedidos para reducir errores y acelerar las entregas.');
 
     const [req] = await Promise.all([
       page.waitForRequest((r) => r.url().includes(`proposals/${PROPOSAL_ID}/update/`) && r.method() === 'PATCH'),
@@ -161,6 +162,7 @@ test.describe('Admin Proposal Send', () => {
     ]);
     expect(req.postDataJSON()).toEqual({
       email_intro: 'Esta propuesta centraliza los pedidos para reducir errores y acelerar las entregas.',
+      text_formats: { '/email_intro': 'markdown_html_v1' },
     });
     await expect(page.getByText('Mensaje del correo guardado.')).toBeVisible();
   });

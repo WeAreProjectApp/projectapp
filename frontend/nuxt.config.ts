@@ -172,6 +172,7 @@ export default defineNuxtConfig({
   // CSS
   css: [
     '~/assets/styles/main.css',
+    '~/assets/styles/editorial.css',
     '~/assets/styles/platform-cover.css',
   ],
 

@@ -7,7 +7,7 @@
   <p v-if="!form.clientName && proposalData?.client_name" class="text-xs text-warning-strong -mt-3">
     ⚠ Vacío — se usará "{{ proposalData.client_name }}" de los datos generales.
   </p>
-  <FieldTextarea v-model="form.inspirationalQuote" label="Frase inspiracional" :rows="2" />
+  <FieldTextarea v-model="form.inspirationalQuote" :format="form.text_formats?.['/inspirationalQuote'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/inspirationalQuote': $event }" label="Frase inspiracional" :rows="2" />
 </template>
 
 <script setup>

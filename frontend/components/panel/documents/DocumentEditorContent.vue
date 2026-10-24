@@ -23,17 +23,20 @@
 
     <!-- v-show, no v-if: al alternar se conservan el historial de deshacer,
          el cursor y el scroll de lo que se está escribiendo. -->
-    <textarea
+    <BaseRichTextEditor
       v-show="view === 'edit'"
       :id="textareaId"
       ref="textareaRef"
-      :value="modelValue"
+      :model-value="modelValue"
+      :format="format"
+      :label="label"
       :placeholder="placeholder"
       class="w-full px-4 py-3 border border-border-default rounded-xl text-sm font-mono leading-relaxed bg-surface text-text-default placeholder:text-text-subtle
              focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-none"
       :class="paneClass"
-      @input="emit('update:modelValue', $event.target.value)"
-    ></textarea>
+      @update:model-value="emit('update:modelValue', $event)"
+      @update:format="emit('update:format', $event)"
+    />
     <!-- Ocupa la misma caja que el editor y se monta sólo al pedirla: la vista
          previa en paralelo parseaba el documento entero en cada tecla. -->
     <div
@@ -45,6 +48,7 @@
       <DocumentMarkdownBody
         v-if="modelValue.trim()"
         :markdown="modelValue"
+        :format="format"
         :theme="theme"
         class="mx-auto w-full max-w-3xl px-5 py-4"
       />
@@ -61,6 +65,7 @@
 <script setup>
 import { nextTick, ref } from 'vue';
 import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownBody.vue';
+import BaseRichTextEditor from '~/components/base/BaseRichTextEditor.vue';
 import { oneOf } from '~/components/base/propValidators';
 
 /**
@@ -70,6 +75,7 @@ import { oneOf } from '~/components/base/propValidators';
  */
 const props = defineProps({
   modelValue: { type: String, default: '' },
+  format: { type: String, default: 'markdown' },
   textareaId: { type: String, required: true },
   label: { type: String, required: true },
   /** Same required marker as BaseFormField, for forms that demand content. */
@@ -80,7 +86,7 @@ const props = defineProps({
   paneClass: { type: String, default: 'min-h-[24rem] panel-desktop:h-[calc(100vh-18rem)]' },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'update:format']);
 
 const viewOptions = [
   { value: 'edit', label: 'Editar', testId: 'doc-editor-view-edit' },
@@ -94,18 +100,11 @@ const textareaRef = ref(null);
 // después de lo insertado. Desde la vista previa vuelve primero al editor:
 // lo pegado tiene que quedar a la vista.
 function insertAtCursor(text) {
-  const textarea = textareaRef.value;
-  const current = props.modelValue;
-  const start = textarea ? textarea.selectionStart : current.length;
-  const end = textarea ? textarea.selectionEnd : current.length;
+  if (view.value === 'edit') { textareaRef.value?.insertAtCursor(text); return; }
   view.value = 'edit';
-  emit('update:modelValue', current.slice(0, start) + text + current.slice(end));
-  if (!textarea) return;
-  const cursor = start + text.length;
-  nextTick(() => {
-    textarea.focus();
-    textarea.setSelectionRange(cursor, cursor);
-  });
+  nextTick(() => textareaRef.value?.insertAtCursor(text));
+  return;
+
 }
 
 defineExpose({ insertAtCursor });

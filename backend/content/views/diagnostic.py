@@ -1,3 +1,4 @@
+from content.services.editorial_email import email_formats
 """Admin + public DRF views for the WebAppDiagnostic feature.
 
 Admin endpoints use Django session auth + IsAdminUser. The 3 public endpoints
@@ -6,6 +7,7 @@ Admin endpoints use Django session auth + IsAdminUser. The 3 public endpoints
 
 import logging
 
+from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -239,6 +241,7 @@ def update_diagnostic_section(request, diagnostic_id, section_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@transaction.atomic
 def bulk_update_diagnostic_sections(request, diagnostic_id):
     """Accept a list of ``{id, ...fields}`` entries and update in one call."""
     diagnostic = get_object_or_404(WebAppDiagnostic, pk=diagnostic_id)
@@ -249,7 +252,7 @@ def bulk_update_diagnostic_sections(request, diagnostic_id):
             code='sections_must_be_list',
         )
 
-    updated_ids = []
+    validated = []
     for entry in payload:
         if not isinstance(entry, dict) or 'id' not in entry:
             continue
@@ -261,9 +264,18 @@ def bulk_update_diagnostic_sections(request, diagnostic_id):
         serializer = DiagnosticSectionUpdateSerializer(
             section, data=entry, partial=True,
         )
-        if serializer.is_valid():
-            serializer.save()
-            updated_ids.append(section.id)
+        if not serializer.is_valid():
+            return error_response(
+                'Datos inválidos.',
+                code='validation_error',
+                errors={'sections': {str(section.id): serializer.errors}},
+            )
+        validated.append(serializer)
+
+    updated_ids = []
+    for serializer in validated:
+        serializer.save()
+        updated_ids.append(serializer.instance.id)
 
     if updated_ids:
         diagnostic_service.log_change(
@@ -1220,9 +1232,13 @@ def _parse_diagnostic_email(request, diagnostic):
 
     greeting = (request.data.get('greeting') or '').strip()
     footer = (request.data.get('footer') or '').strip()
+    text_formats = email_formats(request.data.get('text_formats'), {'greeting': greeting, 'footer': footer})
 
     from content.views.standalone_email import _parse_sections_field
-    sections, sections_error = _parse_sections_field(request.data.get('sections', '[]'))
+    sections, sections_error = _parse_sections_field(
+        request.data.get('sections', '[]'),
+        strict_editorial='text_formats' in request.data,
+    )
     if sections_error:
         return None, error_response(
             sections_error,
@@ -1287,6 +1303,7 @@ def _parse_diagnostic_email(request, diagnostic):
         'greeting': greeting,
         'sections': sections,
         'footer': footer,
+        'text_formats': text_formats,
         'attachments': attachments or None,
     }, None
 
@@ -1309,6 +1326,7 @@ def send_diagnostic_email(request, diagnostic_id):
         greeting=parsed['greeting'],
         sections=parsed['sections'],
         footer=parsed['footer'],
+        text_formats=parsed.get('text_formats'),
         attachments=parsed['attachments'],
     )
     if ok:

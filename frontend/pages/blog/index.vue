@@ -178,7 +178,7 @@
                   <h3 class="text-sm font-medium text-text-brand mb-1 leading-tight line-clamp-2" itemprop="headline">
                     <NuxtLink :to="localePath(`/blog/${post.slug}`)" @click.stop>{{ post.title }}</NuxtLink>
                   </h3>
-                  <p class="text-xs text-green-light line-clamp-2 mb-1.5 flex-1 font-regular" itemprop="description">{{ post.excerpt }}</p>
+                  <BaseRichTextContent class="text-xs text-green-light line-clamp-2 mb-1.5 flex-1 font-regular" itemprop="description" :source="post.excerpt" :format="post.text_formats?.['/excerpt_' + (locale === 'en-us' ? 'en' : 'es')] || 'plain'" />
                   <div class="flex items-center gap-3 text-[10px] text-green-light">
                     <span v-if="post.published_at" class="flex items-center gap-1">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -239,9 +239,7 @@
                   <NuxtLink :to="localePath(`/blog/${post.slug}`)" @click.stop>{{ post.title }}</NuxtLink>
                 </h3>
 
-                <p class="text-base mb-6 flex-1 text-green-light leading-relaxed font-regular" itemprop="description">
-                  {{ post.excerpt }}
-                </p>
+                <BaseRichTextContent class="text-base mb-6 flex-1 text-green-light leading-relaxed font-regular" itemprop="description" :source="post.excerpt" :format="post.text_formats?.['/excerpt_' + (locale === 'en-us' ? 'en' : 'es')] || 'plain'" />
 
                 <div class="flex items-center gap-2 text-sm text-text-brand font-medium group-hover:gap-4 transition-all">
                   <span>{{ isEnglish ? 'Read more' : 'Leer más' }}</span>

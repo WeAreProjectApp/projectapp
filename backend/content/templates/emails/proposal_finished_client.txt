@@ -1,12 +1,12 @@
-{{ greeting|default:"🎯 Misión cumplida." }}
+{% load editorial %}{% editorial_plain_value greeting|default:"🎯 Misión cumplida." "greeting" %}
 
-{{ body|default:"Tu proyecto está en producción. Gracias por la claridad y la confianza." }}
+{% editorial_plain_value body|default:"Tu proyecto está en producción. Gracias por la claridad y la confianza." "body" %}
 
 {% if total_duration %}Tiempo de entrega: {{ total_duration }}{% endif %}
 {% if project_name %}Proyecto: {{ project_name }}{% endif %}
 {% if deliverable_title %}Entregable: {{ deliverable_title }}{% endif %}
 
-{{ cta_text|default:"Ir a mi plataforma" }}: {{ platform_login_url|default:proposal_url }}
+{% editorial_plain_value cta_text|default:"Ir a mi plataforma" "cta_text" %}: {{ platform_login_url|default:proposal_url }}
 
 —
 {{ signature_name }}

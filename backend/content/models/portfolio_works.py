@@ -1,3 +1,4 @@
+from content.models.editorial_text import EditorialTextModel
 import os
 
 from django.db import models
@@ -5,7 +6,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
-class PortfolioWork(models.Model):
+class PortfolioWork(EditorialTextModel, models.Model):
     """
     PortfolioWork model representing completed projects or works in the ProjectApp.
 

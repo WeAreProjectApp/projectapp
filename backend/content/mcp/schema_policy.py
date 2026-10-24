@@ -129,14 +129,19 @@ def schema_problems(tool, *, generic_ok=False, undescribed_ok=False):
             return
 
         properties = node.get('properties')
+        patterns = node.get('patternProperties')
         if object_typed:
             if 'properties' in node:
                 if additional is not False:
                     report(_pointer(path, 'additionalProperties'), 'object with properties must be closed')
-            elif not isinstance(additional, dict):
+            elif not isinstance(additional, dict) and not (
+                additional is False and isinstance(patterns, dict) and patterns
+            ):
                 report(path, 'object without properties needs a typed map or an open reason')
         if 'properties' in node and not isinstance(properties, dict):
             report(_pointer(path, 'properties'), 'properties must be a dict')
+        if 'patternProperties' in node and not isinstance(patterns, dict):
+            report(_pointer(path, 'patternProperties'), 'patternProperties must be a dict')
 
         constraint = bool(node) and set(node) <= {'required', 'not'}
         available = parent_properties if constraint else properties
@@ -152,6 +157,11 @@ def schema_problems(tool, *, generic_ok=False, undescribed_ok=False):
         if isinstance(properties, dict):
             for key, child in properties.items():
                 walk(child, _pointer(_pointer(path, 'properties'), key), needs_type=True)
+        if isinstance(patterns, dict):
+            for key, child in patterns.items():
+                walk(child, _pointer(_pointer(path, 'patternProperties'), key), needs_type=True)
+        if 'propertyNames' in node:
+            walk(node['propertyNames'], _pointer(path, 'propertyNames'), needs_type=True)
         if 'items' in node:
             items = node['items']
             if isinstance(items, list):

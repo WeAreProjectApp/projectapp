@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';
 
 global.IntersectionObserver = jest.fn(() => ({
   observe: jest.fn(),
@@ -38,6 +39,7 @@ function mountInvestment(props = {}) {
   return mount(Investment, {
     props: { ...defaultProps, ...props },
     global: {
+      components: { BaseRichTextContent },
       stubs: {
         ModuleInterestsModal: {
           props: ['visible'],

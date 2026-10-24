@@ -8,6 +8,7 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_CLIENT_COMMUNICATIONS } from '../helpers/flow-tags.js';
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { fillRichTextSource } from '../helpers/editorial.js';
 
 const authCheck = {
   status: 200,
@@ -944,8 +945,8 @@ test.describe('Admin Client Communications', () => {
     await expect(page.getByTestId('communication-message-channel')).toHaveValue('email');
     await page.getByTestId('communication-message-subject')
       .fill('Inicio del trabajo');
-    await page.getByTestId('communication-message-content')
-      .fill('Confirmamos que el equipo inicia mañana.');
+    const composerContent = page.getByTestId('communication-message-content');
+    await fillRichTextSource(composerContent, 'Confirmamos que el equipo inicia mañana.');
     await page.getByTestId('communication-register-sent').click();
 
     await expect.poll(() => submittedPayload).toMatchObject({
@@ -969,12 +970,13 @@ test.describe('Admin Client Communications', () => {
     await page.getByTestId('communication-composer-toggle').click();
 
     const content = page.getByTestId('communication-message-content');
-    await content.fill('Este texto no debe perderse.');
+    await fillRichTextSource(content, 'Este texto no debe perderse.');
     await page.getByTestId('communication-register-sent').click();
 
     await expect(page.getByText('El hilo fue cerrado por otra sesión.', { exact: true }).first())
       .toBeVisible();
-    await expect(content).toHaveValue('Este texto no debe perderse.');
+    await expect(content.getByTestId('rich-text-source-input'))
+      .toHaveValue('Este texto no debe perderse.');
   });
 
   test('moves a long thread to its end and back without scrolling the page', {
@@ -1017,23 +1019,22 @@ test.describe('Admin Client Communications', () => {
     const composerToggle = page.getByTestId('communication-composer-toggle');
     const content = page.getByTestId('communication-message-content');
     await expect(composerToggle).toHaveAttribute('aria-expanded', 'false');
-    await content.evaluate((element) => element.focus());
-    await expect(content).not.toBeFocused();
     await page.getByTestId('communication-message-802').getByRole('button', { name: 'Responder' }).click();
     await expect(composerToggle).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByTestId('communication-composer')).toContainText('Respuesta al mensaje #802');
-    await expect(content).toBeFocused();
+    const visualContent = content.getByTestId('rich-text-visual-input');
+    await expect(visualContent).toBeFocused();
     const detailsToggle = page.getByTestId('communication-details-toggle');
     await detailsToggle.click();
     const date = page.getByTestId('communication-message-date');
     await date.fill('2026-09-25T09:30');
-    await content.fill('La respuesta conserva su fecha.');
+    await visualContent.fill('La respuesta conserva su fecha.');
     await detailsToggle.click();
 
     await expect(detailsToggle).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByTestId('communication-details-summary')).toContainText('25/09/2026');
     await expect(date).toHaveValue('2026-09-25T09:30');
-    await expect(content).toHaveValue('La respuesta conserva su fecha.');
+    await expect(visualContent).toContainText('La respuesta conserva su fecha.');
   });
 
   test('copies directly and marks a draft sent from the overflow menu', {

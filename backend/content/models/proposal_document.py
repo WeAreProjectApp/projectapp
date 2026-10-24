@@ -1,7 +1,8 @@
+from content.models.editorial_text import EditorialTextModel
 from django.db import models
 
 
-class ProposalDocument(models.Model):
+class ProposalDocument(EditorialTextModel, models.Model):
     """
     Documents attached to a proposal during negotiation phase.
 

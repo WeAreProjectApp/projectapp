@@ -1,10 +1,10 @@
-Hola {{ client_name }},
+{% load editorial %}Hola {{ client_name }},
 
 Recibimos tu solicitud para evaluar la plataforma actual. Antes de pasarte cualquier número, hacemos un diagnóstico técnico real.
 
 Este primer paso no tiene costo. La cotización y el cronograma los definimos solo cuando tengamos data.
 
-{{ cta_text|default:"Ver propuesta de diagnóstico" }}: {{ diagnostic_url }}
+{% editorial_plain_value cta_text|default:"Ver propuesta de diagnóstico" "cta_text" %}: {{ diagnostic_url }}
 
 —
 {{ signature_name }}

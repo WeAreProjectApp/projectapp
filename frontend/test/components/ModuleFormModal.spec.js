@@ -1,8 +1,10 @@
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import ModuleFormModal from '../../components/AdditionalModules/ModuleFormModal.vue'
 import BaseFormField from '../../components/base/BaseFormField.vue'
 import BaseInput from '../../components/base/BaseInput.vue'
-import BaseTextarea from '../../components/base/BaseTextarea.vue'
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue'
+import BaseRichTextListEditor from '../../components/base/BaseRichTextListEditor.vue'
 import BaseSelect from '../../components/base/BaseSelect.vue'
 import BaseSegmented from '../../components/base/BaseSegmented.vue'
 
@@ -36,7 +38,7 @@ function mountModal() {
       categories: [{ id: 4, name_es: 'Infraestructura', is_active: true }],
     },
     global: {
-      components: { BaseFormField, BaseInput, BaseTextarea, BaseSelect, BaseSegmented },
+      components: { BaseFormField, BaseInput, BaseRichTextEditor, BaseRichTextListEditor, BaseSelect, BaseSegmented },
       stubs: {
         BaseModal: { props: ['modelValue'], template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>' },
         BaseButton: { template: '<button v-bind="$attrs" :type="$attrs.type || \'button\'"><slot /></button>' },
@@ -49,7 +51,10 @@ function mountModal() {
 
 describe('ModuleFormModal', () => {
   function expectDescribedError(wrapper, selector, message) {
-    const control = wrapper.get(selector)
+    const field = wrapper.get(selector)
+    const control = field.find('[role="textbox"]').exists()
+      ? field.get('[role="textbox"]')
+      : field
     const errorId = control.attributes('aria-describedby')
     const error = wrapper.findAll('[role="alert"]')
       .find((node) => node.attributes('id') === errorId)
@@ -67,6 +72,8 @@ describe('ModuleFormModal', () => {
     const wrapper = mountModal()
     await openForm(wrapper)
     await wrapper.get('[data-testid="additional-module-form"]').trigger('submit')
+    await nextTick()
+    await nextTick()
 
     expect(wrapper.emitted('save')).toBeUndefined()
     expectDescribedError(wrapper, '[data-testid="additional-module-slug"]', 'Escribe el identificador del módulo.')
@@ -91,6 +98,8 @@ describe('ModuleFormModal', () => {
     const wrapper = mountModal()
     await openForm(wrapper)
     await wrapper.get('[data-testid="additional-module-form"]').trigger('submit')
+    await nextTick()
+    await nextTick()
 
     expect(wrapper.get('[role="tab"][aria-selected="true"]').text()).toBe('English')
   })

@@ -1,4 +1,4 @@
-<!doctype html>
+{% load editorial %}<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -50,8 +50,8 @@ a{text-decoration:none}
 </td></tr>
 
 <tr><td class="px-40" style="padding:32px 40px 0 40px;">
-<p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %}</p>
-<p style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{{ body|default:"Notamos que pasaste varios minutos en la sección de inversión. Eso normalmente significa una de dos cosas: o estás cuadrando el presupuesto interno, o quieres entender mejor cómo se distribuyen los pagos. Las dos son válidas."|linebreaksbr }}</p>
+<div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{% editorial_email_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %}</div>
+<div style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{% editorial_email_value body|default:"Notamos que pasaste varios minutos en la sección de inversión. Eso normalmente significa una de dos cosas: o estás cuadrando el presupuesto interno, o quieres entender mejor cómo se distribuyen los pagos. Las dos son válidas." "body" %}</div>
 <p style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{{ body_secondary|default:"Podemos ajustar el calendario de pagos para que encaje con tu flujo de caja: 40/30/30 estándar, 6 cuotas iguales, o un esquema personalizado. La inversión total no cambia — solo el ritmo."|linebreaksbr }}</p>
 </td></tr>
 
@@ -66,7 +66,7 @@ a{text-decoration:none}
 <tr><td class="px-40" align="center" style="padding:40px 40px 12px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="center" bgcolor="#F0FF3D" style="border-radius:999px;mso-padding-alt:18px 32px;">
-<a href="https://wa.me/573238122373?text=Hola%2C%20me%20interesa%20la%20propuesta%20y%20quiero%20hablar%20sobre%20opciones%20de%20pago" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{{ cta_text|default:"Hablemos por WhatsApp" }} &nbsp;→</a>
+<a href="https://wa.me/573238122373?text=Hola%2C%20me%20interesa%20la%20propuesta%20y%20quiero%20hablar%20sobre%20opciones%20de%20pago" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{% editorial_email_value cta_text|default:"Hablemos por WhatsApp" "cta_text" %} &nbsp;→</a>
 </td></tr></table>
 <div style="margin-top:14px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="center" style="border-radius:999px;border:1px solid #ece8db;">

@@ -1,7 +1,7 @@
 <template>
   <section>
     <SectionHeader :index="content.index" :title="content.title" fallback="Cronograma" />
-    <p v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed">{{ content.intro }}</p>
+    <BaseRichTextContent v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed" :source="content.intro" :format="content.text_formats?.['/intro'] || 'plain'" />
 
     <p v-if="durationLabel" class="mt-3 text-text-brand/80 dark:text-text-brand/80">
       Duración estimada: <strong class="text-text-brand dark:text-text-brand">{{ durationLabel }}</strong>.
@@ -27,7 +27,7 @@
         </span>
         <div class="flex-1 min-w-0 border-l-2 border-input-border pl-4 pb-2">
           <div class="font-semibold text-text-brand dark:text-text-brand">{{ d.dayRange }}</div>
-          <div class="text-sm text-text-brand/70 dark:text-text-brand/70 leading-relaxed mt-0.5">{{ d.description }}</div>
+          <BaseRichTextContent class="text-sm text-text-brand/70 dark:text-text-brand/70 leading-relaxed mt-0.5" :source="d.description" :format="d.text_formats?.['/description'] || 'plain'" />
         </div>
       </li>
     </ol>
@@ -35,6 +35,7 @@
 </template>
 
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed } from 'vue';
 import SectionHeader from './SectionHeader.vue';
 

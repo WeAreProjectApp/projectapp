@@ -222,9 +222,7 @@ watch([hasModules, onboardingRef], async ([modulesAvailable, onboarding]) => {
             <span class="block text-lg font-medium leading-6 text-text-brand">
               {{ module.name }}
             </span>
-            <span class="mt-3 block text-sm leading-6 text-text-muted">
-              {{ module.summary }}
-            </span>
+            <BaseRichTextContent class="mt-3 block text-sm leading-6 text-text-muted" :source="module.summary" :format="module.text_formats?.['/summary'] || 'plain'" />
             <span class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-text-brand">
               {{ t('additionalModules.viewDetails') }}
               <span aria-hidden="true" class="transition-transform motion-safe:group-hover:translate-x-1 motion-reduce:transition-none">→</span>
@@ -245,7 +243,7 @@ watch([hasModules, onboardingRef], async ([modulesAvailable, onboarding]) => {
             </span>
             <div class="min-w-0 flex-1">
               <h3 class="break-words text-lg font-medium text-text-brand">{{ module.name }}</h3>
-              <p class="mt-1 break-words text-sm leading-6 text-text-muted">{{ module.summary }}</p>
+              <BaseRichTextContent class="mt-1 break-words text-sm leading-6 text-text-muted" :source="module.summary" :format="module.text_formats?.['/summary'] || 'plain'" />
             </div>
             <BaseButton
               variant="secondary"
@@ -281,7 +279,7 @@ watch([hasModules, onboardingRef], async ([modulesAvailable, onboarding]) => {
               </span>
               <span class="min-w-0 flex-1">
                 <span class="block break-words text-lg font-medium text-text-brand">{{ module.name }}</span>
-                <span class="mt-1 block break-words text-sm leading-6 text-text-muted">{{ module.summary }}</span>
+                <BaseRichTextContent class="mt-1 block break-words text-sm leading-6 text-text-muted" :source="module.summary" :format="module.text_formats?.['/summary'] || 'plain'" />
               </span>
               <span class="shrink-0 text-xl text-text-brand" aria-hidden="true">
                 {{ expandedModuleSlug === module.slug ? '−' : '+' }}
@@ -328,9 +326,7 @@ watch([hasModules, onboardingRef], async ([modulesAvailable, onboarding]) => {
             <h2 class="text-balance text-2xl font-light text-text-brand sm:text-3xl">
               {{ selectedModule.name }}
             </h2>
-            <p class="mt-2 max-w-3xl text-sm leading-6 text-text-muted sm:text-base">
-              {{ selectedModule.summary }}
-            </p>
+            <BaseRichTextContent class="mt-2 max-w-3xl text-sm leading-6 text-text-muted sm:text-base" :source="selectedModule.summary" :format="selectedModule.text_formats?.['/summary'] || 'plain'" />
           </div>
           <BaseButton
             variant="ghost"

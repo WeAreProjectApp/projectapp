@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 from accounts.models import Project, UserProfile
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -39,7 +40,7 @@ class ClientCustomNotesField(serializers.JSONField):
             raise serializers.ValidationError(str(exc)) from exc
 
 
-class _TagSummarySerializer(serializers.ModelSerializer):
+class _TagSummarySerializer(EditorialModelSerializer):
     class Meta:
         model = DocumentTag
         fields = ('id', 'name', 'color')
@@ -244,7 +245,7 @@ class DocumentListSerializer(
     GeneratedDocumentReadMixin,
     ClientProjectReadMixin,
     DocumentThreadSummaryMixin,
-    serializers.ModelSerializer,
+    EditorialModelSerializer,
 ):
     """Lightweight serializer for document lists."""
 
@@ -356,7 +357,7 @@ class DocumentDetailSerializer(
     GeneratedDocumentReadMixin,
     ClientProjectReadMixin,
     DocumentThreadSummaryMixin,
-    serializers.ModelSerializer,
+    EditorialModelSerializer,
 ):
     """Full serializer for document detail view."""
 
@@ -444,7 +445,7 @@ class DocumentDetailSerializer(
         return data
 
 
-class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
+class DocumentCreateUpdateSerializer(EditorialModelSerializer):
     """Serializer for creating/updating documents."""
 
     folder_id = serializers.PrimaryKeyRelatedField(
@@ -563,6 +564,7 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
 class DocumentFromMarkdownSerializer(serializers.Serializer):
     """Serializer for creating a document from markdown input."""
 
+    text_formats = serializers.JSONField(required=False, default=dict)
     title = serializers.CharField(max_length=255)
     markdown = serializers.CharField(required=True)
     client_name = serializers.CharField(max_length=255, required=False, default='')
@@ -616,10 +618,12 @@ class DocumentFromMarkdownSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        from content.services.editorial_format import validate_editorial_values
+        validate_editorial_values('document', {**attrs, 'content_markdown': attrs['markdown']})
         return apply_client_project_association(attrs)
 
 
-class ClientDocumentRowSerializer(serializers.ModelSerializer):
+class ClientDocumentRowSerializer(EditorialModelSerializer):
     """Fila ligera para la sección Documentos de la ficha del cliente.
 
     Sin excerpt ni tags a propósito: la ficha lista para reconocer y saltar,

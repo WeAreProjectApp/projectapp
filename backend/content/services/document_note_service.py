@@ -33,6 +33,7 @@ def sync_legacy_notes(document, *, actor=None):
             document=document,
             title=str(note.get('title') or '').strip(),
             content=str(note.get('content') or '').strip(),
+            text_formats=note.get('text_formats') or {},
             order=index,
             created_by=actor,
             created_at_known=False,
@@ -49,6 +50,7 @@ def create_note(
     *,
     title='',
     content,
+    text_formats=None,
     actor=None,
     mark_needs_fix=False,
 ):
@@ -79,18 +81,21 @@ def create_note(
     )
     if document.document_notes.exists():
         order += 1
+    from content.services.editorial_format import validate_formats
+    formats = validate_formats('documentnote', {'content': content}, text_formats or {})
     return DocumentNote.objects.create(
         document=document,
         episode=episode,
         title=title,
         content=content,
+        text_formats=formats,
         order=order,
         created_by=actor,
     )
 
 
 @historical_write
-def update_note(note, *, title=None, content=None):
+def update_note(note, *, title=None, content=None, text_formats=None):
     if note.deleted_at is not None:
         raise DocumentNoteError(
             'La observación está en la papelera.',
@@ -108,6 +113,10 @@ def update_note(note, *, title=None, content=None):
             raise DocumentNoteError('La observación no puede estar vacía.')
         note.content = content
         update_fields.append('content')
+    from content.services.editorial_format import validate_formats
+    formats = note.text_formats if text_formats is None else text_formats
+    note.text_formats = validate_formats('documentnote', {'content': note.content}, formats, instance=note)
+    update_fields.append('text_formats')
     note.save(update_fields=update_fields)
     return note
 

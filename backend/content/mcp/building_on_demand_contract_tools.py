@@ -98,7 +98,7 @@ def _schema(*, sensitive=False, restore=False):
     else:
         properties.update({
             'markdown': {'type': 'string', 'minLength': 1, 'maxLength': 250000,
-                         'description': 'Contrato Markdown completo; envía exactamente markdown o patches, nunca ambos.'},
+                         'description': 'Fuente markdown_html_v1 completa: Markdown con listas/tablas y HTML limitado para color, resaltado y alineación. Envía exactamente markdown o patches, nunca ambos.'},
             'patches': {'type': 'array', 'minItems': 1, 'maxItems': 50, 'items': deepcopy(PATCH),
                         'description': 'Cambios literales del contrato; envía exactamente patches o markdown, nunca ambos.'},
         })

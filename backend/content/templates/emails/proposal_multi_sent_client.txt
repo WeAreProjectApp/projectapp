@@ -1,16 +1,16 @@
-{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %},
 
-{{ body|default:"Armamos varias opciones para que elijas la que mejor encaja con tu equipo, calendario y presupuesto." }}
+{% editorial_plain_value body|default:"Armamos varias opciones para que elijas la que mejor encaja con tu equipo, calendario y presupuesto." "body" %}
 {% for phase in phases %}
 Propuesta {{ forloop.counter }} de {{ phases_count }} — {{ phase.title }}
-{% if phase.email_intro %}{{ phase.email_intro }}
+{% if phase.email_intro %}{{ phase.email_intro_text }}
 {% endif %}
 {% if phase.total_investment %}Inversión: $ {{ phase.total_investment }} {{ phase.currency }}
 {% endif %}{% if phase.total_duration %}Tiempo: {{ phase.total_duration }}
 {% endif %}{% if phase.payment_summary %}Pagos: {{ phase.payment_summary }}
 {% endif %}Link: {{ phase.proposal_url }}
 {% endfor %}
-{% if closing %}{{ closing }}{% endif %}
+{% if closing %}{% editorial_plain_value closing "closing" %}{% endif %}
 
 —
 {{ signature_name }}

@@ -1,7 +1,8 @@
+from content.models.editorial_text import EditorialTextModel
 from django.db import models
 
 
-class DiagnosticSection(models.Model):
+class DiagnosticSection(EditorialTextModel, models.Model):
     """Individual section within a WebAppDiagnostic.
 
     Each section maps to a Vue component on the frontend via ``section_type``.

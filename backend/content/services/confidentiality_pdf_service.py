@@ -138,6 +138,10 @@ def _get_markdown(params: dict) -> str:
 def _render_block(c, y, block, ps):
     block_type = block.get('type', '')
 
+    if block_type == 'rich_html' or block.get('html'):
+        from content.services.editorial_pdf import draw_editorial_html
+        return draw_editorial_html(c, y, block.get('html', ''), ps=ps)
+
     if block_type == 'heading':
         level = block.get('level', 2)
         text = _strip_emoji(block.get('text', ''))

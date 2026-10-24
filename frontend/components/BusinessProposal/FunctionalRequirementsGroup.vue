@@ -19,9 +19,9 @@
 
         <!-- Description -->
         <div data-animate="fade-up" class="mb-10">
-          <p
+          <div
             class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl"
-            v-html="linkify(group.description)"
+            v-html="linkify(group.description, group.text_formats?.['/description'])"
           />
         </div>
 
@@ -36,7 +36,7 @@
               </div>
               <div>
                 <h4 class="font-bold text-text-brand mb-1">{{ item.name }}</h4>
-                <p class="text-sm text-text-default/70 font-light">{{ item.description }}</p>
+                <BaseRichTextContent class="text-sm text-text-default/70 font-light" :source="item.description" :format="item.text_formats?.['/description'] || 'plain'" />
               </div>
             </div>
           </div>
@@ -55,6 +55,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   group: {
     type: Object,
     default: () => ({

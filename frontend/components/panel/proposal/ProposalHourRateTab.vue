@@ -50,7 +50,7 @@
                 <input v-model.number="row.validityMonths" type="number" min="1" step="1" class="mt-1 w-full rounded-lg border border-border-default bg-input-bg p-2 text-input-text" />
               </label>
               <label class="block text-xs text-text-muted">Nota
-                <textarea v-model="row.note" rows="2" class="mt-1 w-full rounded-lg border border-border-default bg-input-bg p-2 text-input-text" />
+                <BaseRichTextEditor v-model="row.note" :format="row.text_formats?.['/note'] || 'plain'" @update:format="row.text_formats = { ...row.text_formats, '/note': $event }" :rows="2" class="mt-1" />
               </label>
               <BaseButton variant="danger-ghost" size="sm" :disabled="rows.length <= 1" :disabled-reason="rows.length <= 1 ? 'Conserva al menos un paquete.' : ''" @click="rows.splice(idx, 1)">Quitar paquete</BaseButton>
             </template>
@@ -58,7 +58,7 @@
               <h3 class="font-medium text-text-default">{{ row.name }}</h3>
               <p class="text-sm text-text-default">{{ row.xsCount }} XS · {{ row.sCount }} S · {{ row.mCount }} M</p>
               <p class="text-xs text-text-muted">{{ row.validityMonths }} meses desde el pago</p>
-              <p class="text-xs text-text-muted">{{ row.note }}</p>
+              <BaseRichTextContent :source="row.note" :format="row.text_formats?.['/note'] || 'plain'" class="text-xs text-text-muted" />
             </template>
             <p class="text-sm text-text-muted"><span class="line-through">{{ money(row.referencePrice, currency) }}</span> · −{{ row.discountPercent }} %</p>
             <p class="font-medium text-text-brand">{{ money(net(row), currency) }} {{ currency === 'COP' ? '+ IVA' : '+ Tax' }}</p>
@@ -80,7 +80,10 @@ import { useProposalStore } from '~/stores/proposals';
 import { useHourPackagesStore } from '~/stores/hour_packages';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { formatPackageMoney as money } from '~/utils/hourPackagePricing';
+import { resolveEditorialContent, withoutEditorialPrefix } from '~/utils/editorialMetadata';
 import BaseCurrencyInput from '~/components/base/BaseCurrencyInput.vue';
+import BaseRichTextEditor from '~/components/base/BaseRichTextEditor.vue';
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import ProposalHourPackagesTable from './ProposalHourPackagesTable.vue';
 const props = defineProps({ proposal: { type: Object, required: true } });
 const emit = defineEmits(['dirty-state-change']);
@@ -88,7 +91,7 @@ const proposals = useProposalStore();
 const packages = useHourPackagesStore();
 const notify = usePanelNotify();
 const section = computed(() => proposals.currentProposal?.sections?.find((s) => s.section_type === 'commercial_conditions'));
-const content = computed(() => section.value?.content_json || {});
+const content = computed(() => resolveEditorialContent(section.value?.content_json || {}, section.value?.text_formats || {}, '/content_json'));
 const legacy = computed(() => content.value.pricingModel !== 'requirements');
 const legacyPreview = computed(() => {
   const data = content.value;
@@ -120,6 +123,8 @@ watch(dirty, (value) => emit('dirty-state-change', value));
 const catalog = computed(() => (packages.packages || []).filter((p) => p.is_active).map((p) => ({
   id: p.id, name: props.proposal.language === 'en' ? p.name_en : p.name_es,
   note: props.proposal.language === 'en' ? p.note_en : p.note_es,
+  ...(p.text_formats?.[props.proposal.language === 'en' ? '/note_en' : '/note_es']
+    ? { text_formats: { '/note': p.text_formats[props.proposal.language === 'en' ? '/note_en' : '/note_es'] } } : {}),
   xsCount: p.xs_count, sCount: p.s_count, mCount: p.m_count,
   validityMonths: p.validity_months, referencePrice: p.reference_price,
   discountPercent: p.discount_percent, totalPrice: p.total_price,
@@ -170,7 +175,9 @@ async function save() {
       hourPackagesEnabled: enabled.value, currency: currency.value, manualCurrency: currency.value,
       packagesFrozen: Boolean(content.value.packagesFrozen && !refreshing.value && !adopting.value),
       packages: JSON.parse(JSON.stringify(displayed.value)) };
-    const result = await proposals.updateSection(section.value.id, { content_json: next });
+    const annotations = section.value.text_formats || {};
+    const result = await proposals.updateSection(section.value.id, { content_json: next,
+      ...(Object.keys(annotations).length ? { text_formats: withoutEditorialPrefix(annotations, '/content_json') } : {}) });
     if (result?.success === false) { notify.error('No se pudieron guardar los paquetes. Revisa cupos, vigencia, referencia y descuento.'); return; }
     load(); notify.success('Paquetes guardados.');
   } finally { busy.value = false; }

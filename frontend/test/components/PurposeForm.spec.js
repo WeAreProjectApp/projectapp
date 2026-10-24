@@ -1,5 +1,13 @@
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue'
+import BaseRichTextListEditor from '../../components/base/BaseRichTextListEditor.vue'
+import BaseSegmented from '../../components/base/BaseSegmented.vue'
 import PurposeForm from '../../components/WebAppDiagnostic/admin/sections/PurposeForm.vue'
+
+const originalUseI18n = global.useI18n
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }) })
+afterAll(() => { global.useI18n = originalUseI18n })
 
 function defaultValue(overrides = {}) {
   return {
@@ -17,6 +25,7 @@ function defaultValue(overrides = {}) {
 function mountForm(propsOverrides = {}) {
   return mount(PurposeForm, {
     props: { modelValue: defaultValue(), ...propsOverrides },
+    global: { components: { BaseRichTextEditor, BaseRichTextListEditor, BaseSegmented } },
   })
 }
 
@@ -31,14 +40,16 @@ describe('PurposeForm', () => {
     expect(wrapper.findAll('input[type="text"]')[1].element.value).toBe('Mi propósito')
   })
 
-  it('renders paragraphs textarea with value from modelValue', () => {
+  it('renders paragraphs textarea with value from modelValue', async () => {
     const wrapper = mountForm({ modelValue: defaultValue({ paragraphsText: 'Línea 1\nLínea 2' }) })
-    expect(wrapper.findAll('textarea')[0].element.value).toBe('Línea 1\nLínea 2')
+    await nextTick()
+    expect(wrapper.findAll('[data-testid="rich-text-source-input"]').slice(0, 2).map((editor) => editor.element.value)).toEqual(['Línea 1', 'Línea 2'])
   })
 
-  it('renders scope note textarea with value from modelValue', () => {
+  it('renders scope note textarea with value from modelValue', async () => {
     const wrapper = mountForm({ modelValue: defaultValue({ scopeNote: 'Solo backend' }) })
-    expect(wrapper.findAll('textarea')[1].element.value).toBe('Solo backend')
+    await nextTick()
+    expect(wrapper.findAll('[data-testid="rich-text-source-input"]')[1].element.value).toBe('Solo backend')
   })
 
   it('shows empty state message when severityLevels is empty', () => {
@@ -53,7 +64,7 @@ describe('PurposeForm', () => {
     expect(wrapper.text()).not.toContain('Sin niveles configurados.')
   })
 
-  it('renders existing severity levels from modelValue', () => {
+  it('renders existing severity levels from modelValue', async () => {
     const wrapper = mountForm({
       modelValue: defaultValue({
         severityLevels: [
@@ -62,24 +73,27 @@ describe('PurposeForm', () => {
         ],
       }),
     })
+    await nextTick()
     // index, title, severityTitle, severityIntro = 4 base inputs; levels add more
     const textInputs = wrapper.findAll('input[type="text"]')
     expect(textInputs[4].element.value).toBe('Alto')
     expect(textInputs[5].element.value).toBe('Medio')
-    expect(wrapper.findAll('textarea')[2].element.value).toBe('Impacto alto')
+    expect(wrapper.findAll('[data-testid="rich-text-source-input"]')[2].element.value).toBe('Impacto alto')
   })
 
   it('clicking add button appends an empty severity level row', async () => {
     const wrapper = mountForm()
-    const addBtn = wrapper.findAll('button')[0]
+    const addBtn = wrapper.findAll('button').find((button) => button.text() === 'Agregar')
     await addBtn.trigger('click')
+    await nextTick()
     expect(wrapper.findAll('input[type="text"]').length).toBeGreaterThan(4)
     expect(wrapper.text()).not.toContain('Sin niveles configurados.')
   })
 
   it('emits update:modelValue with one new level after clicking add', async () => {
     const wrapper = mountForm()
-    await wrapper.findAll('button')[0].trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === 'Agregar').trigger('click')
+    await nextTick()
     expect(wrapper.emitted('update:modelValue')).toBeTruthy()
     const emitted = wrapper.emitted('update:modelValue')[0][0]
     expect(emitted.severityLevels).toHaveLength(1)
@@ -95,9 +109,9 @@ describe('PurposeForm', () => {
         ],
       }),
     })
-    // button[0] = Agregar, button[1] = first Quitar
-    const removeBtn = wrapper.findAll('button')[1]
+    const removeBtn = wrapper.findAll('button').find((button) => button.text() === 'Quitar')
     await removeBtn.trigger('click')
+    await nextTick()
     const textInputs = wrapper.findAll('input[type="text"]')
     // Only 1 level remains (base 4 + 1 = 5 text inputs)
     expect(textInputs).toHaveLength(5)
@@ -113,8 +127,9 @@ describe('PurposeForm', () => {
         ],
       }),
     })
-    await wrapper.findAll('button')[1].trigger('click')
-    const emittedLevels = wrapper.emitted('update:modelValue')[0][0].severityLevels
+    await wrapper.findAll('button').find((button) => button.text() === 'Quitar').trigger('click')
+    await nextTick()
+    const emittedLevels = wrapper.emitted('update:modelValue').at(-1)[0].severityLevels
     expect(emittedLevels).toHaveLength(1)
     expect(emittedLevels[0].level).toBe('Bajo')
   })

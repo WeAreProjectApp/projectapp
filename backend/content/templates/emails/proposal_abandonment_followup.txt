@@ -1,10 +1,10 @@
-{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %},
 
-{{ body|default:"Notamos que abriste la propuesta pero no llegaste hasta el final. ¿Te quedaron dudas?" }}
+{% editorial_plain_value body|default:"Notamos que abriste la propuesta pero no llegaste hasta el final. ¿Te quedaron dudas?" "body" %}
 {% if body_secondary %}
 {{ body_secondary }}{% endif %}
 
-{{ cta_text|default:"Ver propuesta" }}: {{ proposal_url }}
+{% editorial_plain_value cta_text|default:"Ver propuesta" "cta_text" %}: {{ proposal_url }}
 O escríbenos por WhatsApp: https://wa.me/573238122373
 
 —

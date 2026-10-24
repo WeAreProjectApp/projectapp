@@ -237,6 +237,8 @@
         >
           <DocumentEditorContent
             v-model="form.content_markdown"
+            :format="form.text_formats['/content_markdown'] || 'markdown'"
+            @update:format="form.text_formats['/content_markdown'] = $event"
             textarea-id="doc-markdown"
             label="Contenido Markdown"
             required
@@ -333,6 +335,7 @@
       :email-body="form.client_email_body"
       :whatsapp-message="form.client_whatsapp_message"
       :custom-notes="form.client_custom_notes"
+      :textFormats="form.text_formats"
       mode="draft"
       @submit="applyClientNoteDraft"
     />
@@ -410,6 +413,7 @@ const form = reactive({
   include_subportada: true,
   include_contraportada: true,
   content_markdown: '',
+  text_formats: {},
   client_email_subject: '',
   client_email_body: '',
   client_whatsapp_message: '',
@@ -545,6 +549,7 @@ const notesActionLabel = computed(() => (
 function applyClientNoteDraft(note) {
   form.client_email_subject = note.subject;
   form.client_email_body = note.emailBody;
+  form.text_formats = { ...form.text_formats, ...note.textFormats };
   form.client_whatsapp_message = note.whatsappMessage;
   form.client_custom_notes = note.customNotes;
   showClientNote.value = false;
@@ -703,6 +708,7 @@ async function handleSubmit() {
     include_subportada: form.include_subportada,
     include_contraportada: form.include_contraportada,
     markdown: form.content_markdown,
+    text_formats: { ...form.text_formats },
     client_email_subject: form.client_email_subject,
     client_email_body: form.client_email_body,
     client_whatsapp_message: form.client_whatsapp_message,

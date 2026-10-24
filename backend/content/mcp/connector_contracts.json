@@ -16,52 +16,52 @@
     "version": "3.1.0"
   },
   "additional-modules": {
-    "sha256": "f2ba9f55b84ddb4fc69de882ab894863ace3bc587f2d3dea46b1a15883ae4ee7",
-    "version": "4.0.0"
+    "sha256": "f445c081b9511306c756cb6829e0e0a962e363534ab45ae99f001c1c0124a974",
+    "version": "4.1.2"
   },
   "blog": {
-    "sha256": "e8c16561a0b806542df4d9921b0ad49b1bb9b00e4692447be248c0fdd15dfaa4",
-    "version": "2.0.0"
+    "sha256": "ed35a90d7173d1b524e2604ad6450ad166a4d3a7bb715daf541df874a7486021",
+    "version": "2.1.1"
   },
   "building-on-demand": {
-    "sha256": "1d17013870ae54ab3c9b3811e1c3f1fd55b09c71836c846408ac04463e53f278",
-    "version": "4.0.0"
+    "sha256": "2b0b4dea6f7ae49210ed4298594b19283d162479c197bad5716db4a6b069fdd6",
+    "version": "4.1.1"
   },
   "building-with-us": {
-    "sha256": "e1f4c4bf236dafd42cc9cf6ea53cbf0e2581156825efc17f47d9c7efd657bd9c",
-    "version": "3.0.0"
+    "sha256": "8a2765bb7c19595951f7f52263aa3f1e09a1db9ed94f02a805d087c10f9256fc",
+    "version": "3.1.1"
   },
   "clients": {
     "sha256": "5b7a8bccfe1cb285d405536bfa5947a691fa7ec512d98ce040eb8957a31e5992",
     "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "69530ecac7cc42d312cc6a8b2f8d266f54d4eb454347f5aa9de24bdecf8d451f",
-    "version": "6.2.0"
+    "sha256": "1445bae77c5aae69421d3ccfee7fea6eb604e5e06173ae1f1f690d079fbfe2ed",
+    "version": "6.3.0"
   },
   "communications": {
-    "sha256": "3aa598dcd1930132226521e35bb078718847c0d94d36e7d8c7c5bacbcbb575c7",
-    "version": "3.0.0"
+    "sha256": "6adb60740928cd7b192aa17073d65b21c14f90fc41ba7675506ed2e278a1d3e6",
+    "version": "3.1.2"
   },
   "content": {
-    "sha256": "1cca467eb440ee1cdcaf94ac0d074c72b92aba16588b817a9667125cf33eed7c",
-    "version": "3.0.0"
+    "sha256": "a7e34c0cd806d7aa777b444215c38187d6f69e52962bec3d3ac194a0b29ec41c",
+    "version": "3.1.1"
   },
   "diagnostics": {
-    "sha256": "e03f0d4dde872c42e9f19ecb787c305f8e907a7b0b7d2965909e185ea5e0a584",
-    "version": "2.0.0"
+    "sha256": "bfb34531bfbe3ffdff0ce2b0ba580298b549d896643fd3db4a845b59fb898885",
+    "version": "2.1.1"
   },
   "documents": {
-    "sha256": "0c81feac47911f9025f39d1d0e610044764b4e2c64c8e4a559558e848b8db501",
-    "version": "8.0.0"
+    "sha256": "eb5ddc7ebde9781ec8719fd4331d3f17524dbc9f66bbd83546e6eef17671873a",
+    "version": "8.1.1"
   },
   "linkedin-personal": {
     "sha256": "08d20a093b81d71375b38f5c483b7dce5a2d0c8a79b306d0fd05c3b5928923ff",
     "version": "2.0.0"
   },
   "offerings": {
-    "sha256": "a63ddec90f0273b077984da68f467aca7a0c7f47db7a06a1de40a26a07f0b31e",
-    "version": "2.0.0"
+    "sha256": "a417036afafabe31bc1e57d53fdd6e7ec7e81c6c2886d9e94b062914b78bb65c",
+    "version": "2.1.1"
   },
   "operations": {
     "sha256": "68d4589f26eee8e6ec7943ad17502ccc4f60d6d29d802b21c067ba4528cb0b46",
@@ -72,16 +72,16 @@
     "version": "4.0.0"
   },
   "programs": {
-    "sha256": "4828b53df5cb3a431ca7e0a33e8cf5c54479fdb0e9c082673f425a7cd060ac60",
-    "version": "3.0.0"
+    "sha256": "23d3340e40d5a1740fc7274b5e6c68a78926f2fa3d7860b9fabded52c246b89e",
+    "version": "3.1.0"
   },
   "projects": {
     "sha256": "aa76fa38422e0ea4f64b011f5f00d679d3aa301bdd18fbd4c3549c6613184ff1",
     "version": "4.0.0"
   },
   "proposals": {
-    "sha256": "bc69b0cdac884f491f2ea93433ecc95e33887fe48da9d475712ebe1b8e599edb",
-    "version": "6.0.0"
+    "sha256": "e7e300ad2006101884edd6db93756cae4116419466be3ef2b3d054bd1a0ea7f2",
+    "version": "6.1.1"
   },
   "tasks": {
     "sha256": "fed0f09607abc3c68adae1e6a9c3c963a57315a03e08a28941e0ef7e61419db1",

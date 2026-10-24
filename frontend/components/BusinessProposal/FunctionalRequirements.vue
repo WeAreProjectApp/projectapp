@@ -12,9 +12,9 @@
         </div>
 
         <div data-animate="fade-up" class="requirements-intro mb-12">
-          <p
+          <div
             class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl"
-            v-html="linkify(data.intro)"
+            v-html="linkify(data.intro, data.text_formats?.['/intro'])"
           />
         </div>
 
@@ -38,7 +38,7 @@
                 {{ group.items.length }}
               </span>
             </div>
-            <p class="text-sm text-text-default/70 font-light leading-relaxed mb-3" v-html="linkify(group.description)" />
+            <div class="text-sm text-text-default/70 font-light leading-relaxed mb-3" v-html="linkify(group.description, group.text_formats?.['/description'])" />
             <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-light group-hover:text-text-brand transition-colors">
               {{ t.viewDetail }}
               <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,6 +71,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   data: {
     type: Object,
     default: () => ({

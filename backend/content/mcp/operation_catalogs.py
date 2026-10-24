@@ -20,6 +20,8 @@ from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
 from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
 from content.mcp.proposal_schemas import writable_schema
+from content.serializers.additional_modules import AdditionalModuleAdminSerializer
+from content.serializers.hour_packages import HourPackageCreateUpdateSerializer
 from content.mcp.schema_policy import closed_object
 from content.views.project_administration import AddCommercialPhaseSerializer, ReorderCommercialPhasesSerializer
 from accounts.serializers import UpdateProjectPhaseSerializer
@@ -28,6 +30,46 @@ from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.mcp.schemas.documents_bridge import DOCUMENTS_BRIDGE_SCHEMAS
 from content.mcp.schemas.projects_bridge import PROJECTS_BRIDGE_SCHEMAS
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
+
+
+def _editorial_catalog_op(name, description, route, serializer_class, *, partial=False, path=()):
+    descriptions = {
+        'category': 'Id de la categoría a la que pertenece el módulo.',
+        'slug': 'Identificador público único del módulo, sin espacios.',
+        'icon': 'Emoji que identifica visualmente el módulo.',
+        'is_active': 'Indica si el módulo o paquete está disponible en el catálogo.',
+        'hours': 'Cantidad de horas de servicio que incluye el paquete.',
+        'hourly_rate': 'Tarifa por hora usada para calcular el valor del paquete.',
+        'xs_count': 'Cantidad de requerimientos XS incluidos; los cupos no se intercambian entre tallas.',
+        's_count': 'Cantidad de requerimientos S incluidos; los cupos no se intercambian entre tallas.',
+        'm_count': 'Cantidad de requerimientos M incluidos; los cupos no se intercambian entre tallas.',
+        'validity_months': 'Meses desde el pago para solicitar y validar requerimientos; mínimo uno, sin renovación automática.',
+        'discount_percent': 'Porcentaje de descuento del paquete respecto a su tarifa.',
+        'nationality': 'Mercado del paquete: determina las reglas de moneda y tarifa.',
+    }
+    for locale, language in (('es', 'español'), ('en', 'inglés')):
+        for field, label in (
+            ('name', 'Nombre visible'), ('summary', 'Resumen de hasta 360 caracteres visibles'),
+            ('what_is', 'Descripción de qué es el módulo'), ('purpose', 'Propósito del módulo'),
+            ('problems_solved', 'Lista de problemas que resuelve el módulo'),
+            ('integrations', 'Lista de integraciones del módulo'),
+            ('implementation_requirements', 'Lista de requisitos para implementar el módulo'),
+            ('note', 'Nota comercial del paquete de requerimientos'),
+        ):
+            descriptions[f'{field}_{locale}'] = f'{label} en {language}.'
+    payload = writable_schema(serializer_class, partial=partial)
+    payload['description'] = 'Campos editables del catálogo y sus anotaciones opcionales de formato.'
+    for field, schema in payload['properties'].items():
+        if field in descriptions:
+            schema['description'] = descriptions[field]
+    tool = _op(name, description, route, 'PATCH' if partial else 'POST', path, 'write', payload_schema=payload)
+    for schema_name in ('input_schema', 'accepted_arguments_schema'):
+        for field in path:
+            tool[schema_name]['properties'][field]['description'] = (
+                'Id del módulo que se modifica.' if field == 'module_id' else 'Id del paquete de requerimientos que se modifica.'
+            )
+    return tool
+
 
 OPERATIONS_TOOLS = [
     _op(
@@ -206,8 +248,8 @@ COMMERCIAL_PARITY_TOOLS = [
     _op('create_additional_module_category', 'Crea una categoría de módulos.', 'create-additional-module-category', 'POST', risk='write'),
     _op('update_additional_module_category', 'Actualiza una categoría de módulos.', 'update-additional-module-category', 'PATCH', ('category_id',), 'write'),
     _op('set_additional_module_category_status', 'Activa, archiva o restaura una categoría.', 'set-additional-module-category-status', 'POST', ('category_id', 'action'), 'write'),
-    _op('create_additional_module', 'Crea un módulo adicional bilingüe.', 'create-additional-module', 'POST', risk='write'),
-    _op('update_additional_module', 'Actualiza un módulo adicional.', 'update-additional-module', 'PATCH', ('module_id',), 'write'),
+    _editorial_catalog_op('create_additional_module', 'Crea un módulo adicional bilingüe.', 'create-additional-module', AdditionalModuleAdminSerializer),
+    _editorial_catalog_op('update_additional_module', 'Actualiza un módulo adicional.', 'update-additional-module', AdditionalModuleAdminSerializer, partial=True, path=('module_id',)),
     _op('set_additional_module_status', 'Activa, archiva o restaura un módulo.', 'set-additional-module-status', 'POST', ('module_id', 'action'), 'write'),
     _op('reorder_additional_modules', 'Reordena categorías y módulos.', 'reorder-additional-module-catalog', 'POST', risk='write'),
     _op('list_additional_module_shares', 'Lista enlaces compartidos del catálogo.', 'admin-additional-module-shares'),
@@ -219,8 +261,8 @@ COMMERCIAL_PARITY_TOOLS = [
     _op('render_additional_modules_pdf', 'Genera el catálogo de módulos como asset temporal.', 'admin-additional-module-catalog-pdf', 'POST'),
     _op('list_hour_packages', 'Lista paquetes de requerimientos y sus precios.', 'list-admin-hour-packages'),
     _op('get_hour_package', 'Abre un paquete de requerimientos.', 'retrieve-admin-hour-package', path=('package_id',)),
-    _op('create_hour_package', 'Crea un paquete de requerimientos.', 'create-hour-package', 'POST', risk='write'),
-    _op('update_hour_package', 'Actualiza un paquete de requerimientos.', 'update-hour-package', 'PATCH', ('package_id',), 'write'),
+    _editorial_catalog_op('create_hour_package', 'Crea un paquete de requerimientos.', 'create-hour-package', HourPackageCreateUpdateSerializer),
+    _editorial_catalog_op('update_hour_package', 'Actualiza un paquete de requerimientos.', 'update-hour-package', HourPackageCreateUpdateSerializer, partial=True, path=('package_id',)),
     _op('delete_hour_package', 'Elimina un paquete de requerimientos permitido.', 'delete-hour-package', 'DELETE', ('package_id',), 'sensitive', True),
     _op('get_hour_package_settings', 'Obtiene ajustes de paquetes de requerimientos.', 'hour-package-settings'),
     _op('update_hour_package_settings', 'Actualiza ajustes de paquetes de requerimientos.', 'update-hour-package-settings', 'PATCH', risk='write'),

@@ -1,4 +1,4 @@
-<!doctype html>
+{% load editorial %}<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -50,8 +50,8 @@ a{text-decoration:none}
 </td></tr>
 
 <tr><td class="px-40" style="padding:32px 40px 0 40px;">
-<p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{{ greeting|default:"Gracias por tomarte el tiempo de revisar la propuesta y de darnos una respuesta clara. Eso vale más de lo que parece." }}</p>
-<p style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{{ body|default:"Las decisiones de software a la medida cargan tiempo, presupuesto y futuro. Si esta no era la oportunidad, está bien. Queremos que cuando vuelvas a evaluar la idea — sea con nosotros o con alguien más — tengas toda la información para decidir tranquila."|linebreaksbr }}</p>
+<div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{% editorial_email_value greeting|default:"Gracias por tomarte el tiempo de revisar la propuesta y de darnos una respuesta clara. Eso vale más de lo que parece." "greeting" %}</div>
+<div style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{% editorial_email_value body|default:"Las decisiones de software a la medida cargan tiempo, presupuesto y futuro. Si esta no era la oportunidad, está bien. Queremos que cuando vuelvas a evaluar la idea — sea con nosotros o con alguien más — tengas toda la información para decidir tranquila." "body" %}</div>
 </td></tr>
 
 <tr><td class="px-40" style="padding:32px 40px 0 40px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#faf7ee;border:1px solid #ece8db;border-radius:14px;">
@@ -68,7 +68,7 @@ Si en seis meses, un año o dos, vuelve a tener sentido conversar, escríbenos. 
 <tr><td class="px-40" align="center" style="padding:40px 40px 12px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="center" bgcolor="#F0FF3D" style="border-radius:999px;mso-padding-alt:18px 32px;">
-<a href="https://wa.me/573238122373" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{{ cta_text|default:"Conversemos cuando estés listo" }} &nbsp;→</a>
+<a href="https://wa.me/573238122373" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{% editorial_email_value cta_text|default:"Conversemos cuando estés listo" "cta_text" %} &nbsp;→</a>
 </td></tr></table>
 
 <div style="margin-top:14px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:12px;line-height:18px;color:#5a6b67;">Sin presión y sin venta — solo dejamos la puerta abierta.</div>

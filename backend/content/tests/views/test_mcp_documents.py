@@ -383,6 +383,7 @@ class TestDocumentsMcpCrud:
             'id': payload['notes'][0]['id'],
             'title': 'Seguimiento',
             'content': 'Confirmar recepción.',
+            'text_formats': {},
             'status': 'open',
             'episode_id': None,
             'resolution_note': '',

@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 from copy import deepcopy
+from content.services.editorial_contract import editorial_object_schema, prepare_editorial_object, restore_editorial_object
 
 
 class BuildingWithUsError(ValueError):
@@ -28,7 +29,7 @@ def _text(max_length):
 
 
 def _object(fields):
-    return {'type': 'object', 'additionalProperties': False, 'properties': fields, 'required': list(fields)}
+    return editorial_object_schema(fields)
 
 
 def _list(item, maximum, minimum=1):
@@ -79,10 +80,11 @@ def _validate(value, spec, path):
     if kind == 'object':
         if not isinstance(value, dict):
             _invalid(path, 'Debe ser un objeto.')
-        fields = spec['properties']
+        value, editorial = prepare_editorial_object(value, spec, _invalid, path)
+        fields = {key: child for key, child in spec['properties'].items() if key != 'text_formats'}
         if set(value) != set(fields):
             _invalid(path, 'Incluye todos los campos requeridos y ningún campo desconocido.')
-        return {key: _validate(value[key], child, f'{path}.{key}' if path else key) for key, child in fields.items()}
+        return restore_editorial_object({key: _validate(value[key], child, f'{path}.{key}' if path else key) for key, child in fields.items()}, editorial)
     if kind == 'array':
         if not isinstance(value, list) or not spec['minItems'] <= len(value) <= spec['maxItems']:
             _invalid(path, f'La lista debe tener entre {spec["minItems"]} y {spec["maxItems"]} elementos.')
@@ -102,7 +104,7 @@ def _validate(value, spec, path):
     if _FIGURES.search(value):
         raise BuildingWithUsError('La presentación pública no admite porcentajes ni importes.',
                                   code='PUBLIC_FIGURE_NOT_ALLOWED', details={'path': path})
-    if not value or len(value) > spec.get('maxLength', float('inf')):
+    if not value or len(value) > spec.get('x-editorial-max-visible-length', spec.get('maxLength', float('inf'))):
         _invalid(path, 'El texto es obligatorio y debe respetar la longitud máxima.')
     if 'pattern' in spec and not re.fullmatch(spec['pattern'], value):
         _invalid(path, 'id debe ser un slug en minúsculas.')
@@ -112,6 +114,8 @@ def _validate(value, spec, path):
 def _validate_alignment(es, en, spec, path):
     if spec['type'] == 'object':
         for key, child in spec['properties'].items():
+            if key == 'text_formats':
+                continue
             if key in ('id', 'months') and es[key] != en[key]:
                 _invalid(f'{path}.{key}', 'Los ids y meses deben coincidir entre idiomas y conservar su orden.')
             _validate_alignment(es[key], en[key], child, f'{path}.{key}')

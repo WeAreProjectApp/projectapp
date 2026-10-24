@@ -12,7 +12,7 @@
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Intro</label>
-      <textarea v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextEditor v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" />
     </div>
 
     <div>
@@ -39,12 +39,12 @@
 
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Narrativa</label>
-      <textarea v-model="form.narrative" rows="4" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextEditor v-model="form.narrative" rows="4" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="form.text_formats?.['/narrative'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/narrative': $event }" />
     </div>
 
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Highlights (uno por línea)</label>
-      <textarea v-model="form.highlightsText" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default"></textarea>
+      <BaseRichTextListEditor v-model="form.highlightsText" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default" format-path="/highlights" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
     </div>
   </div>
 </template>

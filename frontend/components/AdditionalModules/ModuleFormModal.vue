@@ -73,6 +73,7 @@ function clearFieldError(field) {
 
 function resetForm() {
   const module = props.module
+  form.text_formats = { ...module?.text_formats }
   form.category = module?.category || props.categories.find((item) => item.is_active)?.id || ''
   form.slug = module?.slug || ''
   form.icon = module?.icon || ''
@@ -111,6 +112,7 @@ function submit() {
     return
   }
   emit('save', {
+    text_formats: { ...form.text_formats },
     category: Number(form.category),
     slug: form.slug.trim(),
     icon: form.icon.trim(),
@@ -191,24 +193,24 @@ const modalFormId = useId();
             <BaseInput id="additional-module-name-es" v-model="form.name_es" :error="!!fieldErrors.name_es" data-testid="additional-module-name-es" @update:model-value="clearFieldError('name_es')" />
           </BaseFormField>
           <BaseFormField :label="t('additionalModules.summary')" for="additional-module-summary-es" required :error="fieldErrors.summary_es">
-            <BaseTextarea id="additional-module-summary-es" v-model="form.summary_es" rows="2" :error="!!fieldErrors.summary_es" data-testid="additional-module-summary-es" @update:model-value="clearFieldError('summary_es')" />
+            <BaseRichTextEditor id="additional-module-summary-es" v-model="form.summary_es" rows="2" :error="!!fieldErrors.summary_es" data-testid="additional-module-summary-es" @update:model-value="clearFieldError('summary_es')"  :format="form.text_formats?.['/summary_es'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/summary_es': $event }" />
           </BaseFormField>
           <div class="grid gap-4 sm:grid-cols-2">
             <BaseFormField :label="t('additionalModules.whatIsField')" for="additional-module-what-es" required :error="fieldErrors.what_is_es">
-              <BaseTextarea id="additional-module-what-es" v-model="form.what_is_es" rows="5" :error="!!fieldErrors.what_is_es" data-testid="additional-module-what-es" @update:model-value="clearFieldError('what_is_es')" />
+              <BaseRichTextEditor id="additional-module-what-es" v-model="form.what_is_es" rows="5" :error="!!fieldErrors.what_is_es" data-testid="additional-module-what-es" @update:model-value="clearFieldError('what_is_es')"  :format="form.text_formats?.['/what_is_es'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/what_is_es': $event }" />
             </BaseFormField>
             <BaseFormField :label="t('additionalModules.purposeField')" for="additional-module-purpose-es" required :error="fieldErrors.purpose_es">
-              <BaseTextarea id="additional-module-purpose-es" v-model="form.purpose_es" rows="5" :error="!!fieldErrors.purpose_es" data-testid="additional-module-purpose-es" @update:model-value="clearFieldError('purpose_es')" />
+              <BaseRichTextEditor id="additional-module-purpose-es" v-model="form.purpose_es" rows="5" :error="!!fieldErrors.purpose_es" data-testid="additional-module-purpose-es" @update:model-value="clearFieldError('purpose_es')"  :format="form.text_formats?.['/purpose_es'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/purpose_es': $event }" />
             </BaseFormField>
           </div>
           <BaseFormField :label="t('additionalModules.problemsField')" for="additional-module-problems-es" required :error="fieldErrors.problems_solved_es">
-            <BaseTextarea id="additional-module-problems-es" v-model="form.problems_solved_es" rows="4" :error="!!fieldErrors.problems_solved_es" data-testid="additional-module-problems-es" @update:model-value="clearFieldError('problems_solved_es')" />
+            <BaseRichTextListEditor id="additional-module-problems-es" v-model="form.problems_solved_es" rows="4" :error="!!fieldErrors.problems_solved_es" data-testid="additional-module-problems-es" @update:model-value="clearFieldError('problems_solved_es')"  format-path="/problems_solved_es" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
           </BaseFormField>
           <BaseFormField :label="t('additionalModules.integrationsField')" for="additional-module-integrations-es" required :error="fieldErrors.integrations_es">
-            <BaseTextarea id="additional-module-integrations-es" v-model="form.integrations_es" rows="4" :error="!!fieldErrors.integrations_es" data-testid="additional-module-integrations-es" @update:model-value="clearFieldError('integrations_es')" />
+            <BaseRichTextListEditor id="additional-module-integrations-es" v-model="form.integrations_es" rows="4" :error="!!fieldErrors.integrations_es" data-testid="additional-module-integrations-es" @update:model-value="clearFieldError('integrations_es')"  format-path="/integrations_es" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
           </BaseFormField>
           <BaseFormField :label="t('additionalModules.requirementsField')" for="additional-module-requirements-es" required :error="fieldErrors.implementation_requirements_es">
-            <BaseTextarea id="additional-module-requirements-es" v-model="form.implementation_requirements_es" rows="4" :error="!!fieldErrors.implementation_requirements_es" data-testid="additional-module-requirements-es" @update:model-value="clearFieldError('implementation_requirements_es')" />
+            <BaseRichTextListEditor id="additional-module-requirements-es" v-model="form.implementation_requirements_es" rows="4" :error="!!fieldErrors.implementation_requirements_es" data-testid="additional-module-requirements-es" @update:model-value="clearFieldError('implementation_requirements_es')"  format-path="/implementation_requirements_es" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
           </BaseFormField>
         </div>
 
@@ -217,24 +219,24 @@ const modalFormId = useId();
             <BaseInput id="additional-module-name-en" v-model="form.name_en" :error="!!fieldErrors.name_en" data-testid="additional-module-name-en" @update:model-value="clearFieldError('name_en')" />
           </BaseFormField>
           <BaseFormField :label="t('additionalModules.summary')" for="additional-module-summary-en" required :error="fieldErrors.summary_en">
-            <BaseTextarea id="additional-module-summary-en" v-model="form.summary_en" rows="2" :error="!!fieldErrors.summary_en" data-testid="additional-module-summary-en" @update:model-value="clearFieldError('summary_en')" />
+            <BaseRichTextEditor id="additional-module-summary-en" v-model="form.summary_en" rows="2" :error="!!fieldErrors.summary_en" data-testid="additional-module-summary-en" @update:model-value="clearFieldError('summary_en')"  :format="form.text_formats?.['/summary_en'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/summary_en': $event }" />
           </BaseFormField>
           <div class="grid gap-4 sm:grid-cols-2">
             <BaseFormField :label="t('additionalModules.whatIsField')" for="additional-module-what-en" required :error="fieldErrors.what_is_en">
-              <BaseTextarea id="additional-module-what-en" v-model="form.what_is_en" rows="5" :error="!!fieldErrors.what_is_en" data-testid="additional-module-what-en" @update:model-value="clearFieldError('what_is_en')" />
+              <BaseRichTextEditor id="additional-module-what-en" v-model="form.what_is_en" rows="5" :error="!!fieldErrors.what_is_en" data-testid="additional-module-what-en" @update:model-value="clearFieldError('what_is_en')"  :format="form.text_formats?.['/what_is_en'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/what_is_en': $event }" />
             </BaseFormField>
             <BaseFormField :label="t('additionalModules.purposeField')" for="additional-module-purpose-en" required :error="fieldErrors.purpose_en">
-              <BaseTextarea id="additional-module-purpose-en" v-model="form.purpose_en" rows="5" :error="!!fieldErrors.purpose_en" data-testid="additional-module-purpose-en" @update:model-value="clearFieldError('purpose_en')" />
+              <BaseRichTextEditor id="additional-module-purpose-en" v-model="form.purpose_en" rows="5" :error="!!fieldErrors.purpose_en" data-testid="additional-module-purpose-en" @update:model-value="clearFieldError('purpose_en')"  :format="form.text_formats?.['/purpose_en'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/purpose_en': $event }" />
             </BaseFormField>
           </div>
           <BaseFormField :label="t('additionalModules.problemsField')" for="additional-module-problems-en" required :error="fieldErrors.problems_solved_en">
-            <BaseTextarea id="additional-module-problems-en" v-model="form.problems_solved_en" rows="4" :error="!!fieldErrors.problems_solved_en" data-testid="additional-module-problems-en" @update:model-value="clearFieldError('problems_solved_en')" />
+            <BaseRichTextListEditor id="additional-module-problems-en" v-model="form.problems_solved_en" rows="4" :error="!!fieldErrors.problems_solved_en" data-testid="additional-module-problems-en" @update:model-value="clearFieldError('problems_solved_en')"  format-path="/problems_solved_en" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
           </BaseFormField>
           <BaseFormField :label="t('additionalModules.integrationsField')" for="additional-module-integrations-en" required :error="fieldErrors.integrations_en">
-            <BaseTextarea id="additional-module-integrations-en" v-model="form.integrations_en" rows="4" :error="!!fieldErrors.integrations_en" data-testid="additional-module-integrations-en" @update:model-value="clearFieldError('integrations_en')" />
+            <BaseRichTextListEditor id="additional-module-integrations-en" v-model="form.integrations_en" rows="4" :error="!!fieldErrors.integrations_en" data-testid="additional-module-integrations-en" @update:model-value="clearFieldError('integrations_en')"  format-path="/integrations_en" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
           </BaseFormField>
           <BaseFormField :label="t('additionalModules.requirementsField')" for="additional-module-requirements-en" required :error="fieldErrors.implementation_requirements_en">
-            <BaseTextarea id="additional-module-requirements-en" v-model="form.implementation_requirements_en" rows="4" :error="!!fieldErrors.implementation_requirements_en" data-testid="additional-module-requirements-en" @update:model-value="clearFieldError('implementation_requirements_en')" />
+            <BaseRichTextListEditor id="additional-module-requirements-en" v-model="form.implementation_requirements_en" rows="4" :error="!!fieldErrors.implementation_requirements_en" data-testid="additional-module-requirements-en" @update:model-value="clearFieldError('implementation_requirements_en')"  format-path="/implementation_requirements_en" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
           </BaseFormField>
         </div>
 

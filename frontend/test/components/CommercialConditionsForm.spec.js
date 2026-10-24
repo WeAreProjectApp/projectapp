@@ -6,6 +6,9 @@
  */
 import { reactive } from 'vue';
 import { mount } from '@vue/test-utils';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseRichTextListEditor from '../../components/base/BaseRichTextListEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import CommercialConditionsForm from '../../components/BusinessProposal/admin/section-forms/CommercialConditionsForm.vue';
 import { buildFormFromJson, formToJson } from '../../components/BusinessProposal/admin/sectionEditorUtils.js';
 
@@ -29,12 +32,17 @@ const BASE_JSON = {
   scopeParagraphs: ['p1'],
 };
 
+const originalUseI18n = global.useI18n;
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }); });
+afterAll(() => { global.useI18n = originalUseI18n; });
+
 function mountForm(jsonOverrides = {}) {
   const form = reactive(
     buildFormFromJson({ ...BASE_JSON, ...jsonOverrides }, 'commercial_conditions', {}),
   );
   const wrapper = mount(CommercialConditionsForm, {
     props: { form, proposalData: {} },
+    global: { components: { BaseRichTextEditor, BaseRichTextListEditor, BaseSegmented } },
   });
   return { wrapper, form };
 }
@@ -45,10 +53,12 @@ describe('CommercialConditionsForm', () => {
 
     const titleInput = wrapper.findAll('input').find((i) => i.element.value === 'Condiciones comerciales');
     expect(titleInput.attributes('disabled')).toBeUndefined();
-    const scopeTextarea = wrapper.findAll('textarea').find((t) => t.element.value.includes('p1'));
+    const scopeTextarea = wrapper.findAll('[data-testid="rich-text-source-input"]').find((t) => t.element.value.includes('p1'));
     expect(scopeTextarea.attributes('disabled')).toBeUndefined();
 
-    expect(wrapper.find('select').exists()).toBe(false);
+    expect(wrapper.findAll('select').map((select) => select.attributes('aria-label'))).toEqual([
+      'richText.heading', 'richText.heading', 'richText.heading',
+    ]);
     expect(wrapper.find('[data-testid="hour-packages-mode-manual"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="apply-base-rate-all"]').exists()).toBe(false);
     expect(wrapper.findAll('button').some((b) => b.text().includes('Agregar paquete'))).toBe(false);

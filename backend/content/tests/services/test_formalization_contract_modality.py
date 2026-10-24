@@ -86,7 +86,7 @@ def test_prepare_attaches_product_then_service_contract(split_proposal, admin_us
     files = list(preparation.files.order_by('pk'))
     assert [item.key for item in files] == ['contract_product', 'contract_service']
     assert files[0].filename.startswith('Contrato de producto')
-    assert preparation.payload['_source_version'] == 4
+    assert preparation.payload['_source_version'] == 5
 
 
 def test_prepare_rejects_the_contract_of_the_other_modality(split_proposal, admin_user, payload):

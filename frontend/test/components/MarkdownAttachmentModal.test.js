@@ -1,4 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 
 const mockAxiosPost = jest.fn();
 jest.mock('axios', () => ({
@@ -14,6 +16,19 @@ jest.mock('../../stores/services/request_http', () => ({
 
 import MarkdownAttachmentModal from '../../components/MarkdownAttachmentModal.vue';
 
+const originalUseI18n = global.useI18n;
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }); });
+afterAll(() => { global.useI18n = originalUseI18n; });
+
+async function editMarkdownSource(wrapper, value) {
+  await wrapper.findAll('[role="tab"]').find((tab) => tab.text() === 'richText.source').trigger('click');
+  await wrapper.get('[data-testid="rich-text-source-input"]').setValue(value);
+}
+
+function markdownSource(wrapper) {
+  return wrapper.get('[data-testid="rich-text-source-input"]');
+}
+
 function getAxiosMock() {
   return mockAxiosPost;
 }
@@ -21,7 +36,7 @@ function getAxiosMock() {
 function mountModal(props = {}) {
   return mount(MarkdownAttachmentModal, {
     props: { open: true, endpoint: 'proposals/42/proposal-email/markdown-attachment/', ...props },
-    global: { stubs: { Teleport: true } },
+    global: { components: { BaseRichTextEditor, BaseSegmented }, stubs: { Teleport: true } },
   });
 }
 
@@ -36,7 +51,7 @@ describe('MarkdownAttachmentModal', () => {
   it('does not render modal content when open is false', () => {
     const wrapper = mount(MarkdownAttachmentModal, {
       props: { open: false, endpoint: 'proposals/42/proposal-email/markdown-attachment/' },
-      global: { stubs: { Teleport: true } },
+      global: { components: { BaseRichTextEditor, BaseSegmented }, stubs: { Teleport: true } },
     });
 
     expect(wrapper.find('h2').exists()).toBe(false);
@@ -50,7 +65,7 @@ describe('MarkdownAttachmentModal', () => {
 
   it('preview button is disabled when title is empty', async () => {
     const wrapper = mountModal();
-    await wrapper.find('textarea').setValue('# Contenido de prueba');
+    await editMarkdownSource(wrapper, '# Contenido de prueba');
 
     const previewBtn = wrapper.findAll('button').find((b) => b.text().includes('Vista previa'));
 
@@ -69,7 +84,7 @@ describe('MarkdownAttachmentModal', () => {
   it('preview button is enabled when both title and markdown are filled', async () => {
     const wrapper = mountModal();
     await wrapper.find('input[type="text"]').setValue('Mi documento');
-    await wrapper.find('textarea').setValue('# Encabezado\n\nTexto de contenido.');
+    await editMarkdownSource(wrapper, '# Encabezado\n\nTexto de contenido.');
 
     const previewBtn = wrapper.findAll('button').find((b) => b.text().includes('Vista previa'));
 
@@ -108,7 +123,7 @@ describe('MarkdownAttachmentModal', () => {
 
     const wrapper = mountModal();
     await wrapper.find('input[type="text"]').setValue('Informe técnico');
-    await wrapper.find('textarea').setValue('# Contenido\n\nPárrafo.');
+    await editMarkdownSource(wrapper, '# Contenido\n\nPárrafo.');
 
     const previewBtn = wrapper.findAll('button').find((b) => b.text().includes('Vista previa'));
     await previewBtn.trigger('click');
@@ -125,7 +140,7 @@ describe('MarkdownAttachmentModal', () => {
 
     const wrapper = mountModal();
     await wrapper.find('input[type="text"]').setValue('Mi reporte');
-    await wrapper.find('textarea').setValue('# Encabezado\n\nContenido.');
+    await editMarkdownSource(wrapper, '# Encabezado\n\nContenido.');
 
     const previewBtn = wrapper.findAll('button').find((b) => b.text().includes('Vista previa'));
     await previewBtn.trigger('click');
@@ -247,13 +262,13 @@ describe('MarkdownAttachmentModal', () => {
   it('resets title and markdown when modal is closed', async () => {
     const wrapper = mountModal();
     await wrapper.find('input[type="text"]').setValue('Borrador');
-    await wrapper.find('textarea').setValue('# Borrador');
+    await editMarkdownSource(wrapper, '# Borrador');
 
     await wrapper.setProps({ open: false });
     await flushPromises();
     await wrapper.setProps({ open: true });
 
     expect(wrapper.find('input[type="text"]').element.value).toBe('');
-    expect(wrapper.find('textarea').element.value).toBe('');
+    expect(markdownSource(wrapper).element.value).toBe('');
   });
 });

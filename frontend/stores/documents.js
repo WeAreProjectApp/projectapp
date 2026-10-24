@@ -794,6 +794,7 @@ export const useDocumentStore = defineStore('documents', {
         formData.append('greeting', payload.greeting || '');
         formData.append('footer', payload.footer || '');
         formData.append('sections', JSON.stringify(payload.sections || []));
+        formData.append('text_formats', JSON.stringify(payload.text_formats || {}));
         formData.append('document_ids', JSON.stringify(payload.document_ids || []));
         const response = await create_request('emails/send/', formData);
         return { success: true, data: response.data };

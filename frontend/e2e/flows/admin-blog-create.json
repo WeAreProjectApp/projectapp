@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Create a new bilingual blog post via manual form with category, readTime, featured, SEO fields.",
+  "description": "Create a new bilingual blog post via manual form with category, readTime, featured, SEO fields. Los extractos y cuerpos de artículo admiten Visual y Fuente Markdown; las anotaciones de formato acompañan el contenido y el JSON estructurado mantiene su editor de código.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

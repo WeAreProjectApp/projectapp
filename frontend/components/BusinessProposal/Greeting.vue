@@ -5,10 +5,8 @@
         <h1 data-animate="fade-up" class="main-title font-light text-text-brand leading-tight mb-8">
           {{ proposalTitle }}, {{ clientName }}
         </h1>
-        
-        <p data-animate="fade-up" class="subtitle font-light text-text-muted italic">
-          "{{ inspirationalQuote }}"
-        </p>
+
+        <BaseRichTextContent data-animate="fade-up" class="subtitle font-light text-text-muted italic" :source="inspirationalQuote" :format="text_formats['/inspirationalQuote'] || 'plain'" />
       </div>
     </div>
   </section>
@@ -22,6 +20,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   proposalTitle: {
     type: String,
     default: 'Propuesta de Desarrollo Web'

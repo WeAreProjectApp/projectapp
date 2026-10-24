@@ -1,4 +1,5 @@
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed } from 'vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
@@ -41,7 +42,7 @@ const whatsappUrl = computed(() => tierWhatsappUrl(props.whatsappBaseUrl, label(
 
     <div class="space-y-2">
       <p class="text-sm font-semibold uppercase tracking-wide text-text-brand">{{ tier.pace_label }}</p>
-      <p class="text-base text-text-muted">{{ tier.pace_summary }}</p>
+      <BaseRichTextContent class="text-base text-text-muted" :source="tier.pace_summary" :format="tier.text_formats?.['/pace_summary'] || 'plain'" />
       <p class="text-sm text-text-muted">
         {{ label('dailyPace', { hours: tier.daily_hours, days: offer.days_per_week }) }}
       </p>
@@ -54,7 +55,7 @@ const whatsappUrl = computed(() => tierWhatsappUrl(props.whatsappBaseUrl, label(
 
     <div class="space-y-2">
       <h4 class="text-sm font-semibold">{{ label('idealFor') }}</h4>
-      <p class="text-base text-text-muted">{{ tier.ideal_for }}</p>
+      <BaseRichTextContent class="text-base text-text-muted" :source="tier.ideal_for" :format="tier.text_formats?.['/ideal_for'] || 'plain'" />
     </div>
 
     <div class="space-y-3">

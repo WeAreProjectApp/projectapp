@@ -9,6 +9,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 import { ADMIN_PROPOSAL_CONTRACT_GENERATE } from '../helpers/flow-tags.js';
 
 const PROPOSAL_ID = 1;
@@ -105,12 +106,13 @@ test.describe('Admin Proposal Contract Generate', () => {
     await status.selectOption('negotiating');
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('tab', { name: 'Contrato personalizado' }).click();
-    await dialog.getByPlaceholder(/Pega o escribe tu contrato/).fill('# Acuerdo negociado');
+    const customContract = richTextEditorByPlaceholder(dialog, /Pega o escribe tu contrato/);
+    await fillRichTextSource(customContract, '# Acuerdo negociado');
     await dialog.getByRole('group', { name: 'Datos del contrato' }).locator('input[type="date"]').fill('2026-09-28');
     await dialog.getByRole('button', { name: 'Generar contrato y negociar', exact: true }).click();
 
     await expect(dialog.getByRole('alert')).toHaveText('No se pudo generar el contrato.');
-    await expect(dialog.getByPlaceholder(/Pega o escribe tu contrato/)).toHaveValue('# Acuerdo negociado');
+    await expect(customContract.getByTestId('rich-text-source-input')).toHaveValue('# Acuerdo negociado');
     await dialog.getByRole('button', { name: 'Generar contrato y negociar', exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await expect(status).toHaveValue('negotiating');
@@ -203,7 +205,10 @@ test.describe('Admin Proposal Contract Generate', () => {
 
     // Toggle to custom mode
     await page.getByRole('tab', { name: /Contrato personalizado/i }).click();
-    await expect(page.getByPlaceholder(/Pega o escribe tu contrato/i)).toBeVisible();
+    await expect(
+      richTextEditorByPlaceholder(page.getByRole('dialog'), /Pega o escribe tu contrato/i)
+        .getByTestId('rich-text-visual-input'),
+    ).toBeVisible();
     // Preview toggle (scope to modal — "Vista previa" also exists as PDF preview labels in documents list).
     await expect(page.getByRole('dialog').getByRole('button', { name: /Vista previa/i })).toBeVisible();
   });
@@ -234,7 +239,10 @@ test.describe('Admin Proposal Contract Generate', () => {
 
     await page.getByRole('button', { name: /Generar contrato/i }).click();
     await page.getByRole('tab', { name: /Contrato personalizado/i }).click();
-    await page.getByPlaceholder(/Pega o escribe tu contrato/i).fill('# Mi contrato\n\nContenido del contrato.');
+    await fillRichTextSource(
+      richTextEditorByPlaceholder(page.getByRole('dialog'), /Pega o escribe tu contrato/i),
+      '# Mi contrato\n\nContenido del contrato.',
+    );
     await page
       .getByRole('group', { name: 'Datos del contrato' })
       .locator('input[type="date"]')
@@ -295,7 +303,10 @@ test.describe('Admin Proposal Contract Generate', () => {
     // Toggle to custom mode and type Markdown (simpler than filling all default fields)
     await page.getByTestId('proposal-next-action-negotiate').click();
     await page.getByRole('tab', { name: /Contrato personalizado/i }).click();
-    await page.getByPlaceholder(/Pega o escribe tu contrato/i).fill('# Mi contrato\n\nContenido del contrato.');
+    await fillRichTextSource(
+      richTextEditorByPlaceholder(page.getByRole('dialog'), /Pega o escribe tu contrato/i),
+      '# Mi contrato\n\nContenido del contrato.',
+    );
 
     // Fill contract date
     const dateInput = page

@@ -1,3 +1,4 @@
+from content.models.editorial_text import EditorialTextModel
 import uuid
 
 from django.conf import settings
@@ -14,7 +15,7 @@ from content.utils import (
 from .hour_packages import Nationality
 
 
-class BusinessProposal(HistoryTrackedModel):
+class BusinessProposal(EditorialTextModel, HistoryTrackedModel):
     """
     Core model for business proposals sent to prospective clients.
 

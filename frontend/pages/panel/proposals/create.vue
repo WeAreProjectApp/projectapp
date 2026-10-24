@@ -424,15 +424,15 @@
           <p class="text-xs leading-relaxed text-text-muted">
             Explica el problema concreto del cliente, cómo lo resuelve esta propuesta y el resultado de negocio esperado. Puedes guardar el borrador vacío, pero necesitarás este mensaje para enviarlo.
           </p>
-          <textarea
+          <BaseRichTextEditor
             id="create-email-intro"
             v-model="form.email_intro"
             rows="6"
             class="w-full resize-y rounded-xl border border-input-border bg-input-bg px-4 py-2.5 text-sm text-input-text placeholder-input-placeholder outline-none focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/30"
             placeholder="Ej. Esta propuesta resuelve… mediante… para lograr…"
             data-testid="create-email-intro"
-          ></textarea>
-          <p class="text-xs text-text-subtle">Texto plano con saltos de línea; no HTML ni Markdown.</p>
+           profile="email" :format="form.text_formats?.['/email_intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, ['/email_intro']: $event }" />
+          <p class="text-xs text-text-subtle">Edita el formato en Visual o la fuente Markdown sin perder estilos.</p>
         </div>
 
         <!-- Email design metadata -->
@@ -489,12 +489,12 @@
               <span class="text-xs font-medium text-text-muted pt-2 w-6">
                 {{ String(idx + 1).padStart(2, '0') }}
               </span>
-              <textarea
+              <BaseRichTextEditor
                 v-model="form.email_features[idx]"
                 rows="2"
                 class="min-w-0 flex-1 px-3 py-2 border border-input-border bg-input-bg text-input-text rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-y"
                 placeholder="Ej. Dashboard en tiempo real con filtros por ruta, conductor y estado."
-              ></textarea>
+               profile="email" :format="form.text_formats?.['/email_features/' + idx] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, ['/email_features/' + idx]: $event }" />
               <BaseButton variant="danger-ghost" size="sm" @click="removeEmailFeature(idx)">
                 Quitar
               </BaseButton>
@@ -538,13 +538,13 @@
                 placeholder="5 días"
                 maxlength="20"
               />
-              <textarea
+              <BaseRichTextEditor
                 v-model="form.email_method_phases[idx].description"
                 rows="2"
                 class="min-w-0 px-3 py-2 border border-input-border bg-input-bg text-input-text rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-y"
                 placeholder="Mapeo de procesos y alcance final."
                 maxlength="120"
-              ></textarea>
+               profile="email" :format="form.text_formats?.['/email_method_phases/' + idx + '/description'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, ['/email_method_phases/' + idx + '/description']: $event }" />
             </div>
             <p class="text-xs text-text-subtle">Columnas: número · título · duración · descripción.</p>
           </div>
@@ -758,14 +758,14 @@
             <p class="text-xs leading-relaxed text-text-muted mb-2">
               Se toma de <code>_meta.optional_metadata.email_intro</code>. Debe conectar problema, solución y resultado de negocio antes de enviar.
             </p>
-            <textarea
+            <BaseRichTextEditor
               id="json-email-intro"
               v-model="jsonForm.email_intro"
               rows="6"
               class="w-full resize-y rounded-xl border border-input-border bg-input-bg px-4 py-2.5 text-sm text-input-text placeholder-input-placeholder outline-none focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/30"
               placeholder="Ej. Esta propuesta resuelve… mediante… para lograr…"
               data-testid="json-email-intro"
-            ></textarea>
+             profile="email" :format="jsonForm.text_formats?.['/email_intro'] || 'plain'" @update:format="jsonForm.text_formats = { ...jsonForm.text_formats, ['/email_intro']: $event }" />
           </div>
 
           <!-- Investment + Currency -->
@@ -1102,6 +1102,7 @@
 </template>
 
 <script setup>
+import { normalizeEditorialFeatures, remapEditorialArrayFormats } from '~/utils/editorialMetadata';
 import { reactive, ref, computed, onMounted, watch } from 'vue';
 import PromptSubTabsPanel from '~/components/panel/PromptSubTabsPanel.vue';
 import { get_request } from '~/stores/services/request_http';
@@ -1319,6 +1320,7 @@ const form = reactive({
   discount_percent: 0,
   show_contract_terms: true,
   email_intro: '',
+  text_formats: {},
   email_features: [],
   email_method_phases: [
     { number: '01', title: 'Diagnóstico', duration: '', description: 'Mapeo de procesos y alcance final.' },
@@ -1334,6 +1336,7 @@ function addEmailFeature() {
   form.email_features = [...form.email_features, ''];
 }
 function removeEmailFeature(idx) {
+  form.text_formats = remapEditorialArrayFormats(form.text_formats, '/email_features', form.email_features.map((_, i) => i).filter(i => i !== idx));
   form.email_features = form.email_features.filter((_, i) => i !== idx);
 }
 function resetEmailMethodPhases() {
@@ -1372,9 +1375,7 @@ const canSendDirectly = computed(() => {
 
 function sanitizeEmailMetadata(payload) {
   payload.email_intro = (payload.email_intro || '').trim();
-  payload.email_features = (payload.email_features || [])
-    .map((f) => (typeof f === 'string' ? f.trim() : ''))
-    .filter(Boolean);
+  normalizeEditorialFeatures(payload);
   payload.email_method_phases = (payload.email_method_phases || []).map((p) => ({
     number: (p.number || '').trim(),
     title: (p.title || '').trim(),
@@ -1474,6 +1475,7 @@ const jsonForm = reactive({
   discount_percent: 0,
   show_contract_terms: true,
   email_intro: '',
+  text_formats: {},
 });
 
 const jsonPreview = computed(() => {
@@ -1667,6 +1669,7 @@ async function handleJsonSubmit() {
     client_name: jsonForm.client_name,
     client_email: jsonForm.client_email || '',
     email_intro: (jsonForm.email_intro || '').trim(),
+    text_formats: { ...jsonForm.text_formats },
     client_phone: jsonForm.client_phone || '',
     client_company: jsonForm.client_company || '',
     project_type: jsonForm.project_type || '',

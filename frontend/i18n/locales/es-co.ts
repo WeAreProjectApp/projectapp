@@ -1,6 +1,7 @@
 export default defineI18nLocale(async () => {
   const [
     global,
+    richText,
     accountingPocket,
     home,
     softwareHome,
@@ -46,6 +47,7 @@ export default defineI18nLocale(async () => {
     videoResources,
   ] = await Promise.all([
     import('~/locales/global/es.js'),
+    import('~/locales/richText/es.js'),
     import('~/locales/accountingPocket/es.js'),
     import('~/locales/home/es.js'),
     import('~/locales/softwareHome/es.js'),
@@ -93,6 +95,7 @@ export default defineI18nLocale(async () => {
 
   return {
     global: global.default,
+    richText: richText.default,
     accountingPocket: accountingPocket.default,
     home: home.default,
     softwareHome: softwareHome.default,

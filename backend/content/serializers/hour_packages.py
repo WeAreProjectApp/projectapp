@@ -3,9 +3,10 @@ from typing import ClassVar
 from rest_framework import serializers
 
 from content.models import HourPackage, HourPackageSettings
+from content.serializers.editorial import EditorialModelSerializer
 
 
-class HourPackageAdminListSerializer(serializers.ModelSerializer):
+class HourPackageAdminListSerializer(EditorialModelSerializer):
     """Admin list serializer — includes the currency derived from nationality."""
     currency = serializers.ReadOnlyField()
     reference_price = serializers.SerializerMethodField()
@@ -55,7 +56,7 @@ class HourPackageAdminDetailSerializer(HourPackageAdminListSerializer):
         fields = HourPackageAdminListSerializer.Meta.fields + ('created_at',)
 
 
-class HourPackageCreateUpdateSerializer(serializers.ModelSerializer):
+class HourPackageCreateUpdateSerializer(EditorialModelSerializer):
     """Serializer for creating and updating hour packages from the admin panel."""
 
     class Meta:
@@ -96,7 +97,7 @@ class HourPackageCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
 
-class HourPackageSettingsSerializer(serializers.ModelSerializer):
+class HourPackageSettingsSerializer(EditorialModelSerializer):
     """Singleton settings for the hour-packages panel."""
 
     exchange_rate = serializers.SerializerMethodField()

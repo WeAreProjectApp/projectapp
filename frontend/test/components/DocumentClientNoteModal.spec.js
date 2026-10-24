@@ -10,7 +10,9 @@ import BaseBadge from '../../components/base/BaseBadge.vue';
 import BaseInput from '../../components/base/BaseInput.vue';
 import BaseModal from '../../components/base/BaseModal.vue';
 import BaseModalActions from '../../components/base/BaseModalActions.vue';
-import BaseTextarea from '../../components/base/BaseTextarea.vue';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import BaseToggle from '../../components/base/BaseToggle.vue';
 import { useDocumentStateStore } from '../../stores/document_states';
 
@@ -25,7 +27,7 @@ function mountModal(props = {}) {
     props: { modelValue: true, ...props },
     global: {
       components: {
-        BaseAlert, BaseBadge, BaseButton, BaseInput, BaseModal, BaseModalActions, BaseTextarea, BaseToggle,
+        BaseAlert, BaseBadge, BaseButton, BaseInput, BaseModal, BaseModalActions, BaseRichTextContent, BaseRichTextEditor, BaseSegmented, BaseToggle,
       },
       stubs: {
         Teleport: true,
@@ -37,19 +39,28 @@ function mountModal(props = {}) {
 }
 
 const subjectField = (wrapper) => wrapper.find('[data-testid="client-note-subject"]');
-const emailField = (wrapper) => wrapper.find('[data-testid="client-note-email"]');
-const whatsappField = (wrapper) => wrapper.find('[data-testid="client-note-whatsapp"]');
+const richTextSource = (wrapper, testId) => wrapper.get(`[data-testid="${testId}"] [data-testid="rich-text-source-input"]`);
+const emailField = (wrapper) => richTextSource(wrapper, 'client-note-email');
+const whatsappField = (wrapper) => richTextSource(wrapper, 'client-note-whatsapp');
 const customTitleField = (wrapper, index = 0) => wrapper.find(`[data-testid="client-note-custom-title-${index}"]`);
-const customContentField = (wrapper, index = 0) => wrapper.find(`[data-testid="client-note-custom-content-${index}"]`);
+const customContentField = (wrapper, index = 0) => richTextSource(wrapper, `client-note-custom-content-${index}`);
 
 describe('DocumentClientNoteModal', () => {
+  const originalUseI18n = global.useI18n;
+
   beforeEach(() => {
+    global.useI18n = () => ({ t: (key) => key });
     setActivePinia(createPinia());
     mockNotifyError.mockReset();
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText: jest.fn().mockResolvedValue(undefined) },
     });
+  });
+
+  afterAll(() => {
+    if (originalUseI18n) global.useI18n = originalUseI18n;
+    else delete global.useI18n;
   });
 
   it('opens with the stored notes', () => {
@@ -81,8 +92,16 @@ describe('DocumentClientNoteModal', () => {
     expect(wrapper.emitted('submit')[0]).toEqual([{
       subject: 'Informe listo',
       emailBody: 'Correo completo',
+      textFormats: {
+        '/client_email_body': 'markdown_html_v1',
+        '/client_whatsapp_message': 'whatsapp_v1',
+      },
       whatsappMessage: 'WhatsApp breve',
-      customNotes: [{ title: 'Próximo paso', content: 'Confirmar la fecha.' }],
+      customNotes: [{
+        title: 'Próximo paso',
+        content: 'Confirmar la fecha.',
+        text_formats: { '/content': 'markdown_html_v1' },
+      }],
     }]);
     expect(wrapper.emitted('update:modelValue')).toBeFalsy();
   });
@@ -219,14 +238,14 @@ describe('DocumentClientNoteModal', () => {
     expect(wrapper.get('[data-testid="client-note-unsaved"]').text()).toBe('Cambios sin guardar');
   });
 
-  it('disables the save again when the change is undone', async () => {
+  it('keeps the save enabled when source editing adds WhatsApp formatting metadata', async () => {
     const wrapper = mountModal({ whatsappMessage: 'Hola Ana, revisa tu correo.' });
     await whatsappField(wrapper).setValue('Hola Ana, revisa tu correo hoy.');
 
     await whatsappField(wrapper).setValue('Hola Ana, revisa tu correo.');
 
-    expect(wrapper.get('[data-testid="client-note-submit"]').attributes('disabled')).toBe('');
-    expect(wrapper.find('[data-testid="client-note-unsaved"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="client-note-submit"]').attributes('disabled')).toBeUndefined();
+    expect(wrapper.get('[data-testid="client-note-unsaved"]').text()).toBe('Cambios sin guardar');
   });
 
   it('treats whitespace the save would trim as no change', async () => {
@@ -309,7 +328,7 @@ describe('DocumentClientNoteModal', () => {
       customNotes: [{ title: 'Legado', content: 'Ya normalizada' }],
     });
     expect(wrapper.find('[data-testid="client-note-custom-0"]').exists()).toBe(false);
-    await wrapper.find('[data-testid="document-observation-content"]').setValue('Corregir el total');
+    await richTextSource(wrapper, 'document-observation-content').setValue('Corregir el total');
 
     await wrapper.find('[data-testid="document-observation-add"]').trigger('click');
 
@@ -317,6 +336,7 @@ describe('DocumentClientNoteModal', () => {
       title: '',
       content: 'Corregir el total',
       mark_needs_fix: true,
+      text_formats: { '/content': 'markdown_html_v1' },
     });
     expect(wrapper.emitted('workflow-changed')).toHaveLength(1);
   });

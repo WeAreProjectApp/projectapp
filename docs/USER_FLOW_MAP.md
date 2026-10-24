@@ -1321,6 +1321,8 @@ durante el envío bloquea nuevos envíos y el cierre.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-email.spec.js`
 
+- **Formato editorial:** Las secciones, saludo y despedida admiten modos Visual y Fuente Markdown, con el mismo formato en la vista previa, el guardado y el envío.
+
 #### FLOW: `admin-standalone-email-composer`
 
 - **Module:** admin
@@ -2001,6 +2003,8 @@ No active browser flow is registered for client profile editing at this time.
 ---
 
 ### 15.3 Diagnostic Delete
+
+- **Formato editorial:** Las narrativas y listas admiten modos Visual y Fuente Markdown, con formato conservado en la presentación pública, el correo y el PDF.
 
 #### FLOW: `admin-diagnostic-delete`
 
@@ -4363,6 +4367,9 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 
 - **Lectura e identificación (2026-09-25):** buscar `#ID` exacto o número junto al texto; IDs visibles en lista, hilo, mensajes y documentos vinculados. Ir al inicio/final desplaza sólo el histórico. La redacción empieza plegada con mensajes existentes; Responder/Editar borrador la abre. Detalles del mensaje y formulario conservan valores al plegarse. Copiar es un icono directo; Marcar enviado vive en Más.
 
+- **Formato editorial:** La redacción admite Visual y Fuente, con perfiles de correo y WhatsApp y copia adaptada al canal; conserva contenido y formato al guardar o ante un error. WhatsApp utiliza únicamente sus marcas nativas.
+- **E2E editorial:** `e2e/admin/editorial-rich-text-communications.spec.js` (correo, WhatsApp y conservación ante rechazo).
+
 ### FLOW: `admin-mini-crm-clients`
 
 - **Module:** admin
@@ -5174,6 +5181,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-blog-create.spec.js`
 
+- **Formato editorial:** Los extractos y cuerpos de artículo admiten Visual y Fuente Markdown; las anotaciones de formato acompañan el contenido y el JSON estructurado mantiene su editor de código.
+
 ### FLOW: `admin-blog-edit`
 
 - **Module:** admin
@@ -5191,6 +5200,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
   7. Success feedback displays.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-blog-edit.spec.js`
+
+- **Formato editorial:** Los extractos y cuerpos de artículo admiten Visual y Fuente Markdown; las anotaciones de formato se conservan al reabrir y en la lectura pública.
 
 ### FLOW: `admin-blog-delete`
 
@@ -5543,13 +5554,16 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Coverage:** ✅ Covered (paste, carga de archivo, asociaciones, selector de carpeta y notas privadas en display/success/error/failure; las casillas de portada y el estilo viajan en el mismo payload, pero se auditan en sus flows específicos).
 - **E2E Spec:** `e2e/admin/admin-document-create.spec.js`
 
+- **Formato editorial:** El contenido admite modos Visual y Fuente Markdown, listas, tablas, colores y alineación; el guardado conserva la fuente única y su declaración de formato.
+- **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
+
 ### FLOW: `admin-document-edit`
 
 - **Module:** admin
 - **Role:** admin
 - **Priority:** P2
 - **Routes:** `/panel/documents/:id/edit`
-- **Description:** Edita contenido, asociación cliente/proyecto, visibilidad en el portal y presentación de un documento manual. La entrada desde el gestor conserva carpeta, filtros, búsqueda, archivo, vista y página en un `from` interno validado; las salidas explícitas restauran ese contexto, mientras una entrada directa o no confiable vuelve a la raíz. Debajo del título, la ruta discreta `Documentos / …` muestra la jerarquía real y cada tramo enlaza al contenido de esa carpeta con hover y foco visibles. La cabecera reserva el ancho de las acciones, limita el título a dos líneas y mantiene visibilidad/cliente sin empujar los controles; debajo muestra los estados concurrentes con su duración. **Acciones** contiene las salidas PDF y queda separado de **Cancelar/Guardar**. La asociación guardada ofrece backlinks y conserva el `client_name` heredado cuando no existe relación. El editor Markdown ocupa todo el ancho de la zona de contenido y el switch **Editar / Vista previa** muestra la preview en esa misma caja; la barra permite copiar o pegar contenido, y la preview y la vista completa se centran sobre un ancho de página con scroll interno. `doc-client-note-open` abre un modal ancho que conserva los mensajes para el cliente (los textos crecen con su contenido y el pie fijo habilita **Guardar cambios** sólo cuando algo cambió), guarda esa metadata directamente y administra observaciones normalizadas enlazables con **Solucionar bug**. Una propuesta enviada o una cuenta de cobro emitida abre en esta misma ruta como registro PDF inmutable: identidad, asociación, carpeta, mensajes y workflow no se editan; se previsualiza y descarga exactamente el archivo guardado, mientras las observaciones privadas sí siguen disponibles. Nada de esta metadata aparece en el PDF ni en el portal del cliente.
+- **Description:** Edita contenido, asociación cliente/proyecto, visibilidad en el portal y presentación de un documento manual. La entrada desde el gestor conserva carpeta, filtros, búsqueda, archivo, vista y página en un `from` interno validado; las salidas explícitas restauran ese contexto, mientras una entrada directa o no confiable vuelve a la raíz. Debajo del título, la ruta discreta `Documentos / …` muestra la jerarquía real y cada tramo enlaza al contenido de esa carpeta con hover y foco visibles. La cabecera reserva el ancho de las acciones, limita el título a dos líneas y mantiene visibilidad/cliente sin empujar los controles; debajo muestra los estados concurrentes con su duración. **Acciones** contiene las salidas PDF y queda separado de **Cancelar/Guardar**. La asociación guardada ofrece backlinks y conserva el `client_name` heredado cuando no existe relación. El editor Visual/Fuente Markdown ocupa todo el ancho de la zona de contenido y el switch **Editar / Vista previa** muestra la preview en esa misma caja; la barra permite copiar o pegar contenido, y la preview y la vista completa se centran sobre un ancho de página con scroll interno. `doc-client-note-open` abre un modal ancho que conserva los mensajes para el cliente (los textos crecen con su contenido y el pie fijo habilita **Guardar cambios** sólo cuando algo cambió), guarda esa metadata directamente y administra observaciones normalizadas enlazables con **Solucionar bug**. Una propuesta enviada o una cuenta de cobro emitida abre en esta misma ruta como registro PDF inmutable: identidad, asociación, carpeta, mensajes y workflow no se editan; se previsualiza y descarga exactamente el archivo guardado, mientras las observaciones privadas sí siguen disponibles. Nada de esta metadata aparece en el PDF ni en el portal del cliente.
 - **Steps:**
   1. Admin llega desde el gestor a `/panel/documents/:id/edit` con su origen canónico en `from`; `GET /api/documents/:id/detail/` carga el documento.
   2. El formulario aparece precargado con título, ruta navegable de carpetas, contenido, visibilidad, asociación, configuración visual, episodios vigentes y notas privadas.
@@ -5559,8 +5573,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
   6. El modal se cierra y la vista confirma **Notas guardadas**; cualquier otro cambio del editor continúa marcado como pendiente.
   7. Admin modifica o guarda por separado cualquier otro dato necesario.
 - **Branches:**
-  - [Display — cuenta emitida] Una cuenta de cobro emitida reemplaza el editor Markdown por un visor acotado del PDF archivado y muestra consecutivo, total, fechas, notas y observaciones de emisión. El PDF y los mensajes quedan bloqueados; las observaciones privadas normalizadas se pueden crear, editar, resolver o eliminar.
-  - [Display — versión generada] Una propuesta archivada muestra el aviso de inmutabilidad, reemplaza el editor Markdown por el panel acotado del PDF guardado y deja una sola descarga. Sus mensajes quedan bloqueados, pero las observaciones privadas se pueden crear, editar, resolver o eliminar.
+  - [Display — cuenta emitida] Una cuenta de cobro emitida reemplaza el editor Visual/Fuente Markdown por un visor acotado del PDF archivado y muestra consecutivo, total, fechas, notas y observaciones de emisión. El PDF y los mensajes quedan bloqueados; las observaciones privadas normalizadas se pueden crear, editar, resolver o eliminar.
+  - [Display — versión generada] Una propuesta archivada muestra el aviso de inmutabilidad, reemplaza el editor Visual/Fuente Markdown por el panel acotado del PDF guardado y deja una sola descarga. Sus mensajes quedan bloqueados, pero las observaciones privadas se pueden crear, editar, resolver o eliminar.
   - [Display — preview proporcional] **Vista previa** ocupa la misma caja que el editor, así alternar no mueve la página, y mantiene el documento en un ancho de lectura con scroll interno cuando el contenido crece; la vista completa conserva el mismo ancho de página.
   - [Success — barra de notas] Con un correo largo, el correo se lee completo sin scroll interno y **Guardar cambios** sigue a la vista en el pie fijo: sin cambios queda deshabilitado con su motivo y, al cambiar un mensaje, se habilita y guarda sin desplazarse.
   - [Success — ruta de carpetas] **Documentos**, **Sin carpeta** y cada ancestro del path son enlaces reales; un clic abre el gestor en ese nivel y conserva el ámbito archivado cuando corresponde.
@@ -5575,6 +5589,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
   - [Failure — servidor] Un fallo 5xx mantiene el modal abierto con toda la colección editada para reintentar.
 - **Coverage:** ✅ Covered (las notas privadas satisfacen display/success/error/failure; el retorno cubre salida explícita, Back nativo y fallback no confiable; el breadcrumb ejecuta navegación real; asociaciones, Markdown, previews proporcionales, PDF archivado y guard tienen cobertura propia o compartida en los specs).
 - **E2E Spec:** `e2e/admin/admin-document-edit.spec.js`, `e2e/admin/admin-document-return-navigation.spec.js`
+
+- **Formato editorial:** Visual y Fuente Markdown comparten contenido e historial. Alternar, guardar y reabrir conserva listas, tablas, color y alineación. Notas y borradores utilizan el mismo editor; WhatsApp sólo ofrece formato nativo. Un formato inválido mantiene la fuente para corregirla.
+- **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
 
 ### FLOW: `admin-document-thread`
 

@@ -18,6 +18,7 @@ import {
   ADMIN_DOCUMENT_EMAIL_HISTORY,
 } from '../helpers/flow-tags.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { fillRichTextSource } from '../helpers/editorial.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -292,9 +293,11 @@ test.describe('Admin Document Edit', () => {
         // quality: allow-deep-link (the editor preview is the documented display surface)
         await mockResponsiveHeaderApi(page);
         await page.goto('/en-us/panel/documents/1/edit', { waitUntil: 'domcontentloaded' });
-        const markdown = page.getByRole('textbox', { name: 'Contenido Markdown' });
+        const editor = page.locator('#edit-markdown-source').locator('..');
+        await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+        const markdown = editor.getByTestId('rich-text-source-input');
         await expect(markdown).toHaveValue(mockDocument.content_markdown);
-        const editorBox = await markdown.boundingBox();
+        const editorBox = await editor.boundingBox();
 
         await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
         const preview = page.getByTestId('doc-markdown-preview-pane');
@@ -370,8 +373,12 @@ test.describe('Admin Document Edit', () => {
     await expect(noteButton).toHaveAccessibleName('Editar notas');
     await noteButton.click();
     await expect(page.getByTestId('client-note-subject')).toHaveValue('Contrato listo para revisión');
-    await expect(page.getByTestId('client-note-email')).toHaveValue('Hola Ana,\n\nEl contrato está listo para tu revisión.');
-    await expect(page.getByTestId('client-note-whatsapp')).toHaveValue('Hola Ana, te envié el contrato para revisión.');
+    const email = page.getByTestId('client-note-email');
+    await email.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(email.getByTestId('rich-text-source-input')).toHaveValue('Hola Ana,\n\nEl contrato está listo para tu revisión.');
+    const whatsapp = page.getByTestId('client-note-whatsapp');
+    await whatsapp.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(whatsapp.getByTestId('rich-text-source-input')).toHaveValue('Hola Ana, te envié el contrato para revisión.');
     const observation = page.getByTestId('document-observation-11');
     await expect(observation).toContainText('Seguimiento');
     await expect(observation).toContainText('Confirmar recepción el viernes.');
@@ -963,7 +970,7 @@ test.describe('Admin Document Edit', () => {
     await page.getByTestId('doc-client-note-open').click();
     await expect(page.getByTestId('client-note-subject')).toHaveValue('Contrato listo');
     await page.getByTestId('document-observation-edit-11').click();
-    await page.getByLabel('Contenido de la observación').fill('Llamar el lunes.');
+    await fillRichTextSource(page.getByTestId('document-observation-edit-form'), 'Llamar el lunes.');
     const requestPromise = page.waitForRequest(
       (request) => request.url().includes('/api/documents/1/notes/11/')
         && request.method() === 'PATCH',
@@ -974,6 +981,7 @@ test.describe('Admin Document Edit', () => {
     expect(request.postDataJSON()).toEqual({
       title: 'Seguimiento',
       content: 'Llamar el lunes.',
+      text_formats: { '/content': 'markdown_html_v1' },
     });
     await expect(page.getByTestId('document-observation-11')).toContainText('Llamar el lunes.');
   });
@@ -1054,8 +1062,11 @@ test.describe('Admin Document Edit', () => {
 
         // The whole email reads without scrolling inside its own field.
         const email = page.getByTestId('client-note-email');
-        await expect(email).toHaveValue(longEmail);
-        const hiddenEmailHeight = await email.evaluate((field) => field.scrollHeight - field.clientHeight);
+        await email.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+        await expect(email.getByTestId('rich-text-source-input')).toHaveValue(longEmail);
+        await email.getByRole('tab', { name: /^(Visual)$/ }).click();
+        await expect(email.getByTestId('rich-text-visual-input')).toHaveText(longEmail, { useInnerText: true });
+        const hiddenEmailHeight = await email.getByTestId('rich-text-visual-input').evaluate((field) => field.scrollHeight - field.clientHeight);
         expect(hiddenEmailHeight).toBeLessThanOrEqual(1);
 
         const modalBody = page.getByTestId('document-client-note-modal');
@@ -1202,15 +1213,14 @@ test.describe('Admin Document Edit', () => {
     });
     await page.goto('/panel/documents/1/edit');
     await page.getByTestId('doc-client-note-open').click();
-    await page.getByTestId('client-note-whatsapp').fill('Mensaje que debe sobrevivir.');
+    const whatsapp = await fillRichTextSource(page.getByTestId('client-note-whatsapp'), 'Mensaje que debe sobrevivir.');
     const responsePromise = page.waitForResponse(
       (response) => response.url().includes('/api/documents/1/update/'),
     );
     await page.getByTestId('client-note-submit').click();
     await responsePromise;
 
-    await expect(page.getByTestId('client-note-whatsapp'))
-      .toHaveValue('Mensaje que debe sobrevivir.');
+    await expect(whatsapp).toHaveValue('Mensaje que debe sobrevivir.');
   });
 
   test('copies the markdown content to the clipboard', {
@@ -1266,7 +1276,9 @@ test.describe('Admin Document Edit', () => {
     });
     await page.goto('/panel/documents/1/edit');
 
-    const textarea = page.getByLabel('Contenido Markdown');
+    const editor = page.locator('#edit-markdown-source').locator('..');
+    await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    const textarea = editor.getByTestId('rich-text-source-input');
     await textarea.click();
     await page.keyboard.press('Control+End');
     await page.evaluate((text) => navigator.clipboard.writeText(text), '\n\nTexto pegado desde el portapapeles.');

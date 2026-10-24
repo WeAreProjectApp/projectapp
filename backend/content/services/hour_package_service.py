@@ -118,6 +118,7 @@ def seed_commercial_conditions_from_catalog(content_json, *, nationality, langua
             'hours': pkg.hours,
             'discountPercent': pkg.discount_percent,
             'note': pkg.note_en if language == 'en' else pkg.note_es,
+            **({'text_formats': {'/note': pkg.text_formats['/note_' + language]}} if '/note_' + language in pkg.text_formats else {}),
             'hourlyRate': float(pkg.hourly_rate),
         }
         for pkg in packages

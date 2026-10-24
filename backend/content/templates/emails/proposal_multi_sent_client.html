@@ -1,4 +1,4 @@
-<!doctype html>
+{% load editorial %}<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -50,8 +50,8 @@ a{text-decoration:none}
 </td></tr>
 
 <tr><td class="px-40" style="padding:32px 40px 0 40px;">
-<p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %}</p>
-<p style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{{ body|default:"Armamos varias opciones para que elijas la que mejor encaja con tu equipo, calendario y presupuesto. Todas comparten nuestra metodología y soporte."|linebreaksbr }}</p>
+<div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{% editorial_email_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %}</div>
+<div style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{% editorial_email_value body|default:"Armamos varias opciones para que elijas la que mejor encaja con tu equipo, calendario y presupuesto. Todas comparten nuestra metodología y soporte." "body" %}</div>
 </td></tr>
 
 {% for phase in phases %}
@@ -60,7 +60,7 @@ a{text-decoration:none}
 <tr><td style="padding:24px 28px 8px 28px;">
 <div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:11px;letter-spacing:2px;color:#809490;text-transform:uppercase;margin-bottom:10px;">Propuesta {{ forloop.counter }} de {{ phases_count }}</div>
 <div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:22px;line-height:28px;color:#001713;letter-spacing:-0.4px;margin-bottom:8px;">{{ phase.title }}</div>
-{% if phase.email_intro %}<div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:14px;line-height:22px;color:#5a6b67;">{{ phase.email_intro|linebreaksbr }}</div>{% endif %}
+{% if phase.email_intro %}<div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:14px;line-height:22px;color:#5a6b67;">{{ phase.email_intro_html }}</div>{% endif %}
 </td></tr>
 <tr><td style="padding:14px 28px;"><div style="height:1px;background:#ece8db;font-size:1px;line-height:1px;">&nbsp;</div></td></tr>
 <tr><td style="padding:0 28px 14px 28px;">
@@ -88,12 +88,12 @@ a{text-decoration:none}
 <tr><td class="px-40" align="center" style="padding:40px 40px 12px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="center" bgcolor="#F0FF3D" style="border-radius:999px;mso-padding-alt:18px 32px;">
-<a href="https://wa.me/573238122373?text=Hola%2C%20quiero%20conversar%20sobre%20las%20propuestas" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{{ cta_text|default:"Agendar 20 min para conversarlas" }} &nbsp;→</a>
+<a href="https://wa.me/573238122373?text=Hola%2C%20quiero%20conversar%20sobre%20las%20propuestas" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{% editorial_email_value cta_text|default:"Agendar 20 min para conversarlas" "cta_text" %} &nbsp;→</a>
 </td></tr></table>
 <div style="margin-top:14px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:12px;line-height:18px;color:#5a6b67;">Te ayudamos a decidir cuál encaja mejor con tu calendario y presupuesto.</div>
 </td></tr>
 
-{% if closing %}<tr><td class="px-40" style="padding:8px 40px 0 40px;"><p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:15px;line-height:24px;color:#5a6b67;">{{ closing|linebreaksbr }}</p></td></tr>{% endif %}
+{% if closing %}<tr><td class="px-40" style="padding:8px 40px 0 40px;"><div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:15px;line-height:24px;color:#5a6b67;">{% editorial_email_value closing "closing" %}</div></td></tr>{% endif %}
 
 <tr><td class="px-40" style="padding:32px 40px 36px 40px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #ece8db;">

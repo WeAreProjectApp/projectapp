@@ -1,5 +1,5 @@
 <script setup>
-import { computed, inject, nextTick, ref, unref, useId, watch } from 'vue'
+import { computed, inject, nextTick, provide, ref, unref, useId, watch } from 'vue'
 import { FIELD_ALIGNED, FIELD_CELL, FORM_ROW_ALIGN } from './formRowClasses'
 import { oneOf } from './propValidators'
 
@@ -39,6 +39,7 @@ const nativeControl = ref(null)
 const rootRef = ref(null)
 const errorId = `${useId()}-error`
 const displayedError = computed(() => props.error || nativeError.value)
+provide('editorialField', { error: displayedError, errorId, label: computed(() => props.label) })
 
 function fieldName() {
   return props.label.trim().replace(/\s*\*$/, '').toLocaleLowerCase('es') || 'este campo'
@@ -71,7 +72,7 @@ watch(
       return
     }
     await nextTick()
-    const control = rootRef.value?.querySelector(
+    const control = rootRef.value?.querySelector('[data-editorial-active="true"]') || rootRef.value?.querySelector(
       'input:not([type="hidden"]), select, textarea, [role="combobox"]',
     )
     if (control) connectNativeError(control)

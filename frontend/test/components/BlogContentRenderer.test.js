@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import BlogContentRenderer from '../../components/blog/BlogContentRenderer.vue';
 
 const sampleContentJson = {
@@ -57,11 +58,16 @@ describe('BlogContentRenderer', () => {
     expect(wrapper.text()).toContain('Final conclusion text.');
   });
 
-  it('renders htmlContent fallback when contentJson has no intro or sections', () => {
+  it('renders htmlContent fallback when contentJson has no intro or sections', async () => {
     const wrapper = mount(BlogContentRenderer, {
-      props: { htmlContent: '<p>Fallback HTML content</p>' },
+      props: { htmlContent: '<p>Fallback <strong>HTML content</strong></p><script>hidden executable content</script>' },
     });
 
-    expect(wrapper.html()).toContain('Fallback HTML content');
+    await nextTick();
+
+    expect(wrapper.text()).toBe('Fallback HTML content');
+    expect(wrapper.html()).toContain('<strong>HTML content</strong>');
+    expect(wrapper.html()).not.toContain('<script');
+    expect(wrapper.text()).not.toContain('hidden executable content');
   });
 });

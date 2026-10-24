@@ -13,6 +13,7 @@ from django.utils import timezone as tz
 from django.utils.dateparse import parse_date
 
 from content.mcp.protocol import ToolError
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 from content.mcp.schema_policy import closed_object, close_root_schemas, open_object
 from content.models import BlogPost
 from content.serializers.blog import (
@@ -154,6 +155,7 @@ def get_blog_calendar(arguments):
 _POST_ID_PROP = {'post_id': {'type': 'integer', 'description': 'ID del blog post.'}}
 
 _BLOG_CREATE_PROPS = {
+    'text_formats': TEXT_FORMATS_SCHEMA,
     'title_es': {'type': 'string'},
     'title_en': {'type': 'string'},
     'excerpt_es': {'type': 'string'},
@@ -202,7 +204,7 @@ BLOG_TOOLS = close_root_schemas([
         'name': 'get_blog_template',
         'description': (
             'Devuelve el template JSON bilingüe (ES/EN) para crear un blog post, '
-            'las categorías disponibles y las reglas de programación. Llama esto '
+            'las categorías disponibles y las reglas de programación. Cada objeto de content_json admite text_formats relativo a sus textos: markdown_html_v1 combina Markdown y HTML limitado para estilos. Llama esto '
             'antes de create_blog_post para conocer la estructura exacta.'
         ),
         'input_schema': {'type': 'object', 'properties': {}},

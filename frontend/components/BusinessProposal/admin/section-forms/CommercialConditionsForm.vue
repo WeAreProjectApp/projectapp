@@ -7,7 +7,7 @@
   <!-- Paquetes de requerimientos -->
   <div class="mt-2">
     <FieldInput v-model="form.packagesTitle" label="Título de los paquetes" />
-    <FieldTextarea v-model="form.packagesIntro" label="Intro de los paquetes" :rows="2" :isSingle="true" class="mt-2" />
+    <FieldTextarea v-model="form.packagesIntro" :format="form.text_formats?.['/packagesIntro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/packagesIntro': $event }" label="Intro de los paquetes" :rows="2" :isSingle="true" class="mt-2" />
 
     <p data-testid="hour-rate-tab-hint" class="text-[11px] text-text-subtle mt-3">
       Los paquetes, los cupos y los descuentos vienen del catálogo de Paquetes de requerimientos.
@@ -17,7 +17,7 @@
     </p>
 
     <FieldTextarea
-      v-model="form.effortBadge"
+      v-model="form.effortBadge" :format="form.text_formats?.['/effortBadge'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/effortBadge': $event }"
       label="Tallas incluidas y condiciones"
       help="Aclara el uso de cupos XS/S/M, la cotización independiente de L/XL y las correcciones cubiertas por garantía."
       :rows="2"
@@ -30,7 +30,7 @@
   <div class="mt-4 border-t border-border-default dark:border-white/[0.08] pt-3">
     <FieldInput v-model="form.scopeTitle" label="Título de alcance" />
     <FieldTextarea
-      v-model="form.scopeParagraphs"
+      v-model="form.scopeParagraphs" :lines="true" format-path="/scopeParagraphs" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event"
       label="Párrafos de alcance (uno por línea)"
       help="Cláusula que aclara que lo no descrito en el alcance no hace parte del trabajo aprobado."
       :rows="6"

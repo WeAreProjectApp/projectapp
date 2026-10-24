@@ -121,6 +121,7 @@ def create_post_from_json(validated_data):
         excerpt_es=data['excerpt_es'],
         excerpt_en=data['excerpt_en'],
         content_json_es=data['content_json_es'],
+        text_formats=data.get('text_formats', {}),
         content_json_en=data.get('content_json_en') or {},
         cover_image_url=data.get('cover_image_url', ''),
         sources=data.get('sources', []),

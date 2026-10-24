@@ -10,6 +10,8 @@ Shared PDF utilities (fonts, colours, drawing helpers) live in
 ``pdf_utils.py`` and are re-exported here for backward compatibility.
 """
 
+from content.services.editorial_projection import editorial_projection
+
 import io
 import logging
 import os
@@ -2028,7 +2030,7 @@ class ProposalPdfService:
                 # Shallow copy: the index/title defaults below write into
                 # ``data``, and without this they would mutate the stored
                 # ``sec.content_json`` for every section that is not re-seeded.
-                data = dict(sec.content_json or {})
+                data = editorial_projection({'content_json': dict(sec.content_json or {})}, sec.text_formats)['content_json']
 
                 # Two modes, and they are genuinely different sources:
                 #
@@ -2065,6 +2067,7 @@ class ProposalPdfService:
                             exc_info=True,
                         )
 
+                data = editorial_projection({'content_json': data}, sec.text_formats)['content_json']
                 if 'title' not in data or not data['title']:
                     data['title'] = sec.title
                 is_paste = (

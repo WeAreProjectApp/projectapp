@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';
 
 jest.mock('../../composables/useSectionAnimations', () => ({
   useSectionAnimations: jest.fn(),
@@ -14,6 +15,7 @@ function mountGreeting(props = {}) {
       inspirationalQuote: 'Innovation is key',
       ...props,
     },
+    global: { components: { BaseRichTextContent } },
   });
 }
 

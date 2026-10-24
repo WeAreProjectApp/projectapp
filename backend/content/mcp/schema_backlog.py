@@ -63,7 +63,6 @@ GENERIC_ADAPTER_BACKLOG = frozenset({
     'suggest_income_period',
     'update_recurring_category',
     # additional-modules
-    'create_additional_module',
     'create_additional_module_category',
     'create_additional_module_share',
     'get_additional_modules_catalog',
@@ -73,7 +72,6 @@ GENERIC_ADAPTER_BACKLOG = frozenset({
     'set_additional_module_category_status',
     'set_additional_module_share_status',
     'set_additional_module_status',
-    'update_additional_module',
     'update_additional_module_category',
     'update_additional_module_share',
     # commercial
@@ -81,7 +79,6 @@ GENERIC_ADAPTER_BACKLOG = frozenset({
     'bulk_action_diagnostics',
     'complete_proposal_stage',
     'create_diagnostic_activity',
-    'create_hour_package',
     'create_partnership_agreement',
     'delete_diagnostic_attachment',
     'delete_hour_package',
@@ -158,7 +155,6 @@ GENERIC_ADAPTER_BACKLOG = frozenset({
     'unarchive_client',
     'update_diagnostic_confidentiality',
     'update_diagnostic_defaults',
-    'update_hour_package',
     'update_hour_package_settings',
     'update_partnership_agreement',
     'upload_diagnostic_attachment',

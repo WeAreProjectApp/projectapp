@@ -244,14 +244,14 @@
                   </div>
                 </div>
                 <div :class="showPreview ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : ''">
-                  <textarea
+                  <BaseRichTextEditor
                     v-model="customMarkdown"
                     rows="14"
                     placeholder="# Contrato de prestacion de servicios&#10;&#10;Pega o escribe tu contrato en formato Markdown..."
                     class="w-full px-4 py-3 border border-input-border rounded-xl text-sm font-mono leading-relaxed
                            bg-input-bg text-input-text placeholder:text-text-subtle
                            focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-y"
-                  ></textarea>
+                   />
                   <div
                     v-if="showPreview"
                     class="border border-border-default rounded-xl bg-surface overflow-y-auto"

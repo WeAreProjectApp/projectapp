@@ -1,3 +1,4 @@
+import { withEditorialFormats } from '~/utils/editorialMetadata';
 /**
  * JSON ↔ form conversion helpers for the 8 DiagnosticSection types.
  *
@@ -309,11 +310,11 @@ const SERIALIZERS = {
 export function buildFormFromJson(sectionType, contentJson) {
   const builder = BUILDERS[sectionType];
   if (!builder) return cloneJson(contentJson || {});
-  return builder(cloneJson(contentJson || {}));
+  return withEditorialFormats(contentJson, builder(cloneJson(contentJson || {})));
 }
 
 export function formToJson(sectionType, form) {
   const serializer = SERIALIZERS[sectionType];
   if (!serializer) return cloneJson(form);
-  return serializer(form);
+  return withEditorialFormats(form, serializer(form));
 }

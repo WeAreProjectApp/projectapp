@@ -36,13 +36,16 @@ test.describe('canvas responsive special', () => {
       await setupCanvas(page);
       // quality: allow-deep-link (the catalog edit scenario reaches this canvas from its row action)
       await page.goto('/en-us/panel/documents/1/edit', { waitUntil: 'domcontentloaded' });
-      const markdown = page.getByRole('textbox', { name: 'Contenido Markdown' });
+      const editor = page.getByTestId('doc-markdown-editor');
+      await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+      const markdown = editor.getByTestId('rich-text-source-input');
       await expect(markdown).toHaveValue(/Contrato/);
       // Regression: the responsive editor previously left the preview toggle
       // unreachable and the preview without rendered content.
       await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Contrato', level: 1, exact: true })).toHaveText('Contrato');
       await page.getByRole('tab', { name: 'Editar', exact: true }).click();
+      await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
       await expect(markdown).toHaveValue(/Contrato/);
     });
   });

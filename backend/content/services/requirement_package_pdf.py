@@ -1,5 +1,6 @@
 """Public package table; no internal size prices or exchange context."""
 from decimal import Decimal
+from content.services.editorial_projection import EditorialSource
 
 
 def render_requirement_packages(c, y, data, currency, enabled, ps):
@@ -22,7 +23,8 @@ def render_requirement_packages(c, y, data, currency, enabled, ps):
             price = amounts(base, pkg.get('discountPercent', 0), currency)
             money = lambda value: _format_currency(float(value), currency)
             rows.append([
-                '**' + pkg.get('name', '') + '**' + (' — ' + pkg['note'] if pkg.get('note') else ''),
+                '**' + pkg.get('name', '') + '**' + (
+                    ' — ' + pkg['note'] if pkg.get('note') and not isinstance(pkg['note'], EditorialSource) else ''),
                 f"{pkg['xsCount']} XS / {pkg['sCount']} S / {pkg['mCount']} M",
                 money(price['reference_price']),
                 f"-{pkg.get('discountPercent', 0)}%",
@@ -34,6 +36,8 @@ def render_requirement_packages(c, y, data, currency, enabled, ps):
             headers[-1] += ' (' + _tax_suffix(currency).strip() + ')'
             y = _draw_table(c, y, headers, rows, ps=ps)
         for pkg in data.get('packages', []):
+            if isinstance(pkg.get('note'), EditorialSource):
+                y = _draw_paragraphs(c, y, [pkg['note']], ps=ps)
             savings = Decimal(str(pkg['referencePrice'])) - Decimal(str(pkg.get('totalPrice', 0)))
             saving_label = 'Savings' if english else 'Ahorro'
             y = _draw_paragraphs(c, y, [

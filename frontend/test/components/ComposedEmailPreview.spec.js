@@ -69,6 +69,7 @@ describe('ComposedEmailPreview', () => {
         { text: '**md**', markdown: true },
       ],
       footer: 'Pie',
+      text_formats: {},
       attachment_names: ['doc.pdf'],
     });
   });

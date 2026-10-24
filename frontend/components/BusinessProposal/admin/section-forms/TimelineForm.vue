@@ -3,7 +3,7 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="8" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.introText" label="Texto introductorio" :rows="3" :isSingle="true" />
+  <FieldTextarea v-model="form.introText" :format="form.text_formats?.['/introText'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/introText': $event }" label="Texto introductorio" :rows="3" :isSingle="true" />
   <FieldInput v-model="form.totalDuration" label="Duración total" placeholder="Aproximadamente 1 mes" />
   <div>
     <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Fases</label>
@@ -21,8 +21,8 @@
             <FieldInput v-model="phase.title" label="Título" />
             <FieldInput v-model="phase.duration" label="Duración" placeholder="2 semanas" />
           </div>
-          <FieldTextarea v-model="phase.description" label="Descripción" :rows="2" :isSingle="true" />
-          <FieldTextarea v-model="phase.tasks" label="Tareas" help="Una por línea" :rows="3" />
+          <FieldTextarea v-model="phase.description" :format="phase.text_formats?.['/description'] || 'plain'" @update:format="phase.text_formats = { ...phase.text_formats, '/description': $event }" label="Descripción" :rows="2" :isSingle="true" />
+          <FieldTextarea v-model="phase.tasks" :lines="true" format-path="/tasks" :formats="phase.text_formats || {}" @update:formats="phase.text_formats = $event" label="Tareas" help="Una por línea" :rows="3" />
           <FieldInput v-model="phase.milestone" label="Hito / Milestone" class="mt-2" />
         </div>
       </template>

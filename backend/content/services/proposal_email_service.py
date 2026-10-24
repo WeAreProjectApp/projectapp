@@ -37,6 +37,30 @@ DEFAULT_METHOD_PHASES = [
 ]
 
 
+def _email_editorial_variants(value, format_name='plain'):
+    """Return safe HTML and plain-text projections for one email value.
+
+    Values without an editorial annotation retain the historical template
+    behavior: Django escapes the HTML alternative and the text alternative
+    receives the original string.
+    """
+    from django.utils.safestring import mark_safe
+
+    from content.services.editorial_format import FORMAT, plain_text, render_source
+    from content.services.email_markdown import editorial_email_html
+
+    source = str(value if value is not None else '')
+    if format_name not in (FORMAT, 'markdown', 'whatsapp_v1'):
+        return {'html': source, 'text': source}
+    html = editorial_email_html(
+        render_source(source, format=format_name, strict=True),
+    )
+    return {
+        'html': mark_safe(html),
+        'text': plain_text(source, format=format_name),
+    }
+
+
 def _resolve_signature(signer_key):
     """Return ``{'name', 'role'}`` for ``signer_key`` (falls back to default)."""
     signatures = getattr(settings, 'EMAIL_SIGNATURES', {}) or {}
@@ -71,18 +95,57 @@ def _build_design_context(proposal=None):
     """
     if proposal is None:
         sig = _resolve_signature(getattr(settings, 'EMAIL_DEFAULT_SIGNER', 'gustavo'))
+        phase_rows = []
+        for phase in DEFAULT_METHOD_PHASES:
+            row = dict(phase)
+            variants = _email_editorial_variants(row.get('description', ''))
+            row.update(
+                description_html=variants['html'],
+                description_text=variants['text'],
+            )
+            phase_rows.append(row)
         return {
             'signature_name': sig['name'],
             'signature_role': sig['role'],
             'email_features': [],
+            'email_feature_rows': [],
             'email_method_phases': DEFAULT_METHOD_PHASES,
+            'email_method_phase_rows': phase_rows,
             'proposal_reference': '',
         }
 
     sig = _resolve_signature(getattr(proposal, 'email_signed_by', None))
+    formats = getattr(proposal, 'text_formats', {}) or {}
+    features = list(getattr(proposal, 'email_features', []) or [])
     method_phases = list(getattr(proposal, 'email_method_phases', []) or [])
     if not method_phases:
         method_phases = DEFAULT_METHOD_PHASES
+
+    feature_rows = []
+    for index, feature in enumerate(features):
+        variants = _email_editorial_variants(
+            feature,
+            formats.get(f'/email_features/{index}', 'plain'),
+        )
+        feature_rows.append(variants)
+
+    phase_rows = []
+    for index, phase in enumerate(method_phases):
+        row = dict(phase) if isinstance(phase, dict) else {
+            'number': '', 'title': '', 'duration': '', 'description': '',
+        }
+        variants = _email_editorial_variants(
+            row.get('description', ''),
+            formats.get(
+                f'/email_method_phases/{index}/description',
+                'plain',
+            ),
+        )
+        row.update(
+            description_html=variants['html'],
+            description_text=variants['text'],
+        )
+        phase_rows.append(row)
 
     year = proposal.created_at.year if getattr(proposal, 'created_at', None) else timezone.now().year
     reference = f'PA-{year}-{proposal.pk:04d}' if proposal.pk else ''
@@ -90,8 +153,10 @@ def _build_design_context(proposal=None):
     return {
         'signature_name': sig['name'],
         'signature_role': sig['role'],
-        'email_features': list(getattr(proposal, 'email_features', []) or []),
+        'email_features': features,
+        'email_feature_rows': feature_rows,
         'email_method_phases': method_phases,
+        'email_method_phase_rows': phase_rows,
         'proposal_reference': reference,
     }
 
@@ -261,6 +326,12 @@ class ProposalEmailService:
         resolved = {}
         for key, value in field_values.items():
             resolved[key] = substitute_variables(value, context)
+        editorial_formats = dict(context.get('editorial_formats') or {})
+        if config and config.text_formats:
+            from content.services.editorial_email import template_formats
+            editorial_formats.update(template_formats(config))
+        if editorial_formats:
+            resolved['editorial_formats'] = editorial_formats
         return resolved
 
     @classmethod
@@ -325,8 +396,14 @@ class ProposalEmailService:
             if '%' in opt.get('label', '')
         )
 
+        intro = (proposal.email_intro or '').strip()
+        intro_format = (proposal.text_formats or {}).get('/email_intro', 'plain')
+        intro_variants = _email_editorial_variants(intro, intro_format)
         return {
-            'email_intro': (proposal.email_intro or '').strip(),
+            'email_intro': intro,
+            'email_intro_html': intro_variants['html'],
+            'email_intro_text': intro_variants['text'],
+            'editorial_formats': {'email_intro': intro_format},
             'payment_options': payment_options,
             'total_duration': total_duration,
             'payment_summary': payment_summary,
@@ -2570,7 +2647,7 @@ class ProposalEmailService:
     @classmethod
     def render_composed_email(
         cls, template_key, proposal, subject, greeting,
-        sections, footer='', attachment_names=None,
+        sections, footer='', attachment_names=None, text_formats=None,
     ):
         """Render a user-composed email exactly as the send path does.
 
@@ -2581,25 +2658,50 @@ class ProposalEmailService:
         and the composed-email preview endpoint so they can never drift.
         """
         from content.services.email_markdown import (
-            markdown_to_email_html, normalize_sections,
+            editorial_email_html, markdown_to_email_html, normalize_sections,
+        )
+        from content.services.editorial_format import (
+            FORMAT, plain_text, render_source,
         )
         from content.services.email_template_registry import get_template_entry
+        from django.utils.safestring import mark_safe
 
         normalized = normalize_sections(sections)
         html_sections = []
-        for item in normalized:
-            if item['markdown']:
+        text_sections = []
+        rich_formats = (FORMAT, 'markdown', 'whatsapp_v1')
+        for index, item in enumerate(normalized):
+            format_name = (
+                item.get('format')
+                or (text_formats or {}).get(f'/sections/{index}')
+            )
+            if format_name in rich_formats:
+                rendered = render_source(
+                    item['text'],
+                    format=format_name,
+                    strict=False,
+                )
+                html = editorial_email_html(rendered)
+                html_sections.append(
+                    {'html': mark_safe(html)} if html else item['text']
+                )
+                text_sections.append(
+                    plain_text(item['text'], format=format_name)
+                )
+            elif item['markdown']:
                 html = markdown_to_email_html(item['text'])
                 # Empty conversion (e.g. only [TOC]) falls back to plain text.
                 html_sections.append({'html': html} if html else item['text'])
+                text_sections.append(item['text'])
             else:
                 html_sections.append(item['text'])
-        text_sections = [item['text'] for item in normalized]
+                text_sections.append(item['text'])
 
         base_context = {
             'subject': subject,
             'greeting': greeting,
             'footer': footer,
+            'editorial_formats': {key.lstrip('/'): value for key, value in (text_formats or {}).items()},
             'attachment_names': attachment_names or [],
         }
         base_context.update(_build_design_context(proposal))
@@ -2625,7 +2727,7 @@ class ProposalEmailService:
         cls, template_key, proposal, recipient_emails=None, subject='',
         greeting='', sections=(), footer='', attachments=None, targets=(),
         return_logs=False, attachment_sources=None, cc_emails=None,
-        recipient_email=None,
+        recipient_email=None, text_formats=None,
     ):
         """
         Send a user-composed email with the standard Project App branding.
@@ -2655,6 +2757,7 @@ class ProposalEmailService:
             'greeting': greeting,
             'sections': normalized_sections,
             'footer': footer,
+            **({'text_formats': text_formats} if text_formats else {}),
             'attachment_names': attachment_names,
             'to_recipients': to_recipients,
             'cc_recipients': cc_recipients,
@@ -2677,7 +2780,7 @@ class ProposalEmailService:
         try:
             html_content, text_content = cls.render_composed_email(
                 template_key, proposal, subject, greeting,
-                normalized_sections, footer, attachment_names,
+                normalized_sections, footer, attachment_names, text_formats=text_formats,
             )
 
             email = EmailMultiAlternatives(
@@ -2743,33 +2846,33 @@ class ProposalEmailService:
     def send_branded_email(
         cls, proposal, recipient_emails=None, subject='', greeting='',
         sections=(), footer='', attachments=None, cc_emails=None,
-        recipient_email=None,
+        recipient_email=None, text_formats=None,
     ):
         """Send a user-composed branded email (generic, no activity logging)."""
         return cls._send_composed_email(
             'branded_email', proposal, recipient_emails, subject,
             greeting, sections, footer, attachments,
-            cc_emails=cc_emails, recipient_email=recipient_email,
+            cc_emails=cc_emails, recipient_email=recipient_email, text_formats=text_formats,
         )
 
     @classmethod
     def send_standalone_branded_email(
         cls, recipient_emails=None, subject='', greeting='',
         sections=(), footer='', attachments=None, targets=(), return_logs=False,
-        attachment_sources=None, cc_emails=None, recipient_email=None,
+        attachment_sources=None, cc_emails=None, recipient_email=None, text_formats=None,
     ):
         """Send a standalone branded email not tied to any proposal."""
         return cls._send_composed_email(
             'branded_email', None, recipient_emails, subject,
             greeting, sections, footer, attachments, targets, return_logs,
-            attachment_sources, cc_emails, recipient_email,
+            attachment_sources, cc_emails, recipient_email, text_formats=text_formats,
         )
 
     @classmethod
     def send_proposal_email(
         cls, proposal, recipient_emails=None, subject='', greeting='',
         sections=(), footer='', attachments=None, cc_emails=None,
-        recipient_email=None,
+        recipient_email=None, text_formats=None,
     ):
         """Send a proposal-specific email and register it as a proposal activity."""
         to_values = (
@@ -2785,7 +2888,7 @@ class ProposalEmailService:
         sent = cls._send_composed_email(
             'proposal_email', proposal, recipient_emails, subject,
             greeting, sections, footer, attachments,
-            cc_emails=cc_emails, recipient_email=recipient_email,
+            cc_emails=cc_emails, recipient_email=recipient_email, text_formats=text_formats,
         )
         if sent:
             from content.models import ProposalChangeLog

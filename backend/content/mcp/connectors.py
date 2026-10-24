@@ -229,6 +229,27 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
 }
 
 
+EDITORIAL_NOTICE = (
+    'Formato editorial: Visual y Fuente comparten una sola fuente markdown_html_v1. '
+    'Usa Markdown para negrita, listas y tablas, y HTML limitado para color '
+    '(span style="color:…"), resaltado (mark style="background-color:…") y '
+    'alineación (p/h1–h6/td/th style="text-align:left|center|right|justify"). '
+    'Declara text_formats con JSON Pointers relativos al objeto propietario; '
+    'los objetos de contenido JSON admiten mapas locales, incluso por elemento. '
+    'Los campos nativos markdown/content_markdown usan esta gramática directamente. '
+    'WhatsApp usa whatsapp_v1 y su sintaxis propia, sin tablas, color ni alineación. '
+    'Omitir el mapa conserva el formato existente; plain conserva texto literal. '
+    'HTML o estilos fuera de la gramática se rechazan; consulta docs/EDITORIAL_FORMAT.md.'
+)
+for _editorial_slug in ('blog', 'documents', 'communications', 'diagnostics', 'proposals',
+                        'building-with-us', 'building-on-demand', 'additional-modules',
+                        'commercial', 'offerings', 'programs', 'content'):
+    SOURCE_CONNECTORS[_editorial_slug] = replace(
+        SOURCE_CONNECTORS[_editorial_slug],
+        notes=(*SOURCE_CONNECTORS[_editorial_slug].notes, EDITORIAL_NOTICE),
+    )
+
+
 # Preserve pre-consolidation catalogs for existing scoped credentials.
 from content.mcp.consolidation import build_catalogs  # noqa: E402
 

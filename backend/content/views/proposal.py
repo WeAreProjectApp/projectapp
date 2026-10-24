@@ -1,3 +1,4 @@
+from content.services.editorial_email import email_formats
 import copy
 import logging
 import re
@@ -3886,10 +3887,14 @@ def _parse_composed_email(request, proposal, template_key):
 
     greeting = (request.data.get('greeting') or '').strip()
     footer = (request.data.get('footer') or '').strip()
+    text_formats = email_formats(request.data.get('text_formats'), {'greeting': greeting, 'footer': footer})
 
     # ── Sections (JSON-encoded string in multipart) ──
     from content.views.standalone_email import _parse_sections_field
-    sections, sections_error = _parse_sections_field(request.data.get('sections', '[]'))
+    sections, sections_error = _parse_sections_field(
+        request.data.get('sections', '[]'),
+        strict_editorial='text_formats' in request.data,
+    )
     if sections_error:
         return None, Response(
             {'error': sections_error},
@@ -3939,6 +3944,7 @@ def _parse_composed_email(request, proposal, template_key):
         'greeting': greeting,
         'sections': sections,
         'footer': footer,
+        'text_formats': text_formats,
         'attachments': attachments or None,
     }, None
 
@@ -3958,6 +3964,7 @@ def _send_composed_email_view(request, proposal_id, send_method, template_key):
         greeting=parsed['greeting'],
         sections=parsed['sections'],
         footer=parsed['footer'],
+        text_formats=parsed.get('text_formats'),
         attachments=parsed['attachments'],
     )
 

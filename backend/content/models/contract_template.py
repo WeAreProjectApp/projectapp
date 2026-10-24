@@ -1,9 +1,10 @@
+from content.models.editorial_text import EditorialTextModel
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
 
-class ContractTemplate(models.Model):
+class ContractTemplate(EditorialTextModel, models.Model):
     """Default combined, product and service texts, changed through one service.
 
     MCP confirms edits; the console uses the same transactional writer.

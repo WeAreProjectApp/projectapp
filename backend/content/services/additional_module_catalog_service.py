@@ -166,6 +166,7 @@ def _localized_module(module, language):
         'icon': module.icon,
         'name': getattr(module, f'name_{suffix}'),
         'summary': getattr(module, f'summary_{suffix}'),
+        **({'text_formats': {path.replace(f'_{suffix}', '', 1): format for path, format in module.text_formats.items() if f'_{suffix}' in path}} if module.text_formats else {}),
         'what_is': getattr(module, f'what_is_{suffix}'),
         'purpose': getattr(module, f'purpose_{suffix}'),
         'problems_solved': getattr(module, f'problems_solved_{suffix}'),

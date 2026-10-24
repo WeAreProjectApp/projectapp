@@ -9,6 +9,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_STANDALONE_EMAIL_COMPOSER, ADMIN_STANDALONE_EMAIL_DEFAULTS } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -148,7 +149,7 @@ test.describe('Admin Standalone Email Composer', () => {
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('test@example.com');
     await page.getByPlaceholder('Asunto del correo').fill('Test Subject');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Hello, this is a test email body.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Hello, this is a test email body.');
 
     const sendButton = page.getByRole('button', { name: /enviar correo/i });
     await expect(sendButton).toBeEnabled();
@@ -171,7 +172,7 @@ test.describe('Admin Standalone Email Composer', () => {
     await ccInput.fill('copy@example.com');
     await ccInput.press('Enter');
     await page.getByPlaceholder('Asunto del correo').fill('Welcome Email');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Welcome to our platform.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Welcome to our platform.');
 
     const sendRequest = page.waitForRequest(
       (req) => req.url().includes('emails/send/') && req.method() === 'POST',
@@ -197,7 +198,7 @@ test.describe('Admin Standalone Email Composer', () => {
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('test@example.com');
     await page.getByPlaceholder('Asunto del correo').fill('Preview Test');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Body content for preview.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Body content for preview.');
 
     const previewWait = page.waitForResponse(
       (res) => res.url().includes('emails/preview/') && res.status() === 200,
@@ -210,7 +211,7 @@ test.describe('Admin Standalone Email Composer', () => {
     await expect(frame.getByText('team@projectapp.co')).toBeVisible();
   });
 
-  test('markdown toggle sends the section flagged as markdown', {
+  test('source mode sends the section flagged as markdown', {
     tag: [...ADMIN_STANDALONE_EMAIL_COMPOSER, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     await setupMocks(page);
@@ -219,8 +220,7 @@ test.describe('Admin Standalone Email Composer', () => {
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('test@example.com');
     await page.getByPlaceholder('Asunto del correo').fill('Markdown Test');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Texto **con** markdown');
-    await page.getByRole('switch', { name: 'Activar Markdown en esta sección' }).click();
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Texto **con** markdown');
 
     const previewRequest = page.waitForRequest(
       (req) => req.url().includes('emails/preview/') && req.method() === 'POST',
@@ -271,7 +271,7 @@ test.describe('Admin Standalone Email Composer', () => {
 
     await expect(page.getByPlaceholder('Hola {client_name}')).toHaveValue('Hola {client_name}');
     await expect(page.getByPlaceholder('Texto de cierre...')).toHaveValue(mockDefaults.config.footer);
-    await expect(page.getByRole('combobox')).toHaveValue('vanessa');
+    await expect(page.getByText('Firmante por defecto', { exact: true }).locator('..').getByRole('combobox')).toHaveValue('vanessa');
     await expect(page.getByText('Variables disponibles:')).toBeVisible();
   });
 
@@ -285,7 +285,7 @@ test.describe('Admin Standalone Email Composer', () => {
     await page.getByRole('tab', { name: 'Configuración' }).click();
 
     await page.getByPlaceholder('Hola {client_name}').fill('Buen día {client_name}');
-    await page.getByRole('combobox').selectOption('gustavo');
+    await page.getByText('Firmante por defecto', { exact: true }).locator('..').getByRole('combobox').selectOption('gustavo');
 
     const putRequest = page.waitForRequest(
       (req) => req.url().includes('emails/defaults/') && req.method() === 'PUT',
@@ -342,8 +342,8 @@ test.describe('Admin Standalone Email Composer — gaps', () => {
     await page.getByRole('button', { name: /Agregar sección/i }).click();
     const sections = page.getByPlaceholder('Escribe el contenido de esta sección...');
     await expect(sections).toHaveCount(2);
-    await sections.first().fill('Se queda');
-    await sections.nth(1).fill('Se va');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...', 0), 'Se queda');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...', 1), 'Se va');
 
     await page.getByRole('button', { name: 'Eliminar' }).nth(1).click();
     await expect(sections).toHaveCount(1);
@@ -364,7 +364,7 @@ test.describe('Admin Standalone Email Composer — gaps', () => {
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('cliente@acme.com');
     await page.getByPlaceholder('Asunto del correo').fill('Fallo');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').first().fill('Contenido');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Contenido');
     await page.getByRole('button', { name: /enviar correo/i }).click();
 
     await expect(page.getByRole('alert').getByText(/Error al enviar el correo/i)).toBeVisible();

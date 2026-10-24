@@ -51,13 +51,13 @@
           <span class="text-xs font-medium text-text-muted pt-2 w-6">
             {{ String(idx + 1).padStart(2, '0') }}
           </span>
-          <BaseTextarea
+          <BaseRichTextEditor
             v-model="form.email_features[idx]"
             :rows="2"
             size="sm"
             class="flex-1"
             placeholder="Ej. Dashboard en tiempo real con filtros por ruta, conductor y estado."
-          />
+           profile="email" :format="form.text_formats?.['/email_features/' + idx] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, ['/email_features/' + idx]: $event }" />
           <BaseButton variant="danger-ghost" size="sm" @click="removeEmailFeature(idx)">
             Quitar
           </BaseButton>
@@ -99,12 +99,12 @@
             size="sm"
             placeholder="5 días"
           />
-          <BaseTextarea
+          <BaseRichTextEditor
             v-model="form.email_method_phases[idx].description"
             :rows="2"
             size="sm"
             placeholder="Mapeo de procesos y alcance final."
-          />
+           profile="email" :format="form.text_formats?.['/email_method_phases/' + idx + '/description'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, ['/email_method_phases/' + idx + '/description']: $event }" />
         </div>
         <p class="text-xs text-text-subtle">Orden de columnas: número · título · duración · descripción.</p>
       </div>
@@ -115,6 +115,7 @@
 </template>
 
 <script setup>
+import { normalizeEditorialFeatures, remapEditorialArrayFormats } from '~/utils/editorialMetadata';
 import { DEFAULT_METHOD_PHASES } from '~/stores/proposals_constants';
 const props = defineProps({ form: { type: Object, required: true }, saving: { type: Boolean, default: false } });
 const emit = defineEmits(['save', 'open-email-preview']);
@@ -125,6 +126,7 @@ function addEmailFeature() {
   form.email_features = [...form.email_features, ''];
 }
 function removeEmailFeature(idx) {
+  form.text_formats = remapEditorialArrayFormats(form.text_formats, '/email_features', form.email_features.map((_, i) => i).filter(i => i !== idx));
   form.email_features = form.email_features.filter((_, i) => i !== idx);
 }
 function ensureMethodPhases() {

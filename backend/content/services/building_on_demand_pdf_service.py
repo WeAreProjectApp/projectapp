@@ -1,6 +1,7 @@
 """Branded booklet built exclusively from the current public program payload."""
 import io
 from xml.sax.saxutils import escape
+from content.services.editorial_projection import editorial_projection, editorial_paragraph
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -37,6 +38,7 @@ class BuildingOnDemandPdfService(FinancingPdfService):
     @classmethod
     def build(cls, *, language):
         payload = serialize_public_program(language)
+        payload = editorial_projection(payload)
         labels = LABELS[payload['language']]
         _register_fonts()
         output = io.BytesIO()
@@ -49,11 +51,11 @@ class BuildingOnDemandPdfService(FinancingPdfService):
         hero = payload['hero']
         story = [
             Spacer(1, 30 * mm), Paragraph('ProjectApp', styles['eyebrow']),
-            Paragraph(escape(hero['eyebrow']), styles['eyebrow']),
-            Paragraph(escape(hero['title']), styles['cover_title']),
-            Paragraph(escape(hero['subtitle']), styles['cover_body']), Spacer(1, 8 * mm),
-            Paragraph(escape(hero['positioning']), styles['cover_body']), Spacer(1, 8 * mm),
-            Paragraph(escape(hero['note']), styles['cover_body']), PageBreak(),
+            editorial_paragraph(hero['eyebrow'], styles['eyebrow']),
+            editorial_paragraph(hero['title'], styles['cover_title']),
+            editorial_paragraph(hero['subtitle'], styles['cover_body']), Spacer(1, 8 * mm),
+            editorial_paragraph(hero['positioning'], styles['cover_body']), Spacer(1, 8 * mm),
+            editorial_paragraph(hero['note'], styles['cover_body']), PageBreak(),
         ]
         story.extend(cls._card_section(payload['cell'], 'roles', styles))
         story.extend(cls._section_heading(payload['fit'], styles))
@@ -70,12 +72,12 @@ class BuildingOnDemandPdfService(FinancingPdfService):
             ])
         story.extend(cls._section_heading(payload['terms'], styles))
         story.extend([
-            Paragraph(escape(payload['terms']['note']), styles['muted']), Spacer(1, 6 * mm),
+            editorial_paragraph(payload['terms']['note'], styles['muted']), Spacer(1, 6 * mm),
         ])
         story.extend(cls._card_section(payload['bag'], 'rules', styles))
         story.extend(cls._estimator(payload, styles, labels))
         story.extend(cls._card_section(payload['hosting'], 'features', styles))
-        story.append(Paragraph(escape(payload['faq']['title']), styles['section']))
+        story.append(editorial_paragraph(payload['faq']['title'], styles['section']))
         for item in payload['faq']['items']:
             story.append(KeepTogether([
                 cls._text_card(item['question'], item['answer'], styles, background=BONE),
@@ -85,9 +87,9 @@ class BuildingOnDemandPdfService(FinancingPdfService):
         story.extend([
             Spacer(1, 6 * mm),
             cls._text_card(cta['title'], cta['body'], styles, background=ESMERALD_LIGHT),
-            Paragraph(escape(cta['button_label']), styles['heading']),
-            Paragraph(escape(cta['whatsapp_url']), styles['body']), Spacer(1, 4 * mm),
-            Paragraph(escape(payload['legal']['disclaimer']), styles['muted']),
+            editorial_paragraph(cta['button_label'], styles['heading']),
+            editorial_paragraph(cta['whatsapp_url'], styles['body']), Spacer(1, 4 * mm),
+            editorial_paragraph(payload['legal']['disclaimer'], styles['muted']),
         ])
         document.build(story, onFirstPage=cls._page_footer, onLaterPages=cls._page_footer)
         return output.getvalue()
@@ -95,8 +97,8 @@ class BuildingOnDemandPdfService(FinancingPdfService):
     @staticmethod
     def _section_heading(section, styles):
         return [
-            Paragraph(escape(section['title']), styles['section']),
-            Paragraph(escape(section['summary']), styles['body']),
+            editorial_paragraph(section['title'], styles['section']),
+            editorial_paragraph(section['summary'], styles['body']),
         ]
 
     @classmethod
@@ -114,7 +116,7 @@ class BuildingOnDemandPdfService(FinancingPdfService):
         return [
             *cls._section_heading(section, styles),
             *cls._cards(section[collection], styles),
-            Paragraph(escape(section['note']), styles['muted']), Spacer(1, 6 * mm),
+            editorial_paragraph(section['note'], styles['muted']), Spacer(1, 6 * mm),
         ]
 
     @classmethod
@@ -125,17 +127,17 @@ class BuildingOnDemandPdfService(FinancingPdfService):
             f"{server['disk_gb']} GB NVMe · {server['transfer_tb']} TB {labels['transfer']}"
         )
         content = [
-            Paragraph(escape(tier['badge']), styles['muted']),
-            Paragraph(escape(tier['name']), styles['heading']),
-            Paragraph(escape(tier['pace_label']), styles['small_heading']),
-            Paragraph(escape(tier['pace_summary']), styles['body']),
+            editorial_paragraph(tier['badge'], styles['muted']),
+            editorial_paragraph(tier['name'], styles['heading']),
+            editorial_paragraph(tier['pace_label'], styles['small_heading']),
+            editorial_paragraph(tier['pace_summary'], styles['body']),
             Paragraph(labels['bag_hours'].format(hours=tier['bag_hours']), styles['number']),
-            Paragraph(escape(tier['ideal_for']), styles['body']),
+            editorial_paragraph(tier['ideal_for'], styles['body']),
             Paragraph(labels['roles'], styles['small_heading']), cls._bullet_list(tier['roles'], styles),
-            Paragraph(labels['server'], styles['small_heading']), Paragraph(escape(server_line), styles['body']),
+            Paragraph(labels['server'], styles['small_heading']), editorial_paragraph(server_line, styles['body']),
             cls._bullet_list(tier['highlights'], styles), Spacer(1, 3 * mm),
             cls._price_table(tier['prices'], terms, prices_include_vat, styles, labels),
-            Spacer(1, 3 * mm), Paragraph(escape(tier['cta_label']), styles['small_heading']),
+            Spacer(1, 3 * mm), editorial_paragraph(tier['cta_label'], styles['small_heading']),
         ]
         card = cls._content_table(content, ESMERALD_LIGHT)
         # Long valid tier copy must remain printable when a card spans pages.
@@ -151,7 +153,7 @@ class BuildingOnDemandPdfService(FinancingPdfService):
         ]]
         for price in prices:
             rows.append([
-                Paragraph(escape(terms[price['term']]), styles['muted']),
+                editorial_paragraph(terms[price['term']], styles['muted']),
                 Paragraph(f"{price['discount_percent']} %", styles['muted']),
                 Paragraph(f"{_format_cop(price['monthly_price'])} COP{suffix}", styles['muted']),
                 Paragraph(f"{_format_cop(price['total'])} COP{suffix}", styles['muted']),
@@ -183,6 +185,6 @@ class BuildingOnDemandPdfService(FinancingPdfService):
                 Spacer(1, 4 * mm),
             ]))
         story.extend([
-            Paragraph(escape(section['disclaimer']), styles['muted']), Spacer(1, 6 * mm),
+            editorial_paragraph(section['disclaimer'], styles['muted']), Spacer(1, 6 * mm),
         ])
         return story

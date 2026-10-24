@@ -1,7 +1,8 @@
+from content.models.editorial_text import EditorialTextModel
 from django.db import models
 
 
-class ProposalDefaultConfig(models.Model):
+class ProposalDefaultConfig(EditorialTextModel, models.Model):
     """
     Stores admin-editable default section configurations for new proposals.
 

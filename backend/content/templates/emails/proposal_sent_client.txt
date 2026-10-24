@@ -1,8 +1,8 @@
-{{ greeting|default:"Hola" }}{% if not greeting %} {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %} {{ client_name }}{% endif %},
 
-{% if body %}{{ body }}
+{% if body %}{% editorial_plain_value body "body" %}
 
-{% endif %}{% if email_intro %}{{ email_intro }}
+{% endif %}{% if email_intro %}{% editorial_plain_value email_intro "email_intro" %}
 {% endif %}
 
 {{ title }}
@@ -10,17 +10,17 @@
 {% endif %}{% if total_duration %}Tiempo: {{ total_duration }}
 {% endif %}{% if payment_summary %}Pagos: {{ payment_summary }}
 {% endif %}
-{% if email_features %}Qué incluye:
-{% for feature in email_features %}{{ forloop.counter|stringformat:"02d" }}. {{ feature }}
+{% if email_feature_rows %}Qué incluye:
+{% for feature in email_feature_rows %}{{ forloop.counter|stringformat:"02d" }}. {{ feature.text }}
 {% endfor %}{% endif %}
-{% if email_method_phases %}Método:
-{% for phase in email_method_phases %}{{ phase.number|default:forloop.counter }}. {{ phase.title }}{% if phase.duration %} — {{ phase.duration }}{% endif %} · {{ phase.description }}
+{% if email_method_phase_rows %}Método:
+{% for phase in email_method_phase_rows %}{{ phase.number|default:forloop.counter }}. {{ phase.title }}{% if phase.duration %} — {{ phase.duration }}{% endif %} · {{ phase.description_text }}
 {% endfor %}{% endif %}
-{{ cta_text|default:"Ver propuesta completa" }}: {{ proposal_url }}
+{% editorial_plain_value cta_text|default:"Ver propuesta completa" "cta_text" %}: {{ proposal_url }}
 {% if days_remaining %}
 Válida por {{ days_remaining }} día{{ days_remaining|pluralize }} más.{% endif %}
 {% if closing %}
-{{ closing }}
+{% editorial_plain_value closing "closing" %}
 {% endif %}
 —
 {{ signature_name }}

@@ -1,4 +1,5 @@
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed, nextTick, ref, watch } from 'vue'
 import PublicDocumentAction from '~/components/PublicDocumentAction.vue'
 import PublicDocumentShareButton from '~/components/PublicDocumentShareButton.vue'
@@ -6,6 +7,7 @@ import BuildingWithUsOnboarding from '~/components/BuildingWithUs/Onboarding.vue
 import { useBuildingWithUsTheme } from '~/composables/useBuildingWithUsTheme'
 import { usePublicDocumentEntrance } from '~/composables/usePublicDocumentEntrance'
 import { isBuildingWithUsProgram, listOf, safeWhatsappUrl } from '~/utils/buildingWithUs'
+import { resolveEditorialContent } from '~/utils/editorialMetadata'
 
 const props = defineProps({
   program: { type: Object, required: true },
@@ -24,12 +26,13 @@ const expandedFaq = ref(new Set())
 const isDownloading = ref(false)
 const downloadError = ref(false)
 
+const program = computed(() => resolveEditorialContent(props.program, props.program?.text_formats))
 const hasSection = (section) => Boolean(section && Object.keys(section).length)
 const roles = computed(() => [
-  { id: 'contribution', section: props.program.contribution },
-  { id: 'expert', section: props.program.expert_profile },
+  { id: 'contribution', section: program.value.contribution },
+  { id: 'expert', section: program.value.expert_profile },
 ].filter(({ section }) => hasSection(section)))
-const models = computed(() => listOf(props.program.participation_models?.items))
+const models = computed(() => listOf(program.value.participation_models?.items))
 
 // Start after the public document and its targets have entered the DOM.
 // A panel preview has neither floating controls nor a tour instance.
@@ -136,9 +139,7 @@ async function downloadPdf() {
             <h1 class="mt-4 max-w-4xl text-balance text-4xl font-light tracking-tight text-text-brand sm:text-6xl lg:text-7xl">
               {{ program.hero.title }}
             </h1>
-            <p v-if="program.hero.subtitle" class="mt-6 max-w-3xl text-base leading-8 text-text-muted sm:text-lg">
-              {{ program.hero.subtitle }}
-            </p>
+            <BaseRichTextContent v-if="program.hero.subtitle" class="mt-6 max-w-3xl text-base leading-8 text-text-muted sm:text-lg" :source="program.hero.subtitle" :format="program.hero.text_formats?.['/subtitle'] || 'plain'" />
             <div class="mt-8 flex flex-wrap gap-3">
               <BaseButton
                 v-if="program.cta"
@@ -170,7 +171,7 @@ async function downloadPdf() {
           >
             <BaseBadge variant="success">{{ t('buildingWithUs.title') }}</BaseBadge>
             <h2 class="mt-4 text-xl font-medium text-text-brand">{{ t('buildingWithUs.tagline') }}</h2>
-            <p class="mt-3 text-sm leading-7 text-text-muted">{{ program.hero.note }}</p>
+            <BaseRichTextContent class="mt-3 text-sm leading-7 text-text-muted" :source="program.hero.note" :format="program.hero.text_formats?.['/note'] || 'plain'" />
           </aside>
         </div>
         <BaseAlert v-if="downloadError" class="mt-4 max-w-xl" variant="danger" data-testid="building-with-us-pdf-error">
@@ -187,13 +188,13 @@ async function downloadPdf() {
         data-testid="building-with-us-origin"
       >
         <h2 id="building-with-us-origin-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.origin.title }}</h2>
-        <p v-if="program.origin.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.origin.summary }}</p>
+        <BaseRichTextContent v-if="program.origin.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.origin.summary" :format="program.origin.text_formats?.['/summary'] || 'plain'" />
         <div v-if="listOf(program.origin.industries).length" class="mt-6 flex flex-wrap gap-2" data-testid="building-with-us-industries" :aria-label="t('buildingWithUs.industriesLabel')">
           <BaseBadge v-for="industry in listOf(program.origin.industries)" :key="industry" variant="neutral">{{ industry }}</BaseBadge>
         </div>
         <ul v-if="listOf(program.origin.points).length" class="mt-6 space-y-3">
-          <li v-for="point in listOf(program.origin.points)" :key="point" class="flex gap-3 text-sm leading-7 text-text-subtle">
-            <span class="text-text-brand" aria-hidden="true">✓</span><span>{{ point }}</span>
+          <li v-for="(point, pointIndex) in listOf(program.origin.points)" :key="point" class="flex gap-3 text-sm leading-7 text-text-subtle">
+            <span class="text-text-brand" aria-hidden="true">✓</span><BaseRichTextContent :source="point" :format="program.origin.text_formats?.['/points/' + pointIndex] || 'plain'" />
           </li>
         </ul>
       </section>
@@ -208,11 +209,11 @@ async function downloadPdf() {
           :data-testid="`building-with-us-${role.id}`"
         >
           <h2 :id="`building-with-us-${role.id}-title`" class="text-3xl font-light text-text-brand">{{ role.section.title }}</h2>
-          <p v-if="role.section.summary" class="mt-4 text-base leading-7 text-text-muted">{{ role.section.summary }}</p>
+          <BaseRichTextContent v-if="role.section.summary" class="mt-4 text-base leading-7 text-text-muted" :source="role.section.summary" :format="role.section.text_formats?.['/summary'] || 'plain'" />
           <ul class="mt-6 space-y-5">
             <li v-for="item in listOf(role.section.items)" :key="item.id" class="rounded-2xl bg-surface-muted p-5">
               <h3 class="text-lg font-medium text-text-brand">{{ item.title }}</h3>
-              <p v-if="item.summary" class="mt-2 text-sm leading-7 text-text-subtle">{{ item.summary }}</p>
+              <BaseRichTextContent v-if="item.summary" class="mt-2 text-sm leading-7 text-text-subtle" :source="item.summary" :format="item.text_formats?.['/summary'] || 'plain'" />
             </li>
           </ul>
         </section>
@@ -220,7 +221,7 @@ async function downloadPdf() {
 
       <section v-if="hasSection(program.participation_models)" data-document-enter aria-labelledby="building-with-us-models-title" data-testid="building-with-us-models">
         <h2 id="building-with-us-models-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.participation_models.title }}</h2>
-        <p v-if="program.participation_models.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.participation_models.summary }}</p>
+        <BaseRichTextContent v-if="program.participation_models.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.participation_models.summary" :format="program.participation_models.text_formats?.['/summary'] || 'plain'" />
         <nav v-if="models.length" class="building-with-us-models-nav mt-7 flex gap-2 overflow-x-auto pb-2 sm:flex-wrap" :aria-label="t('buildingWithUs.modelsNavLabel')">
           <a
             v-for="model in models"
@@ -239,16 +240,16 @@ async function downloadPdf() {
           >
             <BaseBadge v-if="model.badge" variant="success">{{ model.badge }}</BaseBadge>
             <h3 class="mt-5 text-2xl font-medium text-text-brand">{{ model.name }}</h3>
-            <p v-if="model.summary" class="mt-3 text-sm leading-7 text-text-muted">{{ model.summary }}</p>
+            <BaseRichTextContent v-if="model.summary" class="mt-3 text-sm leading-7 text-text-muted" :source="model.summary" :format="model.text_formats?.['/summary'] || 'plain'" />
             <div v-if="model.ideal_for" class="mt-5 rounded-2xl bg-surface-muted p-4 text-sm leading-7 text-text-subtle">
               <p class="font-medium text-text-brand">{{ t('buildingWithUs.idealFor') }}</p>
-              <p>{{ model.ideal_for }}</p>
+              <BaseRichTextContent :source="model.ideal_for" :format="model.text_formats?.['/ideal_for'] || 'plain'" />
             </div>
             <div v-for="party in ['expert', 'projectapp']" :key="party" class="mt-6">
               <h4 class="text-sm font-medium text-text-brand">{{ t(party === 'expert' ? 'buildingWithUs.expertContributes' : 'buildingWithUs.projectappContributes') }}</h4>
               <ul class="mt-3 space-y-3">
-                <li v-for="item in listOf(model[`${party}_contributes`])" :key="item" class="flex gap-3 text-sm leading-6 text-text-subtle">
-                  <span class="text-text-brand" aria-hidden="true">✓</span><span>{{ item }}</span>
+                <li v-for="(item, itemIndex) in listOf(model[`${party}_contributes`])" :key="item" class="flex gap-3 text-sm leading-6 text-text-subtle">
+                  <span class="text-text-brand" aria-hidden="true">✓</span><BaseRichTextContent :source="item" :format="model.text_formats?.['/' + party + '_contributes/' + itemIndex] || 'plain'" />
                 </li>
               </ul>
             </div>
@@ -258,49 +259,49 @@ async function downloadPdf() {
 
       <section v-if="hasSection(program.incubation_periods)" data-document-enter aria-labelledby="building-with-us-periods-title" data-testid="building-with-us-periods">
         <h2 id="building-with-us-periods-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.incubation_periods.title }}</h2>
-        <p v-if="program.incubation_periods.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.incubation_periods.summary }}</p>
+        <BaseRichTextContent v-if="program.incubation_periods.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.incubation_periods.summary" :format="program.incubation_periods.text_formats?.['/summary'] || 'plain'" />
         <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <article v-for="(period, index) in listOf(program.incubation_periods.items)" :key="period.id" class="rounded-3xl border border-border-default bg-surface p-6 shadow-card" :data-testid="`building-with-us-period-${index}`">
             <p class="text-5xl font-light text-text-brand">{{ period.months }}</p>
             <h3 class="mt-4 text-xl font-medium text-text-brand">{{ period.title }}</h3>
-            <p v-if="period.summary" class="mt-3 text-sm leading-7 text-text-muted">{{ period.summary }}</p>
+            <BaseRichTextContent v-if="period.summary" class="mt-3 text-sm leading-7 text-text-muted" :source="period.summary" :format="period.text_formats?.['/summary'] || 'plain'" />
           </article>
         </div>
       </section>
 
       <section v-if="hasSection(program.scope)" data-document-enter aria-labelledby="building-with-us-scope-title" data-testid="building-with-us-scope">
         <h2 id="building-with-us-scope-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.scope.title }}</h2>
-        <p v-if="program.scope.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.scope.summary }}</p>
+        <BaseRichTextContent v-if="program.scope.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.scope.summary" :format="program.scope.text_formats?.['/summary'] || 'plain'" />
         <div class="mt-8 grid gap-5 lg:grid-cols-2">
           <article v-for="item in listOf(program.scope.items)" :key="item.id" class="rounded-3xl border border-border-default bg-surface p-6 shadow-card">
             <h3 class="text-xl font-medium text-text-brand">{{ item.title }}</h3>
-            <p v-if="item.summary" class="mt-3 text-sm leading-7 text-text-muted">{{ item.summary }}</p>
+            <BaseRichTextContent v-if="item.summary" class="mt-3 text-sm leading-7 text-text-muted" :source="item.summary" :format="item.text_formats?.['/summary'] || 'plain'" />
           </article>
         </div>
       </section>
 
       <section v-if="hasSection(program.milestones)" data-document-enter aria-labelledby="building-with-us-milestones-title" data-testid="building-with-us-milestones">
         <h2 id="building-with-us-milestones-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.milestones.title }}</h2>
-        <p v-if="program.milestones.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.milestones.summary }}</p>
+        <BaseRichTextContent v-if="program.milestones.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.milestones.summary" :format="program.milestones.text_formats?.['/summary'] || 'plain'" />
         <ol class="mt-8 space-y-5 border-l-2 border-primary pl-5">
           <li v-for="(item, index) in listOf(program.milestones.items)" :key="item.id" class="flex gap-4 rounded-2xl border border-border-default bg-surface p-5 shadow-card">
             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-lg font-medium text-text-brand">{{ index + 1 }}</span>
             <div class="min-w-0">
               <h3 class="text-xl font-medium text-text-brand">{{ item.title }}</h3>
-              <p v-if="item.summary" class="mt-2 text-sm leading-7 text-text-muted">{{ item.summary }}</p>
+              <BaseRichTextContent v-if="item.summary" class="mt-2 text-sm leading-7 text-text-muted" :source="item.summary" :format="item.text_formats?.['/summary'] || 'plain'" />
             </div>
           </li>
         </ol>
-        <p v-if="program.milestones.note" class="mt-6 max-w-4xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle">{{ program.milestones.note }}</p>
+        <BaseRichTextContent v-if="program.milestones.note" class="mt-6 max-w-4xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle" :source="program.milestones.note" :format="program.milestones.text_formats?.['/note'] || 'plain'" />
       </section>
 
       <section v-if="hasSection(program.agreement)" data-document-enter aria-labelledby="building-with-us-agreement-title" data-testid="building-with-us-agreement">
         <h2 id="building-with-us-agreement-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.agreement.title }}</h2>
-        <p v-if="program.agreement.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.agreement.summary }}</p>
+        <BaseRichTextContent v-if="program.agreement.summary" class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.agreement.summary" :format="program.agreement.text_formats?.['/summary'] || 'plain'" />
         <div class="mt-8 grid gap-5 lg:grid-cols-2">
           <article v-for="item in listOf(program.agreement.items)" :key="item.id" class="rounded-3xl border border-border-default bg-surface p-6 shadow-card">
             <h3 class="text-xl font-medium text-text-brand">{{ item.title }}</h3>
-            <p v-if="item.summary" class="mt-3 text-sm leading-7 text-text-muted">{{ item.summary }}</p>
+            <BaseRichTextContent v-if="item.summary" class="mt-3 text-sm leading-7 text-text-muted" :source="item.summary" :format="item.text_formats?.['/summary'] || 'plain'" />
           </article>
         </div>
       </section>
@@ -312,7 +313,7 @@ async function downloadPdf() {
             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-lg font-medium text-text-brand">{{ index + 1 }}</span>
             <div class="min-w-0">
               <h3 class="text-xl font-medium text-text-brand">{{ step.title }}</h3>
-              <p v-if="step.summary" class="mt-3 text-sm leading-7 text-text-muted">{{ step.summary }}</p>
+              <BaseRichTextContent v-if="step.summary" class="mt-3 text-sm leading-7 text-text-muted" :source="step.summary" :format="step.text_formats?.['/summary'] || 'plain'" />
             </div>
           </li>
         </ol>
@@ -335,9 +336,7 @@ async function downloadPdf() {
               <span class="min-w-0 flex-1 text-lg font-medium text-text-brand">{{ item.question }}</span>
               <span class="shrink-0 text-xl text-text-brand" aria-hidden="true">{{ expandedFaq.has(index) ? '−' : '+' }}</span>
             </BaseButton>
-            <div v-show="expandedFaq.has(index)" :id="`building-with-us-faq-panel-${index}`" class="border-t border-border-default bg-surface-raised p-5 text-sm leading-7 text-text-subtle sm:px-7" :data-testid="`building-with-us-faq-panel-${index}`">
-              {{ item.answer }}
-            </div>
+            <BaseRichTextContent v-show="expandedFaq.has(index)" :id="`building-with-us-faq-panel-${index}`" class="border-t border-border-default bg-surface-raised p-5 text-sm leading-7 text-text-subtle sm:px-7" :data-testid="`building-with-us-faq-panel-${index}`" :source="item.answer" :format="item.text_formats?.['/answer'] || 'plain'" />
           </article>
         </div>
       </section>
@@ -345,13 +344,13 @@ async function downloadPdf() {
       <section v-if="hasSection(program.cta)" data-document-enter>
         <div class="rounded-3xl bg-primary p-7 text-on-primary sm:p-12">
           <h2 v-if="program.cta.title" class="max-w-3xl text-3xl font-light sm:text-5xl">{{ program.cta.title }}</h2>
-          <p v-if="program.cta.body" class="mt-5 max-w-3xl text-base leading-7 opacity-85">{{ program.cta.body }}</p>
+          <BaseRichTextContent v-if="program.cta.body" class="mt-5 max-w-3xl text-base leading-7 opacity-85" :source="program.cta.body" :format="program.cta.text_formats?.['/body'] || 'plain'" />
           <BaseButton as="a" :to="safeWhatsappUrl(program.cta.whatsapp_url)" target="_blank" rel="noopener noreferrer" variant="accent" size="lg" v-bind="{ textPolicy: 'wrap' }" class="mt-7" data-testid="building-with-us-whatsapp-cta">
             {{ program.cta.button_label || t('buildingWithUs.whatsappCta') }}
           </BaseButton>
         </div>
       </section>
-      <p v-if="program.legal?.disclaimer" data-document-enter class="mx-auto max-w-4xl text-center text-xs leading-5 text-text-muted" data-testid="building-with-us-disclaimer">{{ program.legal.disclaimer }}</p>
+      <BaseRichTextContent v-if="program.legal?.disclaimer" data-document-enter class="mx-auto max-w-4xl text-center text-xs leading-5 text-text-muted" data-testid="building-with-us-disclaimer" :source="program.legal.disclaimer" :format="program.legal.text_formats?.['/disclaimer'] || 'plain'" />
     </main>
 
     <template v-if="floatingActions">

@@ -13,6 +13,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_CREATE } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -142,8 +143,7 @@ test.describe('Admin Document Create', () => {
 
     await page.getByLabel(/T[ií]tulo/i).fill('Nuevo Doc');
     await page.getByRole('button', { name: /Pegar Markdown/i }).click();
-    const textarea = page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i);
-    await textarea.fill('# Contenido de prueba\n\nEste es el cuerpo del documento.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Contenido de prueba\n\nEste es el cuerpo del documento.');
 
     await page.getByRole('button', { name: /Crear|Guardar/i }).click();
     await page.waitForURL(/\/panel\/documents/, { timeout: 15000 });
@@ -159,8 +159,7 @@ test.describe('Admin Document Create', () => {
       return null;
     });
     await page.goto('/panel/documents/create');
-    const markdown = page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i);
-    await markdown.fill('# Propuesta de servicios\n\nAlcance y entregables.');
+    const markdown = await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Propuesta de servicios\n\nAlcance y entregables.');
 
     await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
 
@@ -191,8 +190,8 @@ test.describe('Admin Document Create', () => {
     await expect(noteButton).toHaveAccessibleName('Agregar notas');
     await noteButton.click();
     await page.getByTestId('client-note-subject').fill('Caso resuelto');
-    await page.getByTestId('client-note-email').fill('Hola Ana,\n\nEl caso fue resuelto.');
-    await page.getByTestId('client-note-whatsapp').fill('Hola Ana, el caso ya fue resuelto.');
+    await fillRichTextSource(page.getByTestId('client-note-email'), 'Hola Ana,\n\nEl caso fue resuelto.');
+    await fillRichTextSource(page.getByTestId('client-note-whatsapp'), 'Hola Ana, el caso ya fue resuelto.');
     await expect(page.getByTestId('client-note-submit')).toHaveText('Aplicar al borrador');
     await expect(page.getByTestId('client-note-draft-hint'))
       .toContainText('Quedarán guardadas cuando crees el documento');
@@ -205,8 +204,7 @@ test.describe('Admin Document Create', () => {
     // Opening the modal proves Nuxt hydration completed before we edit the
     // underlying form; filling SSR inputs earlier can be replaced by hydration.
     await page.locator('#doc-title').fill('Informe de soporte');
-    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i)
-      .fill('# Informe\n\nCaso resuelto.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Informe\n\nCaso resuelto.');
 
     await page.getByRole('button', { name: /Crear Documento/i }).click();
     await page.waitForURL(/\/panel\/documents/, { timeout: 15000 });
@@ -214,6 +212,11 @@ test.describe('Admin Document Create', () => {
     expect(postBody.client_email_subject).toBe('Caso resuelto');
     expect(postBody.client_email_body).toBe('Hola Ana,\n\nEl caso fue resuelto.');
     expect(postBody.client_whatsapp_message).toBe('Hola Ana, el caso ya fue resuelto.');
+    expect(postBody.text_formats).toMatchObject({
+      '/content_markdown': 'markdown_html_v1',
+      '/client_email_body': 'markdown_html_v1',
+      '/client_whatsapp_message': 'whatsapp_v1',
+    });
   });
 
   test('stores a custom note in the create payload', {
@@ -232,18 +235,17 @@ test.describe('Admin Document Create', () => {
     await page.getByTestId('doc-client-note-open').click();
     await page.getByTestId('client-note-add-custom').click();
     await page.getByTestId('client-note-custom-title-0').fill('Próximo paso');
-    await page.getByTestId('client-note-custom-content-0').fill('Confirmar la fecha de entrega.');
+    await fillRichTextSource(page.getByTestId('client-note-custom-content-0'), 'Confirmar la fecha de entrega.');
     await page.getByTestId('client-note-submit').click();
 
     await page.locator('#doc-title').fill('Informe con contexto');
-    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i)
-      .fill('# Informe');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Informe');
 
     await page.getByRole('button', { name: /Crear Documento/i }).click();
     await page.waitForURL(/\/panel\/documents/, { timeout: 15000 });
 
     expect(postBody.client_custom_notes).toEqual([
-      { title: 'Próximo paso', content: 'Confirmar la fecha de entrega.' },
+      { title: 'Próximo paso', content: 'Confirmar la fecha de entrega.', text_formats: { '/content': 'markdown_html_v1' } },
     ]);
   });
 
@@ -267,8 +269,7 @@ test.describe('Admin Document Create', () => {
     await page.getByTestId('client-note-submit').click();
 
     await page.locator('#doc-title').fill('Informe rechazado');
-    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i)
-      .fill('# Informe');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Informe');
 
     const responsePromise = page.waitForResponse(
       (response) => response.url().includes('/api/documents/create-from-markdown/'),
@@ -300,8 +301,7 @@ test.describe('Admin Document Create', () => {
     await page.getByTestId('client-note-submit').click();
 
     await page.locator('#doc-title').fill('Informe pendiente');
-    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i)
-      .fill('# Informe');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Informe');
 
     const responsePromise = page.waitForResponse(
       (response) => response.url().includes('/api/documents/create-from-markdown/'),
@@ -402,8 +402,7 @@ test.describe('Admin Document Create', () => {
     await expect(page.getByTestId('doc-client-autocomplete')).toHaveValue('Kore SAS');
 
     await page.getByLabel(/T[ií]tulo/i).fill('Entregable Kore');
-    const textarea = page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i);
-    await textarea.fill('# Entregable');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Entregable');
     await page.getByRole('button', { name: /Crear|Guardar/i }).click();
     await page.waitForURL(/\/panel\/documents/, { timeout: 15000 });
 
@@ -513,7 +512,7 @@ test.describe('Admin Document Create', () => {
     await expect(folderPicker).toHaveValue('Vástago / Entregables');
 
     await page.getByLabel(/T[ií]tulo/i).fill('Acta de entrega');
-    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i).fill('# Acta');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Acta');
     await page.getByRole('button', { name: /Crear|Guardar/i }).click();
 
     await expect(page).toHaveURL(/\/panel\/documents\/10\/edit/);
@@ -550,7 +549,7 @@ test.describe('Admin Document Create', () => {
     await expect(page.getByText('Carpeta ajustada', { exact: true })).toBeVisible();
     await expect(page.getByTestId('doc-folder-select')).toHaveValue('Vástago');
     await page.getByLabel(/T[ií]tulo/i).fill('Informe de avance');
-    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i).fill('# Informe');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Informe');
     await page.getByRole('button', { name: /Crear|Guardar/i }).click();
 
     await expect(page).toHaveURL(/\/panel\/documents\/10\/edit/);
@@ -656,7 +655,7 @@ test.describe('Admin Document Create', () => {
 
     const title = page.locator('#doc-title');
     await title.fill('Informe con un título demasiado largo');
-    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i).fill('# Informe');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido en formato Markdown/i), '# Informe');
     const responsePromise = page.waitForResponse(
       (response) => response.url().includes('/api/documents/create-from-markdown/'),
     );

@@ -1,11 +1,11 @@
-{{ greeting|default:"Hola" }}{% if not greeting %} {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %} {{ client_name }}{% endif %},
 
-{{ body|default:"Te compartimos los documentos relacionados con tu proyecto." }}
+{% editorial_plain_value body|default:"Te compartimos los documentos relacionados con tu proyecto." "body" %}
 {% if document_descriptions %}
 Documentos adjuntos:
 {% for doc in document_descriptions %}- {{ doc.name }}{% if doc.description %} — {{ doc.description }}{% endif %}
 {% endfor %}{% endif %}
-{% if footer %}{{ footer }}{% endif %}
+{% if footer %}{% editorial_plain_value footer "footer" %}{% endif %}
 
 —
 {{ signature_name }}

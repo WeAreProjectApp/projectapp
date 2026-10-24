@@ -12,7 +12,7 @@
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Intro</label>
-      <textarea v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextEditor v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" />
     </div>
 
     <div class="flex items-center justify-between pt-2">
@@ -43,11 +43,11 @@
           </div>
           <div>
             <label class="block text-xs font-medium text-text-muted mb-1">Descripción</label>
-            <textarea v-model="cat.description" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+            <BaseRichTextEditor v-model="cat.description" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="cat.text_formats?.['/description'] || 'plain'" @update:format="cat.text_formats = { ...cat.text_formats, '/description': $event }" />
           </div>
           <div>
             <label class="block text-xs font-medium text-text-muted mb-1">Lo bueno (una línea por ítem)</label>
-            <textarea v-model="cat.strengthsText" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default"></textarea>
+            <BaseRichTextListEditor v-model="cat.strengthsText" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default" format-path="/strengths" :formats="cat.text_formats || {}" @update:formats="cat.text_formats = $event" />
           </div>
 
           <div class="pt-2 border-t border-border-muted">
@@ -66,7 +66,7 @@
                   <option v-for="lvl in SEVERITY_LEVELS" :key="lvl" :value="lvl">{{ lvl }}</option>
                 </select>
                 <input v-model="f.title" type="text" placeholder="Título" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" />
-                <textarea v-model="f.detail" rows="2" placeholder="Detalle" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+                <BaseRichTextEditor v-model="f.detail" rows="2" placeholder="Detalle" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="f.text_formats?.['/detail'] || 'plain'" @update:format="f.text_formats = { ...f.text_formats, '/detail': $event }" />
           <BaseActionButton action="delete" variant="danger-ghost" label="Eliminar hallazgo" size="sm" @click="cat.findings.splice(fi,1)" />
               </div>
             </div>
@@ -88,7 +88,7 @@
                   <option v-for="lvl in SEVERITY_LEVELS" :key="lvl" :value="lvl">{{ lvl }}</option>
                 </select>
                 <input v-model="r.title" type="text" placeholder="Sugerencia" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" />
-                <textarea v-model="r.detail" rows="2" placeholder="Relación/Detalle" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+                <BaseRichTextEditor v-model="r.detail" rows="2" placeholder="Relación/Detalle" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="r.text_formats?.['/detail'] || 'plain'" @update:format="r.text_formats = { ...r.text_formats, '/detail': $event }" />
           <BaseActionButton action="delete" variant="danger-ghost" label="Eliminar recomendación" size="sm" @click="r.recommendations?.splice(ri,1); cat.recommendations.splice(ri,1)" />
               </div>
             </div>
@@ -109,6 +109,7 @@ const emit = defineEmits(['update:modelValue']);
 function cloneCategories(list) {
   return (list || []).map((c) => ({
     key: c.key || '',
+    ...(c.text_formats ? { text_formats: { ...c.text_formats } } : {}),
     title: c.title || '',
     description: c.description || '',
     strengthsText: c.strengthsText || '',

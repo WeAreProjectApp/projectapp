@@ -1,4 +1,4 @@
-<!doctype html>
+{% load editorial %}<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -50,8 +50,8 @@ a{text-decoration:none}
 </td></tr>
 
 <tr><td class="px-40" style="padding:32px 40px 0 40px;">
-<p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %}</p>
-<p style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{{ body|default:"Tu propuesta está por vencer. Queremos que arranquemos juntos, así que apartamos cupo en nuestro calendario de noviembre y aplicamos un descuento si confirmas antes del cierre de la semana."|linebreaksbr }}</p>
+<div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{% editorial_email_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %}</div>
+<div style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{% editorial_email_value body|default:"Tu propuesta está por vencer. Queremos que arranquemos juntos, así que apartamos cupo en nuestro calendario de noviembre y aplicamos un descuento si confirmas antes del cierre de la semana." "body" %}</div>
 </td></tr>
 
 <tr><td class="px-40" style="padding:32px 40px 0 40px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#001713;border-radius:16px;">
@@ -71,7 +71,7 @@ a{text-decoration:none}
 <tr><td class="px-40" align="center" style="padding:40px 40px 12px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="center" bgcolor="#FF4D6A" style="border-radius:999px;mso-padding-alt:18px 32px;">
-<a href="{{ proposal_url }}" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#ffffff;background:#FF4D6A;border-radius:999px;">{{ cta_text|default:"Aceptar la oferta" }} &nbsp;→</a>
+<a href="{{ proposal_url }}" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#ffffff;background:#FF4D6A;border-radius:999px;">{% editorial_email_value cta_text|default:"Aceptar la oferta" "cta_text" %} &nbsp;→</a>
 </td></tr></table>
 
 <div style="margin-top:14px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:12px;line-height:18px;color:#5a6b67;">El descuento aplica solo si confirmas antes del 14 de noviembre.</div>

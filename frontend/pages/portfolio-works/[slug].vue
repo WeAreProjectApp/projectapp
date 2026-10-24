@@ -81,11 +81,11 @@
                   {{ cJson.problem.title || (isEnglish ? 'The Challenge' : 'El Desafío') }}
                 </h2>
               </div>
-              <p class="text-lg text-green-light leading-relaxed font-regular mb-6">{{ cJson.problem.description }}</p>
+              <BaseRichTextContent class="text-lg text-green-light leading-relaxed font-regular mb-6" :source="cJson.problem.description" :format="cJson.problem.text_formats?.['/description'] || 'plain'" />
               <ul v-if="cJson.problem.highlights?.length" class="space-y-3">
                 <li v-for="(item, idx) in cJson.problem.highlights" :key="idx" class="flex items-start gap-3">
                   <svg class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4" /></svg>
-                  <span class="text-base text-green-light font-regular">{{ item }}</span>
+                  <BaseRichTextContent class="text-base text-green-light font-regular" :source="item" :format="cJson.problem.text_formats?.['/highlights/' + idx] || 'plain'" />
                 </li>
               </ul>
             </section>
@@ -100,11 +100,11 @@
                   {{ cJson.solution.title || (isEnglish ? 'Our Solution' : 'Nuestra Solución') }}
                 </h2>
               </div>
-              <p class="text-lg text-green-light leading-relaxed font-regular mb-6">{{ cJson.solution.description }}</p>
+              <BaseRichTextContent class="text-lg text-green-light leading-relaxed font-regular mb-6" :source="cJson.solution.description" :format="cJson.solution.text_formats?.['/description'] || 'plain'" />
               <ul v-if="cJson.solution.highlights?.length" class="space-y-3">
                 <li v-for="(item, idx) in cJson.solution.highlights" :key="idx" class="flex items-start gap-3">
                   <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4" /></svg>
-                  <span class="text-base text-green-light font-regular">{{ item }}</span>
+                  <BaseRichTextContent class="text-base text-green-light font-regular" :source="item" :format="cJson.solution.text_formats?.['/highlights/' + idx] || 'plain'" />
                 </li>
               </ul>
             </section>
@@ -119,11 +119,11 @@
                   {{ cJson.results.title || (isEnglish ? 'The Results' : 'Los Resultados') }}
                 </h2>
               </div>
-              <p class="text-lg text-green-light leading-relaxed font-regular mb-6">{{ cJson.results.description }}</p>
+              <BaseRichTextContent class="text-lg text-green-light leading-relaxed font-regular mb-6" :source="cJson.results.description" :format="cJson.results.text_formats?.['/description'] || 'plain'" />
               <ul v-if="cJson.results.highlights?.length" class="space-y-3 mb-8">
                 <li v-for="(item, idx) in cJson.results.highlights" :key="idx" class="flex items-start gap-3">
                   <svg class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4" /></svg>
-                  <span class="text-base text-green-light font-regular">{{ item }}</span>
+                  <BaseRichTextContent class="text-base text-green-light font-regular" :source="item" :format="cJson.results.text_formats?.['/highlights/' + idx] || 'plain'" />
                 </li>
               </ul>
               <!-- YouTube testimonial -->
@@ -195,6 +195,8 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent } from '~/utils/editorialMetadata';
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import FooterSection from '~/components/sections/FooterSection.vue';
 import { usePortfolioWorksStore } from '~/stores/portfolio_works';
@@ -210,7 +212,7 @@ const portfolioStore = usePortfolioWorksStore();
 const work = computed(() => portfolioStore.currentWork);
 const isEnglish = computed(() => locale.value.startsWith('en'));
 const portfolioLang = computed(() => isEnglish.value ? 'en' : 'es');
-const cJson = computed(() => work.value?.content_json || null);
+const cJson = computed(() => work.value?.content_json ? resolveEditorialContent(work.value.content_json, work.value.text_formats, '/content_json_' + (isEnglish.value ? 'en' : 'es')) : null);
 
 const videoEmbedUrl = computed(() => {
   const url = cJson.value?.results?.testimonial_video_url;

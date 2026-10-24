@@ -688,6 +688,8 @@
         <DocumentEditorContent
           ref="markdownEditorRef"
           v-model="form.content_markdown"
+            :format="form.text_formats['/content_markdown'] || 'markdown'"
+            @update:format="form.text_formats['/content_markdown'] = $event"
           textarea-id="edit-markdown"
           label="Contenido Markdown"
           placeholder="# Contenido del documento..."
@@ -737,6 +739,7 @@
       :email-body="form.client_email_body"
       :whatsapp-message="form.client_whatsapp_message"
       :custom-notes="form.client_custom_notes"
+      :textFormats="form.text_formats"
       :notes="normalizedNotes"
       :immutable-content="pdfPreviewDocument"
       :saving="documentStore.isUpdating"
@@ -760,6 +763,7 @@
       <DocumentMarkdownBody
         v-if="form.content_markdown.trim()"
         :markdown="form.content_markdown"
+        :format="form.text_formats?.['/content_markdown'] || 'markdown'"
         variant="full"
         :theme="form.template_style"
         class="max-w-4xl mx-auto"
@@ -932,6 +936,7 @@ const form = reactive({
   content_markdown: '',
   client_email_subject: '',
   client_email_body: '',
+  text_formats: {},
   client_whatsapp_message: '',
   client_custom_notes: [],
   folder_id: null,
@@ -1078,6 +1083,7 @@ const notesDirty = computed(() => NOTE_FIELDS.some((field) => isFieldDirty(field
 function assignClientNote(note) {
   form.client_email_subject = note.subject;
   form.client_email_body = note.emailBody;
+  form.text_formats = { ...form.text_formats, ...note.textFormats };
   form.client_whatsapp_message = note.whatsappMessage;
   form.client_custom_notes = note.customNotes;
 }
@@ -1095,6 +1101,7 @@ function notePayload(note) {
   return {
     client_email_subject: note.subject,
     client_email_body: note.emailBody,
+    text_formats: { ...form.text_formats, ...note.textFormats },
     client_whatsapp_message: note.whatsappMessage,
     client_custom_notes: note.customNotes,
   };
@@ -1276,6 +1283,7 @@ async function reloadDocument() {
     form.content_markdown = result.data.content_markdown || '';
     form.client_email_subject = result.data.client_email_subject || '';
     form.client_email_body = result.data.client_email_body || '';
+    form.text_formats = { ...result.data.text_formats };
     form.client_whatsapp_message = result.data.client_whatsapp_message || '';
     form.client_custom_notes = Array.isArray(result.data.client_custom_notes)
       ? result.data.client_custom_notes.map((note) => ({ ...note }))
@@ -1318,6 +1326,7 @@ async function handleSave() {
     content_markdown: form.content_markdown,
     client_email_subject: form.client_email_subject,
     client_email_body: form.client_email_body,
+    text_formats: { ...form.text_formats },
     client_whatsapp_message: form.client_whatsapp_message,
     client_custom_notes: form.client_custom_notes,
     folder_id: form.folder_id,

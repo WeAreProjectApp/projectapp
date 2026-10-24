@@ -18,7 +18,7 @@ def _indent_depth(ws):
     return ws.count('\t') + len(ws.replace('\t', '')) // 2
 
 
-def markdown_to_blocks(text):
+def markdown_to_blocks(text, *, editorial=False):
     """Convert Markdown text into a list of block dicts.
 
     Supported block types:
@@ -37,6 +37,27 @@ def markdown_to_blocks(text):
     Returns:
         list[dict]: List of block objects.
     """
+    # Extended editorial HTML needs the same parsed grammar as email and the
+    # browser, rather than falling through the historical line parser.
+    if editorial or re.search(r'<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b', text or '', re.I):
+        import copy
+        import xml.etree.ElementTree as ET
+        from content.services.editorial_format import parse_html, render_source, serialize_html
+        root = parse_html(render_source(replace_shortcodes(text or ''), strict=False), strict=False)
+        blocks = []
+        for element in root:
+            wrapper = ET.Element('div')
+            wrapper.append(copy.deepcopy(element))
+            html = serialize_html(wrapper)
+            if element.attrib.get('data-editor-block') == 'toc':
+                blocks.append({'type': 'toc'})
+            elif re.fullmatch(r'h[1-6]', element.tag):
+                blocks.append({'type': 'heading', 'level': int(element.tag[1]),
+                               'text': ''.join(element.itertext()), 'html': html})
+            else:
+                blocks.append({'type': 'rich_html', 'html': html})
+        return blocks
+
     # :shortcode: → emoji before parsing (code spans are left untouched),
     # so every writer — panel, MCP connector, seeds — gets the same PDF.
     text = replace_shortcodes(text or '')

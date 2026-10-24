@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 
-jest.mock('marked', () => ({ marked: jest.fn((text) => text) }));
+jest.mock('marked', () => ({ ...jest.requireActual('marked'), marked: jest.fn((text) => text) }));
 jest.mock('dompurify', () => ({ sanitize: jest.fn((val) => val) }));
 
 // Stub all BusinessProposal section components imported from the barrel

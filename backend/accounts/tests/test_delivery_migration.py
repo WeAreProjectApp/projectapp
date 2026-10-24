@@ -1,5 +1,6 @@
 """The authorized legacy purge must not cascade into client/shared records."""
 import pytest
+from django.core.management import call_command
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 
@@ -35,6 +36,7 @@ def _migrate_legacy_fixture():
     executor = MigrationExecutor(connection)
     latest = executor.loader.graph.leaf_nodes()
     try:
+        call_command('flush', interactive=False, verbosity=0)
         old_target = _legacy_targets(executor.loader.graph)
         executor.migrate(old_target)
         old = executor.loader.project_state(old_target).apps

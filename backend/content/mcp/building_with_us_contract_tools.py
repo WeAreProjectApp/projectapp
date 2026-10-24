@@ -84,13 +84,13 @@ def _schema(*, sensitive=False, restore=False):
     if restore:
         properties['version_id'] = {'type': 'integer', 'minimum': 1}
     else:
-        properties.update({'markdown': {'type': 'string', 'minLength': 1, 'maxLength': 250000},
+        properties.update({'markdown': {'description': 'Fuente markdown_html_v1: Markdown con listas/tablas y HTML limitado para color, resaltado y alineación.', 'type': 'string', 'minLength': 1, 'maxLength': 250000},
                            'patches': {'type': 'array', 'minItems': 1, 'maxItems': 50, 'items': PATCH}})
     if sensitive:
         properties['change_note'] = {'type': 'string', 'minLength': 1, 'maxLength': 4000}
     descriptions = {
         'version_id': 'Identificador de la revisión del contrato que se restaura.',
-        'markdown': 'Contrato Markdown completo; envía markdown o patches, nunca ambos.',
+        'markdown': 'Fuente markdown_html_v1 completa: Markdown con listas/tablas y HTML limitado para color, resaltado y alineación. Envía markdown o patches, nunca ambos.',
         'patches': 'Cambios literales del contrato; envía patches o markdown, nunca ambos.',
         'if_match': 'ETag vigente del contrato obtenido en la consulta previa.',
         'change_note': 'Motivo de la revisión o restauración, guardado en el historial.',
@@ -124,7 +124,7 @@ BUILDING_WITH_US_CONTRACT_TOOLS = [
      'description': 'Lee el contrato privado vigente: markdown, versión, autor, motivo, etag y estado del espejo de sólo lectura del Gestor.',
      'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {}}, 'handler': _read,
      'output_schema': {'type': 'object', 'properties': {
-         'markdown': {'type': 'string'}, 'version': {'type': 'integer'}, 'version_id': {'type': 'integer'},
+         'markdown': {'description': 'Fuente markdown_html_v1: Markdown con listas/tablas y HTML limitado para color, resaltado y alineación.', 'type': 'string'}, 'version': {'type': 'integer'}, 'version_id': {'type': 'integer'},
          'updated_at': {'type': 'string'}, 'author': {'type': 'string'}, 'change_note': {'type': 'string'},
          'etag': {'type': 'string'}, 'mirror': {'type': 'object'},
      }, 'required': ['markdown', 'version', 'version_id', 'updated_at', 'author', 'change_note', 'etag', 'mirror']}},

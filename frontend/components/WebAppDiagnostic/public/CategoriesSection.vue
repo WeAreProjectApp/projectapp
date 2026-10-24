@@ -1,7 +1,7 @@
 <template>
   <section>
     <SectionHeader :index="content.index" :title="content.title" fallback="Categorías evaluadas" />
-    <p v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 mb-6">{{ content.intro }}</p>
+    <BaseRichTextContent v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 mb-6" :source="content.intro" :format="content.text_formats?.['/intro'] || 'plain'" />
 
     <div class="space-y-3">
       <details
@@ -24,12 +24,12 @@
           </span>
         </summary>
         <div class="px-6 pb-6 border-t border-input-border bg-surface/50 dark:bg-primary-soft space-y-4 text-sm">
-          <p v-if="cat.description" class="text-text-brand/70 dark:text-text-brand/70 leading-relaxed pt-3">{{ cat.description }}</p>
+          <BaseRichTextContent v-if="cat.description" class="text-text-brand/70 dark:text-text-brand/70 leading-relaxed pt-3" :source="cat.description" :format="cat.text_formats?.['/description'] || 'plain'" />
 
           <div v-if="cat.strengths?.length">
             <h4 class="font-semibold text-text-brand dark:text-text-brand mb-1">Lo que se encontró bien</h4>
             <ul class="list-disc pl-5 space-y-1 text-text-brand/80 dark:text-text-brand/80">
-              <li v-for="(s, si) in cat.strengths" :key="si">{{ s }}</li>
+              <li v-for="(s, si) in cat.strengths" :key="si"><BaseRichTextContent :source="s" :format="cat.text_formats?.['/strengths/' + si] || 'plain'" /></li>
             </ul>
           </div>
 
@@ -43,7 +43,7 @@
                 >{{ f.level }}</span>
                 <div>
                   <div class="font-medium text-text-brand dark:text-text-brand">{{ f.title }}</div>
-                  <div v-if="f.detail" class="text-text-brand/70 dark:text-text-brand/70">{{ f.detail }}</div>
+                  <BaseRichTextContent v-if="f.detail" class="text-text-brand/70 dark:text-text-brand/70" :source="f.detail" :format="f.text_formats?.['/detail'] || 'plain'" />
                 </div>
               </li>
             </ul>
@@ -59,7 +59,7 @@
                 >{{ r.level }}</span>
                 <div>
                   <div class="font-medium text-text-brand dark:text-text-brand">{{ r.title }}</div>
-                  <div v-if="r.detail" class="text-text-brand/70 dark:text-text-brand/70">{{ r.detail }}</div>
+                  <BaseRichTextContent v-if="r.detail" class="text-text-brand/70 dark:text-text-brand/70" :source="r.detail" :format="r.text_formats?.['/detail'] || 'plain'" />
                 </div>
               </li>
             </ul>
@@ -76,6 +76,7 @@
 </template>
 
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import SectionHeader from './SectionHeader.vue';
 import { severityLevelClass as levelClass } from '~/stores/diagnostics_constants';
 

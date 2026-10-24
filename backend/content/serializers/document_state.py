@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -18,7 +19,7 @@ def actor_display(user):
     return user.get_full_name().strip() or user.get_username()
 
 
-class DocumentStateGroupSerializer(serializers.ModelSerializer):
+class DocumentStateGroupSerializer(EditorialModelSerializer):
     state_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
@@ -30,7 +31,7 @@ class DocumentStateGroupSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at')
 
 
-class DocumentStateSummarySerializer(serializers.ModelSerializer):
+class DocumentStateSummarySerializer(EditorialModelSerializer):
     group_id = serializers.IntegerField(source='group.id', read_only=True)
     group_name = serializers.CharField(source='group.name', read_only=True)
     group_mode = serializers.CharField(
@@ -169,7 +170,7 @@ class DocumentStateSerializer(DocumentStateSummarySerializer):
         return attrs
 
 
-class DocumentNoteSerializer(serializers.ModelSerializer):
+class DocumentNoteSerializer(EditorialModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     resolved_by_name = serializers.SerializerMethodField()
     deleted_by_name = serializers.SerializerMethodField()
@@ -195,7 +196,7 @@ class DocumentNoteSerializer(serializers.ModelSerializer):
         return actor_display(obj.deleted_by)
 
 
-class DocumentNoteEventSerializer(serializers.ModelSerializer):
+class DocumentNoteEventSerializer(EditorialModelSerializer):
     actor_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -210,7 +211,7 @@ class DocumentNoteEventSerializer(serializers.ModelSerializer):
         return actor_display(obj.actor)
 
 
-class DocumentStateEventSerializer(serializers.ModelSerializer):
+class DocumentStateEventSerializer(EditorialModelSerializer):
     actor_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -224,7 +225,7 @@ class DocumentStateEventSerializer(serializers.ModelSerializer):
         return actor_display(obj.actor)
 
 
-class DocumentStateEpisodeSerializer(serializers.ModelSerializer):
+class DocumentStateEpisodeSerializer(EditorialModelSerializer):
     state = DocumentStateSummarySerializer(read_only=True)
     opening_time_known = serializers.SerializerMethodField()
     duration_seconds = serializers.SerializerMethodField()
@@ -267,7 +268,7 @@ class DocumentStateEpisodeSerializer(serializers.ModelSerializer):
         return DocumentNoteSerializer(notes, many=True).data
 
 
-class DocumentBrowseStateSerializer(serializers.ModelSerializer):
+class DocumentBrowseStateSerializer(EditorialModelSerializer):
     """Only the state fields rendered by a document row or card."""
 
     group_mode = serializers.CharField(
@@ -283,7 +284,7 @@ class DocumentBrowseStateSerializer(serializers.ModelSerializer):
         )
 
 
-class DocumentBrowseStateEpisodeSerializer(serializers.ModelSerializer):
+class DocumentBrowseStateEpisodeSerializer(EditorialModelSerializer):
     """Compact active-state projection for the paginated document browser."""
 
     state = DocumentBrowseStateSerializer(read_only=True)
@@ -333,6 +334,7 @@ class CorrectEpisodeOpeningSerializer(serializers.Serializer):
 
 
 class CreateDocumentNoteSerializer(serializers.Serializer):
+    text_formats = serializers.JSONField(required=False)
     title = serializers.CharField(
         max_length=120, required=False, allow_blank=True, default='',
     )
@@ -341,6 +343,7 @@ class CreateDocumentNoteSerializer(serializers.Serializer):
 
 
 class UpdateDocumentNoteSerializer(serializers.Serializer):
+    text_formats = serializers.JSONField(required=False)
     title = serializers.CharField(max_length=120, required=False, allow_blank=True)
     content = serializers.CharField(required=False)
 

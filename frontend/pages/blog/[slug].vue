@@ -67,9 +67,7 @@
               {{ post.title }}
             </h1>
 
-            <p class="text-lg sm:text-xl md:text-2xl mb-8 sm:mb-10 text-green-light leading-relaxed font-regular" itemprop="description">
-              {{ post.excerpt }}
-            </p>
+            <BaseRichTextContent class="text-lg sm:text-xl md:text-2xl mb-8 sm:mb-10 text-green-light leading-relaxed font-regular" itemprop="description" :source="post.excerpt" :format="post.text_formats?.['/excerpt_' + (locale === 'en-us' ? 'en' : 'es')] || 'plain'" />
 
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-8 sm:pb-10 border-b border-border-default/60">
               <div class="flex items-center gap-4">
@@ -126,8 +124,9 @@
         <div class="px-4 sm:px-6 pb-14 sm:pb-20">
           <div class="max-w-3xl mx-auto">
             <BlogContentRenderer
-              :content-json="post.content_json"
+              :content-json="resolveEditorialContent(post.content_json, post.text_formats, '/content_json_' + (locale === 'en-us' ? 'en' : 'es'))"
               :html-content="post.content"
+              :content-format="post.text_formats?.['/content_' + (locale === 'en-us' ? 'en' : 'es')] || 'plain'"
             />
 
             <!-- CTA inline -->
@@ -257,6 +256,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent } from '~/utils/editorialMetadata';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import ContactSection from '~/components/sections/ContactSection.vue';
 import FooterSection from '~/components/sections/FooterSection.vue';
@@ -357,7 +357,7 @@ const articleTitle = computed(() => {
   if (!post.value) return 'Blog — Project App.';
   return post.value.meta_title || `${post.value.title} — Project App.`;
 });
-const articleDescription = computed(() => post.value?.meta_description || post.value?.excerpt || '');
+const articleDescription = computed(() => post.value?.meta_description || post.value?.excerpt_plain || post.value?.excerpt || '');
 
 useHead({
   title: articleTitle,

@@ -1,5 +1,18 @@
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue'
+import BaseRichTextListEditor from '../../components/base/BaseRichTextListEditor.vue'
+import BaseSegmented from '../../components/base/BaseSegmented.vue'
 import CostForm from '../../components/WebAppDiagnostic/admin/sections/CostForm.vue'
+
+const originalUseI18n = global.useI18n
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }) })
+afterAll(() => { global.useI18n = originalUseI18n })
+
+async function editSource(wrapper, index, value) {
+  await wrapper.findAll('[role="tab"]').filter((tab) => tab.text() === 'richText.source')[index].trigger('click')
+  await wrapper.findAll('[data-testid="rich-text-source-input"]')[index].setValue(value)
+}
 
 function defaultValue(overrides = {}) {
   return {
@@ -15,6 +28,7 @@ function defaultValue(overrides = {}) {
 function mountForm(propsOverrides = {}) {
   return mount(CostForm, {
     props: { modelValue: defaultValue(), ...propsOverrides },
+    global: { components: { BaseRichTextEditor, BaseRichTextListEditor, BaseSegmented } },
   })
 }
 
@@ -31,13 +45,13 @@ describe('CostForm', () => {
 
   it('renders intro textarea with value from modelValue', () => {
     const wrapper = mountForm({ modelValue: defaultValue({ intro: 'El costo total es...' }) })
-    expect(wrapper.findAll('textarea')[0].element.value).toBe('El costo total es...')
+    expect(wrapper.findAll('[data-testid="rich-text-source-input"]')[0].element.value).toBe('El costo total es...')
   })
 
   it('renders note textarea with value from modelValue', () => {
     const wrapper = mountForm({ modelValue: defaultValue({ note: 'IVA incluido.' }) })
-    const textareas = wrapper.findAll('textarea')
-    expect(textareas[textareas.length - 1].element.value).toBe('IVA incluido.')
+    const editors = wrapper.findAll('[data-testid="rich-text-source-input"]')
+    expect(editors[editors.length - 1].element.value).toBe('IVA incluido.')
   })
 
   it('renders existing payment description items', () => {
@@ -57,15 +71,17 @@ describe('CostForm', () => {
 
   it('clicking add button appends an empty payment item', async () => {
     const wrapper = mountForm()
-    const addBtn = wrapper.findAll('button')[0]
+    const addBtn = wrapper.findAll('button').find((button) => button.text() === 'Agregar')
     await addBtn.trigger('click')
+    await nextTick()
     const textInputs = wrapper.findAll('input[type="text"]')
     expect(textInputs).toHaveLength(3) // base 2 + 1 new label input
   })
 
   it('emits update:modelValue with one new item after clicking add', async () => {
     const wrapper = mountForm()
-    await wrapper.findAll('button')[0].trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === 'Agregar').trigger('click')
+    await nextTick()
     expect(wrapper.emitted('update:modelValue')).toBeTruthy()
     const emitted = wrapper.emitted('update:modelValue')[0][0]
     expect(emitted.paymentDescription).toHaveLength(1)
@@ -81,8 +97,8 @@ describe('CostForm', () => {
         ],
       }),
     })
-    // button[0] = Agregar, button[1] = delete first item
-    await wrapper.findAll('button')[1].trigger('click')
+    await wrapper.get('button[aria-label="Eliminar descripción"]').trigger('click')
+    await nextTick()
     const textInputs = wrapper.findAll('input[type="text"]')
     expect(textInputs).toHaveLength(3) // base 2 + 1 remaining
     expect(textInputs[2].element.value).toBe('Cuota 2')
@@ -96,15 +112,15 @@ describe('CostForm', () => {
 
   it('emits update:modelValue when intro textarea changes', async () => {
     const wrapper = mountForm()
-    await wrapper.findAll('textarea')[0].setValue('Nuevo intro de costo')
-    expect(wrapper.emitted('update:modelValue')[0][0]).toMatchObject({ intro: 'Nuevo intro de costo' })
+    await editSource(wrapper, 0, 'Nuevo intro de costo')
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toMatchObject({ intro: 'Nuevo intro de costo' })
   })
 
   it('emits update:modelValue when note textarea changes', async () => {
     const wrapper = mountForm()
-    const textareas = wrapper.findAll('textarea')
-    await textareas[textareas.length - 1].setValue('Nota actualizada')
-    expect(wrapper.emitted('update:modelValue')[0][0]).toMatchObject({ note: 'Nota actualizada' })
+    const sourceInputs = wrapper.findAll('[data-testid="rich-text-source-input"]')
+    await editSource(wrapper, sourceInputs.length - 1, 'Nota actualizada')
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toMatchObject({ note: 'Nota actualizada' })
   })
 
   it('syncs form when modelValue prop is updated externally', async () => {

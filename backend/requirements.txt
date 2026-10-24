@@ -43,3 +43,6 @@ html5lib==1.1
 tinycss2>=1.4,<2
 defusedxml>=0.7.1,<0.8
 playwright==1.63.0
+
+# Versioned editorial Markdown grammar
+markdown-it-py==4.2.0

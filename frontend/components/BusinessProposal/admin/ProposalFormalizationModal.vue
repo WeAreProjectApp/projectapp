@@ -186,11 +186,11 @@ onBeforeUnmount(() => { alive = false; clearPdf(); });
           </BaseFormField>
         </BaseFormRow>
         <label class="block text-sm text-text-default">Introducción
-          <textarea v-model="fields.body" rows="3" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" />
+          <BaseRichTextEditor v-model="fields.body" rows="3" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2"  />
         </label>
         <div v-for="(section, index) in sections" :key="section.id" class="space-y-2 rounded-lg border border-border-muted p-3">
           <label class="block text-sm text-text-default">Sección adicional {{ index + 1 }}
-            <textarea v-model="section.text" rows="4" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" :data-testid="`formalization-section-${index}`" />
+            <BaseRichTextEditor v-model="section.text" rows="4" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" :data-testid="`formalization-section-${index}`"  />
           </label>
           <div class="flex flex-wrap items-center gap-2">
             <label class="mr-auto text-xs text-text-default"><input v-model="section.markdown" type="checkbox" /> Markdown</label>
@@ -201,7 +201,7 @@ onBeforeUnmount(() => { alive = false; clearPdf(); });
         </div>
         <BaseButton variant="secondary" size="sm" :disabled="sections.length >= 20" disabled-reason="Puedes agregar hasta 20 secciones." @click="addSection">Agregar sección</BaseButton>
         <label class="block text-sm text-text-default">Cierre
-          <textarea v-model="fields.footer" rows="3" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" />
+          <BaseRichTextEditor v-model="fields.footer" rows="3" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2"  />
         </label>
       </template>
       <template v-else>

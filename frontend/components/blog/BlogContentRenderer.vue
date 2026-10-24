@@ -1,9 +1,7 @@
 <template>
   <div v-if="hasJsonContent" class="blog-json-content">
     <!-- Introduction -->
-    <p class="text-xl mb-12 text-text-brand/80 dark:text-white/80 leading-relaxed font-regular">
-      {{ contentJson.intro }}
-    </p>
+    <BaseRichTextContent class="text-xl mb-12 text-text-brand/80 dark:text-white/80 leading-relaxed font-regular" :source="contentJson.intro" :format="contentJson.text_formats?.['/intro'] || 'plain'" />
 
     <!-- Sections -->
     <div v-for="(section, index) in contentJson.sections" :key="index" class="mb-16">
@@ -11,9 +9,7 @@
         {{ section.heading }}
       </h2>
 
-      <p v-if="section.content" class="text-lg mb-6 text-green-light dark:text-green-light/80 leading-relaxed font-regular">
-        {{ section.content }}
-      </p>
+      <BaseRichTextContent v-if="section.content" class="text-lg mb-6 text-green-light dark:text-green-light/80 leading-relaxed font-regular" :source="section.content" :format="section.text_formats?.['/content'] || 'plain'" />
 
       <!-- List with check icons -->
       <ul v-if="section.list && section.list.length" class="space-y-4 mb-6">
@@ -21,7 +17,7 @@
           <svg class="w-6 h-6 flex-shrink-0 mt-1 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          <span class="text-lg text-green-light dark:text-green-light/80 leading-relaxed font-regular">{{ item }}</span>
+          <BaseRichTextContent class="text-lg text-green-light dark:text-green-light/80 leading-relaxed font-regular" :source="item" :format="section.text_formats?.['/list/' + i] || 'plain'" />
         </li>
       </ul>
 
@@ -33,7 +29,7 @@
           class="bg-primary-soft rounded-2xl p-5 sm:p-8 border border-border-default"
         >
           <h3 class="text-xl font-medium mb-3 text-text-brand dark:text-white">{{ sub.title }}</h3>
-          <p class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular">{{ sub.description }}</p>
+          <BaseRichTextContent class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular" :source="sub.description" :format="sub.text_formats?.['/description'] || 'plain'" />
         </div>
       </div>
 
@@ -48,7 +44,7 @@
           </div>
           <div class="pb-8">
             <h4 class="text-lg font-medium mb-2 text-text-brand dark:text-white">{{ item.step }}</h4>
-            <p class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular">{{ item.description }}</p>
+            <BaseRichTextContent class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular" :source="item.description" :format="item.text_formats?.['/description'] || 'plain'" />
           </div>
         </div>
       </div>
@@ -60,7 +56,7 @@
           :key="i"
           class="bg-primary-soft rounded-xl p-6"
         >
-          <p class="text-base font-regular text-text-brand dark:text-white/80 leading-relaxed">{{ example }}</p>
+          <BaseRichTextContent class="text-base font-regular text-text-brand dark:text-white/80 leading-relaxed" :source="example" :format="section.text_formats?.['/examples/' + i] || 'plain'" />
         </div>
       </div>
 
@@ -108,7 +104,7 @@
           <span class="text-xl flex-shrink-0 mt-0.5" aria-hidden="true">{{ calloutIcon(section.callout.type) }}</span>
           <div>
             <p v-if="section.callout.title" class="font-medium mb-2 text-text-brand dark:text-white text-lg">{{ section.callout.title }}</p>
-            <p class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular">{{ section.callout.text }}</p>
+            <BaseRichTextContent class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular" :source="section.callout.text" :format="section.callout.text_formats?.['/text'] || 'plain'" />
           </div>
         </div>
       </div>
@@ -137,7 +133,7 @@
         <ul class="space-y-3">
           <li v-for="(takeaway, i) in section.key_takeaways" :key="i" class="flex items-start gap-3">
             <span class="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{{ i + 1 }}</span>
-            <span class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular">{{ takeaway }}</span>
+            <BaseRichTextContent class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular" :source="takeaway" :format="section.text_formats?.['/key_takeaways/' + i] || 'plain'" />
           </li>
         </ul>
       </div>
@@ -163,7 +159,7 @@
               <svg class="w-5 h-5 text-green-light flex-shrink-0 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
             </summary>
             <div class="px-5 sm:px-8 pb-5 sm:pb-8" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-              <p class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular" itemprop="text">{{ item.answer }}</p>
+              <BaseRichTextContent class="text-base text-green-light dark:text-green-light/80 leading-relaxed font-regular" itemprop="text" :source="item.answer" :format="item.text_formats?.['/answer'] || 'plain'" />
             </div>
           </details>
         </div>
@@ -172,23 +168,24 @@
 
     <!-- Conclusion -->
     <div v-if="contentJson.conclusion" class="bg-primary rounded-2xl p-6 sm:p-10 mb-10 sm:mb-12">
-      <p class="text-lg sm:text-xl mb-4 sm:mb-6 text-white/90 leading-relaxed font-regular">
-        {{ contentJson.conclusion }}
-      </p>
-      <p v-if="contentJson.cta" class="text-lg text-white/60 leading-relaxed font-light">
-        {{ contentJson.cta }}
-      </p>
+      <BaseRichTextContent class="text-lg sm:text-xl mb-4 sm:mb-6 text-white/90 leading-relaxed font-regular" :source="contentJson.conclusion" :format="contentJson.text_formats?.['/conclusion'] || 'plain'" />
+      <BaseRichTextContent v-if="contentJson.cta" class="text-lg text-white/60 leading-relaxed font-light" :source="contentJson.cta" :format="contentJson.text_formats?.['/cta'] || 'plain'" />
     </div>
   </div>
 
   <!-- Fallback: HTML content via v-html -->
-  <div v-else-if="htmlContent" class="blog-html-content" v-html="htmlContent" />
+  <BaseRichTextContent v-else-if="htmlContent && contentFormat !== 'plain'" :source="htmlContent" :format="contentFormat" class="blog-html-content" />
+  <div v-else-if="htmlContent" class="blog-html-content" v-html="safeLegacyHtml" />
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
+import { computed, ref, onMounted } from 'vue';
+import DOMPurify from 'dompurify';
+import { resolveEditorialContent } from '~/utils/editorialMetadata';
 
 const props = defineProps({
+  contentFormat: { type: String, default: 'plain' },
   contentJson: {
     type: Object,
     default: () => ({}),
@@ -199,11 +196,16 @@ const props = defineProps({
   },
 });
 
+const mounted = ref(false);
+onMounted(() => { mounted.value = true; });
+const safeLegacyHtml = computed(() => mounted.value ? DOMPurify.sanitize(props.htmlContent) : '');
+const contentJson = computed(() => resolveEditorialContent(props.contentJson, props.contentJson?.text_formats));
+
 const hasJsonContent = computed(() => {
-  return props.contentJson
-    && typeof props.contentJson === 'object'
-    && props.contentJson.intro
-    && Array.isArray(props.contentJson.sections);
+  return contentJson.value
+    && typeof contentJson.value === 'object'
+    && contentJson.value.intro
+    && Array.isArray(contentJson.value.sections);
 });
 
 function calloutClasses(type) {

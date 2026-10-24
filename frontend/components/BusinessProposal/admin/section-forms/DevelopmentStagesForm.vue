@@ -3,7 +3,7 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="6" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.intro" label="Texto introductorio" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.intro" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" label="Texto introductorio" :rows="2" :isSingle="true" />
   <FieldInput v-model="form.currentLabel" label="Etiqueta de etapa actual" placeholder="Actual" />
   <div>
     <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Etapas</label>
@@ -21,7 +21,7 @@
             <EmojiIconField v-model="stage.icon" label="Icono" placeholder="✉️" />
             <FieldInput v-model="stage.title" label="Título" />
           </div>
-          <FieldTextarea v-model="stage.description" label="Descripción" :rows="2" :isSingle="true" />
+          <FieldTextarea v-model="stage.description" :format="stage.text_formats?.['/description'] || 'plain'" @update:format="stage.text_formats = { ...stage.text_formats, '/description': $event }" label="Descripción" :rows="2" :isSingle="true" />
           <label class="flex items-center gap-2 mt-2 text-xs">
             <input type="checkbox" v-model="stage.current" class="rounded border-input-border text-text-brand" />
             <span class="text-text-muted/60">Etapa actual</span>

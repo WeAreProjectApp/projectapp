@@ -1120,7 +1120,7 @@ export const useProposalStore = defineStore('proposals', {
      *   edited. Sent with a wholesale sections_json write so the backend
      *   answers 409 ('stale_defaults') instead of overwriting a newer version.
      */
-    async saveProposalDefaults(lang, sectionsJson, generalConfig = null, baseUpdatedAt = null) {
+    async saveProposalDefaults(lang, sectionsJson, generalConfig = null, baseUpdatedAt = null, textFormats = null) {
       this.isUpdating = true;
       this.error = null;
       try {
@@ -1129,6 +1129,7 @@ export const useProposalStore = defineStore('proposals', {
         };
         if (Array.isArray(sectionsJson)) {
           payload.sections_json = sectionsJson;
+          if (textFormats !== null) payload.text_formats = textFormats;
           if (baseUpdatedAt) {
             payload.base_updated_at = baseUpdatedAt;
           }

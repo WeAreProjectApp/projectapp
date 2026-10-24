@@ -3,7 +3,7 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="9" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.intro" label="Intro (por qué se incluyen sin costo)" :rows="3" :isSingle="true" />
+  <FieldTextarea v-model="form.intro" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" label="Intro (por qué se incluyen sin costo)" :rows="3" :isSingle="true" />
 
   <div>
     <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Módulos a destacar</label>
@@ -208,7 +208,7 @@
     </div>
   </div>
 
-  <FieldTextarea v-model="form.footer_note" label="Nota de cierre" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.footer_note" :format="form.text_formats?.['/footer_note'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/footer_note': $event }" label="Nota de cierre" :rows="2" :isSingle="true" />
 </template>
 
 <script setup>

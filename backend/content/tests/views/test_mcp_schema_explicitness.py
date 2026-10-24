@@ -261,12 +261,22 @@ def policy_tool():
                          'allOf': [{'not': {'required': ['flag']}}]},
             'mapping': {'type': 'object', 'description': 'Mapa tipado.',
                         'additionalProperties': {'type': 'array', 'items': {'anyOf': [{'type': 'integer'}, {'type': 'null'}]}}},
+            'pointers': {'type': 'object', 'description': 'Mapa cerrado por rutas.',
+                         'additionalProperties': False,
+                         'patternProperties': {'^/': {'type': 'string', 'enum': ['markdown']}}},
             'payload': {'type': 'object', 'description': 'Contrato externo documentado.',
                         'additionalProperties': True, 'x-mcp-open-reason': 'Versioned external authoring format.'},
             'choice': {'enum': ['manual'], 'description': 'Selección.'},
             'version': {'const': 1, 'description': 'Versión.'},
         },
     }}
+
+
+def test_policy_accepts_a_closed_typed_pattern_map(policy_tool):
+    """Fails if the extended audit rejects declared, typed keys in a closed map."""
+    problems = schema_problems(policy_tool)
+
+    assert problems == []
 
 
 @pytest.mark.parametrize(('path', 'value', 'pointer'), [
@@ -283,6 +293,12 @@ def policy_tool():
     (('properties', 'data'), {'type': 'string', 'description': 'Envelope legado.'}, '/properties/data'),
     (('properties', 'mapping', 'additionalProperties'), {}, '/properties/mapping/additionalProperties'),
     (('properties', 'payload', 'properties'), {'untyped': {}}, '/properties/payload/additionalProperties'),
+    (('properties', 'pointers', 'patternProperties', '^/'), {}, '/properties/pointers/patternProperties/^~1'),
+    (('properties', 'pointers', 'patternProperties'), {}, '/properties/pointers'),
+    (('properties', 'pointers', 'additionalProperties'), True, '/properties/pointers'),
+    (('properties', 'payload', 'patternProperties'),
+     {'^/': {'type': 'object', 'additionalProperties': True}}, '/properties/payload/patternProperties/^~1'),
+    (('properties', 'pointers', 'propertyNames'), {'pattern': '^/'}, '/properties/pointers/propertyNames'),
 ])
 def test_policy_reports_a_mutated_contract_at_its_pointer(policy_tool, path, value, pointer):
     before = deepcopy(policy_tool)

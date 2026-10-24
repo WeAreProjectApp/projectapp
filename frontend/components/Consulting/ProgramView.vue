@@ -1,4 +1,5 @@
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed, nextTick, ref, watch } from 'vue'
 import PublicDocumentAction from '~/components/PublicDocumentAction.vue'
 import PublicDocumentShareButton from '~/components/PublicDocumentShareButton.vue'
@@ -6,6 +7,7 @@ import ConsultingOnboarding from '~/components/Consulting/Onboarding.vue'
 import { useConsultingTheme } from '~/composables/useConsultingTheme'
 import { usePublicDocumentEntrance } from '~/composables/usePublicDocumentEntrance'
 import { isConsultingProgram, consultingListOf, safeConsultingWhatsappUrl } from '~/utils/consulting'
+import { resolveEditorialContent } from '~/utils/editorialMetadata'
 
 const props = defineProps({
   program: { type: Object, required: true },
@@ -24,9 +26,10 @@ const expandedFaq = ref(new Set())
 const isDownloading = ref(false)
 const downloadError = ref(false)
 
+const program = computed(() => resolveEditorialContent(props.program, props.program?.text_formats))
 const hasSection = (section) => Boolean(section && Object.keys(section).length)
 const sectionKeys = ['areas', 'impact', 'measurement', 'deliverable', 'process', 'implementation', 'diagnostic']
-const sections = computed(() => sectionKeys.filter((key) => hasSection(props.program[key])))
+const sections = computed(() => sectionKeys.filter((key) => hasSection(program.value[key])))
 const implementationLinks = computed(() => ({
   cells: `/${props.language === 'en' ? 'en-us' : 'es-co'}/building-on-demand`,
   'building-with-us': `/${props.language === 'en' ? 'en-us' : 'es-co'}/building-with-us`,
@@ -132,8 +135,8 @@ async function downloadPdf() {
         <div v-if="program.hero?.title" class="max-w-4xl">
           <p class="text-sm font-medium uppercase tracking-[0.18em] text-text-brand">{{ program.hero.eyebrow }}</p>
           <h1 class="mt-4 text-balance text-4xl font-light tracking-tight text-text-brand sm:text-6xl">{{ program.hero.title }}</h1>
-          <p class="mt-6 text-base leading-8 text-text-muted sm:text-lg">{{ program.hero.subtitle }}</p>
-          <p class="mt-6 rounded-2xl border border-border-default bg-surface p-5 text-sm leading-7 text-text-muted" data-testid="consulting-hero-aside">{{ program.hero.note }}</p>
+          <BaseRichTextContent class="mt-6 text-base leading-8 text-text-muted sm:text-lg" :source="program.hero.subtitle" :format="program.hero.text_formats?.['/subtitle'] || 'plain'" />
+          <BaseRichTextContent class="mt-6 rounded-2xl border border-border-default bg-surface p-5 text-sm leading-7 text-text-muted" data-testid="consulting-hero-aside" :source="program.hero.note" :format="program.hero.text_formats?.['/note'] || 'plain'" />
           <BaseButton v-if="program.cta" as="a" :to="safeConsultingWhatsappUrl(program.cta.whatsapp_url)" target="_blank" rel="noopener noreferrer" size="lg" class="mt-7" data-testid="consulting-whatsapp-hero">{{ program.cta.button_label }}</BaseButton>
         </div>
       </div>
@@ -148,7 +151,7 @@ async function downloadPdf() {
           <article v-for="(item, index) in consultingListOf(program[key].items)" :key="item.id" class="min-w-0 rounded-3xl border border-border-default bg-surface p-6 shadow-card" :data-testid="`consulting-${key}-${item.id}`">
             <p class="mb-3 text-sm font-medium text-text-brand" aria-hidden="true">{{ String(index + 1).padStart(2, '0') }}</p>
             <h3 class="text-xl font-medium text-text-brand">{{ item.title }}</h3>
-            <p class="mt-3 text-sm leading-7 text-text-muted">{{ item.summary }}</p>
+            <BaseRichTextContent class="mt-3 text-sm leading-7 text-text-muted" :source="item.summary" :format="item.text_formats?.['/summary'] || 'plain'" />
             <BaseButton v-if="key === 'implementation' && implementationLinks[item.id]" as="a" :to="implementationLinks[item.id]" variant="secondary" class="mt-5">{{ t('consulting.learnMore') }}: {{ item.title }}</BaseButton>
           </article>
         </div>
@@ -171,9 +174,7 @@ async function downloadPdf() {
               <span class="min-w-0 flex-1 text-lg font-medium text-text-brand">{{ item.question }}</span>
               <span class="shrink-0 text-xl text-text-brand" aria-hidden="true">{{ expandedFaq.has(index) ? '−' : '+' }}</span>
             </BaseButton>
-            <div v-show="expandedFaq.has(index)" :id="`consulting-faq-panel-${index}`" class="border-t border-border-default bg-surface-raised p-5 text-sm leading-7 text-text-subtle sm:px-7" :data-testid="`consulting-faq-panel-${index}`">
-              {{ item.answer }}
-            </div>
+            <BaseRichTextContent v-show="expandedFaq.has(index)" :id="`consulting-faq-panel-${index}`" class="border-t border-border-default bg-surface-raised p-5 text-sm leading-7 text-text-subtle sm:px-7" :data-testid="`consulting-faq-panel-${index}`" :source="item.answer" :format="item.text_formats?.['/answer'] || 'plain'" />
           </article>
         </div>
       </section>
@@ -181,13 +182,13 @@ async function downloadPdf() {
       <section v-if="hasSection(program.cta)" data-document-enter>
         <div class="rounded-3xl bg-primary p-7 text-on-primary sm:p-12">
           <h2 v-if="program.cta.title" class="max-w-3xl text-3xl font-light sm:text-5xl">{{ program.cta.title }}</h2>
-          <p v-if="program.cta.body" class="mt-5 max-w-3xl text-base leading-7 opacity-85">{{ program.cta.body }}</p>
+          <BaseRichTextContent v-if="program.cta.body" class="mt-5 max-w-3xl text-base leading-7 opacity-85" :source="program.cta.body" :format="program.cta.text_formats?.['/body'] || 'plain'" />
           <BaseButton as="a" :to="safeConsultingWhatsappUrl(program.cta.whatsapp_url)" target="_blank" rel="noopener noreferrer" variant="accent" size="lg" v-bind="{ textPolicy: 'wrap' }" class="mt-7" data-testid="consulting-whatsapp-cta">
             {{ program.cta.button_label || t('consulting.whatsappCta') }}
           </BaseButton>
         </div>
       </section>
-      <p v-if="program.legal?.disclaimer" data-document-enter class="mx-auto max-w-4xl text-center text-xs leading-5 text-text-muted" data-testid="consulting-disclaimer">{{ program.legal.disclaimer }}</p>
+      <BaseRichTextContent v-if="program.legal?.disclaimer" data-document-enter class="mx-auto max-w-4xl text-center text-xs leading-5 text-text-muted" data-testid="consulting-disclaimer" :source="program.legal.disclaimer" :format="program.legal.text_formats?.['/disclaimer'] || 'plain'" />
     </main>
 
     <template v-if="floatingActions">

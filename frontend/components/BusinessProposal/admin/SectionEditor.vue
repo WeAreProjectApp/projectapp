@@ -130,6 +130,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent, withoutEditorialPrefix } from '~/utils/editorialMetadata';
 import { reactive, ref, computed, watch } from 'vue';
 import SectionPreviewModal from '~/components/BusinessProposal/admin/SectionPreviewModal.vue';
 import TechnicalDocumentEditor from '~/components/BusinessProposal/admin/TechnicalDocumentEditor.vue';
@@ -202,11 +203,11 @@ function onPreviewSub(payload) {
 }
 
 // --- Build form state from content_json ---
-const form = reactive(buildFormFromJson(props.section.content_json || {}, props.section.section_type));
+const form = reactive(buildFormFromJson(resolveEditorialContent(props.section.content_json, props.section.text_formats, '/content_json'), props.section.section_type));
 
 watch(() => props.section, (s) => {
   sectionTitle.value = s.title;
-  Object.assign(form, buildFormFromJson(s.content_json || {}, s.section_type));
+  Object.assign(form, buildFormFromJson(resolveEditorialContent(s.content_json, s.text_formats, '/content_json'), s.section_type));
   // A store refresh (save success, panel refresh) is the new clean state.
   baselineSignature.value = dirtySignature();
 }, { deep: true });
@@ -303,6 +304,7 @@ function handleSave() {
         title: sectionTitle.value,
         is_wide_panel: props.section.is_wide_panel,
         content_json: contentJson,
+        ...(props.section.text_formats ? { text_formats: withoutEditorialPrefix(props.section.text_formats, '/content_json') } : {}),
       },
     });
     // Sync hostingPercent back to General tab when saving the investment section

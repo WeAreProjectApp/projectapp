@@ -188,7 +188,10 @@ class DocumentPdfService:
 
                 first_block = False
 
-                if block_type == 'heading':
+                if block_type == 'rich_html':
+                    from content.services.editorial_pdf import draw_editorial_html
+                    y = draw_editorial_html(c, y, block.get('html', ''), ps=ps, color=theme.body_color)
+                elif block_type == 'heading':
                     if has_toc and idx in toc_by_idx:
                         c.bookmarkPage(toc_by_idx[idx]['key'])
                     y = cls._render_heading(c, y, block, ps, theme)
@@ -310,6 +313,9 @@ class DocumentPdfService:
     @classmethod
     def _render_heading(cls, c, y, block, ps, theme):
         """Render h1/h2/h3 headings."""
+        if block.get('html'):
+            from content.services.editorial_pdf import draw_editorial_html
+            return draw_editorial_html(c, y, block['html'], ps=ps, color=theme.body_color)
         level = block.get('level', 1)
         text = block.get('text', '')
 
@@ -511,6 +517,9 @@ class DocumentPdfService:
                         'block_idx': idx,
                     })
                 y = cls._render_heading(c, y, block, ps, theme)
+            elif block_type == 'rich_html':
+                from content.services.editorial_pdf import draw_editorial_html
+                y = draw_editorial_html(c, y, block.get('html', ''), ps=ps, color=theme.body_color)
             elif block_type == 'paragraph':
                 y = cls._render_paragraph(c, y, block, ps, theme)
             elif block_type == 'table':

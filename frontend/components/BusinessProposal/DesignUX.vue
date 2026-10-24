@@ -13,16 +13,16 @@
 
         <div class="grid lg:grid-cols-12 gap-10 items-start">
           <div data-animate="fade-up" class="lg:col-span-8 space-y-6">
-            <p
+            <div
               v-for="(paragraph, idx) in content.paragraphs?.slice(0, 2)"
               :key="idx"
               class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl"
-              v-html="linkify(paragraph)"
+              v-html="linkify(paragraph, content.text_formats?.['/paragraphs/' + idx])"
             />
 
             <div v-if="content.objective" class="pt-2">
-              <h3 class="text-text-brand font-light text-base md:text-lg tracking-wide mb-3" v-html="linkify(content.objectiveTitle)" />
-              <p class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl" v-html="linkify(content.objective)" />
+              <h3 class="text-text-brand font-light text-base md:text-lg tracking-wide mb-3" v-html="linkify(content.objectiveTitle, content.text_formats?.['/objectiveTitle'])" />
+              <div class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl" v-html="linkify(content.objective, content.text_formats?.['/objective'])" />
             </div>
           </div>
 
@@ -34,7 +34,7 @@
               <ul class="space-y-4">
                 <li v-for="(item, idx) in content.focusItems" :key="idx" class="flex gap-3">
                   <span class="mt-3 h-1.5 w-1.5 rounded-full bg-accent flex-shrink-0"></span>
-                  <p class="text-on-primary font-light leading-relaxed" v-html="linkify(item)" />
+                  <div class="text-on-primary font-light leading-relaxed" v-html="linkify(item, content.text_formats?.['/focusItems/' + idx])" />
                 </li>
               </ul>
             </div>
@@ -54,6 +54,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   content: {
     type: Object,
     default: () => ({

@@ -26,6 +26,7 @@ import copy
 from django.db.models import ProtectedError
 
 from content.mcp.protocol import ToolError
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 from content.mcp.schema_policy import close_root_schemas, open_object
 from content.models import (
     BusinessProposal,
@@ -76,7 +77,7 @@ def get_proposal_template(arguments):
             'required_fields': ['general.clientName'],
             'optional_metadata': [
                 'title', 'client_email', 'client_phone', 'language',
-                'email_intro',
+                'email_intro', 'text_formats',
                 'total_investment', 'currency', 'nationality',
                 'project_type', 'project_type_custom', 'market_type',
                 'market_type_custom', 'show_contract_terms', 'show_explainer_video', 'service_contract_approved',
@@ -88,7 +89,7 @@ def get_proposal_template(arguments):
             'functionalRequirements se fusionan con los defaults (no se pueden '
             'eliminar). `email_intro` debe explicar problema, solución y resultado '
             'de negocio; es obligatorio antes de enviar. Para la guía completa de redacción usa la plantilla '
-            'descargable del panel (/panel/proposals).'
+            'descargable del panel (/panel/proposals). Cada objeto editorial de sections puede llevar text_formats relativo a sus campos, por ejemplo {"/introText":"markdown_html_v1"}; usa Markdown para listas/tablas y HTML limitado para color/alineación.'
         ),
     }
 
@@ -223,6 +224,7 @@ _PROPOSAL_ID_PROP = {'proposal_id': {'type': 'integer', 'description': 'ID de la
 _STATUS_ENUM = [c[0] for c in BusinessProposal.Status.choices]
 
 _FROM_JSON_PROPS = {
+    'text_formats': TEXT_FORMATS_SCHEMA,
     'source_hash': {'type': 'string', 'description': 'proposal_source_hash vigente; obligatorio en propuestas con cierre compartido.'},
     'title': {'type': 'string'},
     'client_name': {'type': 'string'},
@@ -231,8 +233,8 @@ _FROM_JSON_PROPS = {
     'email_intro': {
         'type': 'string',
         'description': (
-            'Mensaje personalizado en texto plano que explica el problema, la '
-            'solución propuesta y el resultado de negocio esperado.'
+            'Mensaje personalizado que explica el problema, la '
+            'solución propuesta y el resultado esperado. Admite Markdown extendido y HTML limitado cuando /email_intro declara markdown_html_v1 en text_formats.'
         ),
     },
     'client_phone': {'type': 'string'},

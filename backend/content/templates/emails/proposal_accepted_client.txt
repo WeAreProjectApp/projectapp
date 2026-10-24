@@ -1,6 +1,6 @@
-{{ greeting|default:"¡Excelente! 🎯" }}
+{% load editorial %}{% editorial_plain_value greeting|default:"¡Excelente! 🎯" "greeting" %}
 
-{{ body|default:"Gracias por la confianza. Tu propuesta quedó aceptada y arrancamos esta semana." }}
+{% editorial_plain_value body|default:"Gracias por la confianza. Tu propuesta quedó aceptada y arrancamos esta semana." "body" %}
 
 Próximos pasos:
 01. Contrato en 24 h — firmable digitalmente.
@@ -9,7 +9,7 @@ Próximos pasos:
 
 {% if total_investment %}Acordado: $ {{ total_investment }} {{ currency|default:"COP" }}
 {% endif %}
-{% if platform_login_url %}{{ cta_text|default:"Ir a la plataforma" }}: {{ platform_login_url }}{% else %}{{ cta_text|default:"Ver propuesta" }}: {{ proposal_url }}{% endif %}
+{% if platform_login_url %}{% editorial_plain_value cta_text|default:"Ir a la plataforma" "cta_text" %}: {{ platform_login_url }}{% else %}{% editorial_plain_value cta_text|default:"Ver propuesta" "cta_text" %}: {{ proposal_url }}{% endif %}
 
 —
 {{ signature_name }}

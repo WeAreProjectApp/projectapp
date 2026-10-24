@@ -233,6 +233,7 @@ describe('multiple groups from functional requirements', () => {
 import { mount } from '@vue/test-utils';
 import FunctionalRequirementsModal from '../../components/BusinessProposal/FunctionalRequirementsModal.vue';
 import LinkedRequirementsModal from '../../components/BusinessProposal/LinkedRequirementsModal.vue';
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';
 
 const GROUP_WITH_IDS = {
   icon: '🖥️',
@@ -275,7 +276,7 @@ function mountModal(props = {}) {
       language: 'es',
       ...props,
     },
-    global: { stubs: { teleport: true, transition: false } },
+    global: { components: { BaseRichTextContent }, stubs: { teleport: true, transition: false } },
   });
 }
 

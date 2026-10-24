@@ -61,11 +61,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Nota (ES)</label>
-            <textarea v-model="form.note_es" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" />
+            <BaseRichTextEditor v-model="form.note_es" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y"  :format="form.text_formats?.['/note_es'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/note_es': $event }" />
           </div>
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Note (EN)</label>
-            <textarea v-model="form.note_en" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" />
+            <BaseRichTextEditor v-model="form.note_en" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y"  :format="form.text_formats?.['/note_en'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/note_en': $event }" />
           </div>
         </div>
       </fieldset>
@@ -192,6 +192,7 @@ onMounted(async () => {
   form.nationality = pkg.nationality;
   form.name_es = pkg.name_es;
   form.name_en = pkg.name_en;
+  form.text_formats = { ...pkg.text_formats };
   form.note_es = pkg.note_es;
   form.note_en = pkg.note_en;
   form.xs_count = pkg.xs_count;

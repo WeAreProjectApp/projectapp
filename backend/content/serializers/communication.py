@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -13,13 +14,13 @@ from content.models import (
 )
 
 
-class CommunicationDocumentSerializer(serializers.ModelSerializer):
+class CommunicationDocumentSerializer(EditorialModelSerializer):
     class Meta:
         model = Document
         fields = ('id', 'title', 'status', 'project_id', 'client_user_id')
 
 
-class CommunicationDateCorrectionSerializer(serializers.ModelSerializer):
+class CommunicationDateCorrectionSerializer(EditorialModelSerializer):
     corrected_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -39,7 +40,7 @@ class CommunicationDateCorrectionSerializer(serializers.ModelSerializer):
         return obj.corrected_by.get_full_name() or obj.corrected_by.username
 
 
-class CommunicationMessageRevisionSerializer(serializers.ModelSerializer):
+class CommunicationMessageRevisionSerializer(EditorialModelSerializer):
     edited_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -52,7 +53,7 @@ class CommunicationMessageRevisionSerializer(serializers.ModelSerializer):
         return obj.edited_by.get_full_name() or obj.edited_by.username
 
 
-class CommunicationMessageSerializer(serializers.ModelSerializer):
+class CommunicationMessageSerializer(EditorialModelSerializer):
     documents = CommunicationDocumentSerializer(many=True, read_only=True)
     date_corrections = CommunicationDateCorrectionSerializer(many=True, read_only=True)
     revisions = CommunicationMessageRevisionSerializer(many=True, read_only=True)
@@ -101,7 +102,7 @@ class CommunicationMessageSerializer(serializers.ModelSerializer):
         return obj.created_by.get_full_name() or obj.created_by.username
 
 
-class CommunicationMessageCreateSerializer(serializers.ModelSerializer):
+class CommunicationMessageCreateSerializer(EditorialModelSerializer):
     status = serializers.ChoiceField(
         choices=CommunicationMessage.Status.choices,
         required=False,
@@ -146,7 +147,7 @@ class CommunicationMessageCreateSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class CommunicationDraftUpdateSerializer(serializers.ModelSerializer):
+class CommunicationDraftUpdateSerializer(EditorialModelSerializer):
     reply_to = serializers.PrimaryKeyRelatedField(
         queryset=CommunicationMessage.objects.all(),
         required=False,
@@ -183,7 +184,7 @@ class CommunicationDraftUpdateSerializer(serializers.ModelSerializer):
         return value.strip()
 
 
-class CommunicationThreadListSerializer(serializers.ModelSerializer):
+class CommunicationThreadListSerializer(EditorialModelSerializer):
     client_name = serializers.SerializerMethodField()
     client_email = serializers.EmailField(source='client.user.email', read_only=True)
     project_name = serializers.CharField(source='project.name', read_only=True)
@@ -239,7 +240,7 @@ class CommunicationThreadDetailSerializer(CommunicationThreadListSerializer):
         fields = CommunicationThreadListSerializer.Meta.fields + ('messages',)
 
 
-class CommunicationThreadWriteSerializer(serializers.ModelSerializer):
+class CommunicationThreadWriteSerializer(EditorialModelSerializer):
     folder = serializers.PrimaryKeyRelatedField(
         queryset=CommunicationFolder.objects.all(), required=False, allow_null=True,
     )

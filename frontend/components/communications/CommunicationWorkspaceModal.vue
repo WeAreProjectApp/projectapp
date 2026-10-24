@@ -122,7 +122,7 @@
                 <span class="font-semibold">En respuesta al mensaje #{{ message.reply_to_id }}</span>
                 <span v-if="replyOriginPreview(message)" class="ml-1">· “{{ replyOriginPreview(message) }}”</span>
               </a>
-              <p class="mt-2 whitespace-pre-wrap text-sm text-text-default [overflow-wrap:anywhere]">{{ message.content }}</p>
+              <BaseRichTextContent class="mt-2 text-sm text-text-default" :source="message.content" :format="message.text_formats?.['/content'] || 'plain'" :profile="message.channel === 'whatsapp' ? 'whatsapp' : 'email'" />
 
               <div v-if="message.documents.length" class="mt-3 space-y-1 border-t border-border-muted pt-3">
                 <p class="text-2xs font-semibold uppercase tracking-wide text-text-subtle">Documentos referenciados</p>
@@ -217,7 +217,6 @@
           </div>
           <BaseCollapse id="communication-composer-body" :open="composerOpen">
           <form
-            ref="composerRef"
             class="mx-auto max-h-[50vh] max-w-4xl overflow-y-auto p-4 panel-portrait:p-5"
             data-testid="communication-composer"
             @submit.prevent="submitMessage()"
@@ -261,8 +260,13 @@
               <BaseInput v-model="messageForm.subject" placeholder="Asunto del correo" data-testid="communication-message-subject" />
             </BaseFormField>
             <BaseFormField label="Contenido" class="mt-3">
-              <BaseTextarea
+              <BaseRichTextEditor
+                ref="composerRef"
                 v-model="messageForm.content"
+                :key="messageForm.channel"
+                :profile="messageForm.channel === 'whatsapp' ? 'whatsapp' : 'email'"
+                :format="messageForm.text_formats['/content'] || 'plain'"
+                @update:format="messageForm.text_formats['/content'] = $event"
                 :rows="3"
                 placeholder="Escribe o pega el texto exacto de la comunicación..."
                 data-testid="communication-message-content"
@@ -350,6 +354,7 @@
 </template>
 
 <script setup>
+import { copyEditorialContent } from '~/utils/editorialFormat';
 import { useId, computed, nextTick, reactive, ref, watch } from 'vue';
 import CommunicationFolderPicker from '~/components/communications/CommunicationFolderPicker.vue';
 import BaseCollapse from '~/components/base/BaseCollapse.vue';
@@ -407,6 +412,7 @@ const messageForm = reactive({
   channel: initialChannel(),
   subject: '',
   content: '',
+  text_formats: {},
   occurred_at: localDateTime(),
   reply_to: null,
   document_ids: [],
@@ -504,6 +510,12 @@ function onDirectionChange(direction) {
 }
 
 function onChannelChange(channel) {
+  const format = messageForm.text_formats['/content'];
+  if (messageForm.content && format && format !== 'plain' && (channel === 'whatsapp') !== (format === 'whatsapp_v1')) {
+    messageForm.channel = format === 'whatsapp_v1' ? 'whatsapp' : 'email';
+    notify.error({ title: 'Conservamos el canal del contenido', detail: 'Guarda este borrador y crea otro para el nuevo canal; cada canal utiliza su propio formato.' });
+    return;
+  }
   if (channel === 'whatsapp') messageForm.subject = '';
 }
 
@@ -514,6 +526,7 @@ function resetMessageForm() {
     channel: initialChannel(),
     subject: '',
     content: '',
+    text_formats: {},
     occurred_at: localDateTime(),
     reply_to: null,
     document_ids: [],
@@ -526,6 +539,7 @@ function messagePayload(statusOverride) {
     channel: messageForm.channel,
     subject: messageForm.channel === 'email' ? messageForm.subject.trim() : '',
     content: messageForm.content.trim(),
+    text_formats: { ...messageForm.text_formats },
     occurred_at: new Date(messageForm.occurred_at).toISOString(),
     reply_to: messageForm.reply_to,
     document_ids: [...messageForm.document_ids],
@@ -580,6 +594,7 @@ function editDraft(message) {
     channel: message.channel,
     subject: message.subject || '',
     content: message.content,
+    text_formats: { ...message.text_formats },
     occurred_at: localDateTime(new Date(message.occurred_at)),
     reply_to: message.reply_to_id,
     document_ids: message.documents.map((document) => document.id),
@@ -611,7 +626,8 @@ function replyTo(message) {
 
 async function copyMessage(message) {
   try {
-    await navigator.clipboard.writeText(message.content);
+    if (message.text_formats?.['/content'] && message.text_formats['/content'] !== 'plain') await copyEditorialContent(message.content, message.channel === 'whatsapp' ? 'whatsapp' : 'document');
+    else await navigator.clipboard.writeText(message.content);
     notify.success({ title: 'Texto copiado' });
   } catch {
     notify.error({ title: 'No se pudo copiar el texto' });
@@ -719,7 +735,7 @@ function scrollToMessage(id) {
 }
 function openComposer() {
   composerOpen.value = true;
-  nextTick(() => composerRef.value?.querySelector('textarea')?.focus({ preventScroll: true }));
+  nextTick(() => composerRef.value?.focus());
 }
 function openMoveFolder() {
   targetFolder.value = currentThread.value.folder_id ? String(currentThread.value.folder_id) : '';

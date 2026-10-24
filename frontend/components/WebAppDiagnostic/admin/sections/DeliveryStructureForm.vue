@@ -12,7 +12,7 @@
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Intro</label>
-      <textarea v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextEditor v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" />
     </div>
 
     <div class="flex items-center justify-between pt-2">
@@ -29,7 +29,7 @@
           <input v-model="b.title" type="text" placeholder="Título del bloque" class="flex-1 px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" />
           <BaseButton variant="danger-ghost" size="sm" class="ml-2" @click="form.blocks.splice(idx, 1)">Quitar</BaseButton>
         </div>
-        <textarea v-model="b.paragraphsText" rows="3" placeholder="Párrafos (uno por línea)" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default"></textarea>
+        <BaseRichTextListEditor v-model="b.paragraphsText" rows="3" placeholder="Párrafos (uno por línea)" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default" format-path="/paragraphs" :formats="b.text_formats || {}" @update:formats="b.text_formats = $event" />
         <input v-model="b.example" type="text" placeholder="Ejemplo" class="w-full px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" />
       </div>
     </div>

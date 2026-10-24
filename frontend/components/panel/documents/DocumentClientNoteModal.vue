@@ -69,15 +69,17 @@
               :disabled="isBusy || !draft.emailBody.trim()"
               :disabled-reason="isBusy ? busyDisabledReason : !draft.emailBody.trim() ? 'Escribe el correo antes de copiarlo.' : ''"
               data-testid="client-note-copy-email"
-              @click="copyText('email', draft.emailBody, 'correo')"
+              @click="copyText('email', draft.emailBody, 'correo', draft.textFormats['/client_email_body'])"
             />
           </div>
           <!-- Los textos crecen con su contenido: el correo se lee completo
                sin scroll interno y lo que desplaza es el cuerpo del modal. -->
-          <BaseTextarea
+          <BaseRichTextEditor
             id="document-client-note-email"
             v-model="draft.emailBody"
-            v-auto-resize
+            profile="email"
+            :format="draft.textFormats['/client_email_body'] || 'plain'"
+            @update:format="draft.textFormats['/client_email_body'] = $event"
             :disabled="readonly || immutableContent || isBusy"
             :disabled-reason="fieldDisabledReason"
             rows="9"
@@ -103,10 +105,12 @@
               @click="copyText('whatsapp', draft.whatsappMessage, 'WhatsApp')"
             />
           </div>
-          <BaseTextarea
+          <BaseRichTextEditor
             id="document-client-note-whatsapp"
             v-model="draft.whatsappMessage"
-            v-auto-resize
+            profile="whatsapp"
+            :format="draft.textFormats['/client_whatsapp_message'] || 'plain'"
+            @update:format="draft.textFormats['/client_whatsapp_message'] = $event"
             :disabled="readonly || immutableContent || isBusy"
             :disabled-reason="fieldDisabledReason"
             rows="5"
@@ -213,14 +217,13 @@
                 :disabled="isBusy || !note.content.trim()"
                 :disabled-reason="isBusy ? busyDisabledReason : !note.content.trim() ? 'Escribe el contenido antes de copiarlo.' : ''"
                 :data-testid="`client-note-custom-copy-content-${index}`"
-                @click="copyText(`custom-content-${note.key}`, note.content, `contenido de la nota ${index + 1}`)"
+                @click="copyText(`custom-content-${note.key}`, note.content, `contenido de la nota ${index + 1}`, note.text_formats['/content'])"
               />
             </div>
-            <BaseTextarea
+            <BaseRichTextEditor
               :id="`document-custom-note-content-${index}`"
-              v-model="note.content"
-              v-auto-resize
-              :disabled="readonly || immutableContent || isBusy"
+              v-model="note.content" :format="note.text_formats['/content'] || 'plain'" @update:format="note.text_formats['/content'] = $event"
+                :disabled="readonly || immutableContent || isBusy"
               :disabled-reason="fieldDisabledReason"
               :error="validationAttempted && !note.content.trim()"
               rows="5"
@@ -285,6 +288,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
+import { copyEditorialContent } from '~/utils/editorialFormat';
 import DocumentObservationManager from '~/components/panel/documents/DocumentObservationManager.vue';
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { usePanelNotify } from '~/composables/usePanelNotify';
@@ -296,6 +300,7 @@ const props = defineProps({
   emailBody: { type: String, default: '' },
   whatsappMessage: { type: String, default: '' },
   customNotes: { type: Array, default: () => [] },
+  textFormats: { type: Object, default: () => ({}) },
   documentId: { type: [Number, String], default: null },
   notes: { type: Array, default: () => [] },
   readonly: { type: Boolean, default: false },
@@ -329,7 +334,7 @@ const fieldDisabledReason = computed(() => {
   }
   return busyDisabledReason.value || undefined;
 });
-const draft = reactive({ subject: '', emailBody: '', whatsappMessage: '', customNotes: [] });
+const draft = reactive({ subject: '', emailBody: '', whatsappMessage: '', customNotes: [], textFormats: {} });
 // Lo que había al abrir, con la misma forma que se envía: el botón se habilita
 // sólo cuando guardar cambiaría algo.
 const openedSnapshot = ref('');
@@ -349,6 +354,7 @@ function makeDraftNote(note = {}) {
     key: nextCustomNoteKey,
     title: typeof note.title === 'string' ? note.title : '',
     content: typeof note.content === 'string' ? note.content : '',
+    text_formats: { ...note.text_formats },
   };
 }
 
@@ -357,6 +363,7 @@ watch(
   (open) => {
     if (!open) return;
     draft.subject = props.subject;
+    draft.textFormats = { ...props.textFormats };
     draft.emailBody = props.emailBody;
     draft.whatsappMessage = props.whatsappMessage;
     draft.customNotes = props.customNotes.map(makeDraftNote);
@@ -397,10 +404,12 @@ function normalizedDraft() {
   return {
     subject: draft.subject.trim(),
     emailBody: draft.emailBody.trim(),
+    textFormats: { ...draft.textFormats },
     whatsappMessage: draft.whatsappMessage.trim(),
     customNotes: draft.customNotes.map((note) => ({
       title: note.title.trim(),
       content: note.content.trim(),
+      text_formats: { ...note.text_formats },
     })),
   };
 }
@@ -423,10 +432,11 @@ function copyTone(field) {
   return clipboardFeedback.feedbackFor(field).tone;
 }
 
-async function copyText(field, value, label) {
+async function copyText(field, value, label, format) {
   await clipboardFeedback.copyText({
     key: field,
     text: value,
+    ...(format && format !== 'plain' && field !== 'whatsapp' ? { write: () => copyEditorialContent(value) } : {}),
     successLabel: `Copiado: ${label}`,
     errorLabel: `No se pudo copiar: ${label}`,
     onError: () => notify.error({

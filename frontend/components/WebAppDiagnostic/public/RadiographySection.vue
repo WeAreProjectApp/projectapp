@@ -1,7 +1,7 @@
 <template>
   <section>
     <SectionHeader :index="content.index" :title="content.title" fallback="Radiografía" />
-    <p v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed">{{ content.intro }}</p>
+    <BaseRichTextContent v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed" :source="content.intro" :format="content.text_formats?.['/intro'] || 'plain'" />
 
     <div v-if="content.includes?.length" class="mt-6">
       <h3 class="text-lg font-semibold text-text-brand dark:text-text-brand mb-3">{{ content.includesTitle || '¿Qué incluye esta radiografía?' }}</h3>
@@ -10,7 +10,7 @@
           <span class="mt-1.5 flex-none w-1.5 h-1.5 rounded-full bg-primary dark:bg-accent-soft" />
           <div>
             <strong class="text-text-brand dark:text-text-brand">{{ i.title }}:</strong>
-            <span class="text-text-brand/75 dark:text-text-brand/75">{{ ' ' + (i.description || '') }}</span>
+            <span class="text-text-brand/75 dark:text-text-brand/75"><BaseRichTextContent :source="i.description" :format="i.text_formats?.['/description'] || 'plain'" /></span>
           </div>
         </li>
       </ul>
@@ -18,7 +18,7 @@
 
     <div v-if="content.classificationRows?.length" class="mt-8">
       <h3 class="text-lg font-semibold text-text-brand dark:text-text-brand mb-2">{{ content.classificationTitle || 'Clasificación por tamaño' }}</h3>
-      <p v-if="content.classificationIntro" class="text-text-brand/75 dark:text-text-brand/75 mb-3">{{ content.classificationIntro }}</p>
+      <BaseRichTextContent v-if="content.classificationIntro" class="text-text-brand/75 dark:text-text-brand/75 mb-3" :source="content.classificationIntro" :format="content.text_formats?.['/classificationIntro'] || 'plain'" />
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm border border-input-border dark:border-input-border rounded-xl overflow-hidden">
           <thead class="bg-primary/5 dark:bg-primary-soft">
@@ -39,7 +39,7 @@
           </tbody>
         </table>
       </div>
-      <p v-if="content.classificationNote" class="text-xs text-text-brand/55 dark:text-text-brand/55 mt-2 italic">{{ content.classificationNote }}</p>
+      <BaseRichTextContent v-if="content.classificationNote" class="text-xs text-text-brand/55 dark:text-text-brand/55 mt-2 italic" :source="content.classificationNote" :format="content.text_formats?.['/classificationNote'] || 'plain'" />
     </div>
 
     <div v-if="renderContext && hasStack" class="mt-8 bg-primary/5 dark:bg-primary-soft border border-input-border dark:border-input-border rounded-xl p-4 text-sm">
@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed } from 'vue';
 import SectionHeader from './SectionHeader.vue';
 const props = defineProps({

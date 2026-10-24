@@ -21,6 +21,7 @@ Each entry: {'name', 'description', 'input_schema', 'handler'}.
 from accounts.models import UserProfile
 from accounts.services.proposal_client_service import update_client_profile
 from content.mcp.protocol import ToolError
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 from content.mcp.schema_policy import closed_object, close_root_schemas, open_object
 from content.models import (
     DiagnosticChangeLog,
@@ -289,6 +290,7 @@ _DIAG_ID_PROP = {'diagnostic_id': {'type': 'integer', 'description': 'ID del dia
 _STATUS_ENUM = [s.value for s in WebAppDiagnostic.Status]
 
 _SECTION_WRITE_PROPS = {
+    'text_formats': TEXT_FORMATS_SCHEMA,
     'title': {'type': 'string'},
     'order': {'type': 'integer'},
     'is_enabled': {'type': 'boolean'},

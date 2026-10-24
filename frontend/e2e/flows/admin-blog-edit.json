@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Edit an existing blog post including new fields: category, readTime, isFeatured, content_json, SEO meta.",
+  "description": "Edit an existing blog post including new fields: category, readTime, isFeatured, content_json, SEO meta. Los extractos y cuerpos de artículo admiten Visual y Fuente Markdown; las anotaciones de formato se conservan al reabrir y en la lectura pública.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

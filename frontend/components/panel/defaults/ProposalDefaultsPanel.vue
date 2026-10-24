@@ -422,16 +422,18 @@
                 v-model="emailEditFields[field.key]"
                 type="text"
                 :placeholder="field.default_value"
-                :ref="el => { if (el?.$el) emailFieldRefs[field.key] = el.$el; else if (el) emailFieldRefs[field.key] = el }"
-                @focus="emailLastFocusedField = field.key"
+                :ref="el => { if (el) emailFieldRefs[field.key] = el }"
+                @focusin="emailLastFocusedField = field.key"
               />
-              <BaseTextarea
+              <BaseRichTextEditor
                 v-else
                 v-model="emailEditFields[field.key]"
+                :format="emailEditFormats['/content_overrides/' + field.key] || 'plain'"
+                @update:format="emailEditFormats['/content_overrides/' + field.key] = $event"
                 :rows="3"
                 :placeholder="field.default_value"
-                :ref="el => { if (el?.$el) emailFieldRefs[field.key] = el.$el; else if (el) emailFieldRefs[field.key] = el }"
-                @focus="emailLastFocusedField = field.key"
+                :ref="el => { if (el) emailFieldRefs[field.key] = el }"
+                @focusin="emailLastFocusedField = field.key"
               />
               <p v-if="field.default_value" class="text-[11px] text-text-subtle">
                 Por defecto: {{ truncateText(field.default_value, 100) }}
@@ -744,6 +746,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent, withoutEditorialPrefix } from '~/utils/editorialMetadata';
 import { computed, onMounted, ref, watch } from 'vue';
 import SectionEditor from '~/components/BusinessProposal/admin/SectionEditor.vue';
 import TechnicalDocumentEditor from '~/components/BusinessProposal/admin/TechnicalDocumentEditor.vue';
@@ -852,6 +855,7 @@ async function handleSaveGeneral() {
 const selectedLang = ref('es');
 const sections = ref([]);
 const configUpdatedAt = ref(null);
+const configFormats = ref(null);
 const isLoading = ref(false);
 const expandedSections = ref(new Set());
 const savedSections = ref(new Set());
@@ -968,6 +972,7 @@ function toVirtualSection(section, idx) {
     section_type: section.section_type,
     title: section.title,
     content_json: section.content_json || {},
+    ...(section.text_formats ? { text_formats: section.text_formats } : {}),
     is_wide_panel: section.is_wide_panel || false,
     is_enabled: true,
   };
@@ -990,6 +995,7 @@ function handleSaveSection({ sectionId, payload }) {
       ...sections.value[idx],
       title: payload.title,
       content_json: payload.content_json,
+      ...(payload.text_formats ? { text_formats: payload.text_formats } : {}),
     };
     savedSections.value = new Set([...savedSections.value, idx]);
     showFeedback('Sección actualizada localmente. Guarda todos los cambios para persistir.', 'success');
@@ -1005,6 +1011,7 @@ async function syncConfigVersion(result) {
   const updatedAt = result.data?.updated_at;
   if (updatedAt) {
     configUpdatedAt.value = updatedAt;
+    configFormats.value = result.data.text_formats || null;
     return;
   }
   await loadDefaults(selectedLang.value);
@@ -1017,7 +1024,8 @@ async function loadDefaults(lang) {
   try {
     const result = await proposalStore.fetchProposalDefaults(lang);
     if (result.success && result.data) {
-      sections.value = result.data.sections_json || [];
+      sections.value = resolveEditorialContent(result.data.sections_json || [], result.data.text_formats, '/sections_json');
+      configFormats.value = result.data.text_formats || null;
       configUpdatedAt.value = result.data.updated_at;
       const d = result.data;
       const num = (v, fallback) => {
@@ -1071,6 +1079,7 @@ async function handleSaveAll() {
   try {
     const result = await proposalStore.saveProposalDefaults(
       selectedLang.value, sections.value, null, configUpdatedAt.value,
+      ...(configFormats.value ? [withoutEditorialPrefix(configFormats.value, '/sections_json')] : []),
     );
     if (result.success) {
       savedSections.value = new Set();
@@ -1122,6 +1131,7 @@ const emailSelectedCategory = ref('all');
 const emailSelectedTemplate = ref(null);
 const emailTemplateDetail = ref(null);
 const emailEditFields = ref({});
+const emailEditFormats = ref({});
 const emailEditIsActive = ref(true);
 const emailIsLoading = ref(false);
 const emailLastFocusedField = ref('');
@@ -1147,7 +1157,9 @@ function countByCategory(cat) {
 function emailInsertVariable(name) {
   const varText = `{${name}}`;
   if (emailLastFocusedField.value && emailEditFields.value[emailLastFocusedField.value] !== undefined) {
-    emailEditFields.value[emailLastFocusedField.value] += varText;
+    const editor = emailFieldRefs.value[emailLastFocusedField.value];
+    if (editor?.insertAtCursor) editor.insertAtCursor(varText);
+    else emailEditFields.value[emailLastFocusedField.value] += varText;
     showFeedback(`Variable ${varText} insertada`, 'success');
   } else {
     navigator.clipboard?.writeText(varText);
@@ -1174,6 +1186,7 @@ async function loadEmailTemplateDetail(key) {
     if (result.success) {
       emailTemplateDetail.value = result.data;
       emailEditIsActive.value = result.data.is_active;
+      emailEditFormats.value = { ...result.data.text_formats };
       emailEditFields.value = {};
       for (const field of result.data.editable_fields) {
         emailEditFields.value[field.key] = field.current_value || '';
@@ -1196,6 +1209,7 @@ async function handleSaveEmailTemplate(templateKey) {
   try {
     const result = await proposalStore.saveEmailTemplate(templateKey, {
       content_overrides: emailEditFields.value,
+      text_formats: { ...emailEditFormats.value },
       is_active: emailEditIsActive.value,
     });
     if (result.success) {
@@ -1411,6 +1425,7 @@ async function saveEditJson() {
   try {
     const result = await proposalStore.saveProposalDefaults(
       lang, parsed.sections, null, configUpdatedAt.value,
+      ...(configFormats.value ? [withoutEditorialPrefix(configFormats.value, '/sections_json')] : []),
     );
     if (result.success) {
       sections.value = parsed.sections;

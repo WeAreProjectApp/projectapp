@@ -49,19 +49,14 @@
                 <div class="flex items-center gap-2 mb-2">
                   <span class="drag-handle cursor-grab text-text-subtle hover:text-text-muted select-none text-sm">⠿</span>
                   <span class="text-2xs text-text-subtle uppercase tracking-wide">Sección {{ idx + 1 }}</span>
-                  <span class="ml-auto flex items-center gap-1.5">
-                    <span class="text-2xs text-text-subtle uppercase tracking-wide">Markdown</span>
-                    <BaseToggle v-model="section.markdown" size="sm" aria-label="Activar Markdown en esta sección" />
-                  </span>
+
                   <BaseButton variant="danger-ghost" icon-only size="sm" aria-label="Eliminar" title="Eliminar" v-if="sections.length > 1" @click="removeSection(idx)">
                     <BaseActionIcon action="delete" />
                   </BaseButton>
                 </div>
-                <textarea v-model="section.text" rows="3" placeholder="Escribe el contenido de esta sección..."
-                  class="w-full px-3 py-2 border border-border-default dark:text-white dark:placeholder:text-text-muted rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-emerald-500 resize-y" />
-                <p v-if="section.markdown" class="mt-1 text-2xs text-text-subtle">
-                  Soporta **negrita**, *cursiva*, listas con -, [enlaces](https://...) y títulos con #.
-                </p>
+                <BaseRichTextEditor v-model="section.text" :format="section.markdown ? 'markdown_html_v1' : 'plain'" @update:format="section.markdown = true" rows="3" placeholder="Escribe el contenido de esta sección..."
+                  class="w-full px-3 py-2 border border-border-default dark:text-white dark:placeholder:text-text-muted rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-emerald-500 resize-y"  />
+
               </div>
             </template>
           </draggable>
@@ -73,8 +68,8 @@
 
         <div>
           <label class="block text-xs text-text-muted dark:text-white/70 mb-1">Pie de correo</label>
-          <textarea v-model="footer" rows="2" placeholder="Texto de cierre..."
-            class="w-full px-3 py-2 border border-border-default dark:text-white dark:placeholder:text-text-muted rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-emerald-500 resize-y" />
+          <BaseRichTextEditor v-model="footer" :format="textFormats['/footer'] || 'plain'" @update:format="textFormats['/footer'] = $event" rows="2" placeholder="Texto de cierre..."
+            class="w-full px-3 py-2 border border-border-default dark:text-white dark:placeholder:text-text-muted rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-emerald-500 resize-y"  />
         </div>
 
         <div>
@@ -144,6 +139,7 @@
           :greeting="greeting"
           :sections="sections"
           :footer="footer"
+          :textFormats="textFormats"
           :attachment-names="[...docRefs.map(r => r.label), ...attachments.map(f => f.name)]"
         />
       </div>
@@ -244,6 +240,7 @@ const defaultFooter = ref('Quedamos atentos a tus comentarios.');
 const greeting = ref(defaultGreeting.value);
 const sections = ref([{ id: nextSectionId(), text: '', markdown: false }]);
 const footer = ref(defaultFooter.value);
+const textFormats = ref({});
 const attachments = ref([]);
 const { docRefs, removeDocRef, handleDocRefsAttach, appendDocRefsToFormData, resetDocRefs }
   = useDocRefsAttachment();
@@ -307,6 +304,7 @@ async function handleSend() {
     sections.value.filter(s => s.text.trim()).map(s => ({ text: s.text, markdown: !!s.markdown })),
   ));
   formData.append('footer', footer.value.trim());
+  formData.append('text_formats', JSON.stringify(textFormats.value));
   for (const file of attachments.value) {
     formData.append('attachments', file);
   }

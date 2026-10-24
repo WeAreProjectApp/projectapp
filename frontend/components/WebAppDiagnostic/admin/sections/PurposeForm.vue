@@ -12,11 +12,11 @@
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Párrafos (uno por línea)</label>
-      <textarea v-model="form.paragraphsText" rows="5" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default"></textarea>
+      <BaseRichTextListEditor v-model="form.paragraphsText" rows="5" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm font-mono bg-surface text-text-default" format-path="/paragraphs" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Nota de alcance</label>
-      <textarea v-model="form.scopeNote" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextEditor v-model="form.scopeNote" rows="3" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="form.text_formats?.['/scopeNote'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/scopeNote': $event }" />
     </div>
 
     <div class="pt-3 border-t border-border-muted space-y-2">
@@ -42,7 +42,7 @@
             class="grid sm:grid-cols-[1fr,3fr,auto] gap-2 items-start"
           >
             <input v-model="lvl.level" type="text" placeholder="Crítico / Alto / Medio / Bajo" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" />
-            <textarea v-model="lvl.meaning" rows="2" placeholder="Significado" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+            <BaseRichTextEditor v-model="lvl.meaning" rows="2" placeholder="Significado" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="lvl.text_formats?.['/meaning'] || 'plain'" @update:format="lvl.text_formats = { ...lvl.text_formats, '/meaning': $event }" />
             <BaseButton variant="danger-ghost" size="sm" @click="removeLevel(idx)">Quitar</BaseButton>
           </div>
           <div v-if="!form.severityLevels.length" class="text-xs text-text-subtle italic">Sin niveles configurados.</div>

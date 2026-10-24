@@ -10,7 +10,7 @@
         </h2>
       </div>
 
-      <p data-animate="fade-up" class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl mb-12" v-html="linkify(intro)" />
+      <div data-animate="fade-up" class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl mb-12" v-html="linkify(intro, text_formats?.['/intro'])" />
 
       <!-- Horizontal steps pipeline (desktop) / Vertical (mobile) -->
       <div data-animate="fade-up-stagger" class="hidden md:flex items-start justify-between gap-2 relative">
@@ -86,6 +86,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   index: {
     type: String,
     default: '07',

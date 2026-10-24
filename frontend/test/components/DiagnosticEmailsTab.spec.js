@@ -46,8 +46,19 @@ jest.mock('../../utils/emailAttachments', () => ({
 }));
 
 import { mount } from '@vue/test-utils';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import { validateEmailAttachments } from '../../utils/emailAttachments';
 import DiagnosticEmailsTab from '../../components/WebAppDiagnostic/DiagnosticEmailsTab.vue';
+
+const originalUseI18n = global.useI18n;
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }); });
+afterAll(() => { global.useI18n = originalUseI18n; });
+
+async function editFirstSectionSource(wrapper, value) {
+  await wrapper.findAll('[role="tab"]').find((tab) => tab.text() === 'richText.source').trigger('click');
+  await wrapper.get('[data-testid="rich-text-source-input"]').setValue(value);
+}
 
 async function flushPromises() {
   await Promise.resolve();
@@ -89,6 +100,7 @@ function mountTab(props = {}) {
       ...props,
     },
     global: {
+      components: { BaseRichTextEditor, BaseSegmented },
       stubs: {
         TabSplitLayout: { template: '<div><slot name="main" /><slot name="aside" /></div>' },
         draggable: DraggableStub,
@@ -162,7 +174,7 @@ describe('DiagnosticEmailsTab', () => {
       await flushPromises();
 
       await wrapper.find('input[placeholder="Asunto del correo"]').setValue('Seguimiento');
-      await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Hemos avanzado.');
+      await editFirstSectionSource(wrapper, 'Hemos avanzado.');
       await wrapper.vm.$nextTick();
 
       expect(wrapper.findAll('button').find((btn) => btn.text().includes('Enviar correo')).element.disabled).toBe(false);
@@ -239,7 +251,7 @@ describe('DiagnosticEmailsTab', () => {
       await flushPromises();
 
       await wrapper.find('input[placeholder="Asunto del correo"]').setValue('Seguimiento');
-      await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Avance del proyecto.');
+      await editFirstSectionSource(wrapper, 'Avance del proyecto.');
       await wrapper.vm.$nextTick();
       await wrapper.findAll('button').find((btn) => btn.text().includes('Enviar correo')).trigger('click');
       await flushPromises();
@@ -255,7 +267,7 @@ describe('DiagnosticEmailsTab', () => {
       await flushPromises();
 
       await wrapper.find('input[placeholder="Asunto del correo"]').setValue('Seguimiento');
-      await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Contenido.');
+      await editFirstSectionSource(wrapper, 'Contenido.');
       await wrapper.vm.$nextTick();
       await wrapper.findAll('button').find((btn) => btn.text().includes('Enviar correo')).trigger('click');
       await flushPromises();
@@ -269,7 +281,7 @@ describe('DiagnosticEmailsTab', () => {
       await flushPromises();
 
       await wrapper.find('input[placeholder="Asunto del correo"]').setValue('Asunto');
-      await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Texto.');
+      await editFirstSectionSource(wrapper, 'Texto.');
       await wrapper.vm.$nextTick();
       await wrapper.findAll('button').find((btn) => btn.text().includes('Enviar correo')).trigger('click');
       await flushPromises();

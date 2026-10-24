@@ -8,6 +8,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_RESEND } from '../helpers/flow-tags.js';
+import { fillRichTextSource } from '../helpers/editorial.js';
 
 test.describe.configure({ timeout: 60_000 });
 
@@ -77,8 +78,9 @@ test.describe('Admin Proposal Resend', () => {
 
     await expect(page.getByRole('heading', { name: 'Re-enviar propuesta' })).toBeVisible({ timeout: 5000 });
     const message = page.getByTestId('proposal-resend-email-intro');
-    await expect(message).toHaveValue(mockSentProposal.email_intro);
-    await message.fill('Esta versión incorpora inventario para evitar quiebres de stock.');
+    await message.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(message.getByTestId('rich-text-source-input')).toHaveValue(mockSentProposal.email_intro);
+    await fillRichTextSource(message, 'Esta versión incorpora inventario para evitar quiebres de stock.');
 
     const [response] = await Promise.all([
       page.waitForResponse(r => r.url().includes(`proposals/${PROPOSAL_ID}/resend/`)),
@@ -114,7 +116,9 @@ test.describe('Admin Proposal Resend', () => {
     await page.getByTestId('proposal-actions-menu').click();
     await page.getByTestId('proposal-action-resend').click();
 
-    await expect(page.getByTestId('proposal-resend-email-intro')).toHaveValue('');
+    const message = page.getByTestId('proposal-resend-email-intro');
+    await message.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(message.getByTestId('rich-text-source-input')).toHaveValue('');
     await expect(page.getByTestId('proposal-resend-confirm')).toBeDisabled();
     expect(resendCalled).toBe(false);
   });

@@ -75,7 +75,7 @@
                 <div class="flex flex-wrap items-start justify-between gap-2">
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-text-default">{{ note.title || 'Observación' }}</p>
-                    <p class="mt-1 whitespace-pre-wrap break-words text-sm text-text-muted">{{ note.content }}</p>
+                    <BaseRichTextContent class="mt-1 text-sm text-text-muted" :source="note.content" :format="note.text_formats?.['/content'] || 'plain'" />
                   </div>
                   <BaseBadge :variant="note.status === 'open' ? 'warning' : 'neutral'" size="sm">
                     {{ noteStatusLabel(note.status) }}
@@ -142,8 +142,8 @@
             placeholder="Título breve"
             data-testid="document-observation-title"
           />
-          <BaseTextarea
-            v-model="newNote.content"
+          <BaseRichTextEditor
+            v-model="newNote.content" :format="newNote.text_formats['/content'] || 'plain'" @update:format="newNote.text_formats['/content'] = $event"
             rows="4"
             :disabled="busy"
             placeholder="Describe la observación…"
@@ -176,7 +176,7 @@
         <div v-else-if="deletedNotes.length" class="space-y-3" data-testid="document-observation-trash">
           <article v-for="note in deletedNotes" :key="note.id" class="rounded-xl border border-border-default bg-surface-raised p-3">
             <p class="text-sm font-medium text-text-default">{{ note.title || 'Observación' }}</p>
-            <p class="mt-1 whitespace-pre-wrap break-words text-sm text-text-muted">{{ note.content }}</p>
+            <BaseRichTextContent class="mt-1 text-sm text-text-muted" :source="note.content" :format="note.text_formats?.['/content'] || 'plain'" />
             <p class="mt-2 text-xs text-text-subtle">
               Eliminada por {{ note.deleted_by_name || 'Usuario no disponible' }} · {{ formatDate(note.deleted_at) }}
             </p>
@@ -217,7 +217,7 @@
         <p class="mt-1 text-sm text-text-subtle">Corrige el texto sin cambiar su estado ni su historial.</p>
       </div>
       <BaseInput v-model="editDraft.title" maxlength="120" :disabled="busy" aria-label="Título de la observación" />
-      <BaseTextarea v-model="editDraft.content" rows="7" :disabled="busy" aria-label="Contenido de la observación" />
+      <BaseRichTextEditor v-model="editDraft.content" :format="editDraft.text_formats['/content'] || 'plain'" @update:format="editDraft.text_formats['/content'] = $event" rows="7" :disabled="busy" aria-label="Contenido de la observación" />
       <BaseAlert v-if="errorMessage" variant="danger">{{ errorMessage }}</BaseAlert>
       <div class="flex flex-wrap justify-end gap-2">
         <BaseButton type="button" variant="ghost" :disabled="busy" @click="backToList">Cancelar</BaseButton>
@@ -342,8 +342,8 @@ const deleteCandidates = ref([]);
 const finishOutcome = ref('resolved');
 const loadedTrash = ref(false);
 const loadedEvents = ref(false);
-const newNote = reactive({ title: '', content: '', markNeedsFix: true });
-const editDraft = reactive({ title: '', content: '' });
+const newNote = reactive({ title: '', content: '', text_formats: {}, markNeedsFix: true });
+const editDraft = reactive({ title: '', content: '', text_formats: {} });
 const finishDraft = reactive({ resolutionNote: '', moveCycle: false });
 const canDelete = computed(() => !props.readonly || props.allowDeleteWhenReadonly);
 
@@ -420,6 +420,7 @@ function openEdit(note) {
   actionNote.value = note;
   editDraft.title = note.title || '';
   editDraft.content = note.content || '';
+  editDraft.text_formats = { ...note.text_formats };
   view.value = 'edit';
 }
 
@@ -453,6 +454,7 @@ async function addObservation() {
   const result = await stateStore.createNote(props.documentId, {
     title: newNote.title.trim(),
     content: newNote.content.trim(),
+    text_formats: { ...newNote.text_formats },
     mark_needs_fix: newNote.markNeedsFix,
   });
   busy.value = false;
@@ -463,6 +465,7 @@ async function addObservation() {
   localNotes.value.push(result.data);
   newNote.title = '';
   newNote.content = '';
+  newNote.text_formats = {};
   publishNotes();
 }
 
@@ -473,6 +476,7 @@ async function saveEdit() {
   const result = await stateStore.updateNote(props.documentId, actionNote.value.id, {
     title: editDraft.title.trim(),
     content: editDraft.content.trim(),
+    text_formats: { ...editDraft.text_formats },
   });
   busy.value = false;
   if (!result.success) {

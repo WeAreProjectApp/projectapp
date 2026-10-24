@@ -36,9 +36,13 @@ def normalize_client_custom_notes(value):
                 f'El contenido de la nota {index} es obligatorio.',
             )
 
-        normalized.append({
+        item = {
             'title': title.strip(),
             'content': content.strip(),
-        })
+        }
+        if note.get('text_formats'):
+            from content.services.editorial_format import validate_formats
+            item['text_formats'] = validate_formats('documentnote', item, note['text_formats'])
+        normalized.append(item)
 
     return normalized

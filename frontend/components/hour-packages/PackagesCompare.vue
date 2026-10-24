@@ -29,7 +29,7 @@
         {{ money(totalPrice(pkg), pkg.currency) }} <span class="text-xs">{{ pkg.currency === 'COP' ? '+ IVA' : '+ Tax' }}</span>
       </p>
 
-      <p v-if="pkg.note_es" class="mt-2 text-xs text-text-subtle flex-1">{{ pkg.note_es }}</p>
+      <BaseRichTextContent v-if="pkg.note_es" :source="pkg.note_es" :format="pkg.text_formats?.['/note_es'] || 'plain'" class="mt-2 text-xs text-text-subtle flex-1" />
       <span v-else class="flex-1" />
 
       <div class="mt-4 flex items-center gap-3">
@@ -48,6 +48,7 @@
 </template>
 
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed } from 'vue';
 import {
   bestValuePackageId,

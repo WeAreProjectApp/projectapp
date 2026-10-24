@@ -9,6 +9,7 @@ import { mockApi } from '../helpers/api.js';
 import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_SEND_BRANDED_EMAIL, ADMIN_SEND_PROPOSAL_EMAIL } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const PROPOSAL_ID = 7;
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
@@ -156,7 +157,7 @@ test.describe('Admin Proposal Email — Branded', () => {
     await ccInput.fill('copy@example.com');
     await ccInput.press('Enter');
     await page.getByPlaceholder('Asunto del correo').fill('Aviso general de la propuesta');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Contenido del correo de marca.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Contenido del correo de marca.');
 
     await Promise.all([
       page.waitForResponse((r) => r.url().includes(`proposals/${PROPOSAL_ID}/branded-email/send/`)),
@@ -186,7 +187,7 @@ test.describe('Admin Proposal Email — Branded', () => {
     await selectProposalDestination(page, 'communication', 'emails');
     await page.getByRole('button', { name: 'General' }).click();
     await page.getByPlaceholder('Asunto del correo').fill('Aviso general');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Contenido listo para enviar.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Contenido listo para enviar.');
 
     await page.getByRole('button', { name: 'Enviar correo' }).click();
 
@@ -230,7 +231,9 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
     await expect(correosTab).toBeVisible({ timeout: 15000 });
     await selectProposalDestination(page, 'communication', 'emails');
     await expect(page.getByTestId('proposal-email-intro-card')).toBeVisible();
-    await expect(page.getByTestId('proposal-email-intro')).toHaveValue(proposal.email_intro);
+    const introEditor = page.getByTestId('proposal-email-intro');
+    await introEditor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(introEditor.getByTestId('rich-text-source-input')).toHaveValue(proposal.email_intro);
     await expect(page.getByText('El historial y los correos de seguimiento aparecerán después del primer envío.')).toBeVisible();
   });
 
@@ -261,7 +264,7 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
     await ccInput.fill('advisor@example.com');
     await ccInput.press('Enter');
     await page.getByPlaceholder('Asunto del correo').fill('Seguimiento de tu propuesta');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Quedamos atentos a tu decisión.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Quedamos atentos a tu decisión.');
 
     await Promise.all([
       page.waitForResponse((r) => r.url().includes(`proposals/${PROPOSAL_ID}/proposal-email/send/`)),
@@ -290,7 +293,7 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
     await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await selectProposalDestination(page, 'communication', 'emails');
     await page.getByPlaceholder('Asunto del correo').fill('Seguimiento');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Mensaje listo para enviar.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Mensaje listo para enviar.');
 
     await page.getByRole('button', { name: 'Enviar correo' }).click();
 

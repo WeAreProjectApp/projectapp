@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 from rest_framework import serializers
 
 from accounts.models import UserProfile
@@ -41,7 +42,7 @@ def _validate_client_email_mx(value):
     return value
 
 
-class ProposalProjectStageSerializer(serializers.ModelSerializer):
+class ProposalProjectStageSerializer(EditorialModelSerializer):
     """
     Serializer for ProposalProjectStage — internal project execution tracking.
 
@@ -76,7 +77,7 @@ class ProposalProjectStageSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ProposalSectionListSerializer(serializers.ModelSerializer):
+class ProposalSectionListSerializer(EditorialModelSerializer):
     """
     Lightweight serializer for listing proposal sections in admin views.
     """
@@ -86,7 +87,7 @@ class ProposalSectionListSerializer(serializers.ModelSerializer):
         fields = ('id', 'section_type', 'title', 'order', 'is_enabled', 'is_wide_panel')
 
 
-class ProposalSectionDetailSerializer(serializers.ModelSerializer):
+class ProposalSectionDetailSerializer(EditorialModelSerializer):
     """
     Full serializer for proposal sections, including content_json.
     """
@@ -113,7 +114,7 @@ class ProposalSectionDetailSerializer(serializers.ModelSerializer):
         return data
 
 
-class ProposalListSerializer(serializers.ModelSerializer):
+class ProposalListSerializer(EditorialModelSerializer):
     """
     Lightweight serializer for listing proposals in admin views.
     Includes computed fields for expiration status.
@@ -151,7 +152,7 @@ class ProposalListSerializer(serializers.ModelSerializer):
         return obj.available_transitions
 
 
-class ProposalDetailSerializer(serializers.ModelSerializer):
+class ProposalDetailSerializer(EditorialModelSerializer):
     """
     Full serializer for a business proposal, used by both client and admin detail views.
 
@@ -502,7 +503,7 @@ def serialize_proposal_document(d, *, proposal=None, service_snapshot=None):
     }
 
 
-class ProposalCreateUpdateSerializer(serializers.ModelSerializer):
+class ProposalCreateUpdateSerializer(EditorialModelSerializer):
     """
     Serializer for creating and updating business proposal metadata.
 
@@ -688,7 +689,7 @@ class ProposalCreateUpdateSerializer(serializers.ModelSerializer):
         return proposal
 
 
-class ProposalSectionUpdateSerializer(serializers.ModelSerializer):
+class ProposalSectionUpdateSerializer(EditorialModelSerializer):
     """
     Serializer for updating a proposal section's content and metadata.
     """
@@ -808,6 +809,7 @@ class ProposalFromJSONSerializer(serializers.Serializer):
     show_explainer_video = serializers.BooleanField(required=False)
     service_contract_approved = serializers.BooleanField(required=False)
     email_intro = serializers.CharField(required=False, default='', allow_blank=True)
+    text_formats = serializers.JSONField(required=False)
     sections = serializers.DictField(child=serializers.DictField(), required=True)
 
     def validate_client_email(self, value):
@@ -833,7 +835,13 @@ class ProposalFromJSONSerializer(serializers.Serializer):
             )
         return value
 
+    def validate(self, attrs):
+        from content.services.editorial_format import validate_editorial_values
+        return validate_editorial_values('businessproposal', attrs, instance=self.context.get('proposal'))
+
     def validate_sections(self, value):
+        from content.services.editorial_format import validate_nested_formats
+        validate_nested_formats(value)
         if 'general' not in value:
             raise serializers.ValidationError(
                 'The sections dict must include a "general" key with at least clientName.'
@@ -866,7 +874,7 @@ class ProposalResendSerializer(serializers.Serializer):
     email_intro = serializers.CharField(required=False, allow_blank=True)
 
 
-class ProposalAlertSerializer(serializers.ModelSerializer):
+class ProposalAlertSerializer(EditorialModelSerializer):
     """
     Serializer for creating and listing manual proposal alerts.
     """
@@ -882,7 +890,7 @@ class ProposalAlertSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at', 'client_name', 'proposal_title')
 
 
-class ProposalShareLinkSerializer(serializers.ModelSerializer):
+class ProposalShareLinkSerializer(EditorialModelSerializer):
     """
     Serializer for creating and displaying proposal share links.
     """
@@ -899,7 +907,7 @@ class ProposalShareLinkSerializer(serializers.ModelSerializer):
         )
 
 
-class ProposalDefaultConfigSerializer(serializers.ModelSerializer):
+class ProposalDefaultConfigSerializer(EditorialModelSerializer):
     """
     Serializer for retrieving and updating proposal default configurations.
     """
@@ -1004,7 +1012,7 @@ class ProposalDefaultConfigSerializer(serializers.ModelSerializer):
         return value
 
 
-class EmailTemplateConfigSerializer(serializers.ModelSerializer):
+class EmailTemplateConfigSerializer(EditorialModelSerializer):
     """
     Serializer for retrieving and updating email template configurations.
     """

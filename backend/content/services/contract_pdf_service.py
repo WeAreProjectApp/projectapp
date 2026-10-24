@@ -208,6 +208,10 @@ def _render_block(c, y, block, ps):
     """Render a single markdown block on the canvas. Returns the new y position."""
     block_type = block.get('type', '')
 
+    if block_type == 'rich_html' or block.get('html'):
+        from content.services.editorial_pdf import draw_editorial_html
+        return draw_editorial_html(c, y, block.get('html', ''), ps=ps)
+
     if block_type == 'heading':
         level = block.get('level', 2)
         text = _strip_emoji(block.get('text', ''))

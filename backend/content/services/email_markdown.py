@@ -67,14 +67,22 @@ _ITALIC_RE = re.compile(r'\*([^*]+)\*')
 _CODE_PLACEHOLDER_RE = re.compile(r'\x00(\d+)\x00')
 
 
-def normalize_sections(raw_sections):
+def normalize_sections(raw_sections, *, strict_editorial=False):
     """Coerce a mixed list of strings / ``{text, markdown}`` dicts into a
-    uniform ``[{'text': str, 'markdown': bool}]`` list, dropping empties.
+    uniform list, dropping empties.
 
     Single normalization point shared by the send parsers (standalone,
     proposal, diagnostic) and the composed-email preview endpoint, so both
     the legacy payload shape (plain strings) and the new one keep working.
+
+    New Visual/Source editor submissions opt into ``strict_editorial``. Their
+    Markdown sections are validated against the versioned editorial contract
+    and receive an internal format marker. That marker survives the second
+    normalization performed by the send services, while historical Markdown
+    metadata without it keeps the legacy email renderer.
     """
+    from content.services.editorial_format import FORMAT, render_source
+
     normalized = []
     if not isinstance(raw_sections, list):
         return normalized
@@ -86,7 +94,24 @@ def normalize_sections(raw_sections):
         else:
             continue
         if text.strip():
-            normalized.append({'text': text, 'markdown': markdown})
+            section = {'text': text, 'markdown': markdown}
+            editorial_format = (
+                FORMAT
+                if markdown and (
+                    strict_editorial
+                    or (
+                        isinstance(item, dict)
+                        and item.get('format') == FORMAT
+                    )
+                )
+                else None
+            )
+            if editorial_format:
+                # Fail before sending or persisting metadata. Rendering with
+                # strict=False later is only for already validated content.
+                render_source(text, format=editorial_format, strict=True)
+                section['format'] = editorial_format
+            normalized.append(section)
     return normalized
 
 
@@ -156,6 +181,9 @@ def _render_table(block):
 def _render_block(block):
     block_type = block.get('type')
 
+    if block_type == 'rich_html':
+        return editorial_email_html(block.get('html', ''))
+
     if block_type == 'paragraph':
         return f'<p style="{_P_STYLE}">{_render_inline(block.get("text", ""))}</p>'
 
@@ -203,3 +231,17 @@ def markdown_to_email_html(text):
     """
     parts = [_render_block(block) for block in markdown_to_blocks(text or '')]
     return mark_safe(''.join(part for part in parts if part))
+
+
+def editorial_email_html(html):
+    """Inline the declared styles for mail clients, preserving user choices."""
+    from content.services.editorial_format import parse_html, serialize_html
+    root = parse_html(html, strict=False)
+    styles = {'p': _P_STYLE, 'ul': _LIST_STYLE, 'ol': _LIST_STYLE,
+              'li': _LI_STYLE, 'blockquote': _QUOTE_STYLE, 'pre': _PRE_STYLE,
+              'table': _TABLE_STYLE, 'th': _TH_STYLE, 'td': _TD_STYLE}
+    for element in root.iter():
+        base = styles.get(element.tag, '')
+        if element.tag in ('h1', 'h2', 'h3'): base = _HEADING_STYLES[int(element.tag[1])]
+        if base: element.set('style', base + element.attrib.get('style', ''))
+    return serialize_html(root)

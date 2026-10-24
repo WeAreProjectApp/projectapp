@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';
 
 jest.mock('../../composables/useSectionAnimations', () => ({
   useSectionAnimations: jest.fn(),
@@ -23,7 +24,7 @@ import TechnicalDocumentPublicPanel from '../../components/BusinessProposal/Tech
 function mountPanel(props = {}) {
   return mount(TechnicalDocumentPublicPanel, {
     props: { fragment: 'intro', contentJson: {}, language: 'es', ...props },
-    global: { stubs: { Teleport: true } },
+    global: { components: { BaseRichTextContent }, stubs: { Teleport: true } },
   });
 }
 

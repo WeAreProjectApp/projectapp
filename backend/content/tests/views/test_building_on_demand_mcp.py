@@ -51,12 +51,20 @@ def test_connector_discovery_has_exact_tool_names(api_client, building_on_demand
     assert names == READ_NAMES | WRITE_NAMES | UPLOAD_NAMES | CONTROL_NAMES
     assert len(response.data['result']['tools']) == 44
     assert catalog['connector'] == 'building-on-demand'
-    assert catalog['version'] == '4.0.0'
     schemas = {tool['name']: tool['input_schema'] for tool in catalog['tools']}
     assert schemas['set_building_on_demand_video']['required'] == ['revision', 'asset_id']
     assert schemas['remove_building_on_demand_video']['required'] == ['revision']
     assert schemas['restore_default_building_on_demand_video']['required'] == ['revision']
     assert schemas['set_building_on_demand_video_visibility']['required'] == ['visible']
+
+
+def test_connector_discovery_pins_the_schema_version(api_client, building_on_demand_mcp):
+    """Fails if capability discovery does not announce the schema revision that owns editorial metadata."""
+    token, _ = building_on_demand_mcp
+
+    catalog = rpc_call(api_client, token, 'describe_capabilities', {})['structuredContent']
+
+    assert catalog['version'] == '4.1.1'
 
 
 def test_catalog_writes_advertise_durable_confirmation(api_client, building_on_demand_mcp):

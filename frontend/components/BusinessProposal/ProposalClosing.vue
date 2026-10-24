@@ -17,7 +17,7 @@
       <!-- Thank you message -->
       <div v-if="thankYouMessage" data-animate="fade-up">
         <h3 class="text-2xl md:text-3xl font-bold text-text-brand mb-2">{{ t.thankYouTitle }}</h3>
-        <p class="text-base md:text-lg text-text-brand/70 font-light max-w-2xl mx-auto" v-html="linkify(thankYouMessage)" />
+        <div class="text-base md:text-lg text-text-brand/70 font-light max-w-2xl mx-auto" v-html="linkify(thankYouMessage, text_formats?.['/thankYouMessage'])" />
       </div>
 
       <!-- Commercial CTA and contact channels belong to the final closing panel. -->
@@ -28,10 +28,10 @@
         class="w-full bg-primary rounded-3xl p-5 sm:p-8 md:p-10 text-center shadow-2xl"
       >
         <h3 class="text-2xl sm:text-3xl font-bold text-accent mb-3">{{ t.readyTitle }}</h3>
-        <p
+        <div
           v-if="ctaMessage"
           class="text-base sm:text-lg text-white/85 leading-relaxed mb-6 max-w-2xl mx-auto"
-          v-html="linkify(ctaMessage)"
+          v-html="linkify(ctaMessage, text_formats?.['/ctaMessage'])"
         />
         <div v-if="primaryCTA?.link || secondaryCTA?.text" class="flex flex-col sm:flex-row gap-3 justify-center mb-7">
           <a
@@ -102,7 +102,7 @@
         <div class="space-y-2">
           <div v-for="(opt, i) in closingPaymentOptions" :key="i" class="flex items-center justify-between gap-3 bg-surface/10 rounded-xl px-4 py-3">
             <span class="text-sm text-white/80">{{ opt.label }}</span>
-            <span class="text-sm font-bold text-white whitespace-nowrap">{{ opt.description }}</span>
+            <BaseRichTextContent class="text-sm font-bold text-white whitespace-nowrap" :source="opt.description" :format="opt.text_formats?.['/description'] || 'plain'" />
           </div>
         </div>
         <div v-if="effectiveTotal" class="text-center mt-4 pt-3 border-t border-border-default/15">
@@ -185,7 +185,7 @@
           <div class="space-y-2">
             <div v-for="(opt, i) in closingPaymentOptions" :key="i" class="flex items-center justify-between gap-3 bg-surface/10 rounded-xl px-4 py-3">
               <span class="text-sm text-accent/80">{{ opt.label }}</span>
-              <span class="text-sm font-bold text-accent whitespace-nowrap">{{ opt.description }}</span>
+              <BaseRichTextContent class="text-sm font-bold text-accent whitespace-nowrap" :source="opt.description" :format="opt.text_formats?.['/description'] || 'plain'" />
             </div>
           </div>
           <div v-if="effectiveTotal" class="text-center mt-4 pt-3 border-t border-border-default/15">
@@ -408,6 +408,7 @@ const validityRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   proposal: { type: Object, default: null },
   validityMessage: { type: String, default: '' },
   thankYouMessage: { type: String, default: '' },

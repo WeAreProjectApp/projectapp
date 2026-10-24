@@ -9,6 +9,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_BLOG_CREATE, ADMIN_BLOG_CREATE_FROM_JSON } from '../helpers/flow-tags.js';
+import { fillRichTextSource } from '../helpers/editorial.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 const createdPost = { id: 99, title_es: 'Nuevo Post', title_en: 'New Post', slug: 'nuevo-post', is_published: false, category: 'ai', read_time_minutes: 5 };
@@ -23,10 +24,11 @@ const jsonTemplate = {
   ],
 };
 
-function setupMock(page, { createResponse = createdPost } = {}) {
+function setupMock(page, { createResponse = createdPost, onCreate = () => {} } = {}) {
   return mockApi(page, async ({ apiPath, route }) => {
     if (apiPath === 'auth/check/') return authCheck;
     if (apiPath === 'blog/admin/create/' && route.request().method() === 'POST') {
+      onCreate(route.request().postDataJSON());
       return { status: 201, contentType: 'application/json', body: JSON.stringify(createResponse) };
     }
     if (apiPath === 'blog/admin/create-from-json/' && route.request().method() === 'POST') {
@@ -60,15 +62,16 @@ test.describe('Admin Blog Create', () => {
   test('manual mode: fills all fields and submits successfully', {
     tag: [...ADMIN_BLOG_CREATE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    await setupMock(page);
+    let postBody = null;
+    await setupMock(page, { onCreate: body => { postBody = body; } });
     await page.goto('/panel/blog/create');
 
     await page.getByLabel('Título (ES)').fill('Nuevo Post ES');
     await page.getByLabel('Title (EN)').fill('New Post EN');
-    await page.getByLabel('Resumen (ES)').fill('Resumen corto.');
-    await page.getByLabel('Excerpt (EN)').fill('Short excerpt.');
-    await page.getByLabel('Contenido HTML (ES)').fill('<p>Contenido</p>');
-    await page.getByLabel('Content HTML (EN)').fill('<p>Content</p>');
+    await fillRichTextSource(page.locator('#excerpt_es-source').locator('..'), 'Resumen corto.');
+    await fillRichTextSource(page.locator('#excerpt_en-source').locator('..'), 'Short excerpt.');
+    await fillRichTextSource(page.locator('#content_es-source').locator('..'), '<p>Contenido</p>');
+    await fillRichTextSource(page.locator('#content_en-source').locator('..'), '<p>Content</p>');
     await page.getByLabel('Categoría').selectOption('ai');
     await page.getByLabel('Tiempo lectura (min)').fill('8');
     await page.getByLabel('Imagen de portada (URL)').fill('https://example.com/img.jpg');
@@ -77,23 +80,37 @@ test.describe('Admin Blog Create', () => {
 
     // a successful create navigates away from the create form
     await expect(page).not.toHaveURL(/\/create/);
+    expect(postBody).toMatchObject({
+      excerpt_es: 'Resumen corto.', excerpt_en: 'Short excerpt.',
+      content_es: '<p>Contenido</p>', content_en: '<p>Content</p>',
+      text_formats: {
+        '/excerpt_es': 'markdown_html_v1', '/excerpt_en': 'markdown_html_v1',
+        '/content_es': 'markdown_html_v1', '/content_en': 'markdown_html_v1',
+      },
+    });
   });
 
   test('manual mode: submits with only required fields (no category, no readTime)', {
     tag: [...ADMIN_BLOG_CREATE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    await setupMock(page);
+    let postBody = null;
+    await setupMock(page, { onCreate: body => { postBody = body; } });
     await page.goto('/panel/blog/create');
 
     await page.getByLabel('Título (ES)').fill('Post Mínimo');
     await page.getByLabel('Title (EN)').fill('Minimal Post');
-    await page.getByLabel('Resumen (ES)').fill('Extracto.');
-    await page.getByLabel('Excerpt (EN)').fill('Excerpt.');
+    await fillRichTextSource(page.locator('#excerpt_es-source').locator('..'), 'Extracto.');
+    await fillRichTextSource(page.locator('#excerpt_en-source').locator('..'), 'Excerpt.');
 
     await page.getByRole('button', { name: 'Crear Post' }).click();
 
     // a successful create navigates away from the create form
     await expect(page).not.toHaveURL(/\/create/);
+    expect(postBody).toMatchObject({
+      title_es: 'Post Mínimo', title_en: 'Minimal Post',
+      excerpt_es: 'Extracto.', excerpt_en: 'Excerpt.',
+      text_formats: { '/excerpt_es': 'markdown_html_v1', '/excerpt_en': 'markdown_html_v1' },
+    });
   });
 
   test('switches to JSON import tab and shows template download', {

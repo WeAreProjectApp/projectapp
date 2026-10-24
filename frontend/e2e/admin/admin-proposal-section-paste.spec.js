@@ -436,8 +436,8 @@ test.describe('Proposal Section Edit — Paste Content Mode', () => {
     const pasteTextarea = editor.getByTestId('paste-textarea');
     await expect(pasteTextarea).not.toBeVisible();
 
-    // Form textareas should be present (executive_summary has Párrafos field)
-    await expect(editor.getByLabel('Párrafos')).toBeVisible();
+    // Form editor should be present (executive_summary has the first Párrafos item).
+    await expect(editor.getByRole('textbox', { name: 'Párrafos 1' })).toBeVisible();
   });
 
   test('conversion_strategy paste: saves rawText in payload', {
