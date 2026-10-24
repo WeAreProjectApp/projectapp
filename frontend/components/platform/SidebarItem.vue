@@ -13,6 +13,7 @@
   <NuxtLink
     v-else-if="!disabled"
     :to="item.href"
+    :data-tour="item.tourTarget"
     :class="itemClasses"
     :title="isCollapsed ? item.label : undefined"
     :aria-current="isActive ? 'page' : undefined"

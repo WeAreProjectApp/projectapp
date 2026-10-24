@@ -1,0 +1,18 @@
+export default {
+  help: 'Help', next: 'Next', previous: 'Previous', done: 'Finish', skip: 'Skip tour',
+  progress: '{current} of {total}', video: 'Watch video', dismiss: 'Close',
+  videoInvitation: 'You can also watch a video to get to know the platform.',
+  adminTitle: 'Platform help', globalSettings: 'Global availability', tours: 'Tours',
+  clients: 'Clients', tourEnabled: 'Enable tours', videoEnabled: 'Enable videos',
+  save: 'Save', publish: 'Publish', preview: 'Preview', revisions: 'Revisions',
+  create: 'Create announcement', slug: 'Identifier', context: 'Context', priority: 'Priority',
+  active: 'Active', titleEs: 'Spanish title', titleEn: 'English title',
+  descriptionEs: 'Spanish explanation', descriptionEn: 'English explanation', target: 'Target',
+  addStep: 'Add step', removeStep: 'Remove step', up: 'Move step up', down: 'Move step down',
+  saved: 'Changes saved.', error: 'Could not save. Refresh the data and try again.',
+  loading: 'Loading…', search: 'Find client', previousPage: 'Previous page', nextPage: 'Next page',
+  progressTitle: 'User progress', user: 'User', status: 'Status', tour: 'Tour',
+  published: 'Published revision', draft: 'Draft', empty: 'No results.',
+  contextGeneral: 'General navigation', contextProject: 'Inside a project', contextVoice: 'Voice form',
+  selectTour: 'Select tour', archive: 'Archive', close: 'Close',
+}
