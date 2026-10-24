@@ -881,6 +881,17 @@ Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Cliente
 
 # Active Context — ProjectApp
 
+> **En implementación — IA de Plataforma y reportes por voz (2026-10-24):**
+> configuración compartida con PA-164 en `/panel/platform/ai`, controles independientes
+> globales/cliente apagados inicialmente, claves cifradas, Haiku predeterminado/Luna
+> configurable, transcripción externa y plantillas ES/EN versionadas. Esta sesión es
+> dueña de la base compartida; el chatbot y sus consultas los implementa la otra sesión.
+> El audio es temporal, los borradores duran 24 horas y aceptar un texto no aprueba una entrega.
+> Cupo compartido inicial: 20 solicitudes/300 minutos móviles, con overrides por
+> cliente y canje único del dictado del chatbot. Backend 28 casos y frontend 20
+> casos nuevos verificados localmente; navegador y CI final se verifican en el PR #538.
+> Políticas de fusión conservan autores y los esquemas MCP projects 4.1.1 son cerrados.
+
 **2026-10-01 — seguimiento contractual de Platform en implementación:** la rama
 `feat/01102026-platform-review-workflow` reemplaza el Kanban por contrato/otrosí,
 alcance, fases de ejecución, etapas y guías de validación. Publicación por etapa,
@@ -3007,3 +3018,34 @@ Changelogs con ejemplos antes/después y runbook de guards/slices preparados:
 Los controles compartidos y `*_history` de PR #503 quedan fuera del barrido.
 El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
 entrada documental no declara terminados esos pasos ni operaciones en producción.
+
+
+## 2026-10-24 — Ayuda y recorridos de la plataforma
+
+PR #539 implementa guías general, contextual y de voz por usuario, ES/EN,
+novedades editables y administración común por Panel y las 14 herramientas del
+MCP Proyectos. Completar o saltar impide otra apertura automática; Ayuda permite
+repetir. Los destinos pertenecen a un catálogo cerrado y no ejecutan acciones
+de negocio. Appi y Video consumen el contrato de superficies sin imports
+inversos; Voz está integrada mediante merges de sus commits publicados hasta
+`1d8eebdef`, incluidas ambas excepciones de previsualización sin escrituras,
+la comprobación de propiedad de proyectos de IA y las exenciones precisas de
+borradores privados y contadores de consumo. El contrato combinado conserva
+85 herramientas con sus nombres y serializers explícitos.
+
+La validación focal acredita 22 pruebas backend, 35 unitarias de interfaz y
+navegación, siete controles de contratos/relaciones y 18 casos únicos de
+navegador aprobados, sin omisiones ni reintentos. Incluye el control real de voz,
+la entrada al proyecto, la restauración del menú móvil y cinco perfiles
+responsive. Tras detectar dos carreras en CI se repitieron cuatro casos sobre
+el layout combinado y se validó la invitación a abrir el video en pausa:
+cinco aprobados, sin omisiones ni reintentos. El destino actual se guarda antes
+de animar la tarjeta; el inicio contextual sólo se acusa después de abrir y
+se reintenta cuando aparece un destino que terminó de montarse tarde. Las
+cuatro regresiones nuevas y doce casos vecinos pasaron. La fuente de Ayuda
+del servidor combinado coincide con `d15001691`, y los JSON/XML recibieron
+revisión independiente. Nuxt completó la compilación local. Catálogos y mapa de flujos están
+actualizados; la auditoría conserva las brechas de clases de resultado sin
+reducir el contrato para simular cobertura completa. La comprobación MCP nueva
+de ausencia de escrituras y la entrega del head final se verifican en el CI del
+PR. Esta nota no acredita merge, despliegue ni cambios en datos desplegados.

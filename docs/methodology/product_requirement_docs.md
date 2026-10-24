@@ -1,3 +1,12 @@
+> **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
+> reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
+> (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por
+> panel y MCP projects. Cupo común de 20 solicitudes por ventana móvil de 300
+> minutos con overrides por cliente. Trabajos Huey privados, audio temporal,
+> borradores 24 h y revisión humana antes de llenar el formulario. Chatbot/Jev se
+> integra en su propia sesión. Migraciones accounts.0083–0085, sin aplicar desde
+> este worktree. Contrato y operación: [IA de Plataforma](../platform-ai.md).
+
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
 
 > **Células Scrum y legibilidad contable — 2026-10-22:** Células ofrece video explicativo español en el panel y la página pública, con visibilidad, sustitución, retirada y restauración. Sin recurso en inglés se omite la tarjeta. Bolsillo, Ingresos y Gastos aprovechan el ancho sobrante para Concepto y mantienen importes completos a la derecha.
@@ -1267,3 +1276,8 @@ Oculto por defecto aplica exclusivamente a URLs y accesos: producción/QA y cada
 ### Modalidad contractual posterior a negociación
 
 El equipo administrativo puede corregir single/split en cualquier estado. Fuera de negociación debe revisar el impacto, escribir una nota y confirmar. El contenido personalizado y las evidencias enviadas o firmadas se conservan. Los cambios y restauraciones guardan instantáneas permanentes consultables desde historial y MCP. No se envían documentos automáticamente ni se modifican plantillas u otras propuestas.
+
+
+## Recorridos de clientes — 2026-10-24
+
+Guía general, contextual del primer proyecto y explicación de voz sólo al abrir el formulario; estado por usuario entre dispositivos, repetición desde Ayuda y novedades bilingües administrables.

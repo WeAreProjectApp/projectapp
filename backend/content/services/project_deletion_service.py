@@ -23,6 +23,8 @@ DEPENDENCY_LABELS = {
     'accounts.projectphase': ('phases', 'Fases y propuestas vinculadas'),
     'accounts.changerequest': ('change_requests', 'Solicitudes de cambio'),
     'accounts.bugreport': ('bugs', 'Reportes de errores'),
+    'accounts.platformaijob': ('ai_drafts', 'Borradores privados de IA'),
+    'accounts.platformaiusage': ('ai_usage', 'Métricas de consumo de IA'),
     'accounts.deliverable': ('deliverables', 'Entregables'),
     'accounts.projectdatamodelentity': ('data_models', 'Entidades del modelo de datos'),
     'accounts.notification': ('notifications', 'Notificaciones'),

@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.103.0
+// Registry version: 2.104.0
 
 // ── admin ──
 export const ADMIN_ACCOUNTING_ADS = ['@flow:admin-accounting-ads', '@module:admin', '@priority:P3'];
@@ -198,6 +198,8 @@ export const ADMIN_OUTBOUND_EMAIL_HISTORY_RESEND = ['@flow:admin-outbound-email-
 export const ADMIN_PANEL_PROJECTS = ['@flow:admin-panel-projects', '@module:admin', '@priority:P1'];
 export const ADMIN_PANEL_UNSAVED_GUARD = ['@flow:admin-panel-unsaved-guard', '@module:admin', '@priority:P2'];
 export const ADMIN_PARTNERSHIP_LEGACY_REDIRECTS = ['@flow:admin-partnership-legacy-redirects', '@module:admin', '@priority:P2'];
+export const ADMIN_PLATFORM_GUIDED_TOUR_AUTHORING = ['@flow:admin-platform-guided-tour-authoring', '@module:admin', '@priority:P2'];
+export const ADMIN_PLATFORM_HELP_SETTINGS = ['@flow:admin-platform-help-settings', '@module:admin', '@priority:P1'];
 export const ADMIN_PORTFOLIO_CREATE = ['@flow:admin-portfolio-create', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_DELETE = ['@flow:admin-portfolio-delete', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_EDIT = ['@flow:admin-portfolio-edit', '@module:admin', '@priority:P2'];
@@ -313,6 +315,7 @@ export const ADMIN_TASK_ALERT_MANAGEMENT = ['@flow:admin-task-alert-management',
 export const ADMIN_TASK_DEADLINE_NOTIFICATION = ['@flow:admin-task-deadline-notification', '@module:admin', '@priority:P2'];
 export const ADMIN_VIEW_MAP = ['@flow:admin-view-map', '@module:admin', '@priority:P4'];
 export const ADMIN_WHATSAPP_SUGGESTION = ['@flow:admin-whatsapp-suggestion', '@module:admin', '@priority:P2'];
+export const PANEL_PLATFORM_AI_SETTINGS = ['@flow:panel-platform-ai-settings', '@module:admin', '@priority:P1'];
 export const PROPOSAL_PRE_EXPIRATION_DISCOUNT_SUGGESTION = ['@flow:proposal-pre-expiration-discount-suggestion', '@module:admin', '@priority:P2'];
 
 // ── auth ──
@@ -373,6 +376,9 @@ export const PLATFORM_DELIVERY_NOTICES = ['@flow:platform-delivery-notices', '@m
 export const PLATFORM_DELIVERY_REPLY_PROMPT = ['@flow:platform-delivery-reply-prompt', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_RESPONSES = ['@flow:platform-delivery-responses', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_REVIEW = ['@flow:platform-delivery-review', '@module:platform', '@priority:P1'];
+export const PLATFORM_GUIDED_TOUR_GENERAL = ['@flow:platform-guided-tour-general', '@module:platform', '@priority:P1'];
+export const PLATFORM_GUIDED_TOUR_PROJECT = ['@flow:platform-guided-tour-project', '@module:platform', '@priority:P1'];
+export const PLATFORM_GUIDED_TOUR_VOICE = ['@flow:platform-guided-tour-voice', '@module:platform', '@priority:P2'];
 export const PLATFORM_HOSTING_CARD_DELETE = ['@flow:platform-hosting-card-delete', '@module:platform', '@priority:P2'];
 export const PLATFORM_HOSTING_CARD_SETUP = ['@flow:platform-hosting-card-setup', '@module:platform', '@priority:P1'];
 export const PLATFORM_HOSTING_PROJECT_LIST = ['@flow:platform-hosting-project-list', '@module:platform', '@priority:P2'];
@@ -398,6 +404,7 @@ export const PLATFORM_SECURE_LINK_MANAGE = ['@flow:platform-secure-link-manage',
 export const PLATFORM_SECURE_LINK_REPLACE = ['@flow:platform-secure-link-replace', '@module:platform', '@priority:P1'];
 export const PLATFORM_SIDEBAR_NAVIGATION = ['@flow:platform-sidebar-navigation', '@module:platform', '@priority:P2'];
 export const PLATFORM_VERIFY_ONBOARDING = ['@flow:platform-verify-onboarding', '@module:platform', '@priority:P1'];
+export const PLATFORM_VOICE_REPORT = ['@flow:platform-voice-report', '@module:platform', '@priority:P1'];
 
 // ── proposal ──
 export const PROPOSAL_CLOSING_CONTACT = ['@flow:proposal-closing-contact', '@module:proposal', '@priority:P2'];
