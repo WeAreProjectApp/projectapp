@@ -3,8 +3,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from accounts.models import Project, UserProfile
-from accounts.services import appi_cache
-from accounts.services import appi
+from accounts.services import appi, appi_cache
 from accounts.services.platform_ai import cache_version, invalidate_cache
 
 from .appi_test_support import conversation, grant_cache_admin, ready_turn

@@ -1,11 +1,10 @@
 """Appi contract projections expose only the client's visible evidence."""
 import pytest
+from content.models import Document
 from django.utils import timezone
 
 from accounts.models import ContractAmendment, ProjectContract
 from accounts.services import appi_sources
-from content.models import Document
-
 
 pytestmark = pytest.mark.django_db
 pytest_plugins = ('accounts.tests.appi_test_support',)

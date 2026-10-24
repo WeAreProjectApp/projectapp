@@ -76,6 +76,7 @@ describe('AppiWidget', () => {
     helpState = ref(null)
     helpApp = {}
     global.useI18n = () => ({ locale: ref('es-CO') })
+    global.useLocalePath = () => (path) => path
     global.useRoute = () => ({ path: '/platform/projects/7', params: { id: '7' } })
     global.useState = () => helpState
     global.useNuxtApp = () => helpApp
@@ -93,6 +94,7 @@ describe('AppiWidget', () => {
     jest.useRealTimers()
     global.crypto.randomUUID = originalRandomUUID
     delete global.useI18n
+    delete global.useLocalePath
     delete global.useRoute
     delete global.useState
     delete global.useNuxtApp

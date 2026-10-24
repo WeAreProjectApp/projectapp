@@ -21,9 +21,11 @@ class ProviderReply:
     status_code = 200
 
     def __init__(self, payload):
+        """Store the controlled provider payload returned by this boundary double."""
         self.payload = payload
 
     def json(self):
+        """Return the provider JSON payload consumed by Jev."""
         return self.payload
 
 
