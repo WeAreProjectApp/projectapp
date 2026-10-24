@@ -60,6 +60,7 @@ def test_anonymous_client_cannot_read_conversations():
     response = APIClient().get('/api/platform/chatbot/conversations/')
 
     assert response.status_code in (401, 403)
+    assert 'no-store' in response['Cache-Control']
 
 
 def test_global_off_blocks_queries(client_context):

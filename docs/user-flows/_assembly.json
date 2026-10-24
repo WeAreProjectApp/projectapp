@@ -358,6 +358,16 @@
         "panel-platform-ai-settings",
         "platform-voice-report"
       ]
+    },
+    {
+      "title": "Appi — consultas del proyecto y guías de la plataforma",
+      "flows": [
+        "platform-appi-project-status",
+        "platform-appi-guidance-boundary",
+        "platform-appi-private-history",
+        "platform-appi-availability",
+        "platform-appi-shared-quota-audio"
+      ]
     }
   ]
 }

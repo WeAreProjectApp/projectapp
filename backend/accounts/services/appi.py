@@ -10,9 +10,9 @@ from rest_framework.exceptions import APIException, NotFound
 
 from accounts.models_appi import AppiConversation, AppiTurn
 from accounts.models_ai import PlatformAISettings
-from accounts.services import appi_answers, appi_jev, appi_sources
+from accounts.services import appi_answers, appi_cache, appi_jev, appi_sources
 from accounts.services.appi_catalog import routing_options
-from accounts.services.platform_ai import AIConflict, configuration, require_ai_feature
+from accounts.services.platform_ai import AIConflict, cache_version, configuration, require_ai_feature
 from accounts.services.platform_ai_quota import consume, redeem_chat_audio, refund, reserve, snapshot as quota_snapshot
 
 RETENTION = timedelta(days=90)
@@ -68,9 +68,12 @@ def _valid_query(query):
     return isinstance(query, dict) and query.get('scenario') in routing_options() and query.get('topic', 'general') in appi_jev.CONTRACT_TOPICS
 
 
-def _cached(actor, conversation, exact_key):
-    if not configuration().chatbot_cache_enabled:
+def _cached(actor, conversation, exact_key, config, version):
+    if not config.chatbot_cache_enabled:
         return None
+    hot = appi_cache.lookup(actor, conversation.project_id, 'exact', exact_key, config, version)
+    if hot and hot.exact_key == exact_key:
+        return hot
     return AppiTurn.objects.filter(actor=actor, conversation__project_id=conversation.project_id,
         conversation__expires_at__gt=timezone.now(), exact_key=exact_key, status='ready', expires_at__gt=timezone.now()).order_by('-created_at').first()
 
@@ -117,9 +120,12 @@ def submit(actor, conversation_id, values):
     return turn
 
 
-def _semantic_cached(actor, turn, query, dependency):
-    if not configuration().chatbot_cache_enabled:
+def _semantic_cached(actor, turn, query, dependency, config, version):
+    if not config.chatbot_cache_enabled:
         return None
+    hot = appi_cache.lookup(actor, turn.conversation.project_id, 'typed', dependency, config, version)
+    if hot and hot.dependencies == dependency and hot.query == query:
+        return hot
     # Exact typed parameters: never nearest-neighbour prose matching.
     candidates = AppiTurn.objects.filter(actor=actor, conversation__project_id=turn.conversation.project_id,
         status='ready', dependencies=dependency, expires_at__gt=timezone.now()).exclude(pk=turn.pk).order_by('-created_at')[:10]
@@ -139,7 +145,9 @@ def process(turn_id):
         if turn.expires_at <= timezone.now():
             raise NotFound('La conversación expiró.')
         context = turn.query.get('context', {})
-        cached = _cached(actor, conversation, turn.exact_key)
+        config = configuration()
+        token = cache_version('chatbot', config)
+        cached = _cached(actor, conversation, turn.exact_key, config, token)
         query = cached.query if cached and _valid_query(cached.query) else appi_jev.classify(actor, project, turn.question, context)
         data = appi_sources.snapshot(actor, conversation.project_id, query, turn.language)
         if not cached and data['candidates'] and query['scenario'] in ('bugs', 'phase_status', 'deliverables', 'contract_clause'):
@@ -149,15 +157,17 @@ def process(turn_id):
             elif selection and selection != 'all':
                 query['entity_id'] = selection
             data = appi_sources.snapshot(actor, conversation.project_id, query, turn.language)
-        dependency = appi_answers.dependencies(query, data, turn.language)
+        dependency = appi_answers.dependencies(query, data, turn.language, config=config, cache_token=token)
         if cached and cached.dependencies != dependency:
             cached = None
-        cached = cached or _semantic_cached(actor, turn, query, dependency)
-        response = {**cached.answer, 'provenance': 'cache'} if cached else appi_answers.answer(actor, project, turn.question, query, data, turn.language)
+        cached = cached or _semantic_cached(actor, turn, query, dependency, config, token)
+        response = {**cached.answer, 'provenance': 'cache'} if cached else appi_answers.answer(actor, project, turn.question, query, data, turn.language, config=config)
         # Reauthorization covers switch changes and transfers during provider I/O.
         require_appi(actor, conversation.project_id)
         fresh = appi_sources.snapshot(actor, conversation.project_id, query, turn.language)
-        current_dependency = appi_answers.dependencies(query, fresh, turn.language)
+        fresh_config = configuration()
+        fresh_token = cache_version('chatbot', fresh_config)
+        current_dependency = appi_answers.dependencies(query, fresh, turn.language, config=fresh_config, cache_token=fresh_token)
         if current_dependency != dependency:
             response = appi_answers.template_answer(query, fresh, turn.language)
         now = timezone.now()
@@ -171,6 +181,7 @@ def process(turn_id):
             persisted.status, persisted.verified_at = 'ready', now
             persisted.save(update_fields=['query', 'answer', 'dependencies', 'status', 'verified_at'])
             consume(turn.quota_id)
+        appi_cache.remember(persisted, fresh_config, actor=actor, project_id=conversation.project_id, version=fresh_token)
     except Exception:
         AppiTurn.objects.filter(pk=turn.pk, status='processing').update(status='failed', query={}, answer={})
         refund(turn.quota_id)
@@ -184,15 +195,22 @@ def turn_data(actor, turn, *, memo=None):
         return base
     if not _valid_query(turn.query):
         return {**base, 'question': '', 'status': 'unavailable'}
-    current_ids = {project.pk for project in appi_sources.projects_for(actor, turn.conversation.project_id)}
+    memo = memo if memo is not None else {}
+    membership = ('projects', turn.conversation.project_id)
+    if membership not in memo:
+        memo[membership] = {project.pk for project in appi_sources.projects_for(actor, turn.conversation.project_id)}
+    current_ids = memo[membership]
     if not set(turn.answer.get('project_ids', [])).issubset(current_ids):
         return {**base, 'question': '', 'status': 'unavailable'}
-    memo = memo if memo is not None else {}
     key = appi_sources.digest({'project': turn.conversation.project_id, 'query': turn.query, 'language': turn.language})
     if key not in memo:
         try:
-            current = appi_sources.snapshot(actor, turn.conversation.project_id, turn.query, turn.language)
-            memo[key] = appi_answers.dependencies(turn.query, current, turn.language)
+            if 'policy' not in memo:
+                config = configuration()
+                memo['policy'] = (config, cache_version('chatbot', config))
+            current = appi_sources.snapshot(actor, turn.conversation.project_id, turn.query, turn.language, freshness_only=True)
+            config, token = memo['policy']
+            memo[key] = appi_answers.dependencies(turn.query, current, turn.language, config=config, cache_token=token)
         except APIException:
             memo[key] = None
     if memo[key] is None:

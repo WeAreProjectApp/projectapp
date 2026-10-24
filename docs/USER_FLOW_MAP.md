@@ -6259,6 +6259,11 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-admin-client-detail` | platform | P2 | success,error,failure,display | 1 |
 | `platform-admin-client-list` | platform | P2 | success,error,display | 1 |
 | `platform-admin-project-create` | platform | P3 | success,error | 1 |
+| `platform-appi-availability` | platform | P1 | display,success,error,failure | 1 |
+| `platform-appi-guidance-boundary` | platform | P1 | display,success,error,failure | 1 |
+| `platform-appi-private-history` | platform | P1 | display,success,error,failure | 1 |
+| `platform-appi-project-status` | platform | P1 | display,success,error,failure | 1 |
+| `platform-appi-shared-quota-audio` | platform | P1 | display,success,error,failure | 1 |
 | `platform-bug-reports` | platform | P2 | success,error,failure,display | 1 |
 | `platform-change-requests` | platform | P2 | success,error,failure,display | 1 |
 | `platform-client-document-portal` | platform | P1 | success,display | 1 |
@@ -8074,6 +8079,89 @@ Código: `frontend/components/platform/VoiceReportInput.vue`,
 `backend/accounts/services/platform_ai_jobs.py`, `platform_ai_quota.py`.
 Bugs, cambios y observaciones comparten este control; las pruebas de navegador
 usan un micrófono simulado y API simulada, sin enviar audio a proveedores reales.
+
+
+## Appi — consultas del proyecto y guías de la plataforma
+
+### FLOW: `platform-appi-project-status`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-appi.spec.js`
+
+Cliente autenticado abre Appi, elige uno de sus proyectos o Todos mis proyectos y consulta estado, salud, fase, entregables, bugs o cláusula contractual. La respuesta muestra sólo hechos autorizados, fuentes internas y fecha de verificación; una respuesta histórica puede aparecer como desactualizada, una reconsulta crea una nueva consulta y una respuesta revocada queda no disponible.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Abrir Appi desde el lanzador, navegar por el selector de proyecto y comprobar texto de respuesta, fuente interna y fecha de verificación; comprobar las marcas desactualizada y no disponible con datos reales del fixture. |
+| success | Enviar una consulta válida sobre el proyecto propio, esperar su resultado y usar Consultar de nuevo; la nueva fila conserva el historial anterior y actualiza el marcador de cuota. |
+| error | Intentar consultar con una conversación o proyecto que ya no está disponible; la interfaz conserva los demás mensajes y no muestra datos ajenos. |
+| failure | Simular el fallo del procesamiento o de la lectura durante el sondeo; se muestra el estado de fallo y Reintentar, sin presentar una respuesta inventada. |
+
+### FLOW: `platform-appi-guidance-boundary`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-appi.spec.js`
+
+Cliente usa Appi para pedir pasos de la plataforma, como reportar un bug, y recibe una guía editable con enlace interno permitido. Las guías globales funcionan sin proyecto; las guías de un proyecto piden seleccionarlo. Preguntas fuera del universo de proyecto y uso de la plataforma reciben la respuesta respetuosa de alcance, sin ofrecer información general ni enlaces externos.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Abrir Appi sin proyecto y comprobar sugerencias y propósito finito; al elegir un proyecto, comprobar las sugerencias adicionales relacionadas con estado, salud y bugs. |
+| success | Preguntar cómo reportar un bug, verificar el paso a paso y abrir el enlace interno de Reporte de bugs desde la respuesta. |
+| error | Pedir una guía que necesita proyecto cuando está seleccionado Todos mis proyectos; Appi explica que debe elegirse un proyecto y no entrega un enlace ambiguo. |
+| failure | Fallar la petición de la guía o de sus capacidades; se conserva la pregunta y se muestra el error de la interfaz, sin sustituirla por una guía de otro proyecto. |
+
+### FLOW: `platform-appi-private-history`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-appi.spec.js`
+
+Cliente abre sus conversaciones privadas de Appi, cambia entre ellas, carga mensajes anteriores y puede borrar una conversación tras confirmarlo. El historial conserva sólo sus consultas durante 90 días, no aparece después de vencer y nunca revela conversaciones, preguntas ni respuestas de otra cuenta o de un proyecto que dejó de pertenecerle.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Abrir el selector de historial desde Appi y comprobar títulos propios, mensajes paginados y la ausencia de conversaciones vencidas, ajenas o revocadas. |
+| success | Elegir una conversación propia, cargar mensajes anteriores y borrar otra mediante la confirmación; la conversación desaparece y el cupo consumido no se restablece. |
+| error | Solicitar una conversación inexistente o que dejó de ser accesible; la interfaz muestra el error y conserva el historial que sí pertenece al cliente. |
+| failure | Fallar la carga o el borrado; la conversación no desaparece localmente y aparece el aviso de error sin afirmar que fue eliminada. |
+
+### FLOW: `platform-appi-availability`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-appi.spec.js`
+
+Cliente ve el lanzador de Appi sólo cuando chatbot está habilitado globalmente y para su cuenta. Si faltan las claves o el proveedor necesario, el lanzador explica que no está disponible y no abre un chat; al recuperar disponibilidad, puede abrir Appi sin mezclar el estado privado de otra sesión.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Entrar por la navegación normal como cliente y comprobar que el lanzador se oculta cuando el global o el cliente están apagados, y queda deshabilitado cuando falta preparación del proveedor. |
+| success | Con chatbot activo y disponible, abrir Appi desde el lanzador y comprobar que aparece el panel con su propósito y el campo de consulta. |
+| error | Cambiar a una cuenta sin capacidad de chatbot y comprobar que no conserva conversaciones, borrador ni cuota de la cuenta anterior. |
+| failure | Fallar la lectura de capacidades; no se abre un chat con estado incierto y el lanzador no permite una consulta facturable. |
+
+### FLOW: `platform-appi-shared-quota-audio`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-appi.spec.js`
+
+Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próximo restablecimiento. Una pregunta escrita, una respuesta reutilizada o una consulta fuera de alcance consume una unidad; una pregunta dictada reserva una unidad al transcribir y la canjea una sola vez al enviarla. Al agotar el límite, la interfaz bloquea nuevas consultas y muestra cuándo podrá continuar, sin duplicar el cobro al reintentar.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Abrir Appi y comprobar límite, usado, restante y hora de restablecimiento del cupo compartido para ese cliente. |
+| success | Dictar una pregunta, revisar la transcripción en el campo y enviarla; la respuesta se crea con el mismo recibo y el marcador baja sólo una unidad. |
+| error | Alcanzar el cupo de la ventana móvil e intentar enviar o empezar una grabación; los controles permanecen bloqueados y se informa cuándo vuelve a haber cupo. |
+| failure | Fallar transcripción, envío o sondeo; se conserva la posibilidad de editar o descartar la grabación y un reintento con el mismo identificador no consume una segunda unidad. |
 
 
 ## Unsectioned flows
