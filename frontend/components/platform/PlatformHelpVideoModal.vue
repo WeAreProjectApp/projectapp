@@ -22,6 +22,7 @@ const player = ref(null)
 const failed = ref(false)
 const catalogFailed = ref(false)
 const visible = computed(() => store.isOpen || catalogFailed.value)
+const canOpen = computed(() => store.videoAvailable || store.error)
 const playbackRevision = ref(0)
 
 function pause() { player.value?.pause() }
@@ -53,9 +54,9 @@ watch(visible, (open) => {
   emit(open ? 'open' : 'close')
 }, { flush: 'sync' })
 watch(() => route.fullPath, close)
-watch(() => store.videoAvailable, (available) => help?.registerVideo(open, available))
+watch(canOpen, (available) => help?.registerVideo(open, available))
 onMounted(() => {
-  help?.registerVideo(open, store.videoAvailable)
+  help?.registerVideo(open, canOpen.value)
   store.fetchVideos()
   if (store.isOpen) { surface.requestSurface('video'); emit('open') }
   window.addEventListener('blur', pause)

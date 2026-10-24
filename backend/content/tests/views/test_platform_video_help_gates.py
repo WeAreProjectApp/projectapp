@@ -22,8 +22,8 @@ def tutorial_client(django_user_model, *, onboarded=True):
 ])
 def test_shared_help_switches_govern_tutorials(django_user_model, global_on, client_on, visible):
     user, client = tutorial_client(django_user_model)
-    PlatformHelpSettings.objects.create(pk=1, video_enabled=global_on)
-    ClientPlatformHelpSettings.objects.create(user=user, video_enabled=client_on)
+    PlatformHelpSettings.objects.update_or_create(pk=1, defaults={'video_enabled': global_on})
+    ClientPlatformHelpSettings.objects.update_or_create(user=user, defaults={'video_enabled': client_on})
     response = client.get('/api/platform/help/videos/')
     assert response.status_code == 200
     assert response.data['enabled'] is visible

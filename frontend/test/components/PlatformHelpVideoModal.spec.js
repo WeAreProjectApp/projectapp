@@ -94,6 +94,7 @@ describe('platform video modal', () => {
     await registerVideo.mock.calls.at(-1)[0]()
     await flushPromises()
     expect(wrapper.get('[role="alert"]').text()).toContain('No pudimos cargar los videos')
+    expect(registerVideo.mock.calls.at(-1)[1]).toBe(true)
     usePlatformApi.mockReturnValue({ get: jest.fn().mockResolvedValue(catalog) })
     await wrapper.get('[role="alert"] button').trigger('click')
     await flushPromises()
