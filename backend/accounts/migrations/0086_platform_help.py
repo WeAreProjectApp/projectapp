@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0082_hosting_payment_voided_status'),
+        ('accounts', '0085_shared_ai_quota'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

@@ -83,6 +83,10 @@ class UserProfile(HistoryTrackedModel):
         related_name='profile',
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=ROLE_CLIENT)
+    chatbot_enabled = models.BooleanField(default=False)
+    voice_reporting_enabled = models.BooleanField(default=False)
+    ai_request_limit = models.PositiveIntegerField(null=True, blank=True)
+    ai_window_minutes = models.PositiveIntegerField(null=True, blank=True)
     document_navigation_mode = models.CharField(
         max_length=10,
         choices=DOCUMENT_NAVIGATION_CHOICES,
@@ -1903,4 +1907,10 @@ from accounts.models_delivery_notifications import (  # noqa: E402,F401
 from accounts.models_platform_help import (  # noqa: E402,F401
     ClientPlatformHelpSettings, PlatformGuidedTour, PlatformGuidedTourRevision,
     PlatformHelpEvent, PlatformHelpSettings, PlatformTourProgress,
+)
+
+from accounts.models_ai import (  # noqa: E402,F401
+    PlatformAISettings, PlatformAICredential, PlatformAITemplate,
+    PlatformAITemplateRevision, PlatformAIJob, PlatformAIUsage, PlatformAIEvent,
+    PlatformAIQuotaReservation,
 )
