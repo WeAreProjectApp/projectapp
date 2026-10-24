@@ -92,6 +92,7 @@ export function usePlatformGuidedTour() {
       const description = document.createElement('p')
       description.textContent = step[`description_${language.value}`]
       steps.push({ element: element || undefined, targetKey: step.target,
+        disableActiveInteraction: step.target !== 'platform-appi-launcher',
         popover: { title: title.outerHTML, description: description.outerHTML } })
     }
     if (!steps.length) { restore(); return false }

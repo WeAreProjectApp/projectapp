@@ -1,0 +1,17 @@
+{
+  "id": "admin-platform-guided-tour-authoring",
+  "name": "Admin Platform Guided Tour Authoring",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Borradores bilingües con destinos conocidos, orden de pasos, vista previa, revisiones y publicación sin reiniciar los vistos existentes.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

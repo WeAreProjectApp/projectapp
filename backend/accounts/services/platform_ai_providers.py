@@ -60,7 +60,7 @@ def generate_text(*, actor, project, purpose, model, instructions, text, schema=
                 config['format'] = {'type': 'json_schema', 'schema': schema}
             response = requests.post('https://api.anthropic.com/v1/messages',
                 headers={'x-api-key': key, 'anthropic-version': '2023-06-01'},
-                json={'model': model, 'max_tokens': max_tokens, 'system': [block], 'output_config': config,
+                json={'model': model, 'max_tokens': max_tokens, 'system': [block], 'output_config': config, 'thinking': {'type': 'disabled'},
                       'messages': [{'role': 'user', 'content': text}]}, timeout=(5, 45))
             data = _response(response)
             result = ''.join(block.get('text', '') for block in data.get('content', []) if block.get('type') == 'text')

@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.decorators.cache import never_cache
 from accounts import views_platform_help as views
 
 urlpatterns = [
@@ -15,3 +16,7 @@ urlpatterns = [
     path('admin/tours/<int:tour_id>/revisions/', views.tour_revisions, name='platform-help-tour-revisions'),
     path('admin/progress/', views.help_progress, name='platform-help-progress'),
 ]
+
+# Include authentication and validation errors in the same private cache policy.
+for pattern in urlpatterns:
+    pattern.callback = never_cache(pattern.callback)

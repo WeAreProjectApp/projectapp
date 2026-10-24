@@ -6123,6 +6123,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-panel-session-expired` | auth | P1 | error | 1 |
 | `admin-panel-unsaved-guard` | admin | P2 | display,success,failure | 1 |
 | `admin-partnership-legacy-redirects` | admin | P2 | success,error | — |
+| `admin-platform-guided-tour-authoring` | admin | P2 | success,error,failure,display | 1 |
+| `admin-platform-help-settings` | admin | P1 | success,error,failure,display | 1 |
 | `admin-platform-help-videos` | admin | P2 | display,success,error,failure | — |
 | `admin-portfolio-create` | admin | P2 | display,success,error | 1 |
 | `admin-portfolio-delete` | admin | P2 | display,success | 1 |
@@ -6275,6 +6277,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-delivery-reply-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-responses` | platform | P1 | success,error,failure | 1 |
 | `platform-delivery-review` | platform | P1 | display,success,error,failure | 1 |
+| `platform-guided-tour-general` | platform | P1 | success,error,failure,display | 1 |
+| `platform-guided-tour-project` | platform | P1 | success,error,failure,display | 1 |
+| `platform-guided-tour-voice` | platform | P2 | success,error,failure,display | 1 |
 | `platform-help-videos` | platform | P2 | display,success,failure | — |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
 | `platform-hosting-card-setup` | platform | P1 | success,error | 1 |
@@ -7935,6 +7940,89 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Result:** La copia muestra el estado y los metadatos de sincronización y permite abrir el documento del Gestor Documental cuando existe. El contrato y su copia se administran desde MCP; el panel no edita ni sincroniza. `contract: null` con respuesta 404 muestra que el contrato todavía no está disponible, mientras un fallo del servidor presenta Reintentar.
 - **Evidence:** `frontend/pages/panel/cells/index.vue:124`; `frontend/components/BuildingOnDemand/admin/ContractPanel.vue:42`; `frontend/stores/building_on_demand.js:48`; GET `/api/building-on-demand/admin/contract/`; GET `/api/building-on-demand/admin/contract/pdf/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
 - **Scope:** Los estados del espejo son resultados de consulta, no errores de entrada. Su historial y el fallo de descarga de PDF requieren evidencia adicional a la lectura del contrato.
+
+
+## Platform Help and Guided Tours
+
+### FLOW: `platform-guided-tour-general`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
+
+Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
+| error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
+| failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+### FLOW: `platform-guided-tour-project`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
+
+Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
+| error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
+| failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+### FLOW: `platform-guided-tour-voice`
+
+- **Módulo:** platform
+- **Prioridad:** P2
+- **Rol:** platform-client
+- **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
+
+Guía de voz al abrir voluntariamente el formulario real con voz disponible; no graba, transcribe, modifica ni envía por cuenta del usuario.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
+| error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
+| failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+### FLOW: `admin-platform-help-settings`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+- **Rol:** admin
+- **E2E:** `frontend/e2e/admin/admin-platform-help.spec.js`
+
+Configuración global y por cliente de recorridos y videos, con control de versión e historial de vistos por usuario.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
+| error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
+| failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+### FLOW: `admin-platform-guided-tour-authoring`
+
+- **Módulo:** admin
+- **Prioridad:** P2
+- **Rol:** admin
+- **E2E:** `frontend/e2e/admin/admin-platform-help.spec.js`
+
+Borradores bilingües con destinos conocidos, orden de pasos, vista previa, revisiones y publicación sin reiniciar los vistos existentes.
+
+| Resultado | Interacción y evidencia |
+|---|---|
+| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
+| error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
+| failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
 
 ## Unsectioned flows

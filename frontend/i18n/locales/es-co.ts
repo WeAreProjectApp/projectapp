@@ -45,6 +45,7 @@ export default defineI18nLocale(async () => {
     buildingOnDemand,
     buildingOnDemandAdmin,
     videoResources,
+    platformAI,
     platformHelp,
   ] = await Promise.all([
     import('~/locales/global/es.js'),
@@ -92,6 +93,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/buildingOnDemand/es.js'),
     import('~/locales/buildingOnDemandAdmin/es.js'),
     import('~/locales/videoResources/es.js'),
+    import('~/locales/platformAI/es.js'),
     import('~/locales/platformHelp/es.js'),
   ])
 
@@ -141,6 +143,7 @@ export default defineI18nLocale(async () => {
     buildingOnDemand: buildingOnDemand.default,
     buildingOnDemandAdmin: buildingOnDemandAdmin.default,
     videoResources: videoResources.default,
+    platformAI: platformAI.default,
     platformHelp: platformHelp.default,
   }
 })

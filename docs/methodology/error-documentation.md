@@ -1521,3 +1521,11 @@ mantiene incluso cuando faltan datos de confirmación.
 Regresión focal verificada: `content/tests/views/test_mcp_project_deletion.py`
 y contrato del conector `projects`. No sustituir la comprobación de permisos
 por una validación incompleta del cuerpo.
+
+
+## Rutas JWT fuera de accounts — 2026-10-24
+
+El cliente usePlatformApi conserva baseURL=/api/accounts/. Para una API bajo
+/api/platform/help/ se debe pasar baseURL vacío en la configuración de Axios;
+un path que empieza por / no anula esa base. La comprobación de ayuda usa esa
+configuración sin reemplazar los interceptores JWT.

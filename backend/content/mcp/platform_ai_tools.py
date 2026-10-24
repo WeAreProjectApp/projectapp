@@ -3,12 +3,19 @@ from accounts.serializers_ai import SettingsSerializer, ClientFlagsSerializer, T
 from accounts.services import platform_ai as service
 from accounts.services.platform_ai_cipher import encrypt
 from content.mcp.actor import mcp_actor
-from content.mcp.operation_builder import _op
+from content.mcp.operation_builder import _op as _panel_op
 from content.mcp.proposal_schemas import writable_schema
 
 
 def _schema(serializer):
     return writable_schema(serializer, partial=False)
+
+
+def _op(name, description, route, method='GET', **options):
+    # Even reads and body-free actions have a finite argument contract.
+    options.setdefault('query_schema' if method == 'GET' else 'payload_schema',
+                       {'type': 'object', 'properties': {}, 'additionalProperties': False})
+    return _panel_op(name, description, route, method, **options)
 
 
 def _prepare_key(arguments):
@@ -51,6 +58,8 @@ PLATFORM_AI_TOOLS = [
 
 # Publish finite, described input contracts rather than generic Panel envelopes.
 _DESCRIPTIONS = {
+    'page': 'Página de clientes, desde 1; se devuelven hasta 20 por página.',
+    'search': 'Filtro por correo, nombre o empresa del cliente, hasta 200 caracteres.',
     'provider': 'Proveedor: anthropic, openai o jev.',
     'api_key': 'Clave privada nueva. Solo escritura; nunca se devuelve ni se incluye en el preview.',
     'expected_version': 'Versión vigente leída antes de cambiar el recurso; evita sobrescribir cambios ajenos.',
