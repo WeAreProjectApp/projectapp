@@ -195,11 +195,21 @@ def invalidate_cache(actor, function):
         raise ValidationError('Función no admitida.')
     config, _ = PlatformAISettings.objects.get_or_create(pk=1)
     config = PlatformAISettings.objects.select_for_update().get(pk=config.pk)
-    config.cache_epoch += 1
+    if function == 'all':
+        config.cache_epoch += 1
     config.version += 1
     config.save(update_fields=['cache_epoch', 'version', 'updated_at'])
     event(actor, 'cache.invalidate', function)
     return {'invalidated': True, 'cache_epoch': config.cache_epoch}
+
+
+def cache_version(purpose, config=None):
+    """Version exact caches independently without deleting recoverable drafts."""
+    if purpose not in ('chatbot', 'voice_report'):
+        raise ValidationError('Función no admitida.')
+    config = config or configuration()
+    latest = PlatformAIEvent.objects.filter(action='cache.invalidate', target__in=[purpose, 'all']).order_by('-id').values_list('id', flat=True).first()
+    return f'{config.cache_epoch}:{latest or 0}'
 
 
 def usage_summary(actor):

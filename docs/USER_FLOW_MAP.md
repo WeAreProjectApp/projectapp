@@ -6254,6 +6254,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `layout-icon-interaction-feedback` | layout | P2 | success,failure,display | — |
 | `layout-locale-switch` | layout | P2 | success | 1 |
 | `layout-navbar-navigation` | layout | P2 | success | 1 |
+| `panel-platform-ai-settings` | admin | P1 | success,error,failure,display | — |
 | `platform-access-view` | platform | P2 | — | 0 |
 | `platform-admin-client-detail` | platform | P2 | success,error,failure,display | 1 |
 | `platform-admin-client-list` | platform | P2 | success,error,display | 1 |
@@ -6306,6 +6307,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-secure-link-replace` | platform | P1 | display,success,error,failure | — |
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
 | `platform-verify-onboarding` | platform | P1 | success,error | 1 |
+| `platform-voice-report` | platform | P1 | success,error,failure,display | — |
 | `proposal-closing-contact` | proposal | P2 | display | 1 |
 | `proposal-comment-from-closing` | proposal | P2 | success | 1 |
 | `proposal-conditional-acceptance` | proposal | P2 | — | 0 |
@@ -8023,6 +8025,55 @@ Borradores bilingües con destinos conocidos, orden de pasos, vista previa, revi
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+
+## Section 38 — IA y reportes por voz (Oct 24, 2026)
+
+### Panel: configuración de IA de Plataforma
+
+Entrada: iniciar sesión como staff, abrir **Plataforma → Configuración de IA**.
+Las dos funciones empiezan apagadas y el global apagado prevalece sobre el cliente.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| success | Cambiar activación y guardar. | Se conserva la configuración confirmada y se muestra confirmación. |
+| success | Guardar una clave, elegir el redactor o un cupo global/cliente. | Sólo se informa presencia/versión de la clave; los dos canales comparten la política. |
+| success | Editar, previsualizar o restaurar una plantilla. | Vista previa sin proveedor; guardar/restaurar crea una versión. |
+| error | Previsualizar una plantilla con marcadores no permitidos. | Error visible, sin revisión nueva ni llamada al modelo. |
+| failure | Guardar con error del servidor o versión antigua. | Error visible y formulario conservado para corregir o recargar. |
+| display | Navegar desde Plataforma a la configuración y consultar valores. | Modelos por función, claves sin contenido, cupo 20/300 inicial y consumo. |
+
+Código: `frontend/pages/panel/platform/ai.vue`, `frontend/stores/platform_ai_admin.js`,
+`backend/accounts/views_ai.py`, `backend/content/mcp/platform_ai_tools.py`.
+Los tests E2E sustituyen únicamente las respuestas de API; cifrado, versiones y
+permisos se comprueban en integración backend.
+
+### Platform: preparar un reporte con una nota de voz
+
+Entrada: iniciar sesión como cliente, abrir su proyecto y Bugs, Cambios o una
+etapa de Seguimiento contractual. El botón sólo existe con activación efectiva
+y proveedores configurados. Cambios exige un requerimiento publicado.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| success | Grabar, detener, escuchar, transcribir, corregir y preparar. | Texto estructurado editable según la plantilla del escenario. |
+| success | Revisar y usar la propuesta. | Se llena el formulario; todavía no existe un reporte enviado ni una decisión de conformidad. |
+| success | Recuperar o descartar una preparación propia. | Sólo borradores vigentes del mismo contexto; descartar elimina su contenido. |
+| error | Denegar acceso al micrófono y pulsar Grabar. | Mensaje visible y alternativa de escribir manualmente. |
+| failure | Fallar el procesamiento de la grabación. | Mensaje visible, sin envío del reporte y con posibilidad de reintentar. |
+| display | Navegar a Bugs y abrir Reportar. | Marcador con usadas/disponibles del cupo compartido y próxima liberación; agotado impide otra grabación. |
+
+El máximo es 60 segundos con parada automática; 30 segundos es recomendación.
+Transcribir un reporte consume una unidad; transcribir y enviar una pregunta de
+chatbot comparten una sola unidad. Un resultado ya obtenido sigue contando aunque
+se descarte. Los fallos sin resultado útil liberan la reserva. Ninguna lectura
+consume cupo. El formulario tradicional sigue disponible.
+
+Código: `frontend/components/platform/VoiceReportInput.vue`,
+`frontend/components/platform/PlatformAIQuotaMeter.vue`,
+`backend/accounts/services/platform_ai_jobs.py`, `platform_ai_quota.py`.
+Bugs, cambios y observaciones comparten este control; las pruebas de navegador
+usan un micrófono simulado y API simulada, sin enviar audio a proveedores reales.
 
 
 ## Unsectioned flows

@@ -46,7 +46,9 @@ Cada pregunta nueva del chatbot y cada grabación de reporte enviada a transcrib
 ocupan una unidad. La transcripción y la pregunta dictada comparten la misma
 reserva: el envío del chatbot la canjea una sola vez. Reintentos con el mismo
 `request_id` no duplican el consumo; un identificador no se puede reutilizar con
-otra entrada. Respuestas desde caché y declinaciones nuevas también cuentan.
+otra entrada. Si la transcripción se canjea después de su ventana, la misma reserva
+se incorpora a la ventana actual sólo si hay cupo; no permite acumular consultas
+gratuitas para después. Respuestas desde caché y declinaciones nuevas también cuentan.
 Un fallo técnico sin transcripción/respuesta útil devuelve una reserva pendiente;
 descartar un resultado ya obtenido no la devuelve.
 
@@ -82,7 +84,9 @@ La caché exacta se separa por actor, proyecto, contexto, idioma, modelo, versi�
 credenciales y plantillas y época de invalidación. Su vigencia máxima es 24 horas.
 Nunca evita los permisos actuales. Los prefijos estables aprovechan la caché del
 proveedor cuando son elegibles; no se agregan tokens de relleno ni calentamientos.
-El historial completo de reportes no se reenvía al modelo. Métricas de tokens,
+La invalidación por función conserva la caché de la otra; invalidar ambas cambia
+la época global. No elimina borradores recuperables. El historial completo de
+reportes no se reenvía al modelo. Métricas de tokens,
 audio, latencia y costo estimado no incluyen mensajes ni grabaciones.
 
 ## Contratos de integración
@@ -102,6 +106,7 @@ audio, latencia y costo estimado no incluyen mensajes ni grabaciones.
 `platform_ai_quota.reserve/consume/refund/snapshot` implementan el contador común.
 `redeem_chat_audio(actor, transcription_id, request_id, project_id=...)` verifica
 autor, propósito, trabajo listo, contexto y canje persistente sin cobrar otra vez.
+La clave de caché de cada canal incorpora `platform_ai.cache_version(purpose, config)`.
 El redactor del chatbot utiliza `platform_ai_providers.generate_text`; su política
 de alcance, fuentes y Jev sigue siendo responsabilidad de Appi.
 
@@ -118,3 +123,7 @@ credenciales desde el panel. Validar primero en desarrollo y después con un cli
 piloto; habilitar global y cliente explícitamente. Verificar el flujo completo,
 los casos sin permisos y el marcador antes de ampliar la activación. Las pruebas
 automáticas usan settings_test y fronteras de proveedor simuladas, sin costo de API.
+
+## Referencias de adaptadores
+
+Verificados el 24 de octubre de 2026: [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna), [GPT-Transcribe](https://developers.openai.com/api/docs/models/gpt-transcribe), [transcripción de archivos](https://developers.openai.com/api/docs/guides/speech-to-text) y [Haiku 5.5](https://platform.claude.com/docs/en/models/haiku-5-5/overview). Los costos mostrados son estimaciones con las tarifas base; la factura y el acceso efectivo dependen del proveedor y de la cuenta.

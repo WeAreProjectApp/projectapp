@@ -351,6 +351,13 @@
         "admin-platform-help-settings",
         "admin-platform-guided-tour-authoring"
       ]
+    },
+    {
+      "title": "Section 38 — IA y reportes por voz (Oct 24, 2026)",
+      "flows": [
+        "panel-platform-ai-settings",
+        "platform-voice-report"
+      ]
     }
   ]
 }
