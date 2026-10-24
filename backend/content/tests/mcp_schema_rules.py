@@ -237,6 +237,8 @@ PARITY_PAIRS = {
 }
 
 UNPAIRED_PREVIEWS = {
+    ('projects', 'preview_platform_ai_template'):
+        'Read-only local rendering with sample slots; it neither invokes a provider nor previews a saved mutation. Saving a template is a separate versioned operation.',
     ('documents', 'preview_folder_client_change'):
         'Preview and confirmed portal-policy coverage are separate scenarios; no single MCP preview/apply pair.',
     ('projects', 'preview_project_delete'):

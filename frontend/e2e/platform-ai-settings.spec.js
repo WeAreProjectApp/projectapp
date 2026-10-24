@@ -46,7 +46,7 @@ function reportTemplate() {
   }
 }
 
-async function setup(page, { saveFails = false, previewFails = false } = {}) {
+async function setup(page, { saveFails = false, previewFails = false, concurrentSettingsChange = false } = {}) {
   const scenario = { settings: makeSettings(), savedPayload: null }
   await setAuthLocalStorage(page, {
     token: 'e2e-ai-settings-admin',
@@ -58,10 +58,15 @@ async function setup(page, { saveFails = false, previewFails = false } = {}) {
     if (apiPath === 'platform/ai/admin/settings/' && method === 'PATCH') {
       scenario.savedPayload = route.request().postDataJSON()
       if (saveFails) return json({ detail: 'No disponible.' }, 503)
+      if (scenario.savedPayload.expected_version !== scenario.settings.version) return json({ detail: 'Versión desactualizada.' }, 409)
       scenario.settings = { ...scenario.settings, ...scenario.savedPayload, version: 5 }
       return json(scenario.settings)
     }
     if (apiPath === 'platform/ai/admin/clients/' && method === 'GET') return json({ results: [], count: 0, page: 1 })
+    if (apiPath === 'platform/ai/admin/credentials/anthropic/' && method === 'PUT') {
+      if (concurrentSettingsChange) scenario.settings = { ...scenario.settings, voice_reporting_enabled: false, version: 5 }
+      return json({ configured: true, version: 3, last_test_status: '' })
+    }
     if (apiPath === 'platform/ai/admin/templates/' && method === 'GET') return json([reportTemplate()])
     if (apiPath === 'platform/ai/admin/templates/1/preview/' && method === 'POST') {
       if (previewFails) return json({ detail: 'La plantilla no se puede previsualizar.' }, 400)
@@ -134,5 +139,25 @@ test.describe('Platform AI settings', () => {
 
     await expect(page.getByRole('alert')).toHaveText('No se pudo completar la operación. Actualiza los datos y revisa los valores antes de reintentar.')
     await expect(page.getByTestId('ai-template-content')).toHaveValue('Texto de vista previa rechazado')
+  })
+
+  // Catches a key refresh adopting another administrator's new settings version while retaining an older global form.
+  test('keeps the global form version after saving a provider key', {
+    tag: ['@flow:panel-platform-ai-settings', '@outcome:error'],
+  }, async ({ page }) => {
+    const scenario = await setup(page, { concurrentSettingsChange: true })
+    await openSettingsFromPanel(page)
+    await page.getByRole('tab', { name: 'Proveedores y claves', exact: true }).click()
+    const provider = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Anthropic', exact: true }) })
+    await provider.getByTestId('ai-key-anthropic').fill('synthetic-provider-key')
+    await provider.getByRole('button', { name: 'Guardar o reemplazar clave', exact: true }).click()
+    await expect(page.getByRole('status')).toHaveText('Datos actualizados.')
+    await expect(provider.getByTestId('ai-key-anthropic')).toHaveValue('')
+
+    await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click()
+
+    await expect(page.getByRole('alert')).toHaveText('No se pudo completar la operación. Actualiza los datos y revisa los valores antes de reintentar.')
+    expect(scenario.savedPayload.expected_version).toBe(4)
+    expect(scenario.settings.voice_reporting_enabled).toBe(false)
   })
 })
