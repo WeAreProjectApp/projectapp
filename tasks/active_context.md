@@ -3024,3 +3024,8 @@ editables y administración común por Panel y MCP Proyectos. Ayuda comparte
 coordinación con las sesiones Appi, reportes por voz y videos; los destinos
 son un catálogo cerrado y no ejecutan acciones de negocio. Esta entrada no
 acredita pruebas, entrega ni despliegue.
+
+
+## 2026-10-24 — Ayuda y recorridos, validación en curso
+
+Núcleo e interfaz publicados en PR #539. Se integró sólo el baseline autorizado c92279d94 de Voz. Dieciocho pruebas backend y nueve unitarias pasaron; QA amplía publicación, permisos y navegador. Appi y Video consumen el contrato de superficies y destinos sin imports inversos. Esta nota no acredita entrega final, merge ni deploy.

@@ -1948,3 +1948,12 @@ un cobro ya iniciado: se registra su estado y se evita renovar, cobrar de nuevo
 o enviar avisos relacionados con el proyecto eliminado. Las tareas deben
 comprobar la propiedad actual en la base, aunque hayan cargado la suscripción
 antes de la eliminación.
+
+
+## Ayuda por cuenta — 2026-10-24
+
+Los destinos de orientación son claves de controles conocidos, con contexto y
+requisitos inmutables; el contenido editable no acepta selectores ni URLs.
+Las preferencias y vistos pertenecen a la persona y no se reasignan al unificar
+clientes comerciales. Cada FK nueva a User requiere política explícita en el
+registro de unificación para conservar esa separación.

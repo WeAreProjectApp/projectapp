@@ -1,0 +1,17 @@
+{
+  "id": "platform-guided-tour-project",
+  "name": "Platform Guided Tour — Project Context",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

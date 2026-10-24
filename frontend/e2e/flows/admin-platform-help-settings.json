@@ -1,0 +1,17 @@
+{
+  "id": "admin-platform-help-settings",
+  "name": "Admin Platform Help Availability",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Configuración global y por cliente de recorridos y videos, con control de versión e historial de vistos por usuario.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

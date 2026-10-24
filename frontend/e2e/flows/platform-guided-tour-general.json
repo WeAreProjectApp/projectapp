@@ -1,0 +1,17 @@
+{
+  "id": "platform-guided-tour-general",
+  "name": "Platform Guided Tour — General",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}
