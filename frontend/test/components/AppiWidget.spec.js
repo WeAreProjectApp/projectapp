@@ -165,7 +165,7 @@ describe('AppiWidget', () => {
   test.each([
     ['project', async (mounted) => mounted.get('[data-testid="appi-project"]').setValue('9')],
     ['history', async (mounted) => mounted.get('[data-testid="appi-history"]').setValue('history-9')],
-  ])('releases a dictation receipt before changing $0', async (_transitionName, transition) => {
+  ])('releases a dictation receipt before changing %s', async (_transitionName, transition) => {
     // Falla si una dictación privada se usa en otro proyecto o historial, o si cambiar de contexto borra el texto sin enviar.
     await renderOpenWidget()
     await completeReadyTranscription()
