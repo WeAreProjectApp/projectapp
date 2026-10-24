@@ -25,6 +25,12 @@ foco, cambiar ruta, avanzar y cada 30 segundos durante un recorrido activo.
 El menú móvil y el foco se restauran al salir. Driver.js se importa sólo al
 iniciar una guía; se respeta la preferencia de movimiento reducido.
 
+El destino actual se registra al seleccionarlo, antes de la animación: cerrar
+una tarjeta inmediatamente conserva ese paso. El inicio automático sólo marca
+el contexto después de abrir la guía. Si la navegación monta un destino más
+tarde, un cambio en los destinos visibles permite reintentarlo; las solicitudes
+concurrentes se agrupan y se descartan al desmontar el anfitrión.
+
 ## Administración
 
 En **Panel → Plataforma → Ayuda de la plataforma** se gestionan interruptores,

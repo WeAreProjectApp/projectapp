@@ -162,7 +162,7 @@ describe('usePlatformGuidedTour', () => {
     expect(sidebar.isCollapsed.value).toBe(true)
     expect(window.scrollTo).toHaveBeenLastCalledWith(31, 47)
     expect(document.activeElement.getAttribute('aria-label')).toBe('Volver a la página')
-    expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'skipped', '', null, true)
+    expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'skipped', 'projects', null, true)
   })
 
   it('cancels a run paused while a navigation target is being prepared', async () => {
@@ -223,6 +223,31 @@ describe('usePlatformGuidedTour', () => {
     await flushPromises()
 
     expect(driver.drive).toHaveBeenCalledTimes(1)
-    expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'paused', '', null, true)
+    expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'paused', 'welcome', null, true)
+  })
+
+  it('acknowledges welcome when cancellation precedes Driver highlighting', async () => {
+    mountHarness()
+
+    await tour.start(17)
+    await tour.cancel()
+
+    expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'skipped', 'welcome', null, true)
+  })
+
+  it('acknowledges the final destination when completion precedes Driver highlighting', async () => {
+    addTarget('projects')
+    store.tours = [tourFixture([step('welcome'), step('projects')])]
+    mountHarness()
+
+    await tour.start(17)
+    const options = globalThis.__platformDriverFactory.mock.calls[0][0]
+    options.onNextClick()
+    await flushPromises()
+    options.onDoneClick()
+    await flushPromises()
+
+    expect(driver.drive).toHaveBeenLastCalledWith(1)
+    expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'completed', 'projects', null, true)
   })
 })
