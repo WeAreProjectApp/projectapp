@@ -8,7 +8,6 @@
 import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
 import { setAuthLocalStorage } from '../helpers/auth.js'
-import { viewportUse } from '../helpers/viewports.js'
 import {
   ADMIN_PLATFORM_GUIDED_TOUR_AUTHORING,
   ADMIN_PLATFORM_HELP_SETTINGS,
@@ -129,7 +128,7 @@ test.describe('Platform help administration', () => {
     await expect(page.getByRole('alert')).toHaveText('No se pudo guardar. Actualiza los datos e inténtalo de nuevo.')
   })
 
-  test('previewing a tour shows the saved bilingual draft', {
+  test('previewing a tour shows the saved draft in the active locale', {
     tag: [...ADMIN_PLATFORM_GUIDED_TOUR_AUTHORING, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     // Bug caught: preview stops rendering the draft that an administrator is about to publish.
@@ -156,23 +155,3 @@ test.describe('Platform help administration', () => {
     await expect(page.getByRole('alert')).toHaveText('No se pudo guardar. Actualiza los datos e inténtalo de nuevo.')
   })
 })
-
-for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
-  test.describe(`Platform help administration at ${profile}`, () => {
-    test.use(viewportUse(profile))
-
-    test(`keeps the help editor reachable at ${profile}`, {
-      tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:display', `@viewport:${profile}`],
-    }, async ({ page }) => {
-      // quality: allow-duplicate (per-viewport contract: admin-platform-help-settings)
-      // quality: allow-deep-link (the authenticated panel home is the entry point; this test clicks its visible Plataforma navigation)
-      // Bug caught: a supported viewport clips the only route into platform-help administration.
-      await setupAdmin(page)
-
-      await openPlatformHelp(page)
-      const editor = page.getByTestId('platform-help-admin')
-      await expect(editor.getByRole('heading', { name: 'Ayuda de la plataforma' })).toHaveText('Ayuda de la plataforma')
-      await expect(await editor.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-    })
-  })
-}

@@ -15,6 +15,11 @@ jest.mock('../../composables/usePlatformGuidedTour', () => ({
 const generalTour = { id: 11, context: 'general', status: '' }
 const voiceTour = { id: 12, context: 'voice', status: '' }
 
+function restoreGlobal(name, value) {
+  if (value === undefined) delete globalThis[name]
+  else globalThis[name] = value
+}
+
 describe('PlatformHelpHost', () => {
   let wrapper
   let auth
@@ -22,6 +27,8 @@ describe('PlatformHelpHost', () => {
   let guidedTour
   let help
   let route
+  let originalUseRoute
+  let originalUseI18n
 
   function mountHost() {
     wrapper = mount(PlatformHelpHost, {
@@ -33,6 +40,8 @@ describe('PlatformHelpHost', () => {
   }
 
   beforeEach(() => {
+    originalUseRoute = globalThis.useRoute
+    originalUseI18n = globalThis.useI18n
     route = reactive({ path: '/platform/projects/71/bugs' })
     global.useRoute = () => route
     global.useI18n = () => ({ t: (key) => key })
@@ -60,15 +69,15 @@ describe('PlatformHelpHost', () => {
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    delete global.useRoute
-    delete global.useI18n
+    restoreGlobal('useRoute', originalUseRoute)
+    restoreGlobal('useI18n', originalUseI18n)
     jest.clearAllMocks()
   })
 
   it.each([
     ['the profile needs completion', { needsProfileCompletion: true }],
     ['the session has not been validated', { hasValidatedSession: false }],
-  ])('does not start onboarding guidance while $reason', async (_reason, status) => {
+  ])('does not start onboarding guidance while %s', async (_reason, status) => {
     // Fails if a guidance overlay obscures the required client profile-completion or session-validation flow.
     Object.assign(auth, status)
     store.tours = [generalTour]
@@ -102,7 +111,7 @@ describe('PlatformHelpHost', () => {
   it.each([
     ['a visible voice recording control', true, 12],
     ['no voice recording control', false, 11],
-  ])('selects the expected automatic guide with $visibility', async (_visibility, voiceVisible, expectedTourId) => {
+  ])('selects the expected automatic guide with %s', async (_visibility, voiceVisible, expectedTourId) => {
     // Fails if voice help starts without its recording control or loses priority when the control is present.
     store.tours = [generalTour, voiceTour]
     visibleTourTarget.mockImplementation((key) => key === 'voice-report' && voiceVisible ? document.createElement('button') : undefined)
@@ -110,5 +119,22 @@ describe('PlatformHelpHost', () => {
     await flushPromises()
 
     expect(guidedTour.start).toHaveBeenCalledWith(expectedTourId, { projectId: '71', manual: false })
+  })
+
+  it.each([
+    ['a validated session', 'hasValidatedSession', false, true],
+    ['a completed profile', 'needsProfileCompletion', true, false],
+  ])('starts the general guide after the same user gains %s', async (_transition, field, before, after) => {
+    // Fails if a same-user eligibility transition never reconsiders the first-login guide.
+    auth[field] = before
+    store.tours = [generalTour]
+    mountHost()
+    await flushPromises()
+    guidedTour.start.mockClear()
+
+    auth[field] = after
+    await flushPromises()
+
+    expect(guidedTour.start).toHaveBeenCalledWith(11, { projectId: '71', manual: false })
   })
 })

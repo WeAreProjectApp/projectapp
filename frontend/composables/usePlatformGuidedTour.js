@@ -2,6 +2,7 @@ import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { usePlatformHelpStore } from '~/stores/platform-help'
 import { usePlatformSidebar } from '~/composables/usePlatformSidebar'
 import { usePlatformHelpSurface } from '~/composables/usePlatformHelpSurface'
+import { usePlatformTheme } from '~/composables/usePlatformTheme'
 
 export function visibleTourTarget(key) {
   return [...document.querySelectorAll(`[data-tour="${CSS.escape(key)}"]`)]
@@ -13,6 +14,7 @@ export function usePlatformGuidedTour() {
   const store = usePlatformHelpStore()
   const sidebar = usePlatformSidebar()
   const surface = usePlatformHelpSurface()
+  const { isDark } = usePlatformTheme()
   const { t, locale } = useI18n()
   const activeTour = ref(null)
   const completedTour = ref(null)
@@ -54,7 +56,11 @@ export function usePlatformGuidedTour() {
     await store.acknowledge(tour, status, step, runProject, manualRun)
   }
 
-  function pause() { runToken += 1; return finish('paused') }
+  function pause() {
+    runToken += 1
+    if (!activeTour.value) restore()
+    return finish('paused')
+  }
 
   async function prepareTarget(key) {
     const globalNav = ['projects', 'documents', 'collection-accounts', 'hosting', 'notifications', 'profile', 'help'].includes(key)
@@ -70,7 +76,7 @@ export function usePlatformGuidedTour() {
 
   async function start(tourId, { projectId = null, manual = true } = {}) {
     completedTour.value = null
-    if (activeTour.value) await pause()
+    await pause()
     const token = ++runToken
     if (!await store.fetchHelp(projectId) || !store.tourEnabled || token !== runToken) return false
     const tour = store.tours.find((item) => item.id === tourId)
@@ -86,6 +92,7 @@ export function usePlatformGuidedTour() {
     const steps = []
     for (const step of tour.content.steps) {
       const element = step.target === 'welcome' ? null : await prepareTarget(step.target)
+      if (token !== runToken) return false
       if (!element && step.target !== 'welcome') continue
       const title = document.createElement('span')
       title.textContent = step[`title_${language.value}`]
@@ -103,13 +110,20 @@ export function usePlatformGuidedTour() {
     async function advance(direction) {
       const currentId = activeTour.value?.id
       if (!currentId) return
-      if (!await store.fetchHelp(projectId) || !store.tourEnabled || !store.tours.some((item) => item.id === currentId)) { await pause(); return }
+      const loaded = await store.fetchHelp(projectId)
+      if (token !== runToken || !driver) return
+      if (!loaded || !store.tourEnabled || !store.tours.some((item) => item.id === currentId)) { await pause(); return }
       const available = new Set(store.tours.find((item) => item.id === currentId).content.steps.map((step) => step.target))
       let index = driver.getActiveIndex() + direction
       while (index >= 0 && index < steps.length) {
         const key = steps[index].targetKey
         const element = await prepareTarget(key)
-        if (available.has(key) && (key === 'welcome' || element)) { driver.drive(index); return }
+        if (token !== runToken || !driver) return
+        if (available.has(key) && (key === 'welcome' || element)) {
+          steps[index].element = element || undefined
+          driver.drive(index)
+          return
+        }
         index += direction
       }
       if (direction > 0) await finish('completed')
@@ -131,6 +145,7 @@ export function usePlatformGuidedTour() {
       onPopoverRender: ({ wrapper, closeButton, nextButton, previousButton }) => {
         wrapper.setAttribute('data-testid', 'platform-tour-popover')
         wrapper.setAttribute('role', 'dialog')
+        wrapper.setAttribute('data-theme', isDark.value ? 'dark' : 'light')
         wrapper.setAttribute('aria-label', tour.content[`title_${language.value}`])
         nextButton.setAttribute('data-testid', 'platform-tour-next')
         previousButton.setAttribute('data-testid', 'platform-tour-previous')
@@ -141,6 +156,7 @@ export function usePlatformGuidedTour() {
     })
     const resumeIndex = ['paused', 'in_progress'].includes(tour.status) ? steps.findIndex((step) => step.targetKey === tour.last_step) : 0
     await prepareTarget(steps[Math.max(0, resumeIndex)].targetKey)
+    if (token !== runToken || !driver) return false
     driver.drive(Math.max(0, resumeIndex))
     return true
   }

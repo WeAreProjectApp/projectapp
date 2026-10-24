@@ -12,7 +12,10 @@ export default {
   saved: 'Changes saved.', error: 'Could not save. Refresh the data and try again.',
   loading: 'Loading…', search: 'Find client', previousPage: 'Previous page', nextPage: 'Next page',
   progressTitle: 'User progress', user: 'User', status: 'Status', tour: 'Tour',
+  firstPage: 'You are on the first page.', noMorePages: 'There are no more results.',
   published: 'Published revision', draft: 'Draft', empty: 'No results.',
   contextGeneral: 'General navigation', contextProject: 'Inside a project', contextVoice: 'Voice form',
   selectTour: 'Select tour', archive: 'Archive', close: 'Close',
+  targets: {"welcome": "Welcome", "projects": "Project list", "documents": "Documents", "collection-accounts": "Billing statements", "hosting": "Hosting", "notifications": "Notifications", "profile": "Profile settings", "help": "Help menu", "platform-appi-launcher": "Appi button", "project-summary": "Project overview", "project-delivery": "Delivery and reviews", "project-ideas": "Ideas", "project-changes": "Requests", "project-bugs": "Bug reporting", "project-resources": "Resources", "project-access": "Available access", "project-secure-links": "Secure links", "voice-report": "Record a voice note"},
+  statuses: {"in_progress": "In progress", "paused": "Paused", "completed": "Completed", "skipped": "Skipped"},
 }
