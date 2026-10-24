@@ -28,6 +28,7 @@ const capabilities = (remaining = 4) => ({
   chatbot: { enabled: true, available: true, voice_available: true },
   quota: { remaining, limit: 5, used: 5 - remaining },
 })
+const historyConversation = { id: 'history-9', project_id: 9, language: 'es', title: 'Estado de Nova' }
 
 function buttonNamed(wrapper, label) {
   return wrapper.findAll('[role="button"]').find((button) => button.text() === label)
@@ -51,9 +52,9 @@ describe('AppiWidget', () => {
     api.get.mockImplementation((url) => {
       if (url === '/api/platform/ai/capabilities/') return Promise.resolve({ data: capabilities(4) })
       if (url === 'projects/') return Promise.resolve({ data: [{ id: 7, name: 'Atlas' }, { id: 9, name: 'Nova' }] })
-      if (url === '/api/platform/chatbot/conversations/') return Promise.resolve({ data: { results: [] } })
+      if (url === '/api/platform/chatbot/conversations/') return Promise.resolve({ data: { results: [historyConversation] } })
       if (url === '/api/platform/chatbot/conversations/history-9/') {
-        return Promise.resolve({ data: { conversation: { id: 'history-9', project_id: 9 }, messages: [], quota: { remaining: 4, limit: 5, used: 1 }, next_before: null } })
+        return Promise.resolve({ data: { conversation: historyConversation, messages: [], quota: { remaining: 4, limit: 5, used: 1 }, next_before: null } })
       }
       throw new Error(`Unexpected GET ${url}`)
     })
@@ -164,10 +165,11 @@ describe('AppiWidget', () => {
   test.each([
     ['project', async (mounted) => mounted.get('[data-testid="appi-project"]').setValue('9')],
     ['history', async (mounted) => mounted.get('[data-testid="appi-history"]').setValue('history-9')],
-  ])('releases a dictation receipt before changing $0', async (_transitionName, transition) => {
+  ])('releases a dictation receipt before changing %s', async (_transitionName, transition) => {
     // Falla si una dictación privada se usa en otro proyecto o historial, o si cambiar de contexto borra el texto sin enviar.
     await renderOpenWidget()
     await completeReadyTranscription()
+    expect(wrapper.get('[data-testid="appi-history"]').find('option[value="history-9"]').text()).toBe('Estado de Nova')
     await transition(wrapper)
     await flushPromises()
 
