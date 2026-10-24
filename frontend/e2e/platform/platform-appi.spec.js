@@ -86,7 +86,7 @@ test.describe('Platform Appi', () => {
     const answer = readyMessage({ question: '¿Cómo reporto un bug?', answer: { text: 'Usa el formulario del proyecto.', verified_at: '2026-10-24T12:00:00Z', sources: [], actions: [{ target_key: 'bugs', label: 'Reportar un bug', href: '/platform/projects/7/bugs' }] } })
     await setupAppi(page, { request: ({ apiPath, method }) => {
       if (apiPath === 'platform/chatbot/conversations/42/messages/' && method === 'POST') return json(answer)
-      if (apiPath === 'accounts/projects/7/bugs/' && method === 'GET') return json([])
+      if (apiPath === 'accounts/projects/7/bug-reports/' && method === 'GET') return json([])
       return null
     } })
     await visitClientProject(page); await openAppi(page)
@@ -97,6 +97,10 @@ test.describe('Platform Appi', () => {
     await expect(action).toHaveAttribute('href', /\/platform\/projects\/7\/bugs$/)
     await action.click()
     await expect(page).toHaveURL(/\/platform\/projects\/7\/bugs$/)
+    const reportFirstBug = page.getByRole('button', { name: 'Reportar primer bug' })
+    await expect(reportFirstBug).toBeVisible()
+    await reportFirstBug.click()
+    await expect(page.getByRole('heading', { name: 'Reportar bug', exact: true })).toBeVisible()
     await expect(page.getByTestId('appi-panel')).toHaveCount(0)
   })
 
