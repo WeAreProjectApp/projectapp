@@ -67,6 +67,8 @@ accounts.ProjectIdeaCollection.created_by accounts.ProjectClientAccessPolicy.upd
 accounts.ProjectClientAccessEvent.actor accounts.BillingContextEvent.actor accounts.IssueResponse.actor accounts.IssueEvent.actor
 accounts.DeliveryEvidenceEmail.prepared_by accounts.DeliveryEvidenceEmailAttempt.actor
 accounts.DeliveryNotificationEvent.actor accounts.DeliveryNotificationAttempt.requested_by
+accounts.PlatformAIEvent.actor accounts.PlatformAIJob.actor accounts.PlatformAIQuotaReservation.actor
+accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
 monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
 secure_links.SecureLinkEvent.actor
 ''')

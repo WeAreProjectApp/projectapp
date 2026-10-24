@@ -1,4 +1,6 @@
 """Session/CSRF administration and strictly JWT-authenticated client AI jobs."""
+from functools import wraps
+
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
@@ -23,7 +25,22 @@ def private_response(data, status=200):
     return response
 
 
-@api_view(['GET', 'PATCH'])
+def private_api_view(methods):
+    """Keep handled authentication/permission errors private as well as successes."""
+    def decorate(function):
+        view = api_view(methods)(function)
+
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            response = view(*args, **kwargs)
+            response['Cache-Control'] = 'no-store'
+            return response
+
+        return wrapped
+    return decorate
+
+
+@private_api_view(['GET', 'PATCH'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def settings_view(request):
@@ -31,7 +48,7 @@ def settings_view(request):
     return private_response(data)
 
 
-@api_view(['GET'])
+@private_api_view(['GET'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def clients_view(request):
@@ -50,14 +67,14 @@ def clients_view(request):
     return private_response({'results': [service.client_data(row) for row in result], 'count': pager.count, 'page': result.number})
 
 
-@api_view(['GET', 'PATCH'])
+@private_api_view(['GET', 'PATCH'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def client_view(request, user_id):
     return private_response(service.client_flags(request.user, user_id, request.data if request.method == 'PATCH' else None))
 
 
-@api_view(['PUT', 'DELETE'])
+@private_api_view(['PUT', 'DELETE'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def credential_view(request, provider):
@@ -74,7 +91,7 @@ def credential_view(request, provider):
         raise service.AIUnavailable('La llave de cifrado de IA no está configurada en el servidor.') from None
 
 
-@api_view(['POST'])
+@private_api_view(['POST'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def credential_test_view(request, provider):
@@ -82,14 +99,14 @@ def credential_test_view(request, provider):
     return private_response(test_credential(request.user, provider))
 
 
-@api_view(['GET'])
+@private_api_view(['GET'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def templates_view(request):
     return private_response([templates.template_data(item) for item in PlatformAITemplate.objects.order_by('family', 'scenario', 'language')])
 
 
-@api_view(['GET', 'PATCH'])
+@private_api_view(['GET', 'PATCH'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def template_view(request, template_id):
@@ -101,7 +118,7 @@ def template_view(request, template_id):
     return private_response(templates.template_data(item))
 
 
-@api_view(['GET'])
+@private_api_view(['GET'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def template_versions_view(request, template_id):
@@ -111,7 +128,7 @@ def template_versions_view(request, template_id):
     return private_response(list(item.revisions.order_by('-version').values('version', 'content', 'created_at')[:50]))
 
 
-@api_view(['POST'])
+@private_api_view(['POST'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def template_restore_view(request, template_id):
@@ -119,7 +136,7 @@ def template_restore_view(request, template_id):
     return private_response(templates.update_template(template_id, request.user, '', values['expected_version'], restore_version=values['version']))
 
 
-@api_view(['POST'])
+@private_api_view(['POST'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def template_preview_view(request, template_id):
@@ -133,35 +150,35 @@ def template_preview_view(request, template_id):
     return private_response({'preview': content.format(**sample), 'provider_called': False})
 
 
-@api_view(['GET'])
+@private_api_view(['GET'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def usage_view(request):
     return private_response(service.usage_summary(request.user))
 
 
-@api_view(['GET'])
+@private_api_view(['GET'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def events_view(request):
     return private_response(list(PlatformAIEvent.objects.order_by('-id').values('id', 'action', 'target', 'metadata', 'created_at')[:50]))
 
 
-@api_view(['POST'])
+@private_api_view(['POST'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def invalidate_view(request):
     return private_response(service.invalidate_cache(request.user, request.data.get('function')))
 
 
-@api_view(['GET'])
+@private_api_view(['GET'])
 @authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def capabilities_view(request):
     return private_response(service.ai_capabilities(request.user))
 
 
-@api_view(['GET', 'POST'])
+@private_api_view(['GET', 'POST'])
 @authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def transcriptions_view(request):
@@ -172,15 +189,29 @@ def transcriptions_view(request):
         if purpose not in ('chatbot', 'voice_report'):
             raise ValidationError('Propósito no válido.')
         project_id = request.query_params.get('project_id')
-        project = service.require_ai_feature(request.user, jobs._feature(purpose), project_id)
-        rows = PlatformAIJob.objects.filter(actor=request.user, project=project, purpose=purpose, status='ready', expires_at__gt=timezone.now()).order_by('-created_at')[:10]
+        project = service.require_ai_feature(request.user, jobs._feature(purpose), project_id, require_project=purpose != 'chatbot')
+        rows = PlatformAIJob.objects.filter(actor=request.user, project=project, purpose=purpose, status='ready', expires_at__gt=timezone.now())
+        if purpose == 'voice_report':
+            scenario = request.query_params.get('scenario')
+            if scenario not in ('bug', 'change', 'stage_observation'):
+                raise ValidationError('Escenario no válido.')
+            values = {'scenario': scenario}
+            for name in ('source_requirement_id', 'stage_id'):
+                if request.query_params.get(name):
+                    try:
+                        values[name] = int(request.query_params[name])
+                    except (TypeError, ValueError):
+                        raise ValidationError('Contexto no válido.') from None
+            context = jobs.report_context(project, request.user, values)
+            rows = rows.filter(Q(operation='transcription') | Q(operation='draft', payload__scenario=scenario, payload__context=context))
+        rows = rows.order_by('-created_at')[:10]
         return private_response([{'id': str(item.pk), 'operation': item.operation, 'scenario': item.payload.get('scenario'), 'created_at': item.created_at} for item in rows])
     item = jobs.create_transcription(request.user, validated(TranscriptionSerializer, request.data))
     item.refresh_from_db()
     return private_response(jobs.job_data(item), 202)
 
 
-@api_view(['GET', 'DELETE'])
+@private_api_view(['GET', 'DELETE'])
 @authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def job_view(request, job_id):
@@ -190,7 +221,7 @@ def job_view(request, job_id):
     return private_response(jobs.job_data(jobs.owned_job(request.user, job_id)))
 
 
-@api_view(['POST'])
+@private_api_view(['POST'])
 @authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def report_drafts_view(request, project_id):

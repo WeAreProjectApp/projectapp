@@ -1,3 +1,30 @@
+## IA de Plataforma — projects 4.1.1 (2026-10-24)
+
+El conector projects incorpora `get/update_platform_ai_settings`,
+`list_platform_ai_clients`, `get/update_platform_ai_client`, `list_platform_ai_templates`, `get/update/preview_platform_ai_template`,
+`list_platform_ai_template_versions`, `restore_platform_ai_template`,
+`get_platform_ai_usage`, `list_platform_ai_events`, `invalidate_platform_ai_cache`
+y `set/test/delete_platform_ai_credential`. Ver nombres exactos en
+`content/mcp/platform_ai_tools.py`; son los mismos servicios de `/panel/platform/ai`.
+
+1. Leer configuración y un cliente: ambos interruptores empiezan apagados; el
+   cupo compartido inicial es 20 solicitudes/300 minutos.
+2. Actualizar con versión vigente y confirmar; repetir con versión antigua debe
+   fallar sin sobrescribir. Overrides de cupo se definen juntos o ambos null.
+3. Preparar una credencial sintética en settings_test: la confirmación persiste
+   sólo ciphertext, proveedor y versión. Ni impacto, resultado, eventos ni lectura
+   posterior contienen la clave. Nunca usar una clave real como dato de prueba.
+4. Editar y restaurar una plantilla conserva las revisiones previas; faltantes,
+   marcadores adicionales, atributos y HTML se rechazan. Preview no llama proveedor.
+5. Consultar uso/eventos e invalidar caché: sólo métricas sin audio ni transcripción.
+6. Probar conexión es una acción explícita; puede hacer una llamada mínima a Jev.
+   No forma parte de los tests automáticos sin costo ni de una lectura de clave.
+
+Validación focal: `accounts/tests/test_platform_ai_services.py`,
+`test_platform_ai_jobs.py`, `test_platform_ai_quota.py`; revisión de contratos
+mediante `mcp_inventory --check` y `mcp_schema_report --slug projects`.
+Operación y aprovisionamiento privado en [platform-ai.md](platform-ai.md).
+
 > **Segmentación comercial — 2026-10-22:** Comercial 6.0.0 conserva clientes,
 > propuestas y diagnósticos; Nuestra oferta 1.0.0 (`offerings`) concentra paquetes
 > y módulos; Programas 1.0.0 (`programs`) reúne alianzas y células. Las descripciones

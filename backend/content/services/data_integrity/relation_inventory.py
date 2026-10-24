@@ -107,6 +107,7 @@ _decide(covered('PJ2'), '''
     accounts.IssueEvent.project accounts.ProjectClientAccessPolicy.project accounts.ProjectClientAccessEvent.project
     accounts.ProjectIdea.project accounts.ProjectIdeaCollection.project content.Linktree.project
     content.ProjectBrandAsset.project monitoring.Resource.project
+    accounts.PlatformAIJob.project accounts.PlatformAIUsage.project
 ''')
 _decide(covered('PJ2', 'PJ8'), 'accounts.DeliveryNotificationEvent.project')
 _decide(covered('PJ8'), '''
