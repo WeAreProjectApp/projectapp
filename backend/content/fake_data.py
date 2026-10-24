@@ -199,6 +199,7 @@ DERIVED_MODELS = {
 }
 
 CATALOG_MODELS = {
+    'accounts.PlatformAISettings', 'accounts.PlatformAITemplate', 'accounts.PlatformAITemplateRevision',
     'content.ConsultingProgram',
     'content.BuildingOnDemandProgram',
     'content.BuildingOnDemandContract',
@@ -213,6 +214,10 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Real provider secrets, paid activity and private expiring jobs are never fabricated.
+    'accounts.PlatformAICredential', 'accounts.PlatformAIJob',
+    'accounts.PlatformAIUsage', 'accounts.PlatformAIEvent',
+    'accounts.PlatformAIQuotaReservation',
     # Ownership receipts are created only by the migration engine, never by demo seeds.
     'content.DocumentOwnershipOperation',
     # Provenance is created only by an explicitly confirmed forced deletion;

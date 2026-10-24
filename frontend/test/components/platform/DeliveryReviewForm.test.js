@@ -12,7 +12,7 @@ describe('Client requirement review', () => {
   beforeEach(() => { global.useI18n = () => ({ t: translate }) })
   afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers.length = 0; delete global.useI18n })
   const renderForm = (props = {}) => {
-    const wrapper = mount(DeliveryReviewForm, { props: { stage: createStage(), ...props }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
+    const wrapper = mount(DeliveryReviewForm, { props: { projectId: 1, stage: createStage(), ...props }, global: { stubs: { VoiceReportInput: true, NuxtLink: { template: '<a><slot /></a>' } } } })
     wrappers.push(wrapper)
     return wrapper
   }

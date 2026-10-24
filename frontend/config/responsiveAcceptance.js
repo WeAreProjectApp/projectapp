@@ -62,6 +62,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/panel/projects/',
     'frontend/pages/panel/projects/',
     'frontend/pages/panel/monitoring/',
+    'frontend/pages/panel/platform/ai.vue',
   ], [
     'Buscar y cambiar el alcance del listado.',
     'Crear o editar un proyecto.',
@@ -291,6 +292,7 @@ export function modulesForChangedFiles(files) {
 
 /** Every catalog view has one accountable responsive module or dependency. */
 export function responsiveOwnerForView(sectionId, view) {
+  if (view.url === '/panel/platform/ai') return 'projects';
   if (view.url === '/platform/projects/:id/secure-links') return 'communications';
   const { file, url } = view;
   if (sectionId.startsWith('public-') || view.audience === 'public') return 'public';

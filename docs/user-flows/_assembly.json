@@ -341,6 +341,13 @@
         "admin-building-on-demand-economics",
         "admin-building-on-demand-contract"
       ]
+    },
+    {
+      "title": "Section 38 — IA y reportes por voz (Oct 24, 2026)",
+      "flows": [
+        "panel-platform-ai-settings",
+        "platform-voice-report"
+      ]
     }
   ]
 }

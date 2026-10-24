@@ -1,0 +1,16 @@
+{
+  "id": "platform-voice-report",
+  "name": "Preparar un reporte mediante voz",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "El cliente graba hasta 60 segundos, revisa la transcripción y el texto estructurado y lo incorpora a bugs, cambios u observaciones sin enviar automáticamente; el cupo se comparte con el chatbot.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}
