@@ -189,6 +189,18 @@ describe('usePlatformGuidedTour', () => {
     expect(sidebar.isMobileOpen.value).toBe(false)
   })
 
+  it('does not open Driver when a start is paused in the same turn', async () => {
+    // Fails if start captures its cancellation token after a same-turn pause and opens a stale guide.
+    mountHarness()
+
+    const starting = tour.start(17)
+    await tour.pause()
+
+    await expect(starting).resolves.toBe(false)
+    expect(globalThis.__platformDriverFactory).toHaveBeenCalledTimes(0)
+    expect(store.fetchHelp).toHaveBeenCalledTimes(0)
+  })
+
   it('does not drive a next step after the active tour is paused', async () => {
     // Fails if a delayed catalog refresh advances a Driver instance after its tour was paused.
     let releaseRefresh

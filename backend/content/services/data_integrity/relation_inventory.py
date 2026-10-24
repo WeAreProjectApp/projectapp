@@ -91,6 +91,13 @@ _decide(exempt('Preferencias, códigos y avisos personales: se van con el usuari
     accounts.CommunicationPanelPreference.user accounts.SavedFilterTab.user
     accounts.VerificationCode.user accounts.Notification.user
 ''')
+_decide(exempt('Preferencias de Ayuda y recorridos vistos por esta persona; se van con el usuario, '
+               'sin reasignarse al corregir relaciones comerciales.'), '''
+    accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
+''')
+_decide(AUTHORSHIP, '''
+    accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor
+''')
 _decide(exempt('Confirmación de corta vida del administrador que revisó un cambio sensible.'),
         'content.ProposalContractChangeIntent.owner')
 _decide(exempt('Identidad técnica del conector MCP, no un dato del cliente.'), 'content.McpCredential.actor')

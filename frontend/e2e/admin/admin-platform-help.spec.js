@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-24 — app not running)
 /**
  * Internal platform-help administration.
  *
@@ -79,7 +78,7 @@ async function openPlatformHelp(page) {
   await expect(link).toHaveText('Ayuda de la plataforma')
   await link.click()
   await expect(page).toHaveURL(/\/panel\/platform\/help$/)
-  await expect(page.getByTestId('platform-help-admin').getByRole('heading', { name: 'Ayuda de la plataforma' })).toHaveText('Ayuda de la plataforma')
+  await expect(page.getByTestId('platform-help-admin').getByRole('heading', { name: 'Ayuda de la plataforma', level: 1, exact: true })).toHaveText('Ayuda de la plataforma')
 }
 
 test.describe('Platform help administration', () => {
