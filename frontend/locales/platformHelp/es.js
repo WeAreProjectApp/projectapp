@@ -11,8 +11,11 @@ export default {
   addStep: 'Agregar paso', removeStep: 'Quitar paso', up: 'Subir paso', down: 'Bajar paso',
   saved: 'Cambios guardados.', error: 'No se pudo guardar. Actualiza los datos e inténtalo de nuevo.',
   loading: 'Cargando…', search: 'Buscar cliente', previousPage: 'Página anterior', nextPage: 'Página siguiente',
+  firstPage: 'Ya estás en la primera página.', noMorePages: 'No hay más resultados.',
   progressTitle: 'Estado por usuario', user: 'Usuario', status: 'Estado', tour: 'Recorrido',
   published: 'Revisión publicada', draft: 'Borrador', empty: 'No hay resultados.',
   contextGeneral: 'Navegación general', contextProject: 'Dentro de un proyecto', contextVoice: 'Formulario con voz',
   selectTour: 'Seleccionar recorrido', archive: 'Archivar', close: 'Cerrar',
+  targets: {"welcome": "Bienvenida", "projects": "Lista de proyectos", "documents": "Documentos", "collection-accounts": "Cuentas de cobro", "hosting": "Hosting", "notifications": "Notificaciones", "profile": "Configuración del perfil", "help": "Menú de ayuda", "platform-appi-launcher": "Botón de Appi", "project-summary": "Resumen del proyecto", "project-delivery": "Entrega y revisiones", "project-ideas": "Ideas", "project-changes": "Solicitudes", "project-bugs": "Reporte de bugs", "project-resources": "Recursos", "project-access": "Accesos habilitados", "project-secure-links": "Enlaces seguros", "voice-report": "Grabar nota de voz"},
+  statuses: {"in_progress": "En curso", "paused": "Pausado", "completed": "Completado", "skipped": "Omitido"},
 }

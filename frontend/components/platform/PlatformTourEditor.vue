@@ -9,7 +9,7 @@
     </div>
     <fieldset v-for="(step, index) in form.content.steps" :key="index" class="space-y-3 rounded-xl border border-border-default p-4">
       <legend class="px-2 font-medium">{{ index + 1 }}</legend>
-      <BaseFormField :label="tr('target')" :for="`tour-target-${index}`"><select :id="`tour-target-${index}`" v-model="step.target" required class="w-full rounded-xl border border-border-default bg-surface p-3"><option v-for="target in targetOptions" :key="target" :value="target">{{ target }}</option></select></BaseFormField>
+      <BaseFormField :label="tr('target')" :for="`tour-target-${index}`"><select :id="`tour-target-${index}`" v-model="step.target" required class="w-full rounded-xl border border-border-default bg-surface p-3"><option v-for="target in targetOptions" :key="target" :value="target">{{ tr(`targets.${target}`) }}</option></select></BaseFormField>
       <div class="grid gap-3 lg:grid-cols-2">
         <template v-for="language in ['es', 'en']" :key="language">
           <BaseFormField :label="tr(language === 'es' ? 'titleEs' : 'titleEn')" :for="`tour-step-title-${index}-${language}`"><input :id="`tour-step-title-${index}-${language}`" v-model="step[`title_${language}`]" required maxlength="160" class="w-full rounded-xl border border-border-default bg-surface p-3" /></BaseFormField>

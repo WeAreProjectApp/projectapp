@@ -53,8 +53,10 @@ selectores ni URLs libres. Las tarjetas presentan texto escapado.
 
 El MCP existente **Proyectos** publica estas mismas operaciones: configuración
 global y por cliente (`get/update_platform_help_*`, `list_platform_help_clients`),
-catálogo (`list/get/create/update/preview/publish/archive_platform_guided_tour`
-y `list_platform_guided_tour_revisions`) y progreso (`list_platform_tour_progress`).
+catálogo (`list_platform_guided_tours`, `get_platform_guided_tour`,
+`create_platform_guided_tour`, `update_platform_guided_tour`,
+`preview_platform_guided_tour`, `publish_platform_guided_tour`,
+`archive_platform_guided_tour` y `list_platform_guided_tour_revisions`) y progreso (`list_platform_tour_progress`).
 Panel y MCP comparten validación, control de versión y auditoría. Los cambios de
 disponibilidad y publicaciones usan la confirmación sensible del MCP.
 

@@ -1,10 +1,16 @@
 """Account isolation and publication safeguards for guided platform help."""
 from copy import deepcopy
 from unittest.mock import patch
+
 import pytest
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.test import APIClient
-from accounts.models_platform_help import PlatformGuidedTour, PlatformTourProgress, PlatformHelpEvent
+
+from accounts.models_platform_help import (
+    PlatformGuidedTour,
+    PlatformHelpEvent,
+    PlatformTourProgress,
+)
 from accounts.services import platform_help as help_service
 from accounts.services.project_collaboration_access import CollaborationConflict
 from accounts.tests.project_collaboration_helpers import context
@@ -14,14 +20,17 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def actors():
+    """Create isolated accounts with independent project ownership."""
     return context()
 
 
 def general():
+    """Read the initial published general guide from migration seeds."""
     return PlatformGuidedTour.objects.get(slug='platform-general')
 
 
 def acknowledgement(**overrides):
+    """Build a complete acknowledgement with explicit test overrides."""
     return {'status': 'completed', 'revision': 1, 'last_step': 'projects', **overrides}
 
 
@@ -30,6 +39,7 @@ def test_first_visit_has_published_bilingual_guides(actors):
     result = help_service.client_catalog(actors.client)
     tour = result['tours'][0]
     assert tour['status'] == ''
+    assert tour['content']['steps'][0]['title_es'] == 'Bienvenido a tu plataforma'
     assert tour['content']['steps'][0]['title_en'] == 'Welcome to your platform'
 
 
@@ -55,7 +65,7 @@ def test_skipped_state_survives_replay(actors):
     assert PlatformTourProgress.objects.get(user=actors.client, tour=general()).status == 'skipped'
 
 
-@pytest.mark.parametrize('global_enabled,client_enabled', [(False, True), (True, False), (False, False)])
+@pytest.mark.parametrize(('global_enabled', 'client_enabled'), [(False, True), (True, False), (False, False)])
 def test_disabled_tour_returns_no_steps(actors, global_enabled, client_enabled):
     """Breaks when either disabled gate fails to hide the tour."""
     help_service.update_flags(actors.admin, {'expected_version': 0, 'tour_enabled': global_enabled})

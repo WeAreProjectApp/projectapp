@@ -12,7 +12,7 @@
 import { computed, inject, onBeforeUnmount, onMounted, watch } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformHelpStore } from '~/stores/platform-help'
-import { usePlatformGuidedTour, visibleTourTarget } from '~/composables/usePlatformGuidedTour'
+import { visibleTourTarget } from '~/composables/usePlatformGuidedTour'
 const route = useRoute()
 const auth = usePlatformAuthStore()
 const store = usePlatformHelpStore()
@@ -56,6 +56,10 @@ async function refresh() {
 function openVideo() { tour.completedTour.value = null; help.openVideo() }
 watch(() => route.path, async () => { await tour.pause(); tour.completedTour.value = null; await refresh() })
 watch(() => auth.user?.id, async () => { await tour.pause(); store.reset(); lastAutoContext = ''; await refresh() })
+watch(() => [auth.hasValidatedSession, auth.needsProfileCompletion], async ([validated, needsProfile]) => {
+  if (!validated || needsProfile) await tour.pause()
+  else await refresh()
+})
 onMounted(() => {
   void refresh()
   observer = new MutationObserver(() => { if (Boolean(visibleTourTarget('voice-report')) !== help.voiceVisible.value) void considerAuto() })
