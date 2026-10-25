@@ -2318,6 +2318,22 @@ observa cambios en los destinos visibles y agrupa un único reintento pendiente
 si el destino aparece durante una operación asíncrona. Desmontar desconecta la
 observación e impide reintentos tardíos.
 
+## Ayuda audiovisual de clientes — 2026-10-24
+
+El catálogo `GET /api/platform/help/videos/` usa JWT de sesión y respuesta
+`no-store`. Comparte los interruptores de Ayuda globales/por cliente; filtra
+las piezas de Appi y voz con las capacidades efectivas del servicio de IA.
+El video general no depende de proveedores ni muestra esas opciones. La
+interfaz vuelve a consultar antes de abrir y al recuperar el foco, e invalida
+respuestas que llegan después de cerrar o salir de la cuenta.
+
+Las tres piezas usan el mismo `VideoResource` que los recursos comerciales:
+predeterminado empaquetado, sustitución validada o retirada explícita. Panel y
+MCP Proyectos reutilizan validación, revisiones y almacenamiento privado.
+Cambiar un tutorial no solicita reconstruir páginas públicas. El reproductor
+se monta en el layout cliente y se registra en el coordinador común de Ayuda;
+abrirlo cierra la superficie anterior y conserva el inicio manual del video.
+
 ## Appi y proyecciones privadas — 2026-10-24
 
 Appi usa Jev como clasificador tipado anterior a cualquier redacción. Las

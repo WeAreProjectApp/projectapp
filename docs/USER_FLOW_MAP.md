@@ -6125,6 +6125,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-partnership-legacy-redirects` | admin | P2 | success,error | — |
 | `admin-platform-guided-tour-authoring` | admin | P2 | success,error,failure,display | 1 |
 | `admin-platform-help-settings` | admin | P1 | success,error,failure,display | 1 |
+| `admin-platform-help-videos` | admin | P2 | display,success,error,failure | — |
 | `admin-portfolio-create` | admin | P2 | display,success,error | 1 |
 | `admin-portfolio-delete` | admin | P2 | display,success | 1 |
 | `admin-portfolio-edit` | admin | P2 | display,success,error | 1 |
@@ -6285,6 +6286,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-guided-tour-general` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-project` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-voice` | platform | P2 | success,error,failure,display | 1 |
+| `platform-help-videos` | platform | P2 | display,success,failure | — |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
 | `platform-hosting-card-setup` | platform | P1 | success,error | 1 |
 | `platform-hosting-project-list` | platform | P2 | display,success,error | — |
@@ -8636,6 +8638,17 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   a los flujos existentes del programa y sus otrosíes.
 - **Display:** no aplica: la ruta anterior no muestra una vista propia.
 
+### FLOW: `admin-platform-help-videos`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/:locale/panel/platform/help`
+- **Interaction:** Llegar desde el menú del panel a Ayuda y previsualizar las piezas general, Appi y voz en español. Sustituir un MP4, rechazar archivos incompatibles y conservar la versión anterior ante un error del servidor; retirar o restaurar usando el ciclo compartido con MCP.
+- **Outcomes:** `display`, `success`, `error`, `failure`
+- **Evidence:** frontend/pages/panel/platform/help.vue; frontend/components/platform/PlatformVideoResourcesManager.vue; frontend/components/resources/VideoResourceManager.vue.
+- **Scope:** Se llega desde la navegación del panel y se comprueba el contenido de las tres piezas. La sustitución, la validación local de MP4 y el rechazo del servidor se ejercitan en la interfaz; los permisos, la concurrencia y el ciclo completo de carga, retirada y restauración por MCP se prueban en backend. Los interruptores compartidos pertenecen al flujo de administración de Ayuda.
+
 # Marca y recursos del proyecto
 
 - **Ruta/rol:** `/panel/projects`, admin, Acciones → Marca y recursos.
@@ -9243,6 +9256,18 @@ del cliente permanecen intactas.
 `delivery-reply-prompt.spec.js` cubre envío manual sin adjuntos, revisión del texto
 editado, rechazo de una clasificación fuera del alcance con fuentes incompletas y
 consulta de la conversación pública que originó el prompt.
+
+### FLOW: `platform-help-videos`
+
+- **Module:** platform
+- **Role:** client
+- **Priority:** P2
+- **Route:** `/:locale/platform/projects`
+- **Interaction:** Abrir Ayuda desde el menú y elegir un tutorial disponible en un modal con subtítulos. Al completar un recorrido ofrece una invitación sin abrir el video automáticamente. La reproducción empieza sólo a petición; cerrar devuelve el foco a Ayuda. Permite reintentar un fallo de reproducción e identifica el contenido español también en la interfaz inglesa.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** frontend/components/platform/PlatformHelpVideoModal.vue; frontend/components/platform/PlatformVideoResourcesManager.vue.
+- **Scope:** El catálogo filtra las capacidades efectivas; controles de acceso, concurrencia y MCP se prueban en backend. El modo cliente no tiene formulario de datos ni validación de entrada propia.
+- **Validation:** Los diez casos de navegador de esta pieza verifican el acceso por controles visibles, las fuentes de video, la invitación después del recorrido, reproducción explícita, cierre, recuperación de reproducción, idioma y cinco anchos. La invitación se prueba con el host completo: el video permanece cerrado hasta elegir verlo y abre pausado. La recuperación del catálogo y las respuestas tardías se comprueban en pruebas de store/componente.
 
 ### FLOW: `platform-hosting-project-list`
 

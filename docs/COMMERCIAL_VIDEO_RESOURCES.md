@@ -58,3 +58,43 @@ Pruebas focales: `test_video_resources.py` carga/reemplaza mediante los tres MCP
 ## Células Scrum
 
 El MCP Programas publica `get_building_on_demand_video`, `set_building_on_demand_video`, `remove_building_on_demand_video`, `restore_default_building_on_demand_video` y `set_building_on_demand_video_visibility`, con los mismos uploads y revisiones. El adaptador building-on-demand conserva la identidad anterior durante la compatibilidad. Video y visibilidad no publican revisiones del programa ni alteran el contrato; quitar no reactiva el predeterminado y restaurar no cambia el interruptor.
+
+## Tutoriales de la plataforma del cliente (2026-10-24)
+
+Ayuda en el menú lateral y móvil abre un modal con las piezas disponibles.
+El general dura 90 segundos; Appi y reporte por voz, 72 segundos cada uno.
+Son demostraciones con datos ficticios, narración colombiana y subtítulos
+integrados. La interfaz inglesa los identifica como contenido en español.
+Abrir el modal no reproduce el archivo: el cliente debe pulsar reproducir.
+Cambiar de pieza, cerrar, navegar u ocultar la pestaña detiene la reproducción.
+
+Los controles global y por cliente pertenecen a Ayuda, compartidos con el
+recorrido: ambos deben estar encendidos. No activan las funciones de IA.
+`GET /api/platform/help/videos/` requiere JWT de sesión, perfil de cliente
+activo y onboarding completo; conserva el general ante indisponibilidad de IA
+y filtra los clips por `chatbot.available` y `voice_reporting.available`.
+No realiza consultas a proveedores. El contrato devuelve `topic`, `module`,
+`language` y `resource: {mode, video}`; los predeterminados se resuelven desde
+el manifiesto de assets del frontend, con sus URLs versionadas.
+
+El panel `/panel/platform/help` administra las tres piezas. Reutiliza
+`/api/video-resources/admin/modules/<module>/es/` con sesión staff y CSRF.
+Los módulos son `platform-overview`, `platform-chatbot` y
+`platform-voice-reporting`; esta primera edición admite exclusivamente ES.
+Retirar conserva `none` hasta una restauración explícita. Las sustituciones
+requieren revisión vigente y mantienen el recurso anterior si el MP4 falla
+validación. Un recurso cargado debe incluir los subtítulos visibles.
+
+El MCP **Proyectos** expone `get_platform_help_video`,
+`set_platform_help_video`, `remove_platform_help_video` y
+`restore_default_platform_help_video`, con `topic` (`general`, `chatbot`,
+`voice-reporting`), `language: es` y `revision` para escritura. Set consume
+un `asset_id` MP4 completado; remove usa la confirmación habitual. Se reutilizan
+los mismos servicios, validación, auditoría y permisos del panel. Los
+interruptores se consultan y actualizan con las herramientas compartidas
+`get/update_platform_help_settings`, `list_platform_help_clients` y
+`get/update_platform_help_client`. Cambiar recursos no cambia esos controles.
+
+El equipo ProjectApp revisa las piezas al modificar un flujo y regenera solo
+las afectadas. Fuentes, guiones, tiempos y procedimiento están versionados
+en `explainers/brag-v2/platform-overview/README.md`.

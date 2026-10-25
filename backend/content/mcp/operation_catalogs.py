@@ -15,6 +15,7 @@ from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
+from content.mcp.platform_help_video_tools import PLATFORM_HELP_VIDEO_TOOLS
 from content.mcp.platform_help_tools import PLATFORM_HELP_TOOLS
 from content.mcp.platform_ai_tools import PLATFORM_AI_TOOLS
 from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
@@ -152,7 +153,7 @@ PROJECT_TOOLS = [
     _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['upload_project_brand_asset']),
     _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id'), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['download_project_brand_asset']),
     _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['delete_project_brand_asset']),
-] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + HOSTING_SUBSCRIPTION_TOOLS + DATA_INTEGRITY_TOOLS + PLATFORM_AI_TOOLS
+] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + HOSTING_SUBSCRIPTION_TOOLS + DATA_INTEGRITY_TOOLS + PLATFORM_HELP_VIDEO_TOOLS + PLATFORM_AI_TOOLS
 
 
 DOCUMENT_PARITY_TOOLS = [
