@@ -3062,5 +3062,11 @@ del servidor combinado coincide con `d15001691`, y los JSON/XML recibieron
 revisión independiente. Nuxt completó la compilación local. Catálogos y mapa de flujos están
 actualizados; la auditoría conserva las brechas de clases de resultado sin
 reducir el contrato para simular cobertura completa. La comprobación MCP nueva
-de ausencia de escrituras y la entrega del head final se verifican en el CI del
-PR. Esta nota no acredita merge, despliegue ni cambios en datos desplegados.
+de ausencia de escrituras pasó en el CI de `ebcced837`; sus 14.478 casos no
+registraron fallos, pero la cobertura global fue 92,078735 %, por debajo del
+mínimo de 92,5 %. Se añadieron 35 casos reales de administración, publicación
+y progreso, aprobados en lotes aislados de 16 y 19 con JUnit y JSON de cobertura.
+Cubren 82 líneas y ramas que faltaban en ese informe; el ajuste de IA lo realiza
+su dueño. La revisión independiente y el gate estricto aprobaron estos casos.
+La entrega sigue pendiente del CI del nuevo head. Esta nota no acredita merge,
+despliegue ni cambios en datos desplegados.
