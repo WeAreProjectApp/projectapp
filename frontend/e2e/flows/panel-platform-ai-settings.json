@@ -1,0 +1,16 @@
+{
+  "id": "panel-platform-ai-settings",
+  "name": "Configuración de IA de Plataforma",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "El equipo configura activación global y por cliente, modelos, claves write-only, plantillas versionadas, cupo compartido, caché y consumo desde Plataforma > Configuración de IA.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

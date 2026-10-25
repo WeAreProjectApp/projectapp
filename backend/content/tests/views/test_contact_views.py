@@ -1,28 +1,26 @@
 """Tests for contact API views.
 
-Covers: GET /api/contacts/, POST /api/new-contact/ (happy path, validation errors).
+Covers: POST /api/new-contact/ (happy path, validation errors) and that the
+contact inbox is not exposed at GET /api/contacts/.
 """
 from unittest.mock import patch
 
 import pytest
-from django.urls import reverse
+from django.urls import resolve, reverse
 
 from content.models import Contact
 
 pytestmark = pytest.mark.django_db
 
 
-class TestContactListView:
-    def test_returns_200_with_empty_list(self, api_client):
-        response = api_client.get(reverse('contact-list'))
-        assert response.status_code == 200
-        assert response.data == []
+class TestContactInboxIsNotExposed:
+    def test_contacts_path_is_not_routed_to_a_data_view(self, api_client, contact):
+        """Fails if a view that lists Contact messages is mounted at /api/contacts/ again."""
+        match = resolve('/api/contacts/')
+        response = api_client.get('/api/contacts/')
 
-    def test_returns_all_contacts(self, api_client, contact):
-        response = api_client.get(reverse('contact-list'))
-        assert response.status_code == 200
-        assert len(response.data) == 1
-        assert response.data[0]['email'] == 'client@example.com'
+        assert match.url_name == 'nuxt-page'
+        assert contact.email.encode() not in response.content
 
 
 class TestNewContactView:

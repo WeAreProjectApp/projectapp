@@ -16,6 +16,7 @@
         <NuxtLink
           v-else
           :to="item.href"
+          :data-tour="item.tourTarget"
           :data-active="isActive(item.href)"
           :class="[
             'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition',
@@ -58,12 +59,12 @@ const { t } = useI18n()
 const items = computed(() => {
   const base = `/platform/projects/${props.projectId}`
   const navigationItems = [
-    { label: 'Resumen',           href: localePath(base) },
-    { label: t('platformDelivery.navigation'), href: localePath(`${base}/delivery`) },
-    { label: t('projectIdeas.navigation'), href: localePath(`${base}/ideas`) },
-    { label: 'Solicitudes',       href: localePath(`${base}/changes`) },
-    { label: 'Bugs',              href: localePath(`${base}/bugs`) },
-    { label: 'Recursos',          href: localePath(`${base}/deliverables`) },
+    { label: 'Resumen',           href: localePath(base), tourTarget: 'project-summary' },
+    { label: t('platformDelivery.navigation'), href: localePath(`${base}/delivery`), tourTarget: 'project-delivery' },
+    { label: t('projectIdeas.navigation'), href: localePath(`${base}/ideas`), tourTarget: 'project-ideas' },
+    { label: 'Solicitudes',       href: localePath(`${base}/changes`), tourTarget: 'project-changes' },
+    { label: 'Bugs',              href: localePath(`${base}/bugs`), tourTarget: 'project-bugs' },
+    { label: 'Recursos',          href: localePath(`${base}/deliverables`), tourTarget: 'project-resources' },
     { label: 'Hosting',           href: localePath(`${base}/payments`) },
     { label: t('platformBilling.accounts'), href: localePath(`${base}/collection-accounts`) },
     { label: 'Modelo de datos',   href: localePath(`${base}/data-model`), disabled: true },
@@ -71,13 +72,13 @@ const items = computed(() => {
   if (authStore.isClient) {
     navigationItems.push({
       label: t('platformSecureLinks.navigation'),
-      href: localePath(`${base}/secure-links`),
+      href: localePath(`${base}/secure-links`), tourTarget: 'project-secure-links',
     })
   }
   if (authStore.isAdmin || (String(projectStore.currentProject?.id) === String(props.projectId) && projectStore.currentProject?.can_view_client_access)) {
     navigationItems.push({
       label: t('projectAccess.navigation'),
-      href: localePath(`${base}/access`),
+      href: localePath(`${base}/access`), tourTarget: 'project-access',
     })
   }
   return navigationItems

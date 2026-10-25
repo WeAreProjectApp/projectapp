@@ -293,6 +293,7 @@ MCP_MODEL_CONTRACTS = {
                     'education_level avatar avatar_url theme_color cover_image '
                     'custom_cover_image profile_completed document_navigation_mode',
                 )
+                | _excluded('Controles IA administrados mediante el conector projects y sus servicios.', 'chatbot_enabled voice_reporting_enabled ai_request_limit ai_window_minutes')
                 | _excluded(_AUDIT_INTERNAL, 'created_by archived_by')
             ),
         ),
@@ -1353,6 +1354,14 @@ MCP_MODEL_CONTRACTS.update({
     ),
     'projects': (
         PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS
+        + (
+            _contract('accounts.PlatformHelpSettings', read_only='id version', read_write='tour_enabled video_enabled'),
+            _contract('accounts.ClientPlatformHelpSettings', read_only='id user version', read_write='tour_enabled video_enabled'),
+            _contract('accounts.PlatformGuidedTour', read_only='id slug context kind published_revision version updated_at', read_write='priority is_active draft'),
+            _contract('accounts.PlatformGuidedTourRevision', read_only='id tour number content created_by created_at'),
+            _contract('accounts.PlatformTourProgress', read_only='id user tour status revision last_step updated_at'),
+            _contract('accounts.PlatformHelpEvent', read_only='id actor action subject changes created_at'),
+        )
         + build_issue_contracts(_contract)
         + (_contract(
             'content.ProjectRetentionContext',
@@ -1573,6 +1582,31 @@ MCP_MODEL_CONTRACTS['documents'] += SHARED_PROPOSAL_DOCUMENT_CONTRACTS
 # a source connector's narrower read-only/excluded projection.
 from content.mcp.module_catalog import MODULE_CONNECTORS  # noqa: E402
 
+_ai_profile = next(item for item in MCP_MODEL_CONTRACTS['clients'] if item.model_label == 'accounts.UserProfile')
+MCP_MODEL_CONTRACTS['projects'] += (
+    _contract('accounts.UserProfile', read_only='user updated_at', read_write='chatbot_enabled voice_reporting_enabled ai_request_limit ai_window_minutes',
+              excluded={field: 'Dato del perfil administrado por su módulo; IA solo gestiona sus interruptores.'
+                        for field in _ai_profile.classified_fields - {'user', 'updated_at', 'chatbot_enabled', 'voice_reporting_enabled', 'ai_request_limit', 'ai_window_minutes'}}),
+    _contract('accounts.PlatformAISettings', read_only='id version updated_at cache_epoch',
+              read_write='chatbot_enabled voice_reporting_enabled chatbot_model voice_report_model monthly_audio_limit daily_user_audio_limit ai_request_limit ai_window_minutes max_output_tokens report_cache_enabled chatbot_cache_enabled report_cache_hours chatbot_cache_hours'),
+    _contract('accounts.PlatformAICredential', read_only='id provider version last_test_status tested_at updated_at',
+              excluded={'encrypted_value': 'Se administra mediante API key write-only; jamás se expone el secreto ni su ciphertext.'}),
+    _contract('accounts.PlatformAITemplate', read_only='id family scenario language version updated_at', read_write='content'),
+    _contract('accounts.PlatformAITemplateRevision', read_only='id template version content created_at',
+              excluded={'actor': 'Actor de auditoría interno; las revisiones son inmutables.'}),
+    _contract('accounts.PlatformAIUsage', read_only='id purpose operation provider model audio_seconds input_tokens output_tokens cache_read_tokens cache_write_tokens estimated_cost latency_ms status created_at',
+              excluded=_excluded('Consumo agregado: no se exponen identidades individuales.', 'actor project')),
+    _contract('accounts.PlatformAIEvent', read_only='id action target metadata created_at', excluded={'actor': 'Actor interno de auditoría.'}),
+    _contract('accounts.PlatformAIJob', excluded=_excluded('Trabajo privado y temporal exclusivo de su autor JWT; no accesible por MCP administrativo.',
+              'id actor project purpose operation request_id fingerprint status audio_name audio_seconds payload result error_code created_at updated_at expires_at')),
+    _contract('accounts.PlatformAIQuotaReservation', excluded=_excluded('Reserva interna atómica de una solicitud; el panel/MCP administran la política sin alterar el historial de consumo.',
+              'id actor request_id purpose fingerprint status redemption_request_id created_at')),
+    _contract('accounts.AppiConversation', excluded=_excluded('Historial privado exclusivo de su autor JWT; el MCP administra configuración, no conversaciones del cliente.',
+              'id actor project language title created_at expires_at')),
+    _contract('accounts.AppiTurn', excluded=_excluded('Pregunta, respuesta y caché privados del cliente; sin lectura ni escritura administrativa por MCP.',
+              'id conversation actor request_id request_fingerprint question language status query answer dependencies context_key exact_key quota_id created_at verified_at expires_at')),
+)
+
 MCP_MODEL_CONTRACTS['commercial'] = (
     MCP_MODEL_CONTRACTS['clients'] + MCP_MODEL_CONTRACTS['proposals']
     + MCP_MODEL_CONTRACTS['diagnostics']
@@ -1599,3 +1633,6 @@ for canonical, (_, sources) in MODULE_CONNECTORS.items():
                     if key not in writable | readonly}
         merged.append(McpModelContract(label, readonly, writable, excluded))
     MCP_MODEL_CONTRACTS[canonical] = tuple(merged)
+
+# Platform tutorial resource administration shares the validated video lifecycle.
+MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)

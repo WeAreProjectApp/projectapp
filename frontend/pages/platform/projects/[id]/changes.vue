@@ -199,11 +199,12 @@
           @click.self="isCreateOpen = false"
         >
           <Transition name="modal-content" appear>
-            <div v-if="isCreateOpen" class="w-full max-w-md rounded-3xl border border-border-default bg-surface p-6 shadow-2xl sm:p-8">
+            <div v-if="isCreateOpen" class="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border-default bg-surface p-6 shadow-2xl sm:p-8">
               <h2 class="mb-5 text-lg font-bold text-text-default">Nueva solicitud de cambio</h2>
 
               <form class="space-y-4" @submit.prevent="handleCreate">
                 <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="change-source" required />
+                <VoiceReportInput :project-id="projectId" scenario="change" :requirement-id="createForm.source_requirement_id" @apply="applyVoiceReport" />
                 <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
@@ -546,6 +547,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
 import { useIsMobile } from '~/composables/useIsMobile'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
+import VoiceReportInput from '~/components/platform/VoiceReportInput.vue'
 import { usePlatformChangeRequestsStore } from '~/stores/platform-change-requests'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 import { usePlatformIssueReportsStore } from '~/stores/platform-issue-reports'
@@ -736,6 +738,10 @@ function removeScreenshot() {
   screenshotFile.value = null
   if (screenshotPreview.value) URL.revokeObjectURL(screenshotPreview.value)
   screenshotPreview.value = null
+}
+
+function applyVoiceReport(proposal) {
+  for (const field of ['title', 'description', 'module_or_screen']) createForm[field] = proposal[field]
 }
 
 async function handleCreate() {

@@ -1,4 +1,19 @@
+> **Video de ayuda de plataforma — 2026-10-24, implementado en rama de sesión:** tres MP4 Full HD con voz colombiana y subtítulos integrados: general de 90 s independiente de IA, Appi y voz de 72 s filtrados por capacidades efectivas. Ayuda abre el modal sólo a petición y el recorrido terminado ofrece una invitación; nunca se reproduce automáticamente. Los interruptores global/cliente y el host se comparten con recorridos, sin duplicar flags de IA. Panel y MCP Proyectos permiten sustituir, retirar o restaurar las piezas con revisión de concurrencia y confirmación de retirada. Validación local: 14 casos propios de interfaz, incluidos cinco anchos y la invitación al completar el recorrido, sin omisiones ni reintentos; cinco pruebas de permisos con migraciones de test. Fuentes, huellas y mantenimiento en `explainers/brag-v2/platform-overview/`. Entrega y CI: PR #540; no acredita despliegue.
+
 > **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
+
+# Appi — implementación de sesión, 2026-10-24
+
+Plan aprobado: asistente cliente ES/EN para seguimiento y guías finitas, con Jev
+antes del redactor, historial privado de 90 días, revalidación de fuentes y cuota
+compartida 20/300 minutos con Voz. Configuración, claves, plantillas, STT y ledger
+pertenecen a la sesión voice-reporting-ai; destinos y host Ayuda a
+platform-guided-tour. QA local aprobado: servidor, componentes, los 20 recorridos
+de Appi y cinco perfiles responsive, sin omisiones. La guía de bugs también abre
+el formulario real en su revalidación focal. Las guías históricas dejan de
+mostrarse si se revoca su capacidad, sin reescribir el registro privado. Evidencia
+y límites en `docs/audits/2026-10-24-appi-qa.md`; el CI final del PR sigue pendiente.
+Este registro no acredita despliegue ni entrega del PR.
 
 # Tablas contables y video de Células Scrum — 2026-10-22
 
@@ -880,6 +895,17 @@ Nivel 2 sobre `main` actualizado: paquetes ZIP/archivos, Mustache escapado, recu
 Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Clientes y todo Contable: versiones consultables/comparables, autor, conservación sin vencimiento, PDFs históricos y secretos cifrados. Comunicaciones y restauración quedan fuera. Validación focal: 44 casos backend, 5 del visor y 15 E2E aprobados; regresiones de accesos, propuestas, CRUD contable, correo fallido, PWA, migración de credenciales y eliminación de alias aprobadas, al igual que el contrato de fake data y la compilación Nuxt. El despliegue requiere las migraciones 0250/0251 y el inicializador idempotente descrito en `docs/ENTITY_HISTORY.md`; no se ejecutaron contra una base real.
 
 # Active Context — ProjectApp
+
+> **En implementación — IA de Plataforma y reportes por voz (2026-10-24):**
+> configuración compartida con PA-164 en `/panel/platform/ai`, controles independientes
+> globales/cliente apagados inicialmente, claves cifradas, Haiku predeterminado/Luna
+> configurable, transcripción externa y plantillas ES/EN versionadas. Esta sesión es
+> dueña de la base compartida; el chatbot y sus consultas los implementa la otra sesión.
+> El audio es temporal, los borradores duran 24 horas y aceptar un texto no aprueba una entrega.
+> Cupo compartido inicial: 20 solicitudes/300 minutos móviles, con overrides por
+> cliente y canje único del dictado del chatbot. Backend 28 casos y frontend 20
+> casos nuevos verificados localmente; navegador y CI final se verifican en el PR #538.
+> Políticas de fusión conservan autores y los esquemas MCP projects 4.1.1 son cerrados.
 
 **2026-10-01 — seguimiento contractual de Platform en implementación:** la rama
 `feat/01102026-platform-review-workflow` reemplaza el Kanban por contrato/otrosí,
@@ -3007,3 +3033,40 @@ Changelogs con ejemplos antes/después y runbook de guards/slices preparados:
 Los controles compartidos y `*_history` de PR #503 quedan fuera del barrido.
 El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
 entrada documental no declara terminados esos pasos ni operaciones en producción.
+
+
+## 2026-10-24 — Ayuda y recorridos de la plataforma
+
+PR #539 implementa guías general, contextual y de voz por usuario, ES/EN,
+novedades editables y administración común por Panel y las 14 herramientas del
+MCP Proyectos. Completar o saltar impide otra apertura automática; Ayuda permite
+repetir. Los destinos pertenecen a un catálogo cerrado y no ejecutan acciones
+de negocio. Appi y Video consumen el contrato de superficies sin imports
+inversos; Voz está integrada mediante merges de sus commits publicados hasta
+`1d8eebdef`, incluidas ambas excepciones de previsualización sin escrituras,
+la comprobación de propiedad de proyectos de IA y las exenciones precisas de
+borradores privados y contadores de consumo. El contrato combinado conserva
+85 herramientas con sus nombres y serializers explícitos.
+
+La validación focal acredita 22 pruebas backend, 35 unitarias de interfaz y
+navegación, siete controles de contratos/relaciones y 18 casos únicos de
+navegador aprobados, sin omisiones ni reintentos. Incluye el control real de voz,
+la entrada al proyecto, la restauración del menú móvil y cinco perfiles
+responsive. Tras detectar dos carreras en CI se repitieron cuatro casos sobre
+el layout combinado y se validó la invitación a abrir el video en pausa:
+cinco aprobados, sin omisiones ni reintentos. El destino actual se guarda antes
+de animar la tarjeta; el inicio contextual sólo se acusa después de abrir y
+se reintenta cuando aparece un destino que terminó de montarse tarde. Las
+cuatro regresiones nuevas y doce casos vecinos pasaron. La fuente de Ayuda
+del servidor combinado coincide con `d15001691`, y los JSON/XML recibieron
+revisión independiente. Nuxt completó la compilación local. Catálogos y mapa de flujos están
+actualizados; la auditoría conserva las brechas de clases de resultado sin
+reducir el contrato para simular cobertura completa. La comprobación MCP nueva
+de ausencia de escrituras pasó en el CI de `ebcced837`; sus 14.478 casos no
+registraron fallos, pero la cobertura global fue 92,078735 %, por debajo del
+mínimo de 92,5 %. Se añadieron 35 casos reales de administración, publicación
+y progreso, aprobados en lotes aislados de 16 y 19 con JUnit y JSON de cobertura.
+Cubren 82 líneas y ramas que faltaban en ese informe; el ajuste de IA lo realiza
+su dueño. La revisión independiente y el gate estricto aprobaron estos casos.
+La entrega sigue pendiente del CI del nuevo head. Esta nota no acredita merge,
+despliegue ni cambios en datos desplegados.

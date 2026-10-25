@@ -1,0 +1,17 @@
+{
+  "id": "platform-appi-project-status",
+  "name": "Appi Project Status Answer",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Cliente autenticado abre Appi, elige uno de sus proyectos o Todos mis proyectos y consulta estado, salud, fase, entregables, bugs o cláusula contractual. La respuesta muestra sólo hechos autorizados, fuentes internas y fecha de verificación; una respuesta histórica puede aparecer como desactualizada, una reconsulta crea una nueva consulta y una respuesta revocada queda no disponible.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

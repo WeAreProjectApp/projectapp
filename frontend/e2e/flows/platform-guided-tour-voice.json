@@ -1,0 +1,17 @@
+{
+  "id": "platform-guided-tour-voice",
+  "name": "Platform Guided Tour — Voice Reporting",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P2",
+  "description": "Guía de voz al abrir voluntariamente el formulario real con voz disponible; no graba, transcribe, modifica ni envía por cuenta del usuario.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

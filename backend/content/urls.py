@@ -80,7 +80,7 @@ from content.views.collection_accounts_panel import (
     retrieve_collection_account,
     send_hosting_collection_account,
 )
-from content.views.contact import contact_list, new_contact
+from content.views.contact import new_contact
 from content.views.panel_dashboard import panel_dashboard
 from content.views.project_brand import project_brand, project_brand_asset
 from content.views.panel_projects import (
@@ -437,7 +437,6 @@ urlpatterns = [
     path('proposals/<int:proposal_id>/formalization/preparations/<uuid:preparation_id>/', retrieve_formalization, name='formalization-detail'),
     path('proposals/<int:proposal_id>/formalization/preparations/<uuid:preparation_id>/files/<int:file_id>/', formalization_attachment, name='formalization-file'),
     path('proposals/<int:proposal_id>/formalization/preparations/<uuid:preparation_id>/send/', send_formalization, name='formalization-send'),
-    path('contacts/', contact_list, name='contact-list'),
     path('new-contact/', new_contact, name='new-contact'),
 
     # Building with Us — public presentation and read-only Panel metadata
