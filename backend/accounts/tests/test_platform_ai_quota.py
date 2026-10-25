@@ -3,9 +3,9 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
-from freezegun import freeze_time
 from django.utils import timezone
-from rest_framework.exceptions import Throttled
+from freezegun import freeze_time
+from rest_framework.exceptions import PermissionDenied, Throttled, ValidationError
 
 from accounts.models import UserProfile
 from accounts.models_ai import (
@@ -17,11 +17,11 @@ from accounts.models_ai import (
 from accounts.services import platform_ai_quota
 from accounts.services.platform_ai import AIConflict
 
-
 pytestmark = pytest.mark.django_db
 
 
 def configure_quota(client_user, *, limit=20, minutes=300, client_limit=None):
+    """Set a global quota with an optional paired client override."""
     UserProfile.objects.filter(user=client_user).update(
         ai_request_limit=client_limit,
         ai_window_minutes=minutes if client_limit is not None else None,
@@ -33,6 +33,7 @@ def configure_quota(client_user, *, limit=20, minutes=300, client_limit=None):
 
 
 def configure_chatbot_audio(client_user, *, limit=20):
+    """Enable chatbot dictation with explicit provider credentials."""
     configure_quota(client_user, limit=limit)
     UserProfile.objects.filter(user=client_user).update(chatbot_enabled=True)
     PlatformAISettings.objects.filter(pk=1).update(chatbot_enabled=True)
@@ -44,6 +45,7 @@ def configure_chatbot_audio(client_user, *, limit=20):
 
 
 def expired_chat_audio(client_user, project):
+    """Create a usable transcript whose consumed reservation left the window."""
     reservation = PlatformAIQuotaReservation.objects.create(
         actor=client_user,
         request_id=uuid4(),
@@ -203,3 +205,106 @@ def test_repeated_redemption_preserves_the_reentry_timestamp(client_user, projec
 
     assert repeated.redemption_request_id == request_id
     assert repeated.created_at == timestamp
+
+
+def test_unknown_ai_function_cannot_reserve_client_quota(client_user):
+    """Fails if an unknown function can reserve units from the paid shared quota."""
+    configure_quota(client_user)
+
+    with pytest.raises(ValidationError, match='Propósito no admitido'):
+        platform_ai_quota.reserve(client_user, uuid4(), 'unknown_function', 'invalid')
+
+    assert PlatformAIQuotaReservation.objects.filter(actor=client_user).count() == 0
+
+
+def test_inactive_client_cannot_reserve_shared_quota(client_user):
+    """Fails if a disabled account can start another paid AI request."""
+    configure_quota(client_user)
+    client_user.is_active = False
+    client_user.save(update_fields=['is_active'])
+
+    with pytest.raises(PermissionDenied, match='cuenta de cliente activa'):
+        platform_ai_quota.reserve(client_user, uuid4(), 'chatbot', 'disabled-client')
+
+    assert PlatformAIQuotaReservation.objects.filter(actor=client_user).count() == 0
+
+
+def test_request_id_cannot_move_between_ai_functions(client_user):
+    """Fails if one request ID can pay for both a chatbot call and a voice report."""
+    configure_quota(client_user)
+    request_id = uuid4()
+    reservation = platform_ai_quota.reserve(client_user, request_id, 'chatbot', 'original')
+
+    with pytest.raises(AIConflict, match='otra solicitud'):
+        platform_ai_quota.reserve(client_user, request_id, 'voice_report', 'original')
+
+    reservation.refresh_from_db()
+    assert reservation.purpose == 'chatbot'
+    assert platform_ai_quota.snapshot(client_user)['used'] == 1
+
+
+def test_unfinished_retry_keeps_the_original_quota_reservation(client_user):
+    """Fails if retrying a pending request spends another shared quota unit."""
+    configure_quota(client_user)
+    request_id = uuid4()
+    original = platform_ai_quota.reserve(client_user, request_id, 'voice_report', 'same-recording')
+
+    repeated = platform_ai_quota.reserve(client_user, request_id, 'voice_report', 'same-recording')
+
+    assert repeated.pk == original.pk
+    assert repeated.status == 'reserved'
+    assert platform_ai_quota.snapshot(client_user)['used'] == 1
+
+
+@freeze_time('2026-10-24 15:00:00')
+def test_foreign_transcription_cannot_redeem_the_clients_quota(client_user, admin_user, project):
+    """Fails if a client can redeem another user's private transcription by ID."""
+    configure_chatbot_audio(client_user)
+    reservation, job = expired_chat_audio(client_user, project)
+    PlatformAIJob.objects.filter(pk=job.pk).update(actor=admin_user)
+
+    with pytest.raises(AIConflict, match='transcripción no está disponible'):
+        platform_ai_quota.redeem_chat_audio(client_user, job.pk, uuid4(), project_id=project.pk)
+
+    reservation.refresh_from_db()
+    assert reservation.redemption_request_id is None
+
+
+@freeze_time('2026-10-24 15:00:00')
+def test_expired_reservation_cannot_fund_a_dictated_chat_request(client_user, project):
+    """Fails if a reservation older than a day can fund a newly dictated question."""
+    configure_chatbot_audio(client_user)
+    reservation, job = expired_chat_audio(client_user, project)
+    PlatformAIQuotaReservation.objects.filter(pk=reservation.pk).update(
+        created_at=timezone.now() - timedelta(hours=25),
+    )
+
+    with pytest.raises(AIConflict, match='reserva de la grabación no está disponible'):
+        platform_ai_quota.redeem_chat_audio(client_user, job.pk, uuid4(), project_id=project.pk)
+
+    reservation.refresh_from_db()
+    assert reservation.redemption_request_id is None
+
+
+@freeze_time('2026-10-24 15:00:00')
+def test_chat_request_cannot_redeem_a_second_recording(client_user, project):
+    """Fails if one chatbot request can redeem two separate successful recordings."""
+    configure_chatbot_audio(client_user)
+    reservation, job = expired_chat_audio(client_user, project)
+    request_id = uuid4()
+    original_redemption = PlatformAIQuotaReservation.objects.create(
+        actor=client_user,
+        request_id=uuid4(),
+        purpose='chatbot',
+        fingerprint='first-recording',
+        status='consumed',
+        redemption_request_id=request_id,
+    )
+
+    with pytest.raises(AIConflict, match='asociada a otra grabación'):
+        platform_ai_quota.redeem_chat_audio(client_user, job.pk, request_id, project_id=project.pk)
+
+    reservation.refresh_from_db()
+    original_redemption.refresh_from_db()
+    assert reservation.redemption_request_id is None
+    assert original_redemption.redemption_request_id == request_id
