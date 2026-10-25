@@ -39,7 +39,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Exercise ideas and field visibility through real APIs
         working-directory: frontend
-        run: npx playwright test --config=playwright.project-collaboration.config.js project-collaboration/ideas.spec.js project-collaboration/client-access.spec.js
+        run: npx playwright test --config=playwright.project-collaboration.config.js project-collaboration/ideas.spec.js project-collaboration/client-access.spec.js --repeat-each=10
         env:
           CI: 'true'
       - name: Upload P4 blob report for the shared flow aggregate
