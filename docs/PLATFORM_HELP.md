@@ -94,6 +94,14 @@ modificar datos desplegados. Los flujos y el contrato responsive se registran
 en sus fuentes declarativas; el cierre exige PR abierto y CI verde.
 Las migraciones se aplican mediante el deploy, nunca desde la sesión de trabajo.
 
+`test_platform_help_authoring.py` valida edición bilingüe, identidad estable,
+versiones, publicación inmutable y archivo. `test_platform_help_administration.py`
+valida preferencias, filtros por cliente, el interruptor de video y progreso
+contextual. Sus 35 casos pasaron en dos lotes de 16 y 19, con resultados JUnit
+y cobertura separados. La fixture prepara el catálogo inicial de Ayuda en la
+transacción aislada del test, de modo que estos lotes admiten `--nomigrations`;
+el CI conserva sus comprobaciones normales de migración y el mínimo de cobertura.
+
 El contrato de datos de demostración conserva la configuración, los recorridos
 y sus revisiones como catálogo global. Las preferencias se inicializan al
 acceder; el generador no inventa progreso visto ni eventos de auditoría, que
