@@ -341,6 +341,33 @@
         "admin-building-on-demand-economics",
         "admin-building-on-demand-contract"
       ]
+    },
+    {
+      "title": "Platform Help and Guided Tours",
+      "flows": [
+        "platform-guided-tour-general",
+        "platform-guided-tour-project",
+        "platform-guided-tour-voice",
+        "admin-platform-help-settings",
+        "admin-platform-guided-tour-authoring"
+      ]
+    },
+    {
+      "title": "Section 38 — IA y reportes por voz (Oct 24, 2026)",
+      "flows": [
+        "panel-platform-ai-settings",
+        "platform-voice-report"
+      ]
+    },
+    {
+      "title": "Appi — consultas del proyecto y guías de la plataforma",
+      "flows": [
+        "platform-appi-project-status",
+        "platform-appi-guidance-boundary",
+        "platform-appi-private-history",
+        "platform-appi-availability",
+        "platform-appi-shared-quota-audio"
+      ]
     }
   ]
 }

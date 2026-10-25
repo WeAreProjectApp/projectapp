@@ -206,7 +206,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['programs'],),
     ),
     'projects': ConnectorSpec(
-        'projects', '3.0.0', (PROJECT_TOOLS,), uploads=True,
+        'projects', '3.1.1', (PROJECT_TOOLS,), uploads=True,
     ),
     'content': ConnectorSpec(
         'content', '2.1.1',

@@ -1,0 +1,16 @@
+{
+  "id": "admin-platform-help-videos",
+  "name": "Administración de videos de ayuda",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Llegar desde el menú del panel a Ayuda y previsualizar las piezas general, Appi y voz en español. Sustituir un MP4, rechazar archivos incompatibles y conservar la versión anterior ante un error del servidor; retirar o restaurar usando el ciclo compartido con MCP.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

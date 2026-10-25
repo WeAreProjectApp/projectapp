@@ -1,0 +1,15 @@
+{
+  "id": "platform-help-videos",
+  "name": "Videos de ayuda de plataforma",
+  "module": "platform",
+  "roles": [
+    "client"
+  ],
+  "priority": "P2",
+  "description": "Abrir Ayuda desde el menú y elegir un tutorial disponible en un modal con subtítulos. Al completar un recorrido ofrece una invitación sin abrir el video automáticamente. La reproducción empieza sólo a petición; cerrar devuelve el foco a Ayuda. Permite reintentar un fallo de reproducción e identifica el contenido español también en la interfaz inglesa.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

@@ -1,0 +1,15 @@
+export default {
+  title: 'Cómo funciona tu plataforma',
+  description: 'Elige una guía y pulsa reproducir. Puedes volver cuando quieras.',
+  language: 'Video en español · con subtítulos',
+  close: 'Cerrar video de ayuda',
+  general: 'Lo principal de tu plataforma',
+  chatbot: 'Consultar y orientarte con Appi',
+  'voice-reporting': 'Preparar un reporte con tu voz',
+  retry: 'Volver a intentar',
+  playbackError: 'No pudimos reproducir este video. Vuelve a intentarlo.',
+  loadError: 'No pudimos cargar los videos de ayuda. Vuelve a intentarlo desde Ayuda.',
+  adminTitle: 'Videos de ayuda de la plataforma',
+  adminDescription: 'Los interruptores global y por cliente gobiernan todas las piezas. Los clips de Appi y voz solo aparecen si esas funciones están disponibles para el cliente.',
+  subtitleHint: 'Incluye subtítulos visibles en el MP4. Retirar una pieza la oculta; restaurar recupera el video incluido con la aplicación.',
+}

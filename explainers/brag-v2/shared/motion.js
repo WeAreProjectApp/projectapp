@@ -44,7 +44,7 @@
       if (target) timeline.to(target, { backgroundColor: '#E6EFEF', duration: 0.3 }, start + 2)
     }
     const detailRows = scene.querySelectorAll('.detail-row')
-    if (detailRows.length) timeline.fromTo(detailRows, { x: 24, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.55, ease: 'power2.out' }, start + 1.8) // beat-locked: scene 2 reveal at 5.8s
+    if (detailRows.length && (index > 0 || !document.getElementById('root').hasAttribute('data-initial-rows'))) timeline.fromTo(detailRows, { x: 24, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.55, ease: 'power2.out' }, start + 1.8) // beat-locked: scene 2 reveal at 5.8s
   })
 
   // Product moments inherit the scene's timing, including editorial retiming.
