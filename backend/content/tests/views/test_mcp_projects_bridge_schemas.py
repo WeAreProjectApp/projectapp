@@ -36,6 +36,8 @@ _SERVICE_SERIALIZERS = {
     'restore_project_idea': 'accounts.serializers_project_ideas.IdeaArchiveSerializer',
     'create_project_idea_collection': 'accounts.serializers_project_ideas.IdeaCollectionSerializer',
     'set_project_client_access_policy': 'accounts.serializers_project_client_access.ClientAccessPolicySerializer',
+    'update_platform_ai_settings': 'accounts.serializers_ai.SettingsSerializer',
+    'update_platform_ai_client': 'accounts.serializers_ai.ClientFlagsSerializer',
 }
 _VIEW_PAYLOAD_FIELDS = {'create_project_state': {'confirm_similar'}}
 _CREATE_DEFAULT_FIELDS = {'create_project_state': {'group'}}
@@ -44,6 +46,14 @@ _INTEGRITY_BRIDGE_NAMES = {
     'describe_integrity_rules', 'list_integrity_findings', 'preview_integrity_fixes',
     'apply_integrity_fixes', 'list_integrity_operations', 'preview_integrity_operation_undo',
     'undo_integrity_operation',
+}
+_AI_BRIDGE_NAMES = {
+    'get_platform_ai_settings', 'update_platform_ai_settings',
+    'list_platform_ai_clients', 'get_platform_ai_client', 'update_platform_ai_client',
+    'list_platform_ai_templates', 'get_platform_ai_template', 'update_platform_ai_template',
+    'preview_platform_ai_template', 'list_platform_ai_template_versions', 'restore_platform_ai_template',
+    'get_platform_ai_usage', 'list_platform_ai_events', 'invalidate_platform_ai_cache',
+    'test_platform_ai_credential', 'delete_platform_ai_credential',
 }
 
 
@@ -149,8 +159,8 @@ def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tool
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 55
-    assert set(PROJECTS_BRIDGE_SCHEMAS) | _INTEGRITY_BRIDGE_NAMES == set(original_bridge_tools)
+    assert len(original_bridge_tools) == 71
+    assert set(PROJECTS_BRIDGE_SCHEMAS) | _INTEGRITY_BRIDGE_NAMES | _AI_BRIDGE_NAMES == set(original_bridge_tools)
     assert failures == {name: [] for name in original_bridge_tools}, failures
 
 

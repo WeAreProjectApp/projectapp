@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import DeliveryNoticeHistory from '~/components/platform/delivery/DeliveryNoticeHistory.vue'
+import VoiceReportInput from '~/components/platform/VoiceReportInput.vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformDeliveryStore } from '~/stores/platform-delivery'
 import { usePlatformDocumentsStore } from '~/stores/platform-documents'
@@ -405,12 +406,13 @@ watch(reportMessage, () => { reportHumanReviewed.value = false })
             <BaseModalActions><BaseButton variant="ghost" @click="close">{{ t('platformDelivery.close') }}</BaseButton></BaseModalActions>
           </section>
           <DeliveryAuthoringForm v-else-if="dialog === 'author'" :key="`${author.entity}-${author.node?.id || 'new'}`" :entity="author.entity" :initial="author.node || author.initial || {}" :contracts="store.contracts" :documents="store.documentOptions" :proposal-documents="store.proposalDocumentOptions" :approval-files="store.approvalFileOptions" :commercial-phases="commercialPhases" :loading="store.isUpdating" :error="formError" @submit="saveAuthor" @cancel="close" />
-          <DeliveryReviewForm v-else-if="dialog === 'review' || dialog === 'historical'" :key="`${dialog}-${selected.id}`" :stage="selected" :draft="reviewDraft" :historical="dialog === 'historical'" :documents="chosenDocuments" :evidence-messages="store.evidenceMessages" :loading="store.isUpdating" :error="formError" @draft="reviewDraft = $event" @submit="submitReview" @cancel="close" />
+          <DeliveryReviewForm v-else-if="dialog === 'review' || dialog === 'historical'" :key="`${dialog}-${selected.id}`" :project-id="projectId" :stage="selected" :draft="reviewDraft" :historical="dialog === 'historical'" :documents="chosenDocuments" :evidence-messages="store.evidenceMessages" :loading="store.isUpdating" :error="formError" @draft="reviewDraft = $event" @submit="submitReview" @cancel="close" />
           <template v-else>
             <BaseAlert v-if="formError" variant="danger" role="alert">{{ formError }}</BaseAlert>
             <form v-if="dialog === 'report'" class="space-y-5" @submit.prevent="sendReport">
               <p class="text-sm text-text-muted">{{ t('platformDelivery.reportHint') }}</p>
               <BaseFormField :label="t('platformDelivery.message')" for="delivery-report-message" required><BaseTextarea id="delivery-report-message" v-model="reportMessage" :rows="5" data-testid="delivery-report-message" /></BaseFormField>
+              <VoiceReportInput v-if="!isAdmin" :project-id="projectId" :stage-id="selected.id" scenario="stage_observation" @apply="reportMessage = $event.message" />
               <fieldset class="space-y-2"><legend class="mb-2 text-sm font-medium text-text-default">{{ t('platformDelivery.relatedRequirements') }}</legend><BaseCheckbox v-for="requirement in selected.requirements" :key="requirement.id" v-model="reportRequirementIds" :value="requirement.id" class="flex">{{ requirement.title }}</BaseCheckbox></fieldset>
               <DeliveryDocumentPicker v-model="reportDocumentIds" :documents="chosenDocuments" />
               <template v-if="reportPromptProof">

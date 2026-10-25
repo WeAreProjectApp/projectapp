@@ -1,5 +1,6 @@
 import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
+import { waitForNuxtApp } from '../helpers/navigation.js'
 import {
   PUBLIC_ADDITIONAL_MODULES_CATALOG,
   PUBLIC_ADDITIONAL_MODULES_DETAIL,
@@ -134,7 +135,7 @@ async function setupPublicApi(page, scenario = {}) {
 
 async function openFromFooter(page) {
   await page.goto('/es-co', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByRole('button', { name: 'Switch to English' })).toBeEnabled()
+  await waitForNuxtApp(page, { timeout: 15_000 })
   const catalogLink = page.getByRole('link', { name: 'Módulos adicionales', exact: true })
   await catalogLink.scrollIntoViewIfNeeded()
   await catalogLink.click()
