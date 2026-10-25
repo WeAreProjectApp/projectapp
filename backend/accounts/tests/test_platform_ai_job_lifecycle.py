@@ -12,9 +12,15 @@ from django.core.files.storage import storages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from freezegun import freeze_time
-from rest_framework.exceptions import Throttled, ValidationError
+from rest_framework.exceptions import NotFound, Throttled, ValidationError
 
-from accounts.models import Project, UserProfile
+from accounts.models import (
+    DeliveryPublication,
+    DeliveryStage,
+    Project,
+    Requirement,
+    UserProfile,
+)
 from accounts.models_ai import (
     PlatformAICredential,
     PlatformAIJob,
@@ -24,7 +30,9 @@ from accounts.models_ai import (
     PlatformAIUsage,
 )
 from accounts.services import platform_ai_jobs
+from accounts.services.platform_ai import AIConflict
 from accounts.services.platform_ai_quota import reserve
+from accounts.tests.delivery_helpers import GUIDE, build_delivery_context, publish
 
 pytestmark = pytest.mark.django_db
 
@@ -105,12 +113,12 @@ def pending_transcription(client_user, project):
     ), reservation
 
 
-def private_wav():
+def private_wav(*, sample=100):
     """Build a short valid PCM recording for a private worker input."""
     buffer = BytesIO()
     with wave.open(buffer, 'wb') as item:
         item.setparams((1, 2, 16000, 4000, 'NONE', 'not compressed'))
-        item.writeframes((100).to_bytes(2, 'little', signed=True) * 4000)
+        item.writeframes(sample.to_bytes(2, 'little', signed=True) * 4000)
     return buffer.getvalue()
 
 
@@ -170,6 +178,46 @@ def mock_successful_report_provider(monkeypatch):
     monkeypatch.setattr('accounts.services.platform_ai_providers.requests.post', lambda *args, **kwargs: SuccessfulReportResponse())
 
 
+@pytest.fixture
+def published_delivery_context():
+    """Build one client-visible delivery hierarchy for report-context tests."""
+    context = build_delivery_context()
+    publish(context)
+    return context
+
+
+def visible_sibling_stage(context):
+    """Publish a second stage so context mismatch validation uses real visibility."""
+    stage = DeliveryStage.objects.create(phase=context.phase, key='sibling', title='Etapa alternativa')
+    requirement = Requirement.objects.create(stage=stage, key='sibling-guide', title='Guía alternativa', guide=GUIDE)
+    DeliveryPublication.objects.create(
+        stage=stage,
+        round=1,
+        published_by=context.admin,
+        payload={'requirements': [{'id': requirement.pk}]},
+    )
+    return stage
+
+
+def exhaust_daily_generation_allowance(client_user, project):
+    """Create the three terminal drafts permitted by one daily audio allowance."""
+    expiry = timezone.now() + timedelta(hours=1)
+    PlatformAIJob.objects.bulk_create([
+        PlatformAIJob(
+            actor=client_user, project=project, purpose='voice_report', operation='draft',
+            request_id=uuid4(), fingerprint='prior-draft-one', status='failed', expires_at=expiry,
+        ),
+        PlatformAIJob(
+            actor=client_user, project=project, purpose='voice_report', operation='draft',
+            request_id=uuid4(), fingerprint='prior-draft-two', status='failed', expires_at=expiry,
+        ),
+        PlatformAIJob(
+            actor=client_user, project=project, purpose='voice_report', operation='draft',
+            request_id=uuid4(), fingerprint='prior-draft-three', status='failed', expires_at=expiry,
+        ),
+    ])
+
+
 def test_report_context_requires_a_requirement_for_a_change(client_user, project):
     """Fails if a change report can be drafted without its source requirement."""
     with pytest.raises(ValidationError) as error:
@@ -184,6 +232,72 @@ def test_report_context_requires_a_stage_for_an_observation(client_user, project
         platform_ai_jobs.report_context(project, client_user, {'scenario': 'stage_observation'})
 
     assert error.value.detail['stage_id'] == 'Selecciona una etapa o requerimiento.'
+
+
+def test_report_context_snapshots_a_visible_requirement(published_delivery_context):
+    """Fails if a voice change draft loses the published requirement identity or version."""
+    context = published_delivery_context
+
+    result = platform_ai_jobs.report_context(context.project, context.client, {
+        'scenario': 'change', 'source_requirement_id': context.first.pk,
+    })
+
+    assert result == {
+        'project_id': context.project.pk,
+        'requirement_id': context.first.pk,
+        'requirement_title': 'Guardar registro',
+        'requirement_version': context.first.version,
+        'stage_id': context.stage.pk,
+        'stage_title': 'Etapa',
+    }
+
+
+def test_report_context_hides_an_unpublished_requirement(published_delivery_context):
+    """Fails if a client can use an editorial requirement absent from their publication."""
+    context = published_delivery_context
+    hidden = Requirement.objects.create(stage=context.stage, key='hidden-guide', title='Guía privada', guide=GUIDE)
+
+    with pytest.raises(NotFound, match='Requerimiento no disponible'):
+        platform_ai_jobs.report_context(context.project, context.client, {
+            'scenario': 'change', 'source_requirement_id': hidden.pk,
+        })
+
+    assert context.stage.publications.count() == 1
+
+
+def test_report_context_rejects_a_stage_inconsistent_with_the_requirement(published_delivery_context):
+    """Fails if a voice change connects a published requirement to another visible stage."""
+    context = published_delivery_context
+    sibling = visible_sibling_stage(context)
+    visible_context = platform_ai_jobs.report_context(context.project, context.client, {
+        'scenario': 'stage_observation', 'stage_id': sibling.pk,
+    })
+
+    with pytest.raises(NotFound, match='Etapa no disponible'):
+        platform_ai_jobs.report_context(context.project, context.client, {
+            'scenario': 'change', 'source_requirement_id': context.first.pk, 'stage_id': sibling.pk,
+        })
+
+    assert visible_context == {
+        'project_id': context.project.pk,
+        'stage_id': sibling.pk,
+        'stage_title': 'Etapa alternativa',
+    }
+
+
+def test_report_context_snapshots_a_visible_stage_observation(published_delivery_context):
+    """Fails if a stage observation draft loses its published stage destination."""
+    context = published_delivery_context
+
+    result = platform_ai_jobs.report_context(context.project, context.client, {
+        'scenario': 'stage_observation', 'stage_id': context.stage.pk,
+    })
+
+    assert result == {
+        'project_id': context.project.pk,
+        'stage_id': context.stage.pk,
+        'stage_title': 'Etapa',
+    }
 
 
 @freeze_time('2026-10-24 15:00:00')
@@ -214,6 +328,31 @@ def test_daily_audio_limit_blocks_another_recording_before_storage(client_user, 
 
 
 @freeze_time('2026-10-24 15:00:00')
+def test_transcription_request_id_rejects_different_audio_without_another_reservation(client_user, project, monkeypatch):
+    """Fails if retrying an upload ID with different audio stores another private recording or spends quota twice."""
+    configure_voice(client_user)
+    monkeypatch.setattr(platform_ai_jobs, '_enqueue', lambda job: None)
+    request_id = uuid4()
+    first = {
+        'purpose': 'voice_report', 'project_id': project.pk, 'request_id': request_id,
+        'audio': SimpleUploadedFile('first.wav', private_wav(), content_type='audio/wav'),
+    }
+    second = {
+        **first,
+        'audio': SimpleUploadedFile('second.wav', private_wav(sample=200), content_type='audio/wav'),
+    }
+
+    created = platform_ai_jobs.create_transcription(client_user, first)
+    with pytest.raises(AIConflict, match='identificador ya pertenece'):
+        platform_ai_jobs.create_transcription(client_user, second)
+
+    assert PlatformAIJob.objects.filter(actor=client_user, operation='transcription').count() == 1
+    assert PlatformAIQuotaReservation.objects.filter(actor=client_user).count() == 1
+    with storages['private'].open(created.audio_name, 'rb') as audio:
+        assert audio.read() == private_wav()
+
+
+@freeze_time('2026-10-24 15:00:00')
 def test_active_job_blocks_a_second_report_draft(client_user, project, monkeypatch):
     """Fails if one client can start a report draft while another AI job is pending."""
     configure_voice(client_user)
@@ -234,6 +373,24 @@ def test_active_job_blocks_a_second_report_draft(client_user, project, monkeypat
         platform_ai_jobs.create_report_draft(client_user, project.pk, report_values(transcription))
 
     assert PlatformAIJob.objects.filter(actor=client_user, operation='draft').count() == 1
+
+
+@freeze_time('2026-10-24 15:00:00')
+def test_daily_generation_limit_blocks_a_new_uncached_draft(client_user, project, monkeypatch):
+    """Fails if more than three daily report drafts per audio allowance reach model processing."""
+    configure_voice(client_user, daily_limit=1)
+    transcription = ready_transcription(client_user, project)
+    exhaust_daily_generation_allowance(client_user, project)
+
+    def forbidden_enqueue(job):
+        pytest.fail('A daily-limit rejection must not enqueue model work.')
+
+    monkeypatch.setattr(platform_ai_jobs, '_enqueue', forbidden_enqueue)
+
+    with pytest.raises(Throttled, match='límite diario de generación'):
+        platform_ai_jobs.create_report_draft(client_user, project.pk, report_values(transcription))
+
+    assert PlatformAIJob.objects.filter(actor=client_user, operation='draft').count() == 3
 
 
 def test_worker_refunds_a_job_after_project_ownership_changes(client_user, project, admin_user, monkeypatch):
