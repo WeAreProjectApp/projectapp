@@ -2317,3 +2317,17 @@ de Driver. El anfitrión sólo acusa un inicio automático que llegó a abrirse;
 observa cambios en los destinos visibles y agrupa un único reintento pendiente
 si el destino aparece durante una operación asíncrona. Desmontar desconecta la
 observación e impide reintentos tardíos.
+
+## Appi y proyecciones privadas — 2026-10-24
+
+Appi usa Jev como clasificador tipado anterior a cualquier redacción. Las
+proyecciones del servidor filtran propietario, publicación y visibilidad; los
+modelos externos reciben pregunta y datos acotados, nunca acceso a la base.
+Guías y declinaciones usan plantillas versionadas; sólo una explicación de hechos
+propios puede invocar Haiku/Luna y su resultado se valida antes de entregarlo.
+
+Conversaciones privadas con vencimiento máximo de 90 días, índices Redis de hasta
+24 horas y dependencias de fuentes/modelo/plantilla permiten reutilizar respuestas
+sin omitir reautorización. Se comparte la cuota lógica con reportes de voz mediante
+reservas y canje único del dictado. El historial no se expone por MCP administrativo.
+Contrato completo: [Appi](../APPI.md).

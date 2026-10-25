@@ -6,6 +6,7 @@ from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
 from accounts.models_ai import PlatformAITemplate, PlatformAITemplateRevision
+from accounts.services.appi_catalog import guide_slots
 
 
 REPORT_SEEDS = {
@@ -29,6 +30,7 @@ REPORT_SEEDS = {
 CHAT_SCENARIOS = ('project_status', 'phase_status', 'deliverables', 'bugs', 'project_health', 'contract_clause')
 CHAT_SLOTS = {scenario: {'scope_label', 'facts_text'} for scenario in CHAT_SCENARIOS}
 CHAT_SLOTS.update(out_of_scope=set(), clarification={'choices_text'})
+CHAT_SLOTS.update(guide_slots())
 
 
 def defaults():

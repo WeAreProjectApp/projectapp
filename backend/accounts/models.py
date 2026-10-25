@@ -1903,6 +1903,7 @@ from accounts.models_delivery_email import (  # noqa: E402,F401
 from accounts.models_delivery_notifications import (  # noqa: E402,F401
     DeliveryNotificationAttempt, DeliveryNotificationEvent,
 )
+from accounts.models_appi import AppiConversation, AppiTurn  # noqa: E402,F401
 
 from accounts.models_platform_help import (  # noqa: E402,F401
     ClientPlatformHelpSettings, PlatformGuidedTour, PlatformGuidedTourRevision,

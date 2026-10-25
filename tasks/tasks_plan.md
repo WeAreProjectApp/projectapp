@@ -808,3 +808,13 @@ corrección y reversa integrales. Ver `docs/accounting-settlement.md`.
 ## 2026-10-24 — Recorrido guiado
 
 En validación: guías ES/EN por usuario, Help compartido, borradores y novedades; administración Panel/MCP y vistos persistidos. PR #539 sigue en curso; sin merge ni deploy.
+
+## 2026-10-24 — Appi, asistente de proyectos
+
+Implementación en PR #541: alcance finito, proyecciones autorizadas, Jev antes
+del redactor, guías bilingües editables, caché revalidada e historial privado de
+hasta 90 días. Configuración/credenciales/cuota/audio se integran desde PR #538;
+superficies de Ayuda desde PR #539. Las pruebas locales de servidor, interfaz y
+navegador están aprobadas; catálogos y flujos actualizados. Evidencia en
+`docs/audits/2026-10-24-appi-qa.md`. El cierre aún requiere CI verde del PR final.
+La integración final pertenece al orquestador; no hay migraciones aplicadas ni deploy.

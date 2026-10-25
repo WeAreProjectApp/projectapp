@@ -8,6 +8,8 @@ _LABELS = '''
 accounts.projectadminaccess|Accesos administrativos|Administrative access
 accounts.projectaccessnote|Notas del proyecto|Project notes
 accounts.projectphase|Fases comerciales|Commercial phases
+accounts.appiconversation|Conversaciones privadas de Appi|Private Appi conversations
+accounts.appiturn|Consultas privadas de Appi|Private Appi queries
 accounts.deliveryworkspace|Organización de las entregas|Delivery workspace
 accounts.projectcontract|Contratos del proyecto|Project contracts
 accounts.contractamendment|Otrosíes de contratos|Contract amendments
@@ -123,6 +125,8 @@ _KEYS = {
 }
 
 _HELP = {
+    'accounts.appiconversation': ('Historial privado vinculado al proyecto. Para eliminar el proyecto también debes seleccionar sus conversaciones y consultas de Appi.', 'Private history bound to the project. Deleting the project also requires selecting its Appi conversations and queries.'),
+    'accounts.appiturn': ('Preguntas y respuestas privadas del cliente. Se eliminan junto con su conversación; no se trasladan al archivo administrativo.', 'Private client questions and answers. They are deleted with their conversation, without moving them to the administrative archive.'),
     'accounts.platformaijob': ('Transcripciones y borradores privados temporales. Debes elegir eliminarlos para borrar el proyecto; su audio se elimina al confirmar la operación.', 'Temporary private transcripts and drafts. Select their deletion before deleting the project; their audio is removed after the operation commits.'),
     'accounts.platformaiusage': ('Contadores sin mensajes ni grabaciones. Se conservan sin vínculo al proyecto para mantener el control de consumo.', 'Counters without messages or recordings. They are retained without a project link to preserve usage accounting.'),
     'accounts.projectphase': ('Fases creadas desde propuestas. Las propuestas comerciales se conservan.', 'Phases created from proposals. Commercial proposals are retained.'),
