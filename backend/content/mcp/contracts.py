@@ -1354,6 +1354,14 @@ MCP_MODEL_CONTRACTS.update({
     ),
     'projects': (
         PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS
+        + (
+            _contract('accounts.PlatformHelpSettings', read_only='id version', read_write='tour_enabled video_enabled'),
+            _contract('accounts.ClientPlatformHelpSettings', read_only='id user version', read_write='tour_enabled video_enabled'),
+            _contract('accounts.PlatformGuidedTour', read_only='id slug context kind published_revision version updated_at', read_write='priority is_active draft'),
+            _contract('accounts.PlatformGuidedTourRevision', read_only='id tour number content created_by created_at'),
+            _contract('accounts.PlatformTourProgress', read_only='id user tour status revision last_step updated_at'),
+            _contract('accounts.PlatformHelpEvent', read_only='id actor action subject changes created_at'),
+        )
         + build_issue_contracts(_contract)
         + (_contract(
             'content.ProjectRetentionContext',

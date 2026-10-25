@@ -63,6 +63,7 @@
           :is-active="isActive(item.href)"
           :disabled="item.disabled"
         />
+        <PlatformHelpMenu :collapsed="isCollapsed" />
         <!-- Personaliza button (opens theme picker, not a route) -->
         <BaseButton
           unstyled
@@ -192,6 +193,7 @@
 </template>
 
 <script setup>
+import PlatformHelpMenu from '~/components/platform/PlatformHelpMenu.vue'
 import { computed, inject, onMounted, onUnmounted } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformNotificationsStore } from '~/stores/platform-notifications'

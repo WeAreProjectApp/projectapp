@@ -3018,3 +3018,40 @@ Changelogs con ejemplos antes/después y runbook de guards/slices preparados:
 Los controles compartidos y `*_history` de PR #503 quedan fuera del barrido.
 El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
 entrada documental no declara terminados esos pasos ni operaciones en producción.
+
+
+## 2026-10-24 — Ayuda y recorridos de la plataforma
+
+PR #539 implementa guías general, contextual y de voz por usuario, ES/EN,
+novedades editables y administración común por Panel y las 14 herramientas del
+MCP Proyectos. Completar o saltar impide otra apertura automática; Ayuda permite
+repetir. Los destinos pertenecen a un catálogo cerrado y no ejecutan acciones
+de negocio. Appi y Video consumen el contrato de superficies sin imports
+inversos; Voz está integrada mediante merges de sus commits publicados hasta
+`1d8eebdef`, incluidas ambas excepciones de previsualización sin escrituras,
+la comprobación de propiedad de proyectos de IA y las exenciones precisas de
+borradores privados y contadores de consumo. El contrato combinado conserva
+85 herramientas con sus nombres y serializers explícitos.
+
+La validación focal acredita 22 pruebas backend, 35 unitarias de interfaz y
+navegación, siete controles de contratos/relaciones y 18 casos únicos de
+navegador aprobados, sin omisiones ni reintentos. Incluye el control real de voz,
+la entrada al proyecto, la restauración del menú móvil y cinco perfiles
+responsive. Tras detectar dos carreras en CI se repitieron cuatro casos sobre
+el layout combinado y se validó la invitación a abrir el video en pausa:
+cinco aprobados, sin omisiones ni reintentos. El destino actual se guarda antes
+de animar la tarjeta; el inicio contextual sólo se acusa después de abrir y
+se reintenta cuando aparece un destino que terminó de montarse tarde. Las
+cuatro regresiones nuevas y doce casos vecinos pasaron. La fuente de Ayuda
+del servidor combinado coincide con `d15001691`, y los JSON/XML recibieron
+revisión independiente. Nuxt completó la compilación local. Catálogos y mapa de flujos están
+actualizados; la auditoría conserva las brechas de clases de resultado sin
+reducir el contrato para simular cobertura completa. La comprobación MCP nueva
+de ausencia de escrituras pasó en el CI de `ebcced837`; sus 14.478 casos no
+registraron fallos, pero la cobertura global fue 92,078735 %, por debajo del
+mínimo de 92,5 %. Se añadieron 35 casos reales de administración, publicación
+y progreso, aprobados en lotes aislados de 16 y 19 con JUnit y JSON de cobertura.
+Cubren 82 líneas y ramas que faltaban en ese informe; el ajuste de IA lo realiza
+su dueño. La revisión independiente y el gate estricto aprobaron estos casos.
+La entrega sigue pendiente del CI del nuevo head. Esta nota no acredita merge,
+despliegue ni cambios en datos desplegados.

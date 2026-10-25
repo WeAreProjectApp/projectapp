@@ -74,8 +74,12 @@ secure_links.SecureLinkEvent.actor
 ''')
 
 RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
-# Private AI preparations, usage and quota receipts keep the original actor.
-# Merging identities must not transfer drafts or rewrite audit/idempotency evidence.
+# Help state belongs to the person, not the commercial client being merged.
+# Keep both account preferences and historical authorship on their original user.
+RELATION_POLICIES.update(dict.fromkeys(_keys('''
+accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
+accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor
+'''), NEVER))
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 content.CommunicationFolder.client content.CommunicationThread.client
 content.DocumentFolder.client_user accounts.Project.client

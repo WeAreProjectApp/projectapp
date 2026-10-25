@@ -803,3 +803,8 @@ Implementado en el PR #517: un modal y escritor común para uno o varios ingreso
 participaciones globales, diferencia con deducciones proporcionales y saldos
 reprogramados, IVA heredado y revisión de correos dentro del modal. Incluye
 corrección y reversa integrales. Ver `docs/accounting-settlement.md`.
+
+
+## 2026-10-24 — Recorrido guiado
+
+En validación: guías ES/EN por usuario, Help compartido, borradores y novedades; administración Panel/MCP y vistos persistidos. PR #539 sigue en curso; sin merge ni deploy.

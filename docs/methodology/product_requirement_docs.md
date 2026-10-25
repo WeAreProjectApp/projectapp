@@ -1276,3 +1276,8 @@ Oculto por defecto aplica exclusivamente a URLs y accesos: producción/QA y cada
 ### Modalidad contractual posterior a negociación
 
 El equipo administrativo puede corregir single/split en cualquier estado. Fuera de negociación debe revisar el impacto, escribir una nota y confirmar. El contenido personalizado y las evidencias enviadas o firmadas se conservan. Los cambios y restauraciones guardan instantáneas permanentes consultables desde historial y MCP. No se envían documentos automáticamente ni se modifican plantillas u otras propuestas.
+
+
+## Recorridos de clientes — 2026-10-24
+
+Guía general, contextual del primer proyecto y explicación de voz sólo al abrir el formulario; estado por usuario entre dispositivos, repetición desde Ayuda y novedades bilingües administrables.

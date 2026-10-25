@@ -1754,3 +1754,8 @@ sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio
 ## Guardas de integración de proyectos (2026-10-02)
 
 `ensure_unused_onboarding_project` comparte el inventario bloqueante de eliminación. Sólo descuenta el stub propio sin archivo, descripción, claves de epic, archivo lógico, versiones ni hijos salvo su BusinessProposal exacta. Documentos con proyecto distinto o nulo también bloquean por su relación al Deliverable. `teardown_platform_for_proposal` valida el vínculo vigente antes de escribir y convierte ambos rechazos del inventario en `PlatformRelaunchConflict` (409), propagados fuera de atomic. `launch_to_platform` exige sesión Panel; preview/DELETE de proyectos no aceptan JWT como sesión. No se aplicaron migraciones ni cambios a bases del servicio.
+
+
+## Contrato de ayuda — 2026-10-24
+
+Driver.js 1.10.2 se carga en navegador bajo demanda. API cliente JWT bajo /api/platform/help/; administración de sesión/CSRF y MCP con validación común, versiones y auditoría. Detalle en docs/PLATFORM_HELP.md.

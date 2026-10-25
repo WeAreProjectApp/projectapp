@@ -131,6 +131,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Proyectos', href: lp('/panel/projects'), icon: 'folder' },
         { label: 'Monitoreo', href: lp('/panel/monitoring'), icon: 'search' },
         { label: 'Configuración de IA', href: lp('/panel/platform/ai'), icon: 'settings' },
+        { label: 'Ayuda de la plataforma', href: lp('/panel/platform/help'), icon: 'settings' },
         // The same accounting view, doubled here deliberately: hostings are
         // also part of the delivered product. Item-level gate because the
         // target page is superuser-only while Proyectos is open to admins.
