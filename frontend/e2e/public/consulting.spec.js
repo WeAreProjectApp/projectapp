@@ -91,6 +91,8 @@ test.describe('Public consulting', () => {
     await setupApi(page);
     await openFromFooter(page);
     await page.getByTestId('consulting-language-en').click();
+    await expect(page).toHaveURL(/\/en-us\/consulting$/);
+    await expect(page.getByRole('heading', { level: 1, name: englishProgram.hero.title, exact: true })).toHaveText(englishProgram.hero.title);
     const downloadPromise = page.waitForEvent('download');
 
     await page.getByTestId('consulting-download-pdf-floating').click();
