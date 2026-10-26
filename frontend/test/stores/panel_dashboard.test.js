@@ -91,3 +91,35 @@ describe('usePanelDashboardStore', () => {
     expect(store.finance).toBeNull()
   })
 })
+
+describe('attention list totals', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    jest.clearAllMocks()
+  })
+
+  it('removes an alert whose condition is resolved', async () => {
+    const store = usePanelDashboardStore()
+    store.summary = { attention: [{ type: 'emails_failed', count: 2 }] }
+    get_request.mockResolvedValueOnce({ data: { results: [], total: 0, page: 1, has_next: false } })
+
+    await store.fetchAttentionPage('emails_failed')
+
+    expect(store.attention).toEqual([])
+    expect(store.attentionCount).toBe(0)
+  })
+
+  it('preserves a newer summary when an older page finishes', async () => {
+    const store = usePanelDashboardStore()
+    store.summary = { attention: [{ type: 'emails_failed', count: 2 }] }
+    let finish
+    get_request.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    const request = store.fetchAttentionPage('emails_failed')
+    store.summary = { attention: [{ type: 'emails_failed', count: 4 }] }
+
+    finish({ data: { total: 1, results: [] } })
+    await request
+
+    expect(store.attentionCount).toBe(4)
+  })
+})

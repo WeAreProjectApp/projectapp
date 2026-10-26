@@ -240,3 +240,17 @@
   opacity: 0;
   transform: translateY(-4px);
 }
+
+/* The destination of an attention-radar link remains identifiable without motion. */
+@keyframes radar-record-pulse {
+  0%, 100% { outline-color: transparent; }
+  50% { outline-color: var(--color-focus-ring, currentColor); }
+}
+.radar-record-highlight {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  animation: radar-record-pulse 900ms ease-in-out 3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .radar-record-highlight { animation: none; }
+}

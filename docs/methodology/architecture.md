@@ -1,4 +1,8 @@
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
+
+## Radar de atención — 2026-10-26
+
+`dashboard_attention_service` centraliza la elegibilidad para resumen, listas y detalle. Las FBV de `panel_dashboard` exponen lectura paginada y detalle actualizado bajo `/api/panel/dashboard/attention/<type>/`, con acceso financiero restringido a superusuarios. Los reintentos de correo se agrupan mediante la ascendencia de snapshots y el estado del último envío principal. Vue carga listas al expandir; los destinos reutilizan enlaces de detalle y `useRadarFocus`, mientras Recurrentes puede recuperar y mostrar un registro al margen del filtro ordinario.
 > reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
 > (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por
 > panel y MCP projects. Cupo común de 20 solicitudes por ventana móvil de 300

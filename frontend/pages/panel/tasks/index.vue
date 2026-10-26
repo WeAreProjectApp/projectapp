@@ -17,6 +17,7 @@
       </BaseButton>
     </div>
 
+    <p v-if="taskLinkError" role="alert" class="mb-4 text-sm text-warning-strong" data-testid="task-link-status">{{ taskLinkError }}</p>
     <div v-if="taskStore.isLoading" class="text-center py-12 text-text-subtle text-sm">
       Cargando tableros…
     </div>
@@ -119,6 +120,7 @@
             <li
               v-for="task in taskStore.archivedTasks"
               :key="task.id"
+              :data-testid="`archived-task-${task.id}`"
               class="flex items-center justify-between px-4 py-3 rounded-lg bg-surface border border-border-default"
             >
               <div class="min-w-0">
@@ -171,7 +173,9 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { useRadarFocus } from '~/composables/useRadarFocus';
+import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
+import { computed, reactive, ref, watch } from 'vue';
 import TaskColumn from '~/components/Tasks/TaskColumn.vue';
 import TaskFormModal from '~/components/Tasks/TaskFormModal.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
@@ -183,6 +187,10 @@ import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
 const taskStore = useTaskStore();
+const route = useRoute();
+const radarFocus = useRadarFocus();
+const radarText = useDashboardAttentionText();
+const taskLinkError = ref('');
 // Editar una tarea tiene dirección propia (`?task=`): así la fila puede
 // publicarla en un enlace y la URL se puede compartir o recargar. Crear no
 // tiene qué direccionar — todavía no hay entidad —, así que sigue siendo estado
@@ -198,7 +206,7 @@ const {
 const creatingTask = ref(false);
 
 const showModal = computed({
-  get: () => creatingTask.value || isEditingTask.value,
+  get: () => creatingTask.value || (isEditingTask.value && editingTask.value !== null),
   set: (open) => {
     if (open) return;
     creatingTask.value = false;
@@ -262,9 +270,36 @@ function priorityDot(priority) {
   return 'bg-border-default';
 }
 
-function loadTasks() {
-  return Promise.all([taskStore.fetchAllBoards(), taskStore.fetchAssignees()]);
+async function revealLinkedTask() {
+  const id = Number(route.query.task);
+  taskLinkError.value = '';
+  if (!Number.isInteger(id) || id < 1) return;
+  const task = taskStore.getTaskById(id);
+  if (task) {
+    openBoards[task.board_type] = true;
+    await radarFocus(`[data-task-id="${id}"], [data-testid="task-open-${id}"]`);
+    return;
+  }
+  const result = await taskStore.fetchArchivedTasks();
+  if (Number(route.query.task) !== id) return;
+  if (!result?.success) {
+    taskLinkError.value = radarText.value.detailError;
+    return;
+  }
+  const archived = taskStore.archivedTasks.find((row) => row.id === id);
+  if (archived) {
+    archiveOpen.value = true;
+    taskLinkError.value = radarText.value.changed;
+    await radarFocus(`[data-testid="archived-task-${id}"]`);
+  } else {
+    taskLinkError.value = radarText.value.missing;
+  }
 }
+async function loadTasks() {
+  await Promise.all([taskStore.fetchAllBoards(), taskStore.fetchAssignees()]);
+  await revealLinkedTask();
+}
+watch(() => route.query.task, revealLinkedTask);
 
 onMounted(loadTasks);
 usePanelRefresh(loadTasks);

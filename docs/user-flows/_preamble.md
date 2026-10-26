@@ -1,7 +1,7 @@
 # User Flow Map
 
-> **Version:** 2.41.0
-> **Last updated:** 2026-08-16
+> **Version:** 2.105.0
+> **Last updated:** 2026-10-26
 > **Scope:** Complete map of end-to-end user navigation flows for projectapp, organized by role.
 > **Sources:** Frontend pages (`frontend/pages/`), backend API endpoints (`content/urls.py`, `accounts/urls.py`), route rules (`nuxt.config.ts`).
 

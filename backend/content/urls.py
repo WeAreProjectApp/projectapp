@@ -81,7 +81,7 @@ from content.views.collection_accounts_panel import (
     send_hosting_collection_account,
 )
 from content.views.contact import new_contact
-from content.views.panel_dashboard import panel_dashboard
+from content.views.panel_dashboard import panel_dashboard, dashboard_attention
 from content.views.project_brand import project_brand, project_brand_asset
 from content.views.panel_projects import (
     archive_panel_project,
@@ -636,6 +636,8 @@ urlpatterns = [
 
     # Panel — global dashboard
     path('panel/dashboard/', panel_dashboard, name='panel-dashboard'),
+    path('panel/dashboard/attention/<str:kind>/', dashboard_attention, name='dashboard-attention'),
+    path('panel/dashboard/attention/<str:kind>/<int:record_id>/', dashboard_attention, name='dashboard-attention-detail'),
 
     # Panel — Projects module (Plataforma space)
     path('projects/<int:project_id>/brand/', project_brand, name='project-brand'),
