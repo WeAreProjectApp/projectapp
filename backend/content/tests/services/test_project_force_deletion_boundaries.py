@@ -73,8 +73,8 @@ def test_force_delete_removes_an_empty_secure_link_project_root(superuser, targe
     assert not SecureLinkFolder.objects.filter(pk=root.pk).exists()
 
 
-def test_force_delete_lists_secure_link_subfolders_before_deleting_project(superuser, target_project):
-    """Falla si una subcarpeta de enlaces seguros deja de bloquear el borrado hasta elegirla."""
+def test_force_delete_retains_unselected_secure_link_subfolders(superuser, target_project):
+    """Falla si el borrado pierde el árbol que el operador decidió conservar."""
     root = target_project.secure_link_root_folder
     child = SecureLinkFolder.objects.create(
         name='Entregables',
@@ -85,21 +85,26 @@ def test_force_delete_lists_secure_link_subfolders_before_deleting_project(super
     preview = forced_deletion_preview(target_project, actor=superuser)
     secure_folders = next(
         dependency for dependency in preview['dependencies']
-        if dependency['key'] == 'secure_links.securelinkfolder'
+        if dependency['key'] == 'secure_link_folders'
     )
 
-    with pytest.raises(ProjectForceDeleteError) as error:
-        force_delete_project(
-            target_project.pk,
-            actor=superuser,
-            confirmation='DELETE',
-            impact_token=preview['impact_token'],
-            delete_keys=preview['delete_keys'],
-        )
+    force_delete_project(
+        target_project.pk,
+        actor=superuser,
+        confirmation='DELETE',
+        impact_token=preview['impact_token'],
+        delete_keys=preview['delete_keys'],
+    )
 
-    assert (preview['can_delete'], secure_folders['count']) == (False, 2)
-    assert error.value.code == 'project_force_delete_blocked'
-    assert SecureLinkFolder.objects.filter(pk__in=[root.pk, child.pk]).count() == 2
+    root.refresh_from_db()
+    child.refresh_from_db()
+    assert (secure_folders['count'], secure_folders['selected']) == (2, False)
+    assert not Project.objects.filter(pk=target_project.pk).exists()
+    assert root.retention_context_id is not None
+    assert (root.project_id, root.managed_project_id) == (None, None)
+    assert (child.parent_id, child.project_id, child.retention_context_id) == (
+        root.pk, None, root.retention_context_id,
+    )
 
 
 def test_force_delete_blocks_version_used_by_another_card(superuser, target_project):

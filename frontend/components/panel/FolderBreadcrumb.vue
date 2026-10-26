@@ -1,7 +1,7 @@
 <template>
   <nav
     class="flex items-center gap-2 flex-wrap text-sm mb-4"
-    aria-label="Ruta de carpetas"
+    :aria-label="ariaLabel"
   >
     <!-- design-tokens: allow-raw-button — selectable breadcrumb navigation and folder drop target. -->
     <button
@@ -63,6 +63,7 @@ import { computed, ref } from 'vue';
 
 const props = defineProps({
   adapter: { type: Object, required: true },
+  ariaLabel: { type: String, default: 'Ruta de carpetas' },
   activeId: { type: [String, Number], default: 'all' },
   draggingFolderId: { type: [String, Number], default: null },
   // La raíz cambia con el eje de estado: navegando el archivo el primer tramo

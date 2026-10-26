@@ -113,9 +113,21 @@ ID = {'type': 'integer', 'minimum': 1}
 NULL_ID = {'type': ['integer', 'null'], 'minimum': 1}
 REVISION = {'expected_updated_at': {'type': 'string', 'format': 'date-time'}}
 FOLDER_ID = {'folder_id': ID}
+ARGUMENT_DESCRIPTIONS = {
+    'folder_id': 'ID de una carpeta del árbol propio de Enlaces seguros.',
+    'link_id': 'ID del enlace seguro que cambia de ubicación interna.',
+    'parent': 'ID de la carpeta padre; null elige la raíz del árbol.',
+    'client': 'ID del cliente (UserProfile) inicial; null deja la carpeta sin cliente.',
+    'project': 'ID del proyecto inicial; omitir hereda el padre, null deja sin proyecto.',
+    'name': 'Nombre visible de la carpeta manual, de 1 a 120 caracteres.',
+    'ids': 'IDs de todas las carpetas manuales hermanas, una vez cada una y en el orden deseado.',
+    'expected_updated_at': 'Revisión updated_at leída previamente, con zona horaria; si cambió, rechaza la operación.',
+}
 
 
 def tool(name, description, handler, properties, required=(), *, risk='write'):
+    properties = {key: {**schema, 'description': ARGUMENT_DESCRIPTIONS[key]}
+                  for key, schema in properties.items()}
     return {'name': name, 'description': description, 'handler': handler, 'risk': risk,
             'input_schema': {'type': 'object', 'properties': properties, 'required': list(required), 'additionalProperties': False}}
 

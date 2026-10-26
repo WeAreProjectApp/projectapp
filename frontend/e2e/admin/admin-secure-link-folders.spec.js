@@ -188,7 +188,7 @@ test.describe('Admin secure-link folders', () => {
 
     const form = await openMoveForm(page, row.id);
     await form.getByTestId('secure-folder-parent').selectOption(String(DESTINATION_FOLDER.id));
-    await form.getByTestId('secure-folder-save').click();
+    await page.getByTestId('secure-folder-save').click();
 
     await expect(page.getByRole('alert').filter({ hasText: 'El enlace fue actualizado por otra persona. Vuelve a intentarlo.' }))
       .toHaveText('El enlace fue actualizado por otra persona. Vuelve a intentarlo.');
@@ -213,7 +213,7 @@ test.describe('Admin secure-link folders', () => {
 
     const form = await openMoveForm(page, row.id);
     await form.getByTestId('secure-folder-parent').selectOption(String(DESTINATION_FOLDER.id));
-    await form.getByTestId('secure-folder-save').click();
+    await page.getByTestId('secure-folder-save').click();
 
     await expect(page.getByRole('alert').filter({ hasText: 'El servicio de enlaces no responde.' }))
       .toHaveText('El servicio de enlaces no responde.');

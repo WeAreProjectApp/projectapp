@@ -2861,7 +2861,7 @@ comprobación de estas piezas no requiere claves reales ni llamadas de IA.
 
 ## Comunicaciones: jerarquía de Enlaces seguros
 
-El conector `communications` administra carpetas de hilos y carpetas de enlaces
+El conector `communications` 3.2.0 administra carpetas de hilos y carpetas de enlaces
 como árboles separados. Para enlaces, utilizar estas herramientas:
 
 | Operación | Herramientas |

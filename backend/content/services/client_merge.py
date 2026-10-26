@@ -325,6 +325,8 @@ def _plan_client_merge(survivor, duplicate, *, resolutions, actor, relation_inve
         folder_ids |= root.get_descendant_ids()
     _add_rows(rows, DocumentFolder._base_manager.filter(pk__in=folder_ids))
     _add_rows(rows, CommunicationThread._base_manager.filter(managed_project_id__in=project_ids))
+    from secure_links.models import SecureLinkFolder
+    _add_rows(rows, SecureLinkFolder._base_manager.filter(managed_project_id__in=project_ids))
     if folder_plan:
         for label, pk in folder_plan['closure']:
             row = apps.get_model(label)._base_manager.get(pk=pk)

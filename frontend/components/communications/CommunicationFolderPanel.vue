@@ -112,7 +112,7 @@ const modalFormId = useId();
         <BaseButton :variant="!selected ? 'primary' : 'ghost'" size="sm" @click="select('')">{{ t('communicationFiling.all') }}</BaseButton>
         <BaseButton :variant="selected === 'none' ? 'primary' : 'ghost'" size="sm" data-testid="communication-folder-unfiled" @click="select('none')">{{ t('communicationFiling.unfiled') }}</BaseButton>
       </div>
-      <FolderBreadcrumb v-if="breadcrumbs.length" :adapter="breadcrumbAdapter" :active-id="Number(selected)" :root-label="t('communicationFiling.all')" root-value="" @select="select(String($event))" />
+      <FolderBreadcrumb v-if="breadcrumbs.length" :adapter="breadcrumbAdapter" :active-id="Number(selected)" :aria-label="t('communicationFiling.location')" :root-label="t('communicationFiling.all')" root-value="" @select="select(String($event))" />
       <p v-if="!folders.length && !error" class="p-2 text-xs text-text-muted">{{ t('communicationFiling.empty') }}</p>
       <ul class="space-y-1 overflow-x-auto py-2">
         <li v-for="folder in rows" :key="folder.id" class="flex min-w-0 items-center gap-1" :style="{ paddingInlineStart: `${Math.min(folder.depth, 6) * 12}px` }">

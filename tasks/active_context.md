@@ -2,7 +2,9 @@
 > de árbol propio con raíces de proyecto, carpetas y subcarpetas; navegación
 > por cliente, filtros contextuales y archivo reversible que no revoca enlaces.
 > Panel y MCP Comunicaciones comparten servicios, reglas de permisos y conteos.
-> La validación y entrega se registran en el PR; esta nota no acredita despliegue.
+> Verificación focal y límites en `docs/audits/2026-10-26-secure-link-folders-qa.md`;
+> entrega y CI en el PR #545. Incluye las políticas de fusión de clientes y
+> deshacer cambios de proyecto. Esta nota no acredita despliegue.
 
 > **Video de ayuda de plataforma — 2026-10-24, implementado en rama de sesión:** tres MP4 Full HD con voz colombiana y subtítulos integrados: general de 90 s independiente de IA, Appi y voz de 72 s filtrados por capacidades efectivas. Ayuda abre el modal sólo a petición y el recorrido terminado ofrece una invitación; nunca se reproduce automáticamente. Los interruptores global/cliente y el host se comparten con recorridos, sin duplicar flags de IA. Panel y MCP Proyectos permiten sustituir, retirar o restaurar las piezas con revisión de concurrencia y confirmación de retirada. Validación local: 14 casos propios de interfaz, incluidos cinco anchos y la invitación al completar el recorrido, sin omisiones ni reintentos; cinco pruebas de permisos con migraciones de test. Fuentes, huellas y mantenimiento en `explainers/brag-v2/platform-overview/`. Entrega y CI: PR #540; no acredita despliegue.
 

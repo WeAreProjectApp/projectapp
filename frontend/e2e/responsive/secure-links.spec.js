@@ -10,7 +10,7 @@ import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './
 test.setTimeout(60_000);
 
 const secureLinksScenario = getResponsiveScenario('frontend/pages/panel/secure-links/index.vue');
-const row = secureLinkRow({ title: 'Credenciales responsive con un título largo sin espacios_para_probar_el_ajuste' });
+const row = secureLinkRow({ folder: 902, title: 'Credenciales responsive con un título largo sin espacios_para_probar_el_ajuste' });
 const folderRoot = {
   id: 901,
   name: 'Cliente responsive',
@@ -25,7 +25,7 @@ const folderRoot = {
   link_count: 0,
   archived_link_count: 0,
 };
-const folderChild = { ...folderRoot, id: 902, name: 'Accesos responsive', parent: folderRoot.id };
+const folderChild = { ...folderRoot, id: 902, name: 'Accesos responsive', parent: folderRoot.id, link_count: 1 };
 const folderNavigation = {
   totals: { active: { folders: 2, documents: 1 }, archived: { folders: 0, documents: 0 } },
   unassigned: {
@@ -66,11 +66,20 @@ const enterByProfile = Object.freeze({
   wide: (page) => page.getByRole('link', { name: 'Enlaces seguros', exact: true }).click(),
 });
 
+const visibleFolders = (page) => expect(page.getByTestId('secure-folders-sidebar').filter({ visible: true })).toBeVisible();
+const revealFoldersByProfile = Object.freeze({
+  compact: (page) => page.getByTestId('secure-folders-open').click(),
+  portrait: (page) => page.getByTestId('secure-folders-open').click(),
+  landscape: visibleFolders,
+  desktop: visibleFolders,
+  wide: visibleFolders,
+});
+
 for (const profile of RESPONSIVE_PROFILES) {
   test.describe(`secure links catalog · ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
     test.use(viewportUse(profile));
 
-    test('opens a secure link detail and its content from the responsive list', {
+    test('opens a secure link from a nested folder', {
       tag: ['@flow:admin-secure-link-manage', '@outcome:display', '@responsive:communications', `@responsive-scenario:${secureLinksScenario.catalogKey}`, `@responsive-batch:${batchForScenario(secureLinksScenario.catalogKey)}`, `@viewport:${profile}`],
     }, async ({ page }, testInfo) => {
       await setAuthLocalStorage(page, { token: 'secure-links-responsive-token', userAuth: { id: 9002, role: 'admin', is_staff: true, is_superuser: true } });
@@ -78,6 +87,13 @@ for (const profile of RESPONSIVE_PROFILES) {
       // quality: allow-deep-link (the authenticated panel home is the shell entry; this test reaches Enlaces seguros through the visible responsive navigation)
       await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
       await enterByProfile[profile](page);
+      await revealFoldersByProfile[profile](page);
+      await page.getByText(folderRoot.name, { exact: true }).filter({ visible: true }).click();
+      const child = page.getByTestId(`secure-folder-child-${folderChild.id}`);
+      await expect(child).toHaveText(`${folderChild.name} · 1`);
+      await child.click();
+      await expect(page.getByTestId(`folder-breadcrumb-${folderRoot.id}`)).toHaveText(folderRoot.name);
+      await expect.poll(() => new URL(page.url()).searchParams.get('folder')).toBe(String(folderChild.id));
       const title = page.getByTestId('secure-links-page').getByText(row.title, { exact: true }).filter({ visible: true });
       await expect(title).toHaveCount(1);
       await title.click();
@@ -90,34 +106,6 @@ for (const profile of RESPONSIVE_PROFILES) {
         modalLocator: modal,
         finalActionLocator: modal.getByTestId('secure-link-view-content'),
       });
-    });
-
-    // Bug caught: the folder tree could be unreachable at narrow widths or
-    // leave subfolders unselectable after the responsive navigation changed.
-    test('opens and selects a nested folder from the responsive workspace', {
-      tag: ['@flow:admin-secure-link-manage', '@outcome:display', '@responsive:communications', `@responsive-scenario:${secureLinksScenario.catalogKey}`, `@responsive-batch:${batchForScenario(secureLinksScenario.catalogKey)}`, `@viewport:${profile}`],
-    }, async ({ page }, testInfo) => {
-      await setAuthLocalStorage(page, { token: 'secure-links-responsive-token', userAuth: { id: 9002, role: 'admin', is_staff: true, is_superuser: true } });
-      await installSecureLinksMock(page);
-      // quality: allow-deep-link (the authenticated panel home is the shell entry; navigation reaches the workspace through its visible menu)
-      await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
-      await enterByProfile[profile](page);
-
-      if (['compact', 'portrait'].includes(profile)) {
-        await page.getByTestId('secure-folders-open').click();
-      }
-      const sidebar = page.getByTestId('secure-folders-sidebar').filter({ visible: true });
-      if (['landscape', 'desktop', 'wide'].includes(profile)) {
-        await expect(sidebar).toHaveCount(1);
-      }
-      await page.getByText(folderRoot.name, { exact: true }).filter({ visible: true }).click();
-      const child = page.getByTestId(`secure-folder-child-${folderChild.id}`);
-      await expect(child).toHaveText(`${folderChild.name} · 0`);
-      await child.click();
-
-      await expect(page.getByTestId(`folder-breadcrumb-${folderRoot.id}`)).toHaveText(folderRoot.name);
-      await expect.poll(() => new URL(page.url()).searchParams.get('folder')).toBe(String(folderChild.id));
-      await assertResponsiveScenario(page, testInfo, secureLinksScenario, { profile });
     });
 
     // Bug caught: the floating Custom listbox could be clipped outside a compact panel viewport.

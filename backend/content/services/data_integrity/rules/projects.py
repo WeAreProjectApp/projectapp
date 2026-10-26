@@ -20,7 +20,7 @@ from content.services.data_integrity.fixes import writers
 from content.services.data_integrity.fixes.base import Fixer, change, ref, required_choice, retained_blockers
 from content.services.data_integrity.hashing import clean_spaces, normalized
 from content.services.data_integrity.scope import (
-    DOCUMENT, FOLDER, HOSTING, INCOME, PHASE, PROFILE, PROJECT, THREAD, USER, client_label,
+    DOCUMENT, FOLDER, HOSTING, INCOME, PHASE, PROFILE, PROJECT, SECURE_LINK_FOLDER, THREAD, USER, client_label,
 )
 from content.services.data_integrity.snapshots import model_for
 from content.services.data_integrity.types import (
@@ -518,6 +518,7 @@ class DuplicateProjectNameFixer(Fixer):
         PROJECT: ('name',),
         FOLDER: ('name', 'client_user_id', 'parent_id', 'project_id', 'is_archived', 'archived_at',
                  'archived_via_folder_id', 'slug'),
+        SECURE_LINK_FOLDER: ('name', 'client_id', 'project_id'),
         THREAD: ('title', 'project_id', 'client_id', 'is_archived', 'archived_at'),
     }
 
@@ -538,7 +539,7 @@ class DuplicateProjectNameFixer(Fixer):
         changes = [change(project, 'name', project.name, name, project.name)]
         for label, pk in roots:
             row = model_for(label)._base_manager.get(pk=pk)
-            field = 'name' if label == FOLDER else 'title'
+            field = 'title' if label == THREAD else 'name'
             changes.append(change(row, field, getattr(row, field), name))
         return self.new_plan(
             params, closure=closure,
