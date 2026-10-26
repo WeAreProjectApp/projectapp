@@ -5,6 +5,7 @@
   >
     <!-- design-tokens: allow-raw-button — selectable breadcrumb navigation and folder drop target. -->
     <button
+      v-if="showRoot"
       type="button"
       class="touch-target px-2 py-1 rounded-lg transition-colors"
       :class="segmentClass(dragOverId === 'root')"
@@ -19,12 +20,12 @@
     </button>
 
     <template v-if="activeId === 'none'">
-      <span class="px-1 text-text-subtle select-none">›</span>
+      <span v-if="showRoot" class="px-1 text-text-subtle select-none">›</span>
       <span class="px-2 py-1 font-medium text-text-default">Sin carpeta</span>
     </template>
 
     <template v-for="(crumb, idx) in ancestors" :key="crumb.id">
-      <span class="px-1 text-text-subtle select-none">›</span>
+      <span v-if="showRoot || idx > 0" class="px-1 text-text-subtle select-none">›</span>
       <!-- design-tokens: allow-raw-button — selectable breadcrumb navigation and folder drop target. -->
       <button
         v-if="idx < ancestors.length - 1"
@@ -64,6 +65,7 @@ import { computed, ref } from 'vue';
 const props = defineProps({
   adapter: { type: Object, required: true },
   ariaLabel: { type: String, default: 'Ruta de carpetas' },
+  showRoot: { type: Boolean, default: true },
   activeId: { type: [String, Number], default: 'all' },
   draggingFolderId: { type: [String, Number], default: null },
   // La raíz cambia con el eje de estado: navegando el archivo el primer tramo
