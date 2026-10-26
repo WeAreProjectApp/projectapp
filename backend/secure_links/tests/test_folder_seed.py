@@ -16,7 +16,7 @@ def run_command(name, *args):
     call_command(name, *args, stdout=StringIO(), verbosity=0)
 
 
-def test_fake_secure_link_seed_creates_hierarchy_and_archives_without_revoking():
+def test_fake_secure_link_seed_represents_filing_states():
     """Falla si la muestra deja de ofrecer carpetas anidadas, raíces de proyecto o archivo no revocatorio."""
     run_command('create_fake_secure_links')
 
@@ -41,7 +41,7 @@ def test_fake_secure_link_seed_creates_hierarchy_and_archives_without_revoking()
     )
 
 
-def test_fake_reset_removes_project_folder_tree_and_unfiles_independent_link():
+def test_fake_reset_preserves_independently_associated_link():
     """Falla si el reset deja el árbol protegido o elimina un enlace sin proyecto movido dentro de él."""
     run_command('create_fake_secure_links')
     project = Project.objects.get(name='Secure links demo 1')

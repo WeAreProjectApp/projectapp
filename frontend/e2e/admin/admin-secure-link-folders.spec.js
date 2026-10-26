@@ -176,7 +176,7 @@ test.describe('Admin secure-link folders', () => {
 
   // Bug caught: a stale folder move could close the dialog and falsely imply
   // that the link had moved even though the server rejected its revision.
-  test('keeps the move form open and reports a revision conflict', {
+  test('reports a revision conflict in the open move form', {
     tag: ['@flow:admin-secure-link-manage', '@outcome:error'],
   }, async ({ page }) => {
     const row = secureLinkRow({ folder: ROOT_FOLDER.id, updated_at: '2026-10-20T12:10:00Z' });
