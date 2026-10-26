@@ -242,6 +242,7 @@
 
       <div v-else class="space-y-2">
         <div v-for="entry in emailStore.history" :key="entry.id"
+          :data-testid="`email-history-record-${entry.id}`"
           class="border border-border-muted  rounded-lg overflow-hidden">
           <!-- Summary row -->
           <button type="button" @click="toggleExpand(entry.id)"
@@ -475,6 +476,8 @@
 </template>
 
 <script setup>
+import { useRadarFocus } from '~/composables/useRadarFocus';
+import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
 import { ref, computed, watch, onMounted } from 'vue';
 import draggable from 'vuedraggable';
 import ComposedEmailPreview from '~/components/ComposedEmailPreview.vue';
@@ -499,6 +502,8 @@ const emailStore = useEmailStore();
 const notify = usePanelNotify();
 const localePath = useLocalePath();
 const route = useRoute();
+const radarFocus = useRadarFocus();
+const radarText = useDashboardAttentionText();
 const router = useRouter();
 
 // ── Page tabs (synced to ?tab= for deep-linking) ──
@@ -878,11 +883,25 @@ async function refreshEmails() {
     emailStore.fetchHistory(1, historyFilters.value),
   ]);
   const emailId = Number(route.query.email);
-  if (emailId && emailStore.history.some(entry => entry.id === emailId)) {
-    expandedIds.value[emailId] = true;
+  if (emailId) {
+    // The history groups To/CC siblings; the requested log can be a CC bounce.
+    const entry = emailStore.history[0];
+    if (entry) {
+      expandedIds.value[entry.id] = true;
+      await radarFocus(`[data-testid="email-history-record-${entry.id}"]`);
+    } else if (!emailStore.error) {
+      notify.error({ title: radarText.value.missing });
+    }
   }
 }
 
+watch(() => route.query.email, (email) => {
+  if (email) {
+    activeTab.value = 'history';
+    historyFilters.value = { recipient: '', family: '', status: '', has_attachments: '', attachment_type: '', date_from: '', date_to: '', email_id: email };
+    refreshEmails();
+  }
+});
 onMounted(refreshEmails);
 usePanelRefresh(refreshEmails);
 </script>

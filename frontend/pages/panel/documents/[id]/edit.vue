@@ -1,5 +1,6 @@
 <template>
   <div class="w-full">
+    <DashboardRadarDestination kind="documents_overdue" :id="Number(route.params.id)" :ready="Boolean(documentStore.currentDocument && !loadError)" target="[data-testid=doc-editor-header]" />
     <header
       class="mb-6 grid grid-cols-1 gap-4 panel-landscape:grid-cols-[minmax(0,1fr)_auto] panel-landscape:items-end"
       data-testid="doc-editor-header"
@@ -814,6 +815,7 @@
 </template>
 
 <script setup>
+import DashboardRadarDestination from '~/components/panel/dashboard/DashboardRadarDestination.vue';
 import ProposalSharedDocuments from '~/components/BusinessProposal/admin/ProposalSharedDocuments.vue';
 import ProposalSharedBinary from '~/components/BusinessProposal/admin/ProposalSharedBinary.vue';
 import VatBreakdown from '~/components/accounting/VatBreakdown.vue';

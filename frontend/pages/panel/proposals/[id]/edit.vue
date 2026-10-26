@@ -1,5 +1,6 @@
 <template>
   <div>
+    <DashboardRadarDestination kind="proposals_stale" :id="Number(route.params.id)" :ready="isCurrentProposal" target="[data-testid=proposal-record-header]" />
     <ConfirmModal
       v-model="confirmState.open"
       :title="confirmState.title"
@@ -79,7 +80,7 @@
     </div>
 
     <!-- Sticky header: title + investment + status -->
-    <div v-if="proposal"
+    <div v-if="isCurrentProposal" data-testid="proposal-record-header"
          class="sticky top-0 z-30 -mx-4 px-4 py-3 mb-6 bg-surface/80 backdrop-blur-md border-b border-border-muted transition-all sm:-mx-6 sm:px-6 panel-desktop:-mx-8 panel-desktop:px-8">
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <BaseButton v-if="proposal.project_review_required" variant="secondary" size="sm" :data-testid="`approval-review-${proposal.id}`" @click="openApproval(proposal, false)">{{ approvalText.pending }}</BaseButton>
@@ -462,6 +463,7 @@
 </template>
 
 <script setup>
+import DashboardRadarDestination from '~/components/panel/dashboard/DashboardRadarDestination.vue';
 import { normalizeEditorialFeatures, remapEditorialArrayFormats } from '~/utils/editorialMetadata';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 // General is the default tab: keep it static so the first paint needs no

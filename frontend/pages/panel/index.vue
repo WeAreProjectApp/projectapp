@@ -86,7 +86,7 @@
         <DashboardStatTile
           size="lg"
           label="Pendientes de atención"
-          :value="attention.length"
+          :value="attentionCount"
           format="number"
           :tone="attentionTone"
           :sub="attention.length ? 'revisa el radar' : 'todo al día'"
@@ -94,7 +94,7 @@
       </div>
 
       <!-- Attention radar (signature) -->
-      <DashboardAttentionRadar :items="attention" class="mb-8 dash-reveal" style="animation-delay: 60ms" />
+      <DashboardAttentionRadar :key="summary?.generated_at" :items="attention" class="mb-8 dash-reveal" style="animation-delay: 60ms" />
 
       <!-- Module sections -->
       <DashboardFinanceSection
@@ -160,6 +160,7 @@ const {
   additionalModules,
   operations,
   attention,
+  attentionCount,
   hasFinance,
 } = storeToRefs(store);
 const notify = usePanelNotify();

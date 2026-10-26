@@ -6022,7 +6022,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-consulting-preview` | commercial | P1 | display,success,failure | — |
 | `admin-daily-pipeline-digest` | admin | P2 | — | 0 |
 | `admin-dashboard` | admin | P2 | display | 1 |
-| `admin-dashboard-attention-radar` | admin | P1 | display | 2 |
+| `admin-dashboard-attention-radar` | admin | P1 | display,success,error,failure | 2 |
 | `admin-dashboard-error-retry` | admin | P1 | failure,display | 1 |
 | `admin-dashboard-finance-gate` | admin | P1 | display | 1 |
 | `admin-dashboard-pipeline-value` | admin | P2 | display | 2 |
