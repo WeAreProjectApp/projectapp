@@ -209,3 +209,61 @@ Cerrar o abandonar borra contenido y URLs temporales; respuestas atrasadas no
 reponen secretos. El listado usa la última petición y corrige la página tras
 eliminar su última fila. La migración `secure_links.0002_mcp_viewed_event` sólo
 agrega el tipo de evento; no cambia claves ni datos anteriores.
+
+
+## Carpetas de enlaces seguros
+
+El módulo mantiene su propio árbol. Comparte navegación, rutas y utilidades con
+Documentos y Comunicaciones, sin compartir sus carpetas ni sus datos.
+
+- **Proyectos:** cada proyecto tiene una raíz automática que sigue su nombre.
+  El catálogo compartido determina qué proyectos aparecen como activos; el
+  interruptor permite alcanzar los demás sin eliminar su contenido.
+- **Carpetas:** raíces manuales y subcarpetas, sin límite funcional de niveles.
+  Las raíces automáticas se administran desde el proyecto.
+- **Clasificación:** crear sin indicar carpeta coloca el enlace en la raíz de su
+  proyecto, o sin carpeta si no tiene proyecto. Elegir una carpeta explícita
+  tiene prioridad. Al crear dentro de ella, su asociación se propone inicialmente
+  y puede cambiarse. Los enlaces anteriores se clasifican por su proyecto real.
+- **Ubicación y asociación:** mover conserva cliente, proyecto, propietario y
+  permisos. Editar la asociación conserva la ubicación. En modo Clientes se
+  filtra por el cliente real del enlace; la fila muestra su ubicación aparte.
+- **Consulta:** estados, búsqueda y conteos abarcan la carpeta abierta y todo su
+  subárbol. Todos los enlaces consulta el módulo; Sin carpeta muestra la raíz.
+  Recibidos y su indicador de pendientes respetan ese mismo ámbito.
+- **Archivo:** archivar oculta carpeta y contenido, pero los enlaces vigentes
+  siguen funcionando. Restaurar devuelve solo lo archivado por esa operación;
+  los archivos anteriores independientes se conservan. Eliminar exige carpeta
+  vacía, incluidas subcarpetas y contenido archivado.
+
+La administración de carpetas es interna. La página pública y Platform no
+reciben acceso a este árbol; mantienen sus permisos y clasificación existentes.
+
+### API y compatibilidad
+
+`GET|POST /api/secure-links/folders/`, `GET|PATCH|DELETE folders/<id>/`,
+`POST folders/reorder/`, `POST folders/<id>/archive|restore/` y
+`POST <link_id>/move/` delegan en el mismo servicio que el MCP.
+
+Crear y editar enlaces admiten `folder`. Al crear, omitir clasifica automáticamente,
+`null` elige raíz y un id fija ubicación. Al editar, omitir conserva ubicación.
+El listado admite `folder=all|none|<id>` y
+`archive_scope=active|archived|all` (predeterminado `active`). Un id abarca
+sus descendientes. `expected_updated_at` permite rechazar operaciones obsoletas.
+La organización nunca requiere descifrar el contenido ni consultar la URL.
+
+### Fases de implementación y despliegue
+
+1. Extraer navegación y rutas reutilizables de Documentos y consumirlas con
+   adaptadores; Comunicaciones reutiliza rutas y recorridos comunes.
+2. Incorporar modelo y raíz automática, más migración de clasificación por
+   identificadores de proyecto. No convierte carpetas de los otros módulos.
+3. Incorporar servicios transaccionales, archivo reversible y consultas comunes
+   para API y MCP. Las dependencias se integran con la conservación de proyectos.
+4. Publicar el contrato completo de jerarquía en el MCP Comunicaciones,
+   preservando las herramientas previas y las credenciales. Los alcances
+   personalizados deben habilitar las nuevas herramientas explícitamente.
+5. Integrar navegación, formularios, movimiento, archivo y URL contextual en el panel.
+6. Validar escenarios positivos y negativos en servidor, MCP y navegador;
+   entregar mediante PR. El despliegue aplica las migraciones `secure_links.0006`
+   y `0007`; nunca se ejecutan contra la base del servicio desde el worktree.

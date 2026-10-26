@@ -1,8 +1,14 @@
 from django.urls import path
 
-from . import views
+from . import views, folder_views
 
 urlpatterns = [
+    path('folders/', folder_views.folders),
+    path('folders/reorder/', folder_views.folder_reorder),
+    path('folders/<int:pk>/', folder_views.folder_detail),
+    path('folders/<int:pk>/archive/', folder_views.folder_archive),
+    path('folders/<int:pk>/restore/', folder_views.folder_archive, {'restore': True}),
+    path('<int:pk>/move/', folder_views.link_move),
     path('', views.link_list),
     path('create/', views.link_create),
     path('<int:pk>/', views.link_detail),

@@ -34,6 +34,7 @@ from content.services.project_force_deletion import (
     forced_deletion_preview,
 )
 from content.storage import get_private_storage
+from secure_links.models import SecureLinkFolder
 
 
 pytestmark = pytest.mark.django_db
@@ -60,6 +61,45 @@ def force_delete(project, actor):
         impact_token=preview['impact_token'],
         delete_keys=preview['delete_keys'],
     )
+
+
+def test_force_delete_removes_an_empty_secure_link_project_root(superuser, target_project):
+    """Falla si la raíz automática vacía impide borrar definitivamente su proyecto."""
+    root = target_project.secure_link_root_folder
+
+    force_delete(target_project, superuser)
+
+    assert not Project.objects.filter(pk=target_project.pk).exists()
+    assert not SecureLinkFolder.objects.filter(pk=root.pk).exists()
+
+
+def test_force_delete_lists_secure_link_subfolders_before_deleting_project(superuser, target_project):
+    """Falla si una subcarpeta de enlaces seguros deja de bloquear el borrado hasta elegirla."""
+    root = target_project.secure_link_root_folder
+    child = SecureLinkFolder.objects.create(
+        name='Entregables',
+        parent=root,
+        client=target_project.client.profile,
+        project=target_project,
+    )
+    preview = forced_deletion_preview(target_project, actor=superuser)
+    secure_folders = next(
+        dependency for dependency in preview['dependencies']
+        if dependency['key'] == 'secure_links.securelinkfolder'
+    )
+
+    with pytest.raises(ProjectForceDeleteError) as error:
+        force_delete_project(
+            target_project.pk,
+            actor=superuser,
+            confirmation='DELETE',
+            impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
+        )
+
+    assert (preview['can_delete'], secure_folders['count']) == (False, 2)
+    assert error.value.code == 'project_force_delete_blocked'
+    assert SecureLinkFolder.objects.filter(pk__in=[root.pk, child.pk]).count() == 2
 
 
 def test_force_delete_blocks_version_used_by_another_card(superuser, target_project):

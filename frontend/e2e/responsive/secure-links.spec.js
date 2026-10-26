@@ -11,6 +11,30 @@ test.setTimeout(60_000);
 
 const secureLinksScenario = getResponsiveScenario('frontend/pages/panel/secure-links/index.vue');
 const row = secureLinkRow({ title: 'Credenciales responsive con un título largo sin espacios_para_probar_el_ajuste' });
+const folderRoot = {
+  id: 901,
+  name: 'Cliente responsive',
+  parent: null,
+  order: 0,
+  client: null,
+  project: null,
+  managed_project: null,
+  folder_kind: 'manual',
+  is_archived: false,
+  is_read_only: false,
+  link_count: 0,
+  archived_link_count: 0,
+};
+const folderChild = { ...folderRoot, id: 902, name: 'Accesos responsive', parent: folderRoot.id };
+const folderNavigation = {
+  totals: { active: { folders: 2, documents: 1 }, archived: { folders: 0, documents: 0 } },
+  unassigned: {
+    project: { active: { folders: 2, documents: 1 }, archived: { folders: 0, documents: 0 } },
+    client: { active: { folders: 2, documents: 1 }, archived: { folders: 0, documents: 0 } },
+  },
+  projects: [],
+  clients: [],
+};
 
 async function installSecureLinksMock(page) {
   await mockApi(page, async ({ apiPath, method }) => {
@@ -19,6 +43,9 @@ async function installSecureLinksMock(page) {
       return json({ finance: null, proposals: { total_proposals: 0, by_status: {}, recent: [] }, additional_modules: {}, operations: {}, attention: [] });
     }
     if (apiPath === 'secure-links/public/types/') return json({ types: secureLinkTypes });
+    if (apiPath === 'secure-links/folders/' && method === 'GET') {
+      return json({ folders: [folderRoot, folderChild], navigation: folderNavigation });
+    }
     if (apiPath === 'secure-links/' && method === 'GET') {
       return json({ results: [row], count: 1, page: 1, page_size: 25, counts: { active: 1, consumed: 0, expired: 0, revoked: 0, all: 1 }, lifecycle_counts: { ready: 1, sent: 0, opened: 0, expired: 0, revoked: 0, all: 1 }, unopened_received: 0, public_create_url: 'http://localhost:3000/es-co/secure-link' });
     }
@@ -63,6 +90,34 @@ for (const profile of RESPONSIVE_PROFILES) {
         modalLocator: modal,
         finalActionLocator: modal.getByTestId('secure-link-view-content'),
       });
+    });
+
+    // Bug caught: the folder tree could be unreachable at narrow widths or
+    // leave subfolders unselectable after the responsive navigation changed.
+    test('opens and selects a nested folder from the responsive workspace', {
+      tag: ['@flow:admin-secure-link-manage', '@outcome:display', '@responsive:communications', `@responsive-scenario:${secureLinksScenario.catalogKey}`, `@responsive-batch:${batchForScenario(secureLinksScenario.catalogKey)}`, `@viewport:${profile}`],
+    }, async ({ page }, testInfo) => {
+      await setAuthLocalStorage(page, { token: 'secure-links-responsive-token', userAuth: { id: 9002, role: 'admin', is_staff: true, is_superuser: true } });
+      await installSecureLinksMock(page);
+      // quality: allow-deep-link (the authenticated panel home is the shell entry; navigation reaches the workspace through its visible menu)
+      await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+      await enterByProfile[profile](page);
+
+      if (['compact', 'portrait'].includes(profile)) {
+        await page.getByTestId('secure-folders-open').click();
+      }
+      const sidebar = page.getByTestId('secure-folders-sidebar').filter({ visible: true });
+      if (['landscape', 'desktop', 'wide'].includes(profile)) {
+        await expect(sidebar).toHaveCount(1);
+      }
+      await page.getByText(folderRoot.name, { exact: true }).filter({ visible: true }).click();
+      const child = page.getByTestId(`secure-folder-child-${folderChild.id}`);
+      await expect(child).toHaveText(`${folderChild.name} · 0`);
+      await child.click();
+
+      await expect(page.getByTestId(`folder-breadcrumb-${folderRoot.id}`)).toHaveText(folderRoot.name);
+      await expect.poll(() => new URL(page.url()).searchParams.get('folder')).toBe(String(folderChild.id));
+      await assertResponsiveScenario(page, testInfo, secureLinksScenario, { profile });
     });
 
     // Bug caught: the floating Custom listbox could be clipped outside a compact panel viewport.

@@ -63,6 +63,7 @@ _RETENTION_MODELS = frozenset({
     'content.projectbrandasset',
     'monitoring.resource',
     'secure_links.securelink',
+    'secure_links.securelinkfolder',
 })
 
 
@@ -712,9 +713,15 @@ MCP_MODEL_CONTRACTS = {
             ),
         ),
         _contract(
+            'secure_links.SecureLinkFolder',
+            read_only='id managed_project is_archived archived_at archived_via_folder created_at updated_at',
+            read_write='name parent order client project',
+            excluded=_excluded(_AUDIT_INTERNAL, 'created_by'),
+        ),
+        _contract(
             'secure_links.SecureLink',
-            read_only='id origin audience owner replaces expires_at consumed_at revoked_at sent_at sent_by activation_count created_at updated_at',
-            read_write='secret_type title language client project validity_days',
+            read_only='id origin audience owner replaces expires_at consumed_at revoked_at sent_at sent_by activation_count created_at updated_at is_archived archived_at archived_via_folder',
+            read_write='secret_type title language client project validity_days folder',
             excluded=(
                 _excluded(
                     'Cifrado interno; crear/actualizar reciben fields y la lectura explícita confirmada devuelve contenido, nunca ciphertext.',

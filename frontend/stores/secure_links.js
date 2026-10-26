@@ -86,6 +86,10 @@ export const useSecureLinksStore = defineStore('secure_links', {
       return this._write(() => create_request('secure-links/create/', payload), 'No se pudo crear el enlace.');
     },
 
+    async moveLink(id, folder, expected_updated_at) {
+      return this._write(() => create_request(`secure-links/${id}/move/`, { folder, expected_updated_at }), 'No se pudo mover el enlace.');
+    },
+
     async updateLink(id, payload) {
       return this._write(() => patch_request(`secure-links/${id}/`, payload), 'No se pudo guardar el enlace.');
     },

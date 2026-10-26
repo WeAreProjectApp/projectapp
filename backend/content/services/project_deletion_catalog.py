@@ -91,6 +91,7 @@ content.linktreetemplateversion|Versiones de páginas de enlaces|Link page versi
 content.linktreetemplateclick|Estadísticas de páginas de enlaces|Link page statistics
 content.qrcard|Tarjetas QR|QR cards
 content.contracttemplatemirror|Copias de plantillas de contrato|Contract template copies
+secure_links.securelinkfolder|Carpetas de enlaces seguros|Secure link folders
 secure_links.securelink|Enlaces seguros|Secure links
 secure_links.securelinkevent|Historial de enlaces seguros|Secure link history
 monitoring.resource|Recursos de monitoreo|Monitoring resources

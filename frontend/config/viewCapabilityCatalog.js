@@ -185,7 +185,7 @@ const panelCapabilities = [
         'Da continuidad a los mensajes enviados desde distintos módulos.', ['/panel/emails'],
         { icon: 'send', stage: 'Comunicación' }),
       feature('panel-secure-links', 'Compartir información sensible',
-        'Genera la URL con un formulario de campos esenciales, dropdown de tipos y opciones plegables. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; renombra el título en línea, edita el contenido desde el detalle o desde los tres puntos de la fila y conserva eliminación confirmada, reactivación e historial.',
+        'Genera la URL con un formulario de campos esenciales, dropdown de tipos y opciones plegables. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; renombra el título en línea, edita el contenido desde el detalle o desde los tres puntos de la fila y conserva eliminación confirmada, reactivación e historial. Organiza por carpetas automáticas de proyecto, carpetas propias y subcarpetas; navega por cliente, filtra estados dentro de la carpeta y mueve o archiva sin cambiar permisos ni revocar enlaces.',
         'Evita pegar secretos en correos o WhatsApp sin perder el control de quién los abrió.', ['/panel/secure-links'],
         { icon: 'key', stage: 'Comunicación' }),
     ],

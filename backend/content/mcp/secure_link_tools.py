@@ -18,7 +18,7 @@ from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
 
 _ALLOWED_CREATE = {
-    'secret_type', 'title', 'fields', 'client_id', 'project_id', 'language', 'validity_days',
+    'secret_type', 'title', 'fields', 'client_id', 'project_id', 'language', 'validity_days', 'folder_id',
 }
 
 
@@ -56,6 +56,9 @@ def _summary(link):
     """Metadata only: never the token, the URL or the content."""
     return {
         'id': link.pk,
+        'folder_id': link.folder_id,
+        'is_archived': link.is_archived,
+        'archived_at': link.archived_at.isoformat() if link.archived_at else None,
         'title': link.title,
         'secret_type': link.secret_type,
         'type_label': type_label(link.secret_type),
@@ -122,7 +125,7 @@ def _catalog_error(exc):
 
 def _panel_data(serializer_class, arguments):
     data = {key: value for key, value in arguments.items() if key != 'link_id'}
-    for source, target in (('client_id', 'client'), ('project_id', 'project')):
+    for source, target in (('client_id', 'client'), ('project_id', 'project'), ('folder_id', 'folder')):
         if source in data:
             value = data.pop(source)
             data[target] = None if value is None else _int(value, source)
@@ -133,7 +136,7 @@ def _panel_data(serializer_class, arguments):
 
 
 def update_secure_link(arguments):
-    _reject_unknown(arguments, {'link_id', 'title', 'client_id', 'project_id', 'secret_type', 'fields'})
+    _reject_unknown(arguments, {'link_id', 'title', 'client_id', 'project_id', 'secret_type', 'fields', 'folder_id'})
     link = _link_or_error(arguments)
     changes = _panel_data(PanelUpdateSerializer, arguments)
     if not changes:
@@ -192,24 +195,19 @@ def reveal_secure_link_content(arguments):
 
 def list_secure_links(arguments):
     arguments = arguments or {}
-    _reject_unknown(arguments, {'owner_id', 'client_id', 'project_id', 'status', 'lifecycle_status', 'page', 'page_size'})
-    query = SecureLink.objects.select_related('replaced_by')
-    if arguments.get('client_id') not in (None, ''):
-        query = query.filter(client_id=_int(arguments['client_id'], 'client_id'))
-    if arguments.get('owner_id') not in (None, ''):
-        query = query.filter(owner_id=_int(arguments['owner_id'], 'owner_id'))
-    if arguments.get('project_id') not in (None, ''):
-        query = query.filter(project_id=_int(arguments['project_id'], 'project_id'))
-    status = arguments.get('status')
-    if status:
-        if status not in SecureLink.STATUSES:
-            raise ToolError(f'status debe ser uno de: {", ".join(SecureLink.STATUSES)}.')
-        query = query.with_status(status)
-    lifecycle_status = arguments.get('lifecycle_status')
-    if lifecycle_status:
-        if lifecycle_status not in SecureLink.LIFECYCLE_STATUSES:
-            raise ToolError(f'lifecycle_status debe ser uno de: {", ".join(SecureLink.LIFECYCLE_STATUSES)}.')
-        query = query.with_lifecycle_status(lifecycle_status)
+    _reject_unknown(arguments, {'owner_id', 'client_id', 'project_id', 'status', 'lifecycle_status', 'page', 'page_size', 'folder_id', 'archive_scope', 'search', 'received'})
+    from secure_links.serializers import FilterSerializer
+    from secure_links.queries import filter_links, selected_links, counts_for
+    data = {key.removesuffix('_id'): value for key, value in arguments.items() if key != 'page_size'}
+    serializer = FilterSerializer(data=data)
+    if not serializer.is_valid():
+        raise ToolError('Revisa los filtros de enlaces seguros.')
+    try:
+        base = filter_links(serializer.validated_data)
+        totals = counts_for(base)
+        query = selected_links(serializer.validated_data, base).select_related('replaced_by')
+    except services.SecureLinkError as exc:
+        raise ToolError(exc.message, code=exc.code) from exc
     page_size = min(_int(arguments.get('page_size') or 20, 'page_size'), 50)
     paginator = Paginator(query, page_size)
     page = paginator.get_page(_int(arguments.get('page') or 1, 'page'))
@@ -217,6 +215,7 @@ def list_secure_links(arguments):
         'count': paginator.count,
         'page': page.number,
         'num_pages': paginator.num_pages,
+        **totals,
         'results': [_summary(link) for link in page.object_list],
     }
 
@@ -307,6 +306,7 @@ SECURE_LINK_TOOLS = [
                 'secret_type': {'type': 'string', 'enum': list(SECRET_TYPES), 'description': 'Tipo del catálogo (list_secure_link_types).'},
                 'title': {'type': 'string', 'maxLength': 160, 'description': 'Etiqueta interna; no se muestra antes de abrir el enlace.'},
                 'fields': {'type': 'object', 'description': 'Valores por key del tipo elegido.', 'additionalProperties': {'type': 'string'}},
+                'folder_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'Ubicación interna; omitido clasifica por proyecto, null elige raíz.'},
                 'client_id': {'type': 'integer', 'minimum': 1, 'description': 'Cliente (UserProfile) asociado.'},
                 'project_id': {'type': 'integer', 'minimum': 1, 'description': 'Proyecto del mismo cliente.'},
                 'language': {'type': 'string', 'enum': ['es', 'en'], 'description': 'Idioma de la página que verá el destinatario.'},
@@ -327,6 +327,10 @@ SECURE_LINK_TOOLS = [
             'type': 'object',
             'properties': {
                 'client_id': {'type': 'integer', 'minimum': 1},
+                'folder_id': {'oneOf': [{'type': 'integer', 'minimum': 1}, {'type': 'string', 'enum': ['all', 'none']}]},
+                'archive_scope': {'type': 'string', 'enum': ['active', 'archived', 'all']},
+                'search': {'type': 'string', 'maxLength': 120},
+                'received': {'type': 'boolean'},
                 'owner_id': {'type': 'integer', 'minimum': 1},
                 'project_id': {'type': 'integer', 'minimum': 1},
                 'status': {'type': 'string', 'enum': list(SecureLink.STATUSES)},
@@ -370,6 +374,7 @@ SECURE_LINK_TOOLS = [
             'properties': {
                 **_LINK_ID,
                 'title': {'type': 'string', 'maxLength': 160},
+                'folder_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'Mover sin cambiar asociaciones; null elige raíz.'},
                 'client_id': {'type': ['integer', 'null'], 'minimum': 1},
                 'project_id': {'type': ['integer', 'null'], 'minimum': 1},
                 'secret_type': {'type': 'string', 'enum': list(SECRET_TYPES)},
