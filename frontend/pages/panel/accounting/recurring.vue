@@ -464,7 +464,7 @@ import { get_request } from '~/stores/services/request_http';
 import { useRadarFocus } from '~/composables/useRadarFocus';
 import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
 import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
@@ -525,6 +525,7 @@ const radarId = computed(() => {
   return Number.isInteger(value) && value > 0 ? value : null;
 });
 let radarRequest = 0;
+onBeforeUnmount(() => { radarRequest += 1; });
 async function loadRadarRecord() {
   const id = radarId.value;
   const token = ++radarRequest;
@@ -890,7 +891,8 @@ const displayGroups = computed(() => {
  * order they meant as a temporary reading.
  */
 const canReorder = computed(() =>
-  !isArchivedScope.value
+  !radarId.value
+  && !isArchivedScope.value
   && isGrouped.value
   && !hasActiveFilters.value
   && !groupedWeightSort.value,

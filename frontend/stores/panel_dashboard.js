@@ -33,7 +33,10 @@ export const usePanelDashboardStore = defineStore('panel_dashboard', {
       const summary = this.summary;
       const response = await get_request(`panel/dashboard/attention/${type}/?page=${page}`);
       const item = this.summary?.attention?.find((entry) => entry.type === type);
-      if (item && summary === this.summary) item.count = response.data.total;
+      if (item && summary === this.summary) {
+        if (response.data.total === 0) this.summary.attention = this.summary.attention.filter((entry) => entry.type !== type);
+        else item.count = response.data.total;
+      }
       return response.data;
     },
     async fetchAttentionDetail(type, id) {

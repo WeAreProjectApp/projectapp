@@ -244,7 +244,7 @@
 /* The destination of an attention-radar link remains identifiable without motion. */
 @keyframes radar-record-pulse {
   0%, 100% { outline-color: transparent; }
-  50% { outline-color: var(--color-primary, currentColor); }
+  50% { outline-color: var(--color-focus-ring, currentColor); }
 }
 .radar-record-highlight {
   outline: 2px solid currentColor;

@@ -21,6 +21,7 @@ def failed_email_incidents(now):
     """
     rows = list(EmailLog.objects.filter(
         sent_at__gte=now - timedelta(days=7),
+        status__in=(*FAILED, EmailLog.Status.SENT, EmailLog.Status.DELIVERED),
         delivery_role=EmailLog.DeliveryRole.PRIMARY,
     ).order_by('sent_at', 'id').values(
         'id', 'delivery_id', 'snapshot_id', 'sent_at', 'status', 'retry_of_id',
@@ -76,7 +77,7 @@ def attention_records(kind, today, now):
         return BusinessProposal.objects.filter(
             status='sent', is_active=True, first_viewed_at__isnull=True,
             sent_at__lt=now - timedelta(days=7),
-        ).order_by('sent_at', 'id')
+        ).only('id', 'title', 'client_name', 'sent_at').order_by('sent_at', 'id')
     payments = RecurringPayment.objects.filter(
         is_active=True, is_archived=False, frequency=RecurringPayment.Frequency.MONTHLY,
     ).filter(Q(reminders_muted=False) | Q(reminders_muted_until__isnull=False, reminders_muted_until__lte=today))

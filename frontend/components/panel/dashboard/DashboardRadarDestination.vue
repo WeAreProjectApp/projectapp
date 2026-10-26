@@ -5,7 +5,7 @@
   </div>
 </template>
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import { get_request } from '~/stores/services/request_http';
 import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
@@ -18,6 +18,7 @@ const active = computed(() => route.query.radar === '1');
 const error = ref('');
 const changed = ref(false);
 let token = 0;
+onBeforeUnmount(() => { token += 1; });
 async function checkRecord() {
   const request = ++token;
   error.value = '';

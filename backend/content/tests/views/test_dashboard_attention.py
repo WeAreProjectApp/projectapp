@@ -94,7 +94,7 @@ def test_muted_recurring_is_excluded(super_client):
 
 
 def test_collection_payload_identifies_client(admin_client):
-    kind, _ = DocumentType.objects.get_or_create(code='collection_account', defaults={'name': 'Collection', 'label': 'Cuenta'})
+    kind, _ = DocumentType.objects.get_or_create(code='collection_account', defaults={'name': 'Collection'})
     doc = Document.objects.create(title='CC-42', document_type=kind, client_name='ACME', commercial_status='issued', due_date=date(2026, 10, 20), total=900)
     data = admin_client.get(f'{BASE}documents_overdue/').json()['results'][0]
     assert data['client'] == 'ACME'

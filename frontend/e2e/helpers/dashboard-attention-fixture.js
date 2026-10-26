@@ -40,7 +40,7 @@ export function radarApi({ failList = false, missing = false, forbidden = false 
       const board = new URL(route.request().url()).searchParams.get('board');
       return json(board === 'macro' ? { items: [] } : { todo: board === 'weekly' ? [{ id: 42, title: radarRecord('tasks_overdue').title, board_type: 'weekly', status: 'todo', priority: 'high' }] : [], in_progress: [], blocked: [], done: [] });
     }
-    if (apiPath === 'documents/42/') return json({ id: 42, title: radarRecord('documents_overdue').title, content_markdown: '# Cuenta de cobro', document_type_code: 'collection_account', commercial_status: 'issued', active_states: [], notes: [], is_generated_snapshot: false, language: 'es', text_formats: {} });
+    if (apiPath === 'documents/42/detail/') return json({ id: 42, title: radarRecord('documents_overdue').title, content_markdown: '# Cuenta de cobro', document_type_code: 'collection_account', commercial_status: 'issued', active_states: [], notes: [], is_generated_snapshot: false, language: 'es', text_formats: {} });
     if (apiPath === 'proposals/42/detail/') return json({ id: 42, uuid: '11111111-1111-4111-8111-111111111111', title: radarRecord('proposals_stale').title, client_name: 'ACME', client_email: 'cliente@example.test', status: 'sent', language: 'es', currency: 'COP', total_investment: '123000', sections: [], requirement_groups: [], is_active: true });
     return null;
   };
