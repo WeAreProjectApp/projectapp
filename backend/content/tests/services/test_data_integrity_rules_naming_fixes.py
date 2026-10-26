@@ -25,6 +25,7 @@ from content.tests.data_integrity_helpers import (
     undo,
 )
 from content.tests.data_integrity_projects_factories import make_retention_context
+from secure_links.models import SecureLinkFolder
 
 pytestmark = pytest.mark.django_db
 
@@ -139,22 +140,26 @@ def _project_names(project, root, thread):
             CommunicationThread.objects.get(pk=thread.pk).title]
 
 
-def test_project_rename_resyncs_its_root_folder_and_thread_and_undo_restores_all(make_client_profile, superuser):
+def test_project_name_cleanup_restores_managed_names_on_undo(make_client_profile, superuser):
     """Fails if the managed root folder or thread keeps the old name, goes unrecorded, or stays renamed after undo."""
     project = make_project(make_client_profile(), ' Kore  App')
     root = DocumentFolder.objects.get(managed_project=project)
     thread = CommunicationThread.objects.get(managed_project=project)
+    secure_root = SecureLinkFolder.objects.get(managed_project=project)
 
     operation_id = fix(superuser, nm1_finding('accounts.project', project.pk))
 
     assert _project_names(project, root, thread) == ['Kore App'] * 3
+    assert SecureLinkFolder.objects.get(pk=secure_root.pk).name == 'Kore App'
     assert recorded(operation_id) == {('accounts.project', project.pk, 'name'),
                                       ('content.documentfolder', root.pk, 'name'),
-                                      ('content.communicationthread', thread.pk, 'title')}
+                                      ('content.communicationthread', thread.pk, 'title'),
+                                      ('secure_links.securelinkfolder', secure_root.pk, 'name')}
 
     undo(superuser, operation_id)
 
     assert _project_names(project, root, thread) == [' Kore  App'] * 3
+    assert SecureLinkFolder.objects.get(pk=secure_root.pk).name == ' Kore  App'
 
 
 def test_project_rename_records_subfolders_the_root_resync_realigns(make_client_profile, superuser):
