@@ -73,3 +73,28 @@ for (const width of [412, 835, 1440]) {
     await expect(page.getByTestId('radar-record-emails_failed-42')).toBeFocused();
   });
 }
+
+test('restores the exact recurrent through browser history', { tag: [...ADMIN_DASHBOARD_ATTENTION_RADAR, '@role:admin', '@outcome:success'] }, async ({ page }) => {
+  await setup(page);
+  await openDetail(page, 'recurring_due');
+  await page.getByTestId('radar-detail-destination').click();
+  await expect(page.getByTestId('accounting-row-42')).toContainText('Pendiente recurring_due 42');
+
+  await page.goBack({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('attention-item-recurring_due')).toBeVisible();
+  await page.goForward({ waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('accounting-row-42')).toContainText('Pendiente recurring_due 42');
+});
+
+test('uses a static focus cue with reduced motion', { tag: [...ADMIN_DASHBOARD_ATTENTION_RADAR, '@role:admin', '@outcome:success'] }, async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setup(page);
+  await openDetail(page, 'emails_failed');
+  await page.getByTestId('radar-detail-destination').click();
+
+  const record = page.getByTestId('email-history-record-42');
+  await expect(record).toContainText('Pendiente emails_failed 42');
+  await expect(record).toHaveClass(/radar-record-highlight/);
+  await expect(record).toHaveCSS('animation-name', 'none');
+});

@@ -2,7 +2,7 @@
 
 ## 2026-10-26 — Radar de atención
 
-Implementación: acordeones para cinco tipos, detalle actualizado, destinos exactos con resaltado, contador por elementos y resolución de correos por reintento exitoso. Pendientes de validación final y entrega de PR; no requiere migraciones.
+Implementación: acordeones para cinco tipos, detalle actualizado, destinos exactos con resaltado, contador por elementos y resolución de correos por reintento exitoso. PR #544 abierto, con pruebas acotadas y controles de catálogo/flows. No requiere migraciones; integración y despliegue siguen el flujo ordinario.
 
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
 > reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
