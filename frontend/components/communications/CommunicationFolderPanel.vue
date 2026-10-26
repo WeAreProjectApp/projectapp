@@ -2,6 +2,7 @@
 import { useId, computed, reactive, ref, watch } from 'vue';
 import { useCommunicationsStore } from '~/stores/communications';
 import { usePanelNotify } from '~/composables/usePanelNotify';
+import FolderBreadcrumb from '~/components/panel/FolderBreadcrumb.vue';
 import { folderOptions, folderPath } from '~/utils/communicationFolders';
 
 const props = defineProps({
@@ -23,6 +24,7 @@ const deleting = ref(false);
 const form = reactive({ id: null, name: '', parent: '', client: null, project: null });
 let requestVersion = 0;
 const selectedFolder = computed(() => folders.value.find((item) => String(item.id) === String(props.selected)));
+const breadcrumbAdapter = { ancestorsOf: id => folderPath(folders.value.find(f => f.id === id), folders.value) };
 const breadcrumbs = computed(() => folderPath(selectedFolder.value, folders.value));
 const rows = computed(() => {
   const result = [];
@@ -110,9 +112,7 @@ const modalFormId = useId();
         <BaseButton :variant="!selected ? 'primary' : 'ghost'" size="sm" @click="select('')">{{ t('communicationFiling.all') }}</BaseButton>
         <BaseButton :variant="selected === 'none' ? 'primary' : 'ghost'" size="sm" data-testid="communication-folder-unfiled" @click="select('none')">{{ t('communicationFiling.unfiled') }}</BaseButton>
       </div>
-      <nav v-if="breadcrumbs.length" :aria-label="t('communicationFiling.location')" class="flex flex-wrap gap-1 px-2 text-xs">
-        <BaseButton v-for="folder in breadcrumbs" :key="folder.id" variant="link" size="sm" @click="select(String(folder.id))">/ {{ folder.name }}</BaseButton>
-      </nav>
+      <FolderBreadcrumb v-if="breadcrumbs.length" :adapter="breadcrumbAdapter" :active-id="Number(selected)" :aria-label="t('communicationFiling.location')" :show-root="false" @select="select(String($event))" />
       <p v-if="!folders.length && !error" class="p-2 text-xs text-text-muted">{{ t('communicationFiling.empty') }}</p>
       <ul class="space-y-1 overflow-x-auto py-2">
         <li v-for="folder in rows" :key="folder.id" class="flex min-w-0 items-center gap-1" :style="{ paddingInlineStart: `${Math.min(folder.depth, 6) * 12}px` }">

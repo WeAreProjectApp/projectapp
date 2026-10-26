@@ -77,6 +77,7 @@ _decide(covered('CL6', 'PJ2'), 'content.ProjectRetentionContext.client')
 _decide(covered('DC1', 'DC2', 'DC9', 'CM6', 'CL6'), 'content.Document.client_user')
 _decide(covered('DC3', 'DC9', 'CL6'), 'content.DocumentFolder.client_user')
 _decide(covered('CM5', 'CL6'), 'secure_links.SecureLink.client')
+_decide(covered('CL6'), 'secure_links.SecureLinkFolder.client')
 # What deleting the client leaves without client (SET_NULL): CL6 reports it.
 _decide(covered('CL6'), '''
     content.EmailLog.client content.AdditionalModuleShareLink.client content.LinktreeTemplate.client
@@ -134,6 +135,9 @@ _decide(covered('PJ5', 'PJ2'), 'content.DocumentFolder.managed_project')
 _decide(covered('AC1', 'PJ1', 'PJ3', 'PJ2'), 'content.HostingRecord.project')
 _decide(covered('AC1', 'AC2', 'AC10', 'PJ1', 'PJ3', 'PJ2'), 'content.IncomeRecord.project')
 _decide(covered('CM5', 'PJ2'), 'secure_links.SecureLink.project')
+_decide(covered('PJ2'), '''
+    secure_links.SecureLinkFolder.project secure_links.SecureLinkFolder.managed_project
+''')
 _decide(exempt('Evento de auditoría de solo-anexar.'), 'accounts.BillingContextEvent.project')
 _decide(exempt('Historial privado con caducidad, ligado a su actor original: no se reasigna ni se conserva '
                'al borrar el proyecto. Appi revalida la pertenencia antes de mostrarlo.'),

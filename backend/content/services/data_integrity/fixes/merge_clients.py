@@ -21,6 +21,7 @@ def merge_fields():
         'content.document': ('client_user_id', 'folder_id', 'updated_by_id'),
         'content.documentfolder': ('parent_id', 'order', 'name', 'project_id', 'client_user_id', 'managed_client_id',
                                    'is_archived', 'archived_at', 'archived_via_folder_id'),
+        'secure_links.securelinkfolder': ('name', 'client_id', 'project_id'),
         'content.communicationthread': ('client_id', 'managed_client_id', 'title', 'project_id',
                                         'is_archived', 'archived_at'),
         'content.hostingrecord': ('client_name', 'client_email', 'client_contact_name', 'client_identification'),
@@ -88,6 +89,7 @@ class MergeClientsFixer(Fixer):
                  'content.incomerecord': 7, 'content.hostingrecord': 7,
                  'content.document': 6, 'content.documentcollectionaccount': 6,
                  'accounts.project': 5, 'content.documentfolder': 4,
+                 'secure_links.securelinkfolder': 4,
                  'content.communicationfolder': 3, 'content.communicationthread': 3,
                  'content.clientdocumentnumbersequence': 2, 'accounts.userprofile': 1, 'auth.user': 0}
 

@@ -40,8 +40,8 @@
     "version": "6.3.0"
   },
   "communications": {
-    "sha256": "6adb60740928cd7b192aa17073d65b21c14f90fc41ba7675506ed2e278a1d3e6",
-    "version": "3.1.2"
+    "sha256": "b99b5c4041d56804c00bce3a649b9b4df087ce60a9fbd64fed91e98df4c2c7b7",
+    "version": "3.2.0"
   },
   "content": {
     "sha256": "a7e34c0cd806d7aa777b444215c38187d6f69e52962bec3d3ac194a0b29ec41c",

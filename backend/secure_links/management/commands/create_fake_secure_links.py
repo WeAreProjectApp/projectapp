@@ -6,6 +6,8 @@ from django.utils import timezone
 
 from secure_links import services
 from secure_links.models import SecureLink
+from secure_links.folder_seed import create_folder_samples
+from secure_links.folder_services import archive_folder
 from secure_links.platform_seed import create_platform_samples
 
 SAMPLES = [
@@ -29,11 +31,15 @@ class Command(BaseCommand):
             raise CommandError('Los datos ficticios no están permitidos en este entorno.')
         now = timezone.now()
         states = ['ready', 'sent', 'opened', 'expired', 'revoked']
+        create_platform_samples()
+        contexts, archive = create_folder_samples()
         for index, (secret_type, title, fields) in enumerate(SAMPLES * 3):
             origin = [SecureLink.Origin.PANEL, SecureLink.Origin.MCP, SecureLink.Origin.PUBLIC][index % 3]
+            context = {} if origin == SecureLink.Origin.PUBLIC else contexts[(index // 3) % len(contexts)]
             link, _url = services.create_link(
                 secret_type=secret_type, title=f'{title} #{index + 1}', fields=fields, origin=origin,
                 validity_days=7, creator_name='Cliente demo' if origin == SecureLink.Origin.PUBLIC else '',
+                **context,
             )
             state = states[index % len(states)]
             if state == 'sent' and not link.team_only:
@@ -45,5 +51,5 @@ class Command(BaseCommand):
             elif state == 'revoked':
                 link.revoked_at = now - timedelta(hours=index)
             link.save()
-        create_platform_samples()
+        archive_folder(archive)
         self.stdout.write('Enlaces seguros de ejemplo disponibles.')

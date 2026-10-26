@@ -26,6 +26,7 @@ COMM_FOLDER = 'content.communicationfolder'
 INCOME = 'content.incomerecord'
 HOSTING = 'content.hostingrecord'
 SECURE_LINK = 'secure_links.securelink'
+SECURE_LINK_FOLDER = 'secure_links.securelinkfolder'
 RECURRING = 'content.recurringpayment'
 
 SCOPE_KINDS = ('all', 'client', 'project', 'proposal', 'document', 'thread')
@@ -84,7 +85,7 @@ def _client_scope(profile):
         BusinessProposal, CommunicationFolder, CommunicationThread, Document, DocumentFolder,
         DocumentThreadItem, HostingRecord, IncomeRecord, ProposalSection,
     )
-    from secure_links.models import SecureLink
+    from secure_links.models import SecureLink, SecureLinkFolder
 
     user_id = profile.user_id
     projects = _ids(Project._base_manager.filter(client_id=user_id))
@@ -106,6 +107,8 @@ def _client_scope(profile):
         INCOME: _ids(IncomeRecord._base_manager.filter(Q(client_id=profile.pk) | Q(project_id__in=projects))),
         HOSTING: _ids(HostingRecord._base_manager.filter(Q(client_id=profile.pk) | Q(project_id__in=projects))),
         SECURE_LINK: _ids(SecureLink._base_manager.filter(Q(client_id=profile.pk) | Q(project_id__in=projects))),
+        SECURE_LINK_FOLDER: _ids(SecureLinkFolder._base_manager.filter(
+            Q(client_id=profile.pk) | Q(project_id__in=projects) | Q(managed_project_id__in=projects))),
     }
 
 
@@ -115,7 +118,7 @@ def _project_scope(project):
         BusinessProposal, CommunicationFolder, CommunicationThread, Document, DocumentFolder,
         DocumentThreadItem, HostingRecord, IncomeRecord, ProposalSection,
     )
-    from secure_links.models import SecureLink
+    from secure_links.models import SecureLink, SecureLinkFolder
 
     proposals = _ids(BusinessProposal._base_manager.filter(
         Q(project_phases__project_id=project.pk) | Q(deliverable__project_id=project.pk)))
@@ -137,6 +140,8 @@ def _project_scope(project):
         INCOME: _ids(IncomeRecord._base_manager.filter(project_id=project.pk)),
         HOSTING: _ids(HostingRecord._base_manager.filter(project_id=project.pk)),
         SECURE_LINK: _ids(SecureLink._base_manager.filter(project_id=project.pk)),
+        SECURE_LINK_FOLDER: _ids(SecureLinkFolder._base_manager.filter(
+            Q(project_id=project.pk) | Q(managed_project_id=project.pk))),
     }
 
 

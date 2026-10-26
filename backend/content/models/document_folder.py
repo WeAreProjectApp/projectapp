@@ -204,18 +204,8 @@ class DocumentFolder(RetainedProjectModel, models.Model):
 
     def get_descendant_ids(self):
         """Devuelve el set de IDs de todas las subcarpetas (recursivo)."""
-        descendant_ids = set()
-        pending = list(self.children.values_list('pk', flat=True))
-        while pending:
-            child_id = pending.pop()
-            if child_id in descendant_ids:
-                continue
-            descendant_ids.add(child_id)
-            pending.extend(
-                DocumentFolder.objects.filter(parent_id=child_id)
-                .values_list('pk', flat=True)
-            )
-        return descendant_ids
+        from content.services.folder_tree import descendant_ids
+        return descendant_ids(DocumentFolder.objects.values_list('pk', 'parent_id'), self.pk)
 
 
 class DocumentFolderMutationLock(models.Model):

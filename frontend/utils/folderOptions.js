@@ -1,3 +1,4 @@
+import { folderPath } from './folderHierarchy';
 import { normalizeName } from './clientMatch';
 
 /**
@@ -61,15 +62,7 @@ function indexById(folders) {
 
 // Cadena raíz → carpeta. Un dato cíclico se corta en la primera repetición.
 function chainOf(byId, id) {
-  const chain = [];
-  const seen = new Set();
-  let current = byId.get(id) || null;
-  while (current && !seen.has(toFolderId(current.id))) {
-    seen.add(toFolderId(current.id));
-    chain.unshift(current);
-    current = byId.get(toFolderId(current.parent)) || null;
-  }
-  return chain;
+  return folderPath(byId.get(id), [...byId.values()]);
 }
 
 /**

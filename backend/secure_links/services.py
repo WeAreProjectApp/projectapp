@@ -22,6 +22,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .catalog import CatalogError, clean_fields, labelled_fields, type_label
+from .folder_services import UNSET
 from .models import SecureLink, SecureLinkEvent
 
 VALIDITY_CHOICES = (1, 3, 7, 30)
@@ -171,15 +172,18 @@ def content_for(link, language=None):
 
 
 @transaction.atomic
-def create_link(*, secret_type, title, fields, origin, actor=None, client=None,
-                project=None, language=SecureLink.Language.ES, validity_days=None,
+def create_link(*, secret_type, title, fields, origin, actor=None, client=UNSET,
+                project=UNSET, language=SecureLink.Language.ES, validity_days=None,
                 creator_name='', creator_email='', meta=None, owner=None, audience=None,
-                creation_request_id=None, creation_request_fingerprint='', replaces=None):
+                creation_request_id=None, creation_request_fingerprint='', replaces=None, folder=UNSET):
     client_origin = origin in (SecureLink.Origin.PUBLIC, SecureLink.Origin.PLATFORM)
     allowed = PUBLIC_VALIDITY_CHOICES if client_origin else VALIDITY_CHOICES
     days = _validity(validity_days, allowed=allowed)
     payload = clean_fields(secret_type, fields)
     title = _title(title)
+    from .folder_services import initial_location, lock_tree
+    lock_tree()
+    folder, client, project = initial_location(folder, client, project)
     client, project = _association(client, project)
     token, token_hash, token_encrypted = _new_token()
     link = SecureLink.objects.create(
@@ -196,6 +200,7 @@ def create_link(*, secret_type, title, fields, origin, actor=None, client=None,
         creator_ip=(meta.ip if meta and origin == SecureLink.Origin.PUBLIC else None),
         client=client,
         project=project,
+        folder=folder,
         owner=owner,
         audience=SecureLink.Audience.TEAM if client_origin else (audience or SecureLink.Audience.BEARER),
         creation_request_id=creation_request_id,
@@ -283,6 +288,8 @@ def _locked_link(link):
         from accounts.models import Project
 
         Project.objects.select_for_update().filter(pk=link.project_id).first()
+    from .folder_services import lock_tree
+    lock_tree()
     current = SecureLink.objects.select_for_update().filter(pk=link.pk).first()
     if current is None:
         raise _not_found()
@@ -387,6 +394,9 @@ def update_link(link, *, actor, meta=None, **changes):
     """Edit title, association and/or content. Never changes the link state."""
     link = _locked_link(link)
     changed = []
+    if 'folder' in changes:
+        from .folder_services import move_link
+        link = move_link(link, changes.pop('folder'), actor=actor)
     if 'title' in changes:
         link.title = _title(changes['title'])
         changed.append('title')

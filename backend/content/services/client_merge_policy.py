@@ -71,6 +71,7 @@ accounts.DeliveryNotificationEvent.actor accounts.DeliveryNotificationAttempt.re
 accounts.PlatformAIEvent.actor accounts.PlatformAIJob.actor accounts.PlatformAIQuotaReservation.actor
 accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
 monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
+secure_links.SecureLinkFolder.created_by
 secure_links.SecureLinkEvent.actor
 ''')
 
@@ -86,7 +87,7 @@ content.CommunicationFolder.client content.CommunicationThread.client
 content.DocumentFolder.client_user accounts.Project.client
 content.IncomeRecord.client content.HostingRecord.client content.FinancingAgreement.client
 content.BusinessProposal.client content.WebAppDiagnostic.client content.EmailLog.client
-secure_links.SecureLink.client content.AdditionalModuleShareLink.client
+secure_links.SecureLink.client secure_links.SecureLinkFolder.client content.AdditionalModuleShareLink.client
 content.LinktreeTemplate.client accounts.ProjectIdea.recipient accounts.ProjectIdeaCollection.recipient
 '''), RELINK))
 RELATION_POLICIES.update(dict.fromkeys(_keys('''

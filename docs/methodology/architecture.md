@@ -1,3 +1,10 @@
+> **Jerarquía de Enlaces seguros — 2026-10-26:** `SecureLinkFolder` separa
+> ubicación interna de asociación y audiencia. El servicio transaccional de
+> carpetas serializa movimientos, creación y cascadas; panel y MCP lo consumen.
+> Los componentes compartidos de navegación usan adaptadores independientes.
+> Archivo y estado de consumo son ejes distintos; las rutas públicas y Platform
+> conservan sus permisos. Contrato: [Enlaces seguros](../secure-links.md).
+
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
 
 ## Radar de atención — 2026-10-26

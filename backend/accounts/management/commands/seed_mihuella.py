@@ -183,6 +183,7 @@ class Command(BaseCommand):
             DocumentStateEpisode,
             ProjectRetentionContext,
         )
+        from secure_links.models import SecureLinkFolder
 
         user = User.objects.filter(email=CLIENT_EMAIL).first()
         if user:
@@ -253,6 +254,12 @@ class Command(BaseCommand):
                         managed_project_id=None,
                         retention_context_id=context.pk,
                     )
+
+                SecureLinkFolder.objects.filter(
+                    managed_project=project,
+                    children__isnull=True,
+                    links__isnull=True,
+                ).delete()
 
                 project.delete()
             BusinessProposal.objects.filter(

@@ -36,11 +36,7 @@ class CommunicationFolder(RetainedProjectModel, models.Model):
             return
         if (self.parent.client_id, self.parent.project_id) != (self.client_id, self.project_id):
             raise ValidationError({'parent': 'La carpeta debe pertenecer al mismo contexto.'})
-        parents = dict(CommunicationFolder.objects.filter(client_id=self.client_id).values_list('id', 'parent_id'))
-        node_id = self.parent_id
-        visited = {self.pk} if self.pk else set()
-        while node_id:
-            if node_id in visited:
-                raise ValidationError({'parent': 'Una carpeta no puede contenerse a sí misma.'})
-            visited.add(node_id)
-            node_id = parents.get(node_id)
+        from content.services.folder_tree import descendant_ids
+        scope = CommunicationFolder.objects.filter(client_id=self.client_id).values_list('id', 'parent_id')
+        if self.pk and self.parent_id in ({self.pk} | descendant_ids(scope, self.pk)):
+            raise ValidationError({'parent': 'Una carpeta no puede contenerse a sí misma.'})

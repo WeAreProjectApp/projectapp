@@ -2857,3 +2857,37 @@ Pruebas focales: `content/tests/views/test_mcp_platform_help_videos.py`,
 `test_platform_help_videos.py` y `test_platform_video_help_gates.py`. Siempre
 desde backend del worktree, settings_test y almacenamiento temporal. La
 comprobación de estas piezas no requiere claves reales ni llamadas de IA.
+
+
+## Comunicaciones: jerarquía de Enlaces seguros
+
+El conector `communications` 3.2.0 administra carpetas de hilos y carpetas de enlaces
+como árboles separados. Para enlaces, utilizar estas herramientas:
+
+| Operación | Herramientas |
+|---|---|
+| Consultar | `list_secure_link_folders`, `get_secure_link_folder` |
+| Crear / renombrar | `create_secure_link_folder`, `update_secure_link_folder` |
+| Mover / ordenar | `move_secure_link_folder`, `reorder_secure_link_folders` |
+| Archivar / restaurar | `archive_secure_link_folder`, `restore_secure_link_folder` |
+| Eliminar vacía, con confirmación | `delete_secure_link_folder` |
+| Mover enlace | `move_secure_link` |
+
+Las operaciones sobre carpetas reciben `folder_id`; crear y mover carpeta usan
+`parent` (`null` = raíz). Ordenar exige todos los ids de carpetas manuales
+hermanas, sin duplicados. `expected_updated_at` detecta una edición posterior.
+Las raíces automáticas de proyecto rechazan cambios manuales.
+
+`create_secure_link` y `update_secure_link` admiten `folder_id`; omitir al crear
+clasifica por proyecto, y `null` elige raíz. Omitir al actualizar conserva.
+`list_secure_links` admite carpeta (`all`, `none` o id), búsqueda, recibidos y
+ámbito de archivo; comparte resultados y conteos con el panel. Las listas y
+los detalles ordinarios nunca exponen token, URL o contenido.
+
+Validar: crear subcarpeta → crear enlace dentro → mover entre proyectos sin
+cambiar su asociación → archivar manteniendo el enlace vigente → restaurar.
+Intentar ciclo y modificación de raíz automática debe fallar. La eliminación
+solicita confirmación; un cambio posterior de la carpeta o contenido añadido
+impide ejecutarla. Una credencial restringida no descubre ni ejecuta acciones
+fuera de su alcance y no gana permiso de lectura de secretos por administrar
+carpetas.

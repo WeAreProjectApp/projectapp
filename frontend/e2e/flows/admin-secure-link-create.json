@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin creates a one-time secure link. Confidential message is the default type; required fields (and the credentials username) remain visible while optional fields are in More details, and client, project, language and validity are collapsed under optional Settings. Saving shows the URL and copy actions. Sharing is manual: the flow creates no draft and sends no message automatically. Custom requires a type name and content; validation errors, catalog retry and recoverable server failures preserve retryable input.",
+  "description": "Admin creates a one-time secure link. Confidential message is the default type; required fields (and the credentials username) remain visible while optional fields are in More details, and client, project, language and validity are collapsed under optional Settings. Saving shows the URL and copy actions. Sharing is manual: the flow creates no draft and sends no message automatically. Custom requires a type name and content; validation errors, catalog retry and recoverable server failures preserve retryable input. Creation from an open project folder or subfolder preselects its folder, client and project, while explicit association edits remain available. Creating without a folder choice files by project; explicitly selecting no folder keeps the link at root.",
   "outcomes": [
     "success",
     "error",

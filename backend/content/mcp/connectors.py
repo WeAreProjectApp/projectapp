@@ -37,6 +37,7 @@ from content.mcp.proposal_formalization_tools import PROPOSAL_FORMALIZATION_TOOL
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.mcp.proposal_tools import PROPOSAL_TOOLS
 from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
+from content.mcp.secure_link_folder_tools import SECURE_LINK_FOLDER_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
 from content.mcp.video_tools import BUILDING_ON_DEMAND_VIDEO_TOOLS, PROPOSAL_VIDEO_TOOLS
@@ -141,8 +142,8 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='commercial',
     ),
     'communications': ConnectorSpec(
-        'communications', '2.1.1',
-        (COMMUNICATION_TOOLS, COMMUNICATION_EMAIL_TOOLS, SECURE_LINK_TOOLS,
+        'communications', '2.2.0',
+        (COMMUNICATION_TOOLS, COMMUNICATION_EMAIL_TOOLS, SECURE_LINK_TOOLS, SECURE_LINK_FOLDER_TOOLS,
          PLATFORM_SECURE_LINK_TOOLS),
         uploads=True, confirm_sensitive=True,
     ),
