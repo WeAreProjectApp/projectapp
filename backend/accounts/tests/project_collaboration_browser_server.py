@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 from socketserver import ThreadingMixIn
+from threading import Lock
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 LOCMEM_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
@@ -132,30 +133,35 @@ def main(argv=None):
             database = setup_databases(verbosity=0, interactive=False)
             try:
                 application = get_wsgi_application()
+                application_lock = Lock()
                 fixtures = {}
 
                 def test_application(environ, start_response):
-                    path = environ.get('PATH_INFO')
-                    if path == '/__p4_ready__':
-                        response = HttpResponse('ready')
-                    elif (
-                        path == '/__p4_fixture__'
-                        and environ.get('REQUEST_METHOD') == 'POST'
-                    ):
-                        certify_mail_isolation()
-                        size = min(int(environ.get('CONTENT_LENGTH') or 0), 4096)
-                        payload = json.loads(environ['wsgi.input'].read(size) or '{}')
-                        key = payload['key']
-                        if key not in fixtures:
-                            fixtures[key] = create_browser_fixture(
-                                key, payload.get('grants', [])
-                            )
-                        response = JsonResponse(fixtures[key])
-                    else:
-                        return application(environ, start_response)
-                    start_response(f'{response.status_code} OK', list(response.items()))
-                    return [response.content]
+                    with application_lock:
+                        path = environ.get('PATH_INFO')
+                        if path == '/__p4_ready__':
+                            response = HttpResponse('ready')
+                        elif (
+                            path == '/__p4_fixture__'
+                            and environ.get('REQUEST_METHOD') == 'POST'
+                        ):
+                            certify_mail_isolation()
+                            size = min(int(environ.get('CONTENT_LENGTH') or 0), 4096)
+                            payload = json.loads(environ['wsgi.input'].read(size) or '{}')
+                            key = payload['key']
+                            if key not in fixtures:
+                                fixtures[key] = create_browser_fixture(
+                                    key, payload.get('grants', [])
+                                )
+                            response = JsonResponse(fixtures[key])
+                        else:
+                            return application(environ, start_response)
+                        start_response(f'{response.status_code} OK', list(response.items()))
+                        return [response.content]
 
+                # Shared in-memory SQLite cannot wait on concurrent table locks.
+                # Serialize this disposable harness; production locks remain in
+                # the domain services, not in this fixture-only server.
                 with make_server(
                     '127.0.0.1',
                     backend_port,
