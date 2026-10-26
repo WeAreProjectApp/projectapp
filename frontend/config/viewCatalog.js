@@ -379,7 +379,7 @@ export const viewCatalogSections = [
         group: 'Acceso y dashboard',
         file: 'frontend/pages/panel/index.vue',
         reference: 'vista dashboard del panel',
-        notes: 'App ProjectApp instalable desde la barra lateral o el menú móvil; ayuda por navegador y aviso sin conexión con reintento. Los datos requieren internet.',
+        notes: 'Radar desplegable de correos fallidos, recurrentes, tareas, cuentas de cobro y propuestas: listas de cinco, detalle en modal y acceso al registro exacto resaltado. El contador suma elementos. App instalable con ayuda por navegador y reintento sin conexión; los datos requieren internet.',
         audience: 'admin',
         viewType: 'dashboard',
       },

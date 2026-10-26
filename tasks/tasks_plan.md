@@ -1,5 +1,9 @@
 > **Videos de uso de plataforma — 2026-10-24:** tres piezas publicadas en la rama de sesión: general (90 s), Appi y reporte por voz (72 s cada una), con narración colombiana y subtítulos. Acceso desde Ayuda y una invitación al terminar el recorrido, reproducción manual, controles globales/por cliente y administración de recursos por panel/MCP. Los clips de IA siguen las capacidades disponibles. Catorce casos propios de navegador y cinco pruebas de permisos con migraciones de test aprobados; entrega consultable en PR #540 y despliegue separado. El equipo ProjectApp mantiene las fuentes por funcionalidad.
 
+## 2026-10-26 — Radar de atención
+
+Implementación: acordeones para cinco tipos, detalle actualizado, destinos exactos con resaltado, contador por elementos y resolución de correos por reintento exitoso. PR #544 abierto, con pruebas acotadas y controles de catálogo/flows. No requiere migraciones; integración y despliegue siguen el flujo ordinario.
+
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
 > reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
 > (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por

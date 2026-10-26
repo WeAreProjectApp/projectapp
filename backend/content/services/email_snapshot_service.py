@@ -393,6 +393,7 @@ def resend_email_log(log, recipients, cc_recipients=()):
         contextual_client=log.client,
     )
     common_log_fields = {
+        'retry_of': log,
         'template_key': snapshot.template_key,
         'recipients': recipients + cc_recipients,
         'recipient_contexts': recipient_contexts,

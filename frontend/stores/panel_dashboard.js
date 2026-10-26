@@ -24,10 +24,25 @@ export const usePanelDashboardStore = defineStore('panel_dashboard', {
     additionalModules: (state) => state.summary?.additional_modules ?? null,
     operations: (state) => state.summary?.operations ?? null,
     attention: (state) => state.summary?.attention ?? [],
+    attentionCount: (state) => (state.summary?.attention ?? []).reduce((total, item) => total + item.count, 0),
     hasFinance: (state) => Boolean(state.summary?.finance),
   },
 
   actions: {
+    async fetchAttentionPage(type, page = 1) {
+      const summary = this.summary;
+      const response = await get_request(`panel/dashboard/attention/${type}/?page=${page}`);
+      const item = this.summary?.attention?.find((entry) => entry.type === type);
+      if (item && summary === this.summary) {
+        if (response.data.total === 0) this.summary.attention = this.summary.attention.filter((entry) => entry.type !== type);
+        else item.count = response.data.total;
+      }
+      return response.data;
+    },
+    async fetchAttentionDetail(type, id) {
+      const response = await get_request(`panel/dashboard/attention/${type}/${id}/`);
+      return response.data;
+    },
     /**
      * Fetch the consolidated dashboard summary.
      * @returns {Promise<{success: boolean}>}

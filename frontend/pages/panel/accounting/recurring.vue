@@ -142,6 +142,11 @@
       </BaseButton>
     </div>
 
+    <div v-if="radarId" class="mb-4 rounded-lg border border-border-muted bg-surface p-3" data-testid="recurring-radar-focus">
+      <p class="text-sm text-text-muted" :role="radarError ? 'alert' : 'status'">{{ radarError || radarText.focused }}</p>
+      <BaseButton v-if="radarError" variant="secondary" size="sm" @click="loadRadarRecord">{{ radarText.retry }}</BaseButton>
+      <BaseButton variant="secondary" size="sm" @click="clearRadarRecord">{{ radarText.exitFocus }}</BaseButton>
+    </div>
     <!-- Filter panel -->
     <AccountingFilterPanel
       :fields="filterFields"
@@ -455,8 +460,11 @@
 </template>
 
 <script setup>
+import { get_request } from '~/stores/services/request_http';
+import { useRadarFocus } from '~/composables/useRadarFocus';
+import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
 import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
@@ -506,13 +514,49 @@ import {
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
 
 const store = useAccountingStore();
+const route = useRoute();
+const router = useRouter();
+const radarText = useDashboardAttentionText();
+const radarFocus = useRadarFocus();
+const radarRecord = ref(null);
+const radarError = ref('');
+const radarId = computed(() => {
+  const value = Number(route.query.recurring);
+  return Number.isInteger(value) && value > 0 ? value : null;
+});
+let radarRequest = 0;
+onBeforeUnmount(() => { radarRequest += 1; });
+async function loadRadarRecord() {
+  const id = radarId.value;
+  const token = ++radarRequest;
+  radarRecord.value = null;
+  radarError.value = '';
+  if (!id) return;
+  try {
+    const response = await get_request(`accounting/recurring/${id}/`);
+    if (token !== radarRequest) return;
+    radarRecord.value = response.data;
+    collapsedGroupIds.value = [];
+    goTo(1);
+    await radarFocus(`[data-testid="accounting-row-${id}"]`);
+  } catch (error) {
+    if (token !== radarRequest) return;
+    radarError.value = error.response?.status === 404 ? radarText.value.missing : error.response?.status === 403 ? radarText.value.forbidden : radarText.value.detailError;
+  }
+}
+function clearRadarRecord() {
+  const query = { ...route.query };
+  delete query.recurring;
+  delete query.radar;
+  router.replace({ query });
+}
 const notify = usePanelNotify();
 const archiveScope = ref('current');
 const archiveScopeOptions = [
   { value: 'current', label: 'Vigentes' },
   { value: 'archived', label: 'Archivados' },
 ];
-const isArchivedScope = computed(() => archiveScope.value === 'archived');
+const isArchivedScope = computed(() => radarRecord.value?.is_archived ?? (archiveScope.value === 'archived'));
 
 // -------------------------------------------------------------------
 // Filters
@@ -707,7 +751,7 @@ const columns = [
 
 const groupedColumns = SHARED_COLUMNS.map(({ sortable, ...col }) => col);
 
-const filteredRows = computed(() => applyFilters(store.recurringPayments));
+const filteredRows = computed(() => radarId.value ? (radarRecord.value ? [radarRecord.value] : []) : applyFilters(store.recurringPayments));
 const filteredIds = computed(() => filteredRows.value.map((row) => row.id));
 const { selectedIds, clearSelection, dropIds } = useRowSelection(
   () => store.recurringPayments,
@@ -847,7 +891,8 @@ const displayGroups = computed(() => {
  * order they meant as a temporary reading.
  */
 const canReorder = computed(() =>
-  !isArchivedScope.value
+  !radarId.value
+  && !isArchivedScope.value
   && isGrouped.value
   && !hasActiveFilters.value
   && !groupedWeightSort.value,
@@ -1211,6 +1256,7 @@ async function loadRecords() {
   if (!result.success) {
     notify.error({ title: 'No se pudieron cargar los pagos recurrentes', detail: result.message });
   }
+  await loadRadarRecord();
 }
 
 async function loadAll() {
@@ -1228,6 +1274,7 @@ watch(archiveScope, async () => {
   await loadRecords();
 });
 
+watch(radarId, loadRadarRecord);
 onMounted(loadAll);
 usePanelRefresh(loadAll);
 </script>

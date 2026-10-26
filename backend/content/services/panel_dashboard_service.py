@@ -21,13 +21,11 @@ from content.models import (
     EmailLog,
     HostingRecord,
     HourPackage,
-    RecurringPayment,
     Task,
     WebAppDiagnostic,
 )
 from content.services import accounting_service
 from content.services.proposal_analytics_service import build_dashboard_core
-from content.services.recurring_schedule import next_charge_date
 from content.utils import today_bogota
 
 EMAIL_FAILED_STATUSES = (EmailLog.Status.FAILED, EmailLog.Status.BOUNCED)
@@ -213,88 +211,27 @@ def _operations_block(today, now):
     }
 
 
-def _recurring_due_soon(today):
-    """Active monthly payments billed within RECURRING_DUE_DAYS."""
-    due = []
-    payments = RecurringPayment.objects.filter(
-        is_active=True,
-        is_archived=False,
-        frequency=RecurringPayment.Frequency.MONTHLY,
-    ).filter(
-        Q(reminders_muted=False)
-        | Q(reminders_muted_until__isnull=False, reminders_muted_until__lte=today)
-    )
-    for payment in payments:
-        target = next_charge_date(payment, today)
-        if target is None:
-            continue
-        days = (target - today).days
-        if days <= RECURRING_DUE_DAYS:
-            due.append(days)
-    return due
-
-
 def _attention_block(operations, today, now, *, include_finance):
+    from content.services.dashboard_attention_service import TYPES, attention_records, record_count
+
     items = []
-
-    overdue_docs = operations['documents']['collection_accounts']['overdue_issued']
-    if overdue_docs:
-        items.append({
-            'type': 'documents_overdue',
-            'severity': 'danger',
-            'count': overdue_docs,
-            'meta': {},
-        })
-
-    from content.services.email_log_service import representative_delivery_queryset
-
-    failed_emails_7d = representative_delivery_queryset(EmailLog.objects.filter(
-        sent_at__gte=now - timedelta(days=7),
-        status__in=EMAIL_FAILED_STATUSES,
-        delivery_role=EmailLog.DeliveryRole.PRIMARY,
-    )).count()
-    if failed_emails_7d:
-        items.append({
-            'type': 'emails_failed',
-            'severity': 'danger',
-            'count': failed_emails_7d,
-            'meta': {},
-        })
-
-    overdue_tasks = operations['tasks']['overdue']
-    if overdue_tasks:
-        items.append({
-            'type': 'tasks_overdue',
-            'severity': 'danger' if operations['tasks']['overdue_high'] else 'warning',
-            'count': overdue_tasks,
-            'meta': {'high_priority': operations['tasks']['overdue_high']},
-        })
-
-    stale_proposals = BusinessProposal.objects.filter(
-        status='sent',
-        is_active=True,
-        first_viewed_at__isnull=True,
-        sent_at__lt=now - timedelta(days=STALE_PROPOSAL_DAYS),
-    ).count()
-    if stale_proposals:
-        items.append({
-            'type': 'proposals_stale',
-            'severity': 'warning',
-            'count': stale_proposals,
-            'meta': {'days': STALE_PROPOSAL_DAYS},
-        })
-
-    if include_finance:
-        due_days = _recurring_due_soon(today)
-        if due_days:
-            next_days = min(due_days)
-            items.append({
-                'type': 'recurring_due',
-                'severity': 'warning' if next_days <= 3 else 'info',
-                'count': len(due_days),
-                'meta': {'next_days': next_days},
-            })
-
+    for kind in TYPES:
+        if kind == 'recurring_due' and not include_finance:
+            continue
+        records = attention_records(kind, today, now)
+        count = record_count(records)
+        if not count:
+            continue
+        severity, meta = 'danger', {}
+        if kind == 'tasks_overdue':
+            high = records.filter(priority=Task.Priority.HIGH).count()
+            severity, meta = ('danger' if high else 'warning'), {'high_priority': high}
+        elif kind == 'proposals_stale':
+            severity, meta = 'warning', {'days': STALE_PROPOSAL_DAYS}
+        elif kind == 'recurring_due':
+            days = (records[0].radar_charge_date - today).days
+            severity, meta = ('warning' if days <= 3 else 'info'), {'next_days': days}
+        items.append({'type': kind, 'severity': severity, 'count': count, 'meta': meta})
     items.sort(key=lambda item: (_SEVERITY_RANK[item['severity']], -item['count']))
     return items
 

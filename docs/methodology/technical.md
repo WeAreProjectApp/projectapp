@@ -1,4 +1,8 @@
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
+
+## Contrato del radar — 2026-10-26
+
+`GET panel/dashboard/attention/<type>/?page=N` devuelve `results`, `total`, `page`, `page_size=5` y `has_next`. `GET .../<id>/` devuelve el detalle con `eligible`: un registro que cambió de estado sigue siendo consultable; un registro ausente devuelve 404. Tipos: `emails_failed`, `recurring_due`, `tasks_overdue`, `documents_overdue`, `proposals_stale`. Los endpoints mantienen sesión/CSRF del Panel y rechazan recurrentes a usuarios sin superusuario. El resumen conserva su contrato y los componentes suman los conteos por tipo. No se añaden migraciones.
 > reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
 > (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por
 > panel y MCP projects. Cupo común de 20 solicitudes por ventana móvil de 300

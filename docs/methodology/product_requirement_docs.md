@@ -1,4 +1,8 @@
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
+
+## Radar de atención — 2026-10-26
+
+Cada alerta se despliega sin abandonar el Dashboard y lista cinco pendientes identificables, con carga incremental. Seleccionar un pendiente abre un modal; su acción abre el registro exacto en el módulo correspondiente. Correos muestra destinatario, asunto, fecha y motivo; recurrentes muestra concepto, valor, fecha y medio de pago. Se incluyen tareas, cuentas de cobro y propuestas. Consultar no marca como atendido y no existe descarte manual. Un reintento exitoso elimina el pendiente de correo conservando el historial. El indicador superior cuenta elementos.
 > reportes en Plataforma → Configuración de IA, proveedores Haiku/Luna por función
 > (Haiku inicial), claves cifradas write-only y plantillas ES/EN versionadas por
 > panel y MCP projects. Cupo común de 20 solicitudes por ventana móvil de 300

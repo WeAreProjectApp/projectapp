@@ -2,6 +2,7 @@
   <div
     class="group bg-surface border border-border-default rounded-lg p-3 shadow-card hover:shadow-raised cursor-pointer transition-all"
     data-testid="task-card"
+    :data-task-id="task.id"
   >
     <h3
       class="line-clamp-2 min-w-0 max-w-full text-sm font-medium text-text-default [overflow-wrap:anywhere]"

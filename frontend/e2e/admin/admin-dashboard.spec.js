@@ -252,7 +252,7 @@ test.describe('Admin Dashboard', () => {
     await expect(page.getByText('Utilidad líquida 2026')).not.toBeVisible();
   });
 
-  test('attention radar lists items with severity copy and module links', {
+  test('attention radar renders collapsible severity summaries', {
     tag: [...ADMIN_DASHBOARD_ATTENTION_RADAR, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
     // quality: allow-no-interaction (display flow — asserts the radar renders each attention item's copy and module link from the payload)
@@ -265,7 +265,7 @@ test.describe('Admin Dashboard', () => {
     await expect(docsItem).toContainText('1 cuenta de cobro vencida');
     const tasksItem = page.getByTestId('attention-item-tasks_overdue');
     await expect(tasksItem).toContainText('2 tareas vencidas');
-    await expect(tasksItem).toHaveAttribute('href', /\/panel\/tasks/);
+    await expect(tasksItem).toHaveAttribute('aria-expanded', 'false');
   });
 
   test('shows the positive empty radar when nothing needs attention', {
