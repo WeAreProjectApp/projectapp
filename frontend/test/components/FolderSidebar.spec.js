@@ -831,9 +831,10 @@ describe('FolderSidebar', () => {
     it('calls reorderFolders when draggable emits end with a changed order', async () => {
       const wrapper = mountSidebar({ folders: [folderA, folderB] });
 
-      // Simulate drag-end by directly manipulating localFolders and triggering handleFolderReorder
-      wrapper.vm.localFolders = [folderB, folderA];
-      await wrapper.findComponent({ name: 'draggable' }).vm.$emit('end');
+      const dragList = wrapper.findComponent({ name: 'draggable' });
+      // Sortable publishes its reordered list through the v-model boundary.
+      await dragList.vm.$emit('update:modelValue', [folderB, folderA]);
+      await dragList.vm.$emit('end');
       await flushPromises();
 
       expect(mockFolderStore.reorderFolders).toHaveBeenCalledWith([folderB.id, folderA.id]);

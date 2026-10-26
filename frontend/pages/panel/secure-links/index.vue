@@ -42,6 +42,29 @@
       </div>
     </div>
 
+    <div class="flex min-w-0 flex-col gap-4 panel-landscape:flex-row">
+      <BaseButton class="panel-landscape:hidden" variant="secondary" data-testid="secure-folders-open" @click="folderDrawerOpen = true"><BaseActionIcon action="folders" />Carpetas</BaseButton>
+      <div class="hidden w-64 shrink-0 panel-landscape:block" data-testid="secure-folders-sidebar">
+        <FolderSidebar v-bind="sidebarProps" v-on="sidebarEvents" />
+      </div>
+      <BaseDrawer v-model="folderDrawerOpen" title="Carpetas de enlaces seguros">
+        <FolderSidebar v-bind="sidebarProps" touch-mode v-on="sidebarEvents" />
+      </BaseDrawer>
+      <section class="min-w-0 flex-1" aria-label="Contenido de enlaces seguros">
+        <FolderBreadcrumb :adapter="folders" :active-id="selectedFolderId" root-label="Todos los enlaces" @select="selectFolder" />
+        <div class="mb-4 flex flex-wrap gap-2">
+          <BaseButton variant="secondary" size="sm" data-testid="secure-folder-create" :disabled="Boolean(currentFolder?.is_archived || currentFolder?.is_read_only)" disabled-reason="Restaura primero la carpeta" @click="openFolderForm()"><BaseActionIcon action="create" />Nueva carpeta</BaseButton>
+          <BaseButton v-if="currentFolder && !currentFolder.managed_project && !currentFolder.is_read_only" variant="secondary" size="sm" data-testid="secure-folder-edit" @click="openFolderForm(currentFolder)"><BaseActionIcon action="edit" />Editar carpeta</BaseButton>
+          <BaseButton v-if="currentFolder && !currentFolder.managed_project && !currentFolder.is_read_only" variant="secondary" size="sm" data-testid="secure-folder-move" @click="openFolderForm(currentFolder, true)"><BaseActionIcon action="move" />Mover carpeta</BaseButton>
+          <BaseButton v-if="currentFolder && !currentFolder.managed_project && !currentFolder.is_read_only" variant="secondary" size="sm" data-testid="secure-folder-archive" @click="archiveFolder(currentFolder)"><BaseActionIcon :action="currentFolder.is_archived ? 'restore' : 'archive'" />{{ currentFolder.is_archived ? 'Restaurar carpeta' : 'Archivar carpeta' }}</BaseButton>
+          <BaseButton v-if="currentFolder && !currentFolder.managed_project && !currentFolder.is_read_only" variant="danger-ghost" size="sm" :disabled="folders.totalContentCount(currentFolder) > 0" disabled-reason="Mueve antes los enlaces y subcarpetas, incluidos los archivados" data-testid="secure-folder-delete" @click="deleteFolder(currentFolder)"><BaseActionIcon action="delete" />Eliminar carpeta</BaseButton>
+        </div>
+        <div v-if="childFolders.length" class="mb-4 flex flex-wrap gap-2" data-testid="secure-folder-children">
+          <div v-for="folder in childFolders" :key="folder.id" class="flex items-center gap-1">
+            <BaseButton variant="secondary" size="sm" :data-testid="`secure-folder-child-${folder.id}`" @click="selectFolder(folder.id)"><BaseActionIcon action="folders" />{{ folder.name }} · {{ folders.recursiveDocumentCount(folder, filters.archive) }}</BaseButton>
+            <BaseActionButton action="move-up" :label="`Subir carpeta ${folder.name}`" :disabled="childFolders[0]?.id === folder.id || folders.isUpdating" disabled-reason="La carpeta ya está primera o se está guardando el orden" @click="reorderFolder(folder)" />
+          </div>
+        </div>
     <div class="mb-4 flex flex-col gap-3 panel-landscape:flex-row panel-landscape:items-center panel-landscape:justify-between">
       <BaseSegmented
         v-model="filters.tab"
@@ -82,11 +105,13 @@
       table-min-width="60rem"
       row-actions-layout="menu-start"
       interactive-rows
-      @row-click="(row) => openDetail(row.id)"
+      @row-click="(row, event) => openRow(detailHref(row.id), event)"
+      @row-auxclick="(row, event) => openRow(detailHref(row.id), event)"
     >
       <template #cell-title="{ row }">
-        <span class="font-medium text-text-default [overflow-wrap:anywhere]">{{ row.title }}</span>
+        <BaseRowLink :to="detailHref(row.id)" class="font-medium text-text-default [overflow-wrap:anywhere]">{{ row.title }}</BaseRowLink>
         <span class="block text-xs text-text-subtle">{{ row.type_label }}</span>
+        <span class="block text-xs text-text-subtle" :data-testid="`secure-link-location-${row.id}`">{{ folderPathLabel(folders.folders, row.folder) || 'Sin carpeta' }}</span>
       </template>
       <template #cell-association="{ row }">
         <span class="[overflow-wrap:anywhere]">{{ [row.client_name, row.project_name].filter(Boolean).join(' · ') || '—' }}</span>
@@ -126,10 +151,14 @@
       <BaseButton variant="ghost" size="sm" :disabled="filters.page >= totalPages" disabled-reason="Ya estás en la última página" @click="filters.page += 1">Siguiente</BaseButton>
     </div>
 
+      </section>
+    </div>
+    <SecureLinkFolderManager :open="folderForm.open" :folder="folderForm.folder" :parent-id="numericFolderId" :move-link="folderForm.link" :move-folder="folderForm.moving" :busy="store.isUpdating" @close="folderForm.open = false" @saved="folderSaved" @move-link="moveLink" />
     <SecureLinkFormModal
       v-model="formModal.open"
       :link="formModal.link"
       :initial-fields="formModal.fields"
+      :folder="creationFolder"
       @saved="onSaved"
     />
 
@@ -178,6 +207,11 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import FolderSidebar from '~/components/panel/FolderSidebar.vue';
+import FolderBreadcrumb from '~/components/panel/FolderBreadcrumb.vue';
+import SecureLinkFolderManager from '~/components/secureLinks/SecureLinkFolderManager.vue';
+import { useSecureLinkFoldersStore } from '~/stores/secure_link_folders';
+import { folderPathLabel } from '~/utils/folderOptions';
 import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseActionIcon from '~/components/base/BaseActionIcon.vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
@@ -196,6 +230,7 @@ import SecureLinkStatusBadge from '~/components/secureLinks/SecureLinkStatusBadg
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelNotify } from '~/composables/usePanelNotify';
+import { useRowNavigation } from '~/composables/useRowNavigation';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import { contentFieldValues } from '~/composables/useSecureLinkForm';
 import { useSecureLinksStore } from '~/stores/secure_links';
@@ -204,14 +239,48 @@ import { formatDateTime } from '~/utils/formatDate';
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
 const store = useSecureLinksStore();
+const folders = useSecureLinkFoldersStore();
+const folderDrawerOpen = ref(false);
+const showInactive = ref(false);
+const folderForm = reactive({ open: false, folder: null, link: null, moving: false });
 const route = useRoute();
 const router = useRouter();
+const { openRow } = useRowNavigation();
+const detailHref = id => router.resolve({ path: route.path, query: { ...route.query, link: id } }).href;
 const notify = usePanelNotify();
 const clipboard = useClipboardFeedback();
 const { confirmState, requestConfirm, handleConfirmed, handleCancelled } = useConfirmModal();
 
 const { t } = useI18n();
-const filters = reactive({ tab: 'all', search: '', page: 1 });
+const readFilters = query => ({
+  tab: ['all', 'received', 'ready', 'sent', 'opened', 'expired', 'revoked'].includes(query.tab) ? query.tab : 'all',
+  search: typeof query.search === 'string' ? query.search : '', page: Math.max(1, Number(query.page) || 1),
+  folder: /^\d+$/.test(String(query.folder)) || query.folder === 'none' ? String(query.folder) : 'all',
+  mode: query.mode === 'client' ? 'client' : 'project', entity: /^\d+$/.test(String(query.entity)) || query.entity === 'none' ? String(query.entity) : 'all',
+  archive: ['active', 'archived', 'all'].includes(query.archive) ? query.archive : 'active',
+});
+const filters = reactive(readFilters(route.query));
+const selectedFolderId = computed(() => /^\d+$/.test(filters.folder) ? Number(filters.folder) : filters.folder);
+const numericFolderId = computed(() => typeof selectedFolderId.value === 'number' ? selectedFolderId.value : null);
+const currentFolder = computed(() => folders.folderById(numericFolderId.value));
+const creationFolder = computed(() => filters.folder === 'all' ? undefined : currentFolder.value || null);
+const childFolders = computed(() => folders.folders.filter(f => filters.folder !== 'none' && f.parent === numericFolderId.value && !f.managed_project && (filters.archive === 'all' || (filters.archive === 'active' ? !f.is_archived : f.is_archived || folders.archivedContentCount(f) > 0))));
+const sidebarProps = computed(() => ({
+  adapter: folders, testIdPrefix: 'secure-links', unassignedManualOnly: false, itemLabel: 'enlaces', itemShortLabel: 'enlaces', storageKey: 'projectapp-secure-links-sidebar-sections',
+  folders: folders.folders, activeId: selectedFolderId.value, archiveScope: filters.archive,
+  navigationMode: filters.mode, navigationSelection: ['all', 'none'].includes(filters.entity) ? filters.entity : Number(filters.entity), navigationFacets: folders.navigationFacets,
+  navigationLoading: folders.isLoading, navigationError: folders.error, showInactiveProjects: showInactive.value,
+  archivedCount: folders.navigation.totals?.archived?.documents || 0,
+  unfiledCount: filters.archive === 'all' ? (folders.navigation.unfiled?.active?.documents || 0) + (folders.navigation.unfiled?.archived?.documents || 0) : folders.navigation.unfiled?.[filters.archive]?.documents || 0,
+}));
+const sidebarEvents = {
+  select: selectFolder, manage: () => openFolderForm(), edit: f => openFolderForm(f), delete: deleteFolder, archive: archiveFolder,
+  'update:navigation-mode': mode => { filters.mode = mode; filters.entity = 'all'; filters.folder = 'all'; filters.page = 1; },
+  'select-entity': id => { filters.entity = String(id); filters.folder = filters.mode === 'project' ? String(folders.navigation.projects.find(p => p.id === Number(id))?.managed_root_id || 'all') : 'all'; filters.page = 1; folderDrawerOpen.value = false; },
+  'toggle-inactive-projects': value => { showInactive.value = value; },
+  'toggle-archived': () => { filters.archive = filters.archive === 'archived' ? 'active' : 'archived'; filters.page = 1; },
+  'view-archived': () => { filters.archive = 'archived'; }, 'retry-navigation': () => folders.fetchFolders(),
+};
 const formModal = reactive({ open: false, link: null, fields: null });
 const detailModal = reactive({ open: false, id: null });
 const createdModal = reactive({ open: false, url: '', expiresAt: null });
@@ -244,17 +313,20 @@ function currentFilters() {
     received: tab === 'received' ? 'true' : '',
     search: filters.search.trim(),
     page: filters.page,
+    folder: filters.folder, archive_scope: filters.archive,
+    ...(filters.entity !== 'all' && (filters.mode === 'client' || filters.entity === 'none') ? { [filters.mode]: filters.entity } : {}),
   };
 }
 
 let searchTimer = null;
 async function load() {
+  persistFilters();
   const result = await store.fetchLinks(currentFilters());
   if (result.success && result.page !== filters.page) filters.page = result.page;
   if (!result.success && result.error) notify.error({ title: result.error.message });
 }
 
-watch(() => [filters.tab, filters.page], load);
+watch(() => [filters.tab, filters.page, filters.folder, filters.mode, filters.entity, filters.archive], () => { persistFilters(); load(); });
 watch(() => filters.tab, () => { filters.page = 1; });
 watch(() => filters.search, () => {
   store.invalidateLists();
@@ -292,15 +364,17 @@ onBeforeUnmount(() => {
 
 onMounted(() => {
   store.fetchTypes();
+  folders.fetchFolders();
   load();
 });
 
 // The admin layout's bottom "Actualizar datos" button reloads this list.
-usePanelRefresh(load);
+usePanelRefresh(async () => { await folders.fetchFolders(); await load(); });
 
 function actionItems(row) {
   return [
     { action: 'view', label: 'Detalle e historial', testid: `secure-link-open-${row.id}`, onClick: () => openDetail(row.id) },
+    { action: 'move', label: 'Mover de carpeta', testid: `secure-link-move-${row.id}`, onClick: () => { folderForm.folder = null; folderForm.link = row; folderForm.moving = false; folderForm.open = true; } },
     { action: 'edit', label: t('secureLinks.panel.editContent'), testid: `secure-link-edit-content-${row.id}`, onClick: () => editRowContent(row) },
     { action: 'copy', label: 'Copiar enlace', testid: `secure-link-copy-${row.id}`, onClick: () => copyRowUrl(row) },
     ...(!row.team_only && row.status === 'active' && !row.sent_at
@@ -345,6 +419,7 @@ async function editRowContent(row) {
 }
 
 function onSaved(data) {
+  folders.fetchFolders();
   formModal.fields = null;
   if (data?.url) {
     createdModal.url = data.url;
@@ -426,5 +501,49 @@ async function remove(row) {
   const result = await store.deleteLink(row.id);
   if (!result.success) notify.error({ title: result.error.message });
   else load();
+}
+
+function persistFilters() {
+  const query = { ...route.query, tab: filters.tab === 'all' ? undefined : filters.tab, search: filters.search || undefined,
+    page: filters.page === 1 ? undefined : String(filters.page), folder: filters.folder === 'all' ? undefined : filters.folder,
+    mode: filters.mode === 'project' ? undefined : filters.mode, entity: filters.entity === 'all' ? undefined : filters.entity,
+    archive: filters.archive === 'active' ? undefined : filters.archive };
+  router.replace({ query });
+}
+watch(() => route.query, query => {
+  const next = readFilters(query);
+  if (Object.keys(next).some(key => next[key] !== filters[key])) Object.assign(filters, next);
+});
+function selectFolder(id) { filters.folder = String(id); filters.entity = 'all'; filters.page = 1; folderDrawerOpen.value = false; }
+function openFolderForm(folder = null, moving = false) { Object.assign(folderForm, { open: true, folder, link: null, moving }); }
+async function reorderFolder(folder) {
+  const siblings = folders.folders.filter(f => f.parent === folder.parent && !f.managed_project);
+  const index = siblings.findIndex(f => f.id === folder.id);
+  if (index < 1) return;
+  [siblings[index - 1], siblings[index]] = [siblings[index], siblings[index - 1]];
+  const result = await folders.reorderFolders(siblings.map(f => f.id), folder.parent);
+  if (!result.success) notify.error({ title: result.error?.message || 'No se pudo guardar el orden.' });
+}
+async function folderSaved() { folderForm.open = false; await folders.fetchFolders(); await load(); }
+async function moveLink({ link, folder }) {
+  const result = await store.moveLink(link.id, folder, link.updated_at);
+  if (!result.success) { notify.error({ title: result.error?.message || 'No se pudo mover el enlace.' }); return; }
+  await folderSaved();
+}
+async function archiveFolder(folder) {
+  const confirmed = await requestConfirm({ title: folder.is_archived ? 'Restaurar carpeta' : 'Archivar carpeta', message: folder.is_archived ? 'Se restaurará lo archivado por esta carpeta.' : 'Se ocultarán esta carpeta y su contenido. Los enlaces vigentes seguirán funcionando.' });
+  if (!confirmed) return;
+  const result = await folders.archiveFolder(folder, folder.is_archived);
+  if (!result.success) { notify.error({ title: result.error?.message }); return; }
+  filters.archive = folder.is_archived ? 'active' : 'archived';
+  await load();
+}
+async function deleteFolder(folder) {
+  const confirmed = await requestConfirm({ title: 'Eliminar carpeta', message: 'Solo se eliminará si está vacía, incluido su contenido archivado.' });
+  if (!confirmed) return;
+  const result = await folders.deleteFolder(folder);
+  if (!result.success) { notify.error({ title: result.error?.message }); return; }
+  if (numericFolderId.value === folder.id) selectFolder(folder.parent || 'all');
+  await load();
 }
 </script>

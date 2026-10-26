@@ -2,7 +2,7 @@ from accounts.models import Project, UserProfile
 from rest_framework import serializers
 
 from .catalog import SECRET_TYPES, type_label
-from .models import SecureLink, SecureLinkEvent
+from .models import SecureLink, SecureLinkEvent, SecureLinkFolder
 from .services import sender_label
 
 
@@ -41,7 +41,7 @@ class SecureLinkSerializer(serializers.ModelSerializer):
             'created_by_name', 'creator_name', 'creator_email', 'validity_days', 'expires_at',
             'consumed_at', 'revoked_at', 'activation_count', 'created_at', 'updated_at',
             'lifecycle_status', 'sent_at', 'sent_by',
-            'owner', 'audience', 'replaces',
+            'owner', 'audience', 'replaces', 'folder', 'is_archived', 'archived_at',
         )
 
     def get_type_label(self, obj):
@@ -66,6 +66,7 @@ class SecureLinkSerializer(serializers.ModelSerializer):
 
 
 class _AssociationMixin(serializers.Serializer):
+    folder = serializers.PrimaryKeyRelatedField(queryset=SecureLinkFolder.objects.all(), required=False, allow_null=True)
     client = serializers.PrimaryKeyRelatedField(
         queryset=UserProfile.objects.clients(), required=False, allow_null=True,
     )
@@ -99,12 +100,29 @@ class ReactivateSerializer(serializers.Serializer):
 
 
 class FilterSerializer(serializers.Serializer):
+    folder = serializers.CharField(required=False, default='all')
+    archive_scope = serializers.ChoiceField(choices=('active', 'archived', 'all'), default='active')
+    owner = serializers.IntegerField(required=False, min_value=1)
+
+    def validate_folder(self, value):
+        if value not in ('all', 'none') and (not value.isdecimal() or int(value) < 1):
+            raise serializers.ValidationError('Selecciona una carpeta válida.')
+        return value
+
     status = serializers.ChoiceField(choices=SecureLink.STATUSES, required=False)
     lifecycle_status = serializers.ChoiceField(choices=SecureLink.LIFECYCLE_STATUSES, required=False)
     origin = serializers.ChoiceField(choices=SecureLink.Origin.choices, required=False)
     received = serializers.BooleanField(required=False)
-    client = serializers.IntegerField(required=False, min_value=1)
-    project = serializers.IntegerField(required=False, min_value=1)
+    client = serializers.CharField(required=False)
+    project = serializers.CharField(required=False)
+
+    def validate_client(self, value):
+        if value == 'all':
+            raise serializers.ValidationError('Selecciona un identificador o none.')
+        return self.validate_folder(value)
+
+    def validate_project(self, value):
+        return self.validate_client(value)
     search = serializers.CharField(required=False, max_length=120)
     page = serializers.IntegerField(required=False, min_value=1, default=1)
 

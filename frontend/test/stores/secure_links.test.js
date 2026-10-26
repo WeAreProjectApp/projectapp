@@ -71,6 +71,15 @@ describe('useSecureLinksStore', () => {
     expect(JSON.stringify(store.$state)).not.toContain('token');
   });
 
+  it('posts a root move with the link revision', async () => {
+    create_request.mockResolvedValue({ data: { ...row, folder: null } });
+
+    await store.moveLink(7, null, '2026-10-26T12:45:00Z');
+
+    // Fails if moving to the root omits its explicit destination or concurrency revision.
+    expect(create_request).toHaveBeenCalledWith('secure-links/7/move/', { folder: null, expected_updated_at: '2026-10-26T12:45:00Z' });
+  });
+
   it('merges manual delivery metadata into the listed link', async () => {
     // Fails if the manual-send control posts to a legacy endpoint or does not refresh its list row.
     store.links = [row];

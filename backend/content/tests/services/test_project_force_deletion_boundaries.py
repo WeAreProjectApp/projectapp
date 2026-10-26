@@ -34,6 +34,7 @@ from content.services.project_force_deletion import (
     forced_deletion_preview,
 )
 from content.storage import get_private_storage
+from secure_links.models import SecureLinkFolder
 
 
 pytestmark = pytest.mark.django_db
@@ -59,6 +60,50 @@ def force_delete(project, actor):
         confirmation='DELETE',
         impact_token=preview['impact_token'],
         delete_keys=preview['delete_keys'],
+    )
+
+
+def test_force_delete_removes_an_empty_secure_link_project_root(superuser, target_project):
+    """Falla si la raíz automática vacía impide borrar definitivamente su proyecto."""
+    root = target_project.secure_link_root_folder
+
+    force_delete(target_project, superuser)
+
+    assert not Project.objects.filter(pk=target_project.pk).exists()
+    assert not SecureLinkFolder.objects.filter(pk=root.pk).exists()
+
+
+def test_force_delete_retains_unselected_secure_link_subfolders(superuser, target_project):
+    """Falla si el borrado pierde el árbol que el operador decidió conservar."""
+    root = target_project.secure_link_root_folder
+    child = SecureLinkFolder.objects.create(
+        name='Entregables',
+        parent=root,
+        client=target_project.client.profile,
+        project=target_project,
+    )
+    preview = forced_deletion_preview(target_project, actor=superuser)
+    secure_folders = next(
+        dependency for dependency in preview['dependencies']
+        if dependency['key'] == 'secure_link_folders'
+    )
+
+    force_delete_project(
+        target_project.pk,
+        actor=superuser,
+        confirmation='DELETE',
+        impact_token=preview['impact_token'],
+        delete_keys=preview['delete_keys'],
+    )
+
+    root.refresh_from_db()
+    child.refresh_from_db()
+    assert (secure_folders['count'], secure_folders['selected']) == (2, False)
+    assert not Project.objects.filter(pk=target_project.pk).exists()
+    assert root.retention_context_id is not None
+    assert (root.project_id, root.managed_project_id) == (None, None)
+    assert (child.parent_id, child.project_id, child.retention_context_id) == (
+        root.pk, None, root.retention_context_id,
     )
 
 

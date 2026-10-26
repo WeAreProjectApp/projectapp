@@ -36,6 +36,7 @@ DEPENDENCY_LABELS = {
     'content.projectbrandasset': ('brand_assets', 'Recursos de marca'),
     'content.communicationfolder': ('communication_folders', 'Carpetas de comunicaciones'),
     'content.linktree': ('linktrees', 'Páginas de enlaces'),
+    'secure_links.securelinkfolder': ('secure_link_folders', 'Carpetas de enlaces seguros'),
     'secure_links.securelink': ('secure_links', 'Enlaces seguros'),
     'monitoring.resource': ('monitoring', 'Recursos de monitoreo'),
 }
@@ -152,6 +153,7 @@ def _dependency_inventory(project, *, lock=False):
         _count(DocumentStateEpisode.objects.filter(project=project).exclude(pk=episode_id), lock))
 
     special_models = {Document, DocumentFolder, CommunicationThread, DocumentStateEpisode}
+    from secure_links.models import SecureLinkFolder
     relations = {}
     for relation in Project._meta.related_objects:
         model = relation.related_model
@@ -163,7 +165,10 @@ def _dependency_inventory(project, *, lock=False):
             model._meta.label_lower,
             (model._meta.label_lower, str(model._meta.verbose_name_plural)),
         )
-        add(key, label, _count(model._base_manager.filter(query), lock))
+        rows = model._base_manager.filter(query)
+        if model is SecureLinkFolder:
+            rows = rows.exclude(managed_project=project, children__isnull=True, links__isnull=True)
+        add(key, label, _count(rows, lock))
 
     operational_fields = (
         'production_url', 'staging_url', 'admin_url', 'repository_url',
@@ -249,4 +254,6 @@ def delete_empty_project(project_id, *, actor):
     DocumentFolder.objects.filter(pk__in=folder_ids).delete()
     CommunicationThread.objects.filter(pk__in=thread_ids).delete()
     DocumentStateEpisode.objects.filter(project=project).delete()
+    from secure_links.models import SecureLinkFolder
+    SecureLinkFolder.objects.filter(managed_project=project, children__isnull=True, links__isnull=True).delete()
     project.delete()

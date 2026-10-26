@@ -7,7 +7,7 @@ Writers raise ``ValueError``/``ValidationError`` on refusal; a fixer's
 ``plan`` should prevent that with blockers, and the engine rolls back if not.
 """
 from content.services.data_integrity.scope import (
-    COMM_FOLDER, DOCUMENT, FOLDER, HOSTING, INCOME, PROFILE, PROJECT, PROPOSAL, THREAD, USER,
+    COMM_FOLDER, DOCUMENT, FOLDER, HOSTING, INCOME, PROFILE, PROJECT, PROPOSAL, SECURE_LINK_FOLDER, THREAD, USER,
 )
 from content.services.data_integrity.snapshots import register_fields
 
@@ -18,6 +18,7 @@ register_fields(DOCUMENT, 'project_id', 'title')
 register_fields(THREAD, 'project_id', 'folder_id', 'title', 'client_id', 'is_archived', 'archived_at')
 register_fields(FOLDER, 'name', 'client_user_id', 'is_archived', 'archived_at')
 register_fields(COMM_FOLDER, 'name')
+register_fields(SECURE_LINK_FOLDER, 'name', 'client_id', 'project_id')
 register_fields(PROJECT, 'name', 'status')
 register_fields(USER, 'first_name', 'last_name')
 register_fields(PROFILE, 'company_name')
@@ -46,12 +47,15 @@ def financial_closure(model_label, record_ids):
 
 
 def project_root_closure(project_id):
-    """A project's managed root folder and root thread, which a rename re-syncs."""
+    """A project's managed roots, which a rename re-syncs."""
     from content.models import CommunicationThread, DocumentFolder
+    from secure_links.models import SecureLinkFolder
     keys = [(FOLDER, pk) for pk in DocumentFolder._base_manager.filter(managed_project_id=project_id)
             .values_list('pk', flat=True)]
     keys += [(THREAD, pk) for pk in CommunicationThread._base_manager.filter(managed_project_id=project_id)
              .values_list('pk', flat=True)]
+    keys += [(SECURE_LINK_FOLDER, pk) for pk in SecureLinkFolder._base_manager.filter(
+        managed_project_id=project_id).values_list('pk', flat=True)]
     return keys
 
 

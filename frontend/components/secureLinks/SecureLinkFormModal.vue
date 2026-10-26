@@ -126,6 +126,7 @@ import { useSecureLinkForm } from '~/composables/useSecureLinkForm';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
+  folder: { type: Object, default: undefined },
   /** Existing link row when editing; null to create. */
   link: { type: Object, default: null },
   /**
@@ -170,9 +171,9 @@ watch(() => props.modelValue, (open) => {
     secretType: props.link?.secret_type || 'confidential_message',
     title: props.link?.title || '',
     fields: props.initialFields ? { ...props.initialFields } : {},
-    client: props.link?.client ?? null,
-    clientLabel: props.link?.client_name || '',
-    project: props.link?.project ?? null,
+    client: props.link?.client ?? props.folder?.client ?? null,
+    clientLabel: props.link?.client_name || props.folder?.client_name || '',
+    project: props.link?.project ?? props.folder?.project ?? null,
     language: props.link?.language || 'es',
     validityDays: 7,
   });
@@ -215,6 +216,7 @@ async function submit() {
     fields: form.fields,
     client: form.client || null,
     project: form.project || null,
+    ...(!props.link && props.folder !== undefined ? { folder: props.folder?.id ?? null } : {}),
   };
   const result = props.link
     ? await store.updateLink(props.link.id, payload)

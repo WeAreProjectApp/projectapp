@@ -1,8 +1,6 @@
 from content.api_errors import error_response
 from django.contrib.auth import get_user
-from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from projectapp.recaptcha import CaptchaError, verify_captcha
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
@@ -81,34 +79,24 @@ def link_list(request):
     if not valid:
         return _invalid(serializer.errors)
     data = serializer.validated_data
-    query = SecureLink.objects.select_related('client__user', 'project', 'created_by')
-    if data.get('origin'):
-        query = query.filter(origin=data['origin'])
-    if data.get('received'):
-        query = query.filter(audience=SecureLink.Audience.TEAM)
-    for field in ('client', 'project'):
-        if field in data:
-            query = query.filter(**{f'{field}_id': data[field]})
-    if data.get('search'):
-        term = data['search']
-        query = query.filter(
-            Q(title__icontains=term) | Q(creator_name__icontains=term) | Q(creator_email__icontains=term)
-            | Q(client__user__first_name__icontains=term) | Q(client__user__last_name__icontains=term)
-            | Q(client__company_name__icontains=term) | Q(project__name__icontains=term)
-        )
-    now = timezone.now()
-    totals = query.aggregate(
-        all=Count('pk'),
-        **{f'legacy_{status}': Count('pk', filter=condition) for status, condition in query.status_conditions(now).items()},
-        **{f'lifecycle_{status}': Count('pk', filter=condition) for status, condition in query.lifecycle_conditions(now).items()},
-    )
-    counts = {'all': totals['all'], **{status: totals[f'legacy_{status}'] for status in SecureLink.STATUSES}}
-    lifecycle_counts = {'all': totals['all'], **{status: totals[f'lifecycle_{status}'] for status in SecureLink.LIFECYCLE_STATUSES}}
-    if data.get('status'):
-        query = query.with_status(data['status'])
-    if data.get('lifecycle_status'):
-        query = query.with_lifecycle_status(data['lifecycle_status'])
-    total = query.count()
+    from .queries import counts_for, filter_links, selected_links
+    try:
+        base = filter_links(data)
+        totals = counts_for(base)
+        query = selected_links(data, base)
+    except services.SecureLinkError as exc:
+        return _service_error(exc)
+    selectors = [key for key in ('status', 'lifecycle_status', 'received') if data.get(key)]
+    if not selectors:
+        total = totals['counts']['all']
+    elif selectors == ['status']:
+        total = totals['counts'][data['status']]
+    elif selectors == ['lifecycle_status']:
+        total = totals['lifecycle_counts'][data['lifecycle_status']]
+    elif selectors == ['received']:
+        total = totals['lifecycle_counts']['received']
+    else:
+        total = query.count()
     page = min(data['page'], max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE))
     rows = query[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]
     return Response({
@@ -116,9 +104,7 @@ def link_list(request):
         'count': total,
         'page': page,
         'page_size': PAGE_SIZE,
-        'counts': counts,
-        'lifecycle_counts': lifecycle_counts,
-        'unopened_received': services.unopened_received_count(),
+        **totals,
         'public_create_url': services.public_create_url(),
     })
 

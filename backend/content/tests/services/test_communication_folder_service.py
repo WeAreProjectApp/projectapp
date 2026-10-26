@@ -56,9 +56,10 @@ def test_save_folder_rejects_reparenting_a_folder_below_its_descendant():
     client = make_client('folder-cycle@example.com')
     root = CommunicationFolder.objects.create(name='Raíz', client=client)
     child = CommunicationFolder.objects.create(name='Hija', client=client, parent=root)
+    grandchild = CommunicationFolder.objects.create(name='Nieta', client=client, parent=child)
 
     with pytest.raises(CommunicationError) as error:
-        communication_folder_service.save_folder(folder=root, data={'parent': child})
+        communication_folder_service.save_folder(folder=root, data={'parent': grandchild})
 
     assert error.value.args[0]['parent'] == ['Una carpeta no puede contenerse a sí misma.']
     root.refresh_from_db()

@@ -33,6 +33,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import transaction
 from django.db.models import Count, F, Q
+from django.db.models.deletion import ProtectedError
 
 from content.fake_data import SeedContext, covered_model_labels
 from content.models import (
@@ -604,6 +605,33 @@ def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflo
     assert client_thread.retention_context.retained_records == {
         'content.communicationthread': [str(client_thread.pk)],
     }
+
+
+def test_mihuella_flush_rejects_custom_secure_folder_content(make_client_profile):
+    """Resetting the demo cannot remove a custom secure folder or its independent link."""
+    from accounts.management.commands.seed_mihuella import CLIENT_EMAIL, PROJECT_NAME
+    from content.tests.data_integrity_merge_factories import make_secure_link
+    from secure_links import folder_services as filing
+    from secure_links.models import SecureLinkFolder
+
+    profile = make_client_profile(
+        username=CLIENT_EMAIL,
+        email=CLIENT_EMAIL,
+        company='Entre Especies',
+    )
+    project = Project.objects.create(name=PROJECT_NAME, client=profile.user)
+    root = project.secure_link_root_folder
+    custom = filing.save_folder(data={'name': 'Enlaces propios', 'parent': root})
+    standalone = make_secure_link(profile, '9' * 64, None)
+    filing.move_link(standalone, custom)
+
+    with pytest.raises(ProtectedError):
+        run_command('seed_mihuella', '--flush', '--seed', '19', '--anchor-date', '2026-08-26')
+
+    assert Project.objects.filter(pk=project.pk).exists()
+    assert SecureLinkFolder.objects.filter(pk__in=[root.pk, custom.pk]).count() == 2
+    standalone.refresh_from_db()
+    assert (standalone.project_id, standalone.folder_id) == (None, custom.pk)
 
 
 def test_platform_seed_configures_communication_preferences():

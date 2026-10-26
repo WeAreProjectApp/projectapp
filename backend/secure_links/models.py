@@ -15,6 +15,9 @@ from django.db.models import Q
 from django.utils import timezone
 
 
+from .folders import SecureLinkFolder, SecureLinkFolderLock  # noqa: F401
+
+
 class SecureLinkQuerySet(models.QuerySet):
     @staticmethod
     def status_conditions(now=None):
@@ -62,6 +65,11 @@ class SecureLink(RetainedProjectModel, models.Model):
 
     STATUSES = ('active', 'consumed', 'expired', 'revoked')
     LIFECYCLE_STATUSES = ('ready', 'sent', 'opened', 'expired', 'revoked')
+
+    folder = models.ForeignKey('secure_links.SecureLinkFolder', null=True, blank=True, on_delete=models.PROTECT, related_name='links')
+    is_archived = models.BooleanField(default=False, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archived_via_folder = models.ForeignKey('secure_links.SecureLinkFolder', null=True, blank=True, on_delete=models.SET_NULL, related_name='cascade_archived_links')
 
     token_hash = models.CharField(max_length=64, unique=True)
     token_encrypted = models.TextField()

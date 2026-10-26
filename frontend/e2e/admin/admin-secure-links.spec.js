@@ -526,7 +526,7 @@ test.describe('Admin secure links', () => {
 
     await openRowMenu(page, { kebab: 'secure-link-actions-7', menu: ACTIONS_MODAL });
     await expect(page.getByTestId(ACTIONS_MODAL).getByRole('button')).toHaveText([
-      'Detalle e historial', 'Editar contenido', 'Copiar enlace', 'Marcar como enviado', 'Revocar', 'Eliminar',
+      'Detalle e historial', 'Mover de carpeta', 'Editar contenido', 'Copiar enlace', 'Marcar como enviado', 'Revocar', 'Eliminar',
     ]);
     await expect(page.getByTestId('secure-link-detail')).toHaveCount(0);
     await expect(page).not.toHaveURL(/link=/);

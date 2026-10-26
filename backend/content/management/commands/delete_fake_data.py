@@ -102,6 +102,8 @@ class Command(BaseCommand):
 
         from secure_links.models import SecureLink
         SecureLink.objects.filter(owners).delete()
+        from secure_links.folder_seed import clear_project_folder_samples
+        clear_project_folder_samples(project_ids, retention_context_ids)
 
         # Order matters because of PROTECT chains:
         #   CommunicationAttachment ─PROTECT→ Document

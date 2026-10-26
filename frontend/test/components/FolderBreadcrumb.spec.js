@@ -48,6 +48,14 @@ describe('FolderBreadcrumb', () => {
     expect(wrapper.text()).toContain('2026');
   });
 
+  it('renders a path when its host already provides the root control', () => {
+    const wrapper = mountCrumb({ activeId: 2, showRoot: false, ariaLabel: 'Ubicación' });
+
+    expect(wrapper.find('nav').attributes('aria-label')).toBe('Ubicación');
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['Clientes']);
+    expect(wrapper.text()).toContain('2026');
+  });
+
   it('resolves a path that runs through archived folders', () => {
     const wrapper = mountCrumb({ activeId: 4 });
 
