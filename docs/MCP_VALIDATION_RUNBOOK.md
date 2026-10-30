@@ -2620,7 +2620,7 @@ confirmaciones y adaptadores de `projects` y `accounting-billing` en
 No ejecutar validaciones mutantes contra conectores activos de producción.
 ### Buscador de contrato existente (2026-10-29)
 
-`accounting.get_project_billing_options` conserva sus campos y admite `query`
+`accounting.get_project_billing_options` conserva sus campos y admite `contract_source_search`
 opcional (texto, máximo 300 caracteres). Filtra únicamente `contract_sources`
 por coincidencia continua en el título, sin distinguir mayúsculas, tildes ni
 guiones bajos; vacío devuelve todas las fuentes elegibles y todas sus versiones.

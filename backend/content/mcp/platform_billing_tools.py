@@ -153,11 +153,11 @@ def _tool(name, description, operation, *, serializer=None, fields=None, require
 
 
 def _read_contract_options(arguments, actor, payload):
-    query = arguments.get('query', '')
-    if not isinstance(query, str) or len(query) > 300:
-        raise ToolError('query debe ser un texto de hasta 300 caracteres.')
+    search_text = arguments.get('contract_source_search', '')
+    if not isinstance(search_text, str) or len(search_text) > 300:
+        raise ToolError('contract_source_search debe ser un texto de hasta 300 caracteres.')
     options = project_billing_options(arguments['project_id'], actor)
-    options['contract_sources'] = filter_contract_source_options(options['contract_sources'], query)
+    options['contract_sources'] = filter_contract_source_options(options['contract_sources'], search_text)
     return options
 
 
@@ -183,9 +183,9 @@ def _contract_impact(arguments):
 
 
 PLATFORM_BILLING_TOOLS = [
-    _tool('get_project_billing_options', 'Lista contratos/otrosí, hosting y documentos vinculables del proyecto con fecha y carpeta; contratos primero. query filtra nombres por coincidencia sin distinguir mayúsculas, tildes ni guiones bajos. No concede acceso documental ni busca en otros proyectos.',
+    _tool('get_project_billing_options', 'Lista contratos/otrosí, hosting y documentos vinculables del proyecto con fecha y carpeta; contratos primero. contract_source_search filtra nombres por coincidencia sin distinguir mayúsculas, tildes ni guiones bajos. No concede acceso documental ni busca en otros proyectos.',
           _read_contract_options,
-          read_fields={'query': {'type': 'string', 'maxLength': 300,
+          read_fields={'contract_source_search': {'type': 'string', 'maxLength': 300,
                                  'description': 'Texto opcional contenido en el nombre del documento. Vacío devuelve todas las fuentes elegibles y versiones del proyecto.'}}),
     _tool('link_project_billing_contract', 'Registra un contrato existente del proyecto para habilitar sus cuentas de cobro; no emite documentos ni modifica importes.',
           lambda args, actor, data: link_billing_contract(args['project_id'], actor, data),
