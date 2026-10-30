@@ -2279,57 +2279,81 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
 
   // Bug caught: a contract document already attached to the project could not
   // become the billing contract, trapping the operator before preview.
-  test('linking an existing project contract unlocks its collection preview', {
-    tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
-  }, async ({ page }) => {
-    const calls = [];
-    const project = { id: 10, name: 'Litigio' };
-    const contract = { id: 91, title: 'Contrato Marco David Camacho García', amendments: [] };
-    const client = {
-      id: 5, name: 'Marco David Camacho García', company: '', email: 'marco@litigio.test',
-      phone: '', nit: '', cedula: '123456789', is_email_placeholder: false,
-    };
-    const contractSource = {
-      id: 701, source_type: 'document', title: contract.title,
-      origin_label: 'Documento del proyecto',
-    };
-    await mockApi(page, buildHandler({
-      rows: [incomeRow({
-        has_collection_account: false, client: client.id, client_name: client.name,
-        project: project.id, project_name: project.name,
-      })],
-      calls,
-      collectionProjectContext: {
-        project, contract, client, contracts: [], contractSources: [contractSource],
-      },
-    }));
-    await gotoIncomes(page);
+  for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+    test(`linking an existing project contract unlocks its collection preview (${profile})`, {
+      tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      await page.setViewportSize(viewportUse(profile).viewport);
+      const calls = [];
+      const project = { id: 10, name: 'Litigio' };
+      const contract = { id: 91, title: 'Contrato Marco David Camacho García', amendments: [] };
+      const client = {
+        id: 5, name: 'Marco David Camacho García', company: '', email: 'marco@litigio.test',
+        phone: '', nit: '', cedula: '123456789', is_email_placeholder: false,
+      };
+      const contractSource = {
+        id: 701, source_type: 'document', title: 'Contrato_Marco_David_Camacho_García',
+        origin_label: 'Documento del proyecto', is_contract_like: true,
+        created_at: '2026-10-29T12:00:00Z', folder_path: 'Legal / Firmados',
+      };
+      await mockApi(page, buildHandler({
+        rows: [incomeRow({
+          has_collection_account: false, client: client.id, client_name: client.name,
+          project: project.id, project_name: project.name,
+        })],
+        calls,
+        collectionProjectContext: {
+          project, contract, client, contracts: [], contractSources: [
+            { ...contractSource, id: 900, title: 'Revisión del conteo diario', is_contract_like: false },
+            contractSource,
+            { ...contractSource, id: 702, created_at: '2026-09-01T12:00:00Z', folder_path: 'Legal / Anteriores' },
+          ],
+        },
+      }));
+      await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-1').click();
-    await page.getByTestId('income-action-generate-collection-1').click();
-    await page.getByTestId('billing-nature').selectOption('contract');
-    await page.getByTestId('billing-link-contract-open').click();
-    await page.getByTestId('billing-link-contract-source')
-      .selectOption(`${contractSource.source_type}:${contractSource.id}`);
-    await page.getByTestId('billing-link-contract-submit').click();
+      await page.getByTestId('income-actions-1').click();
+      await page.getByTestId('income-action-generate-collection-1').click();
+      await page.getByTestId('billing-nature').selectOption('contract');
+      await page.getByTestId('billing-link-contract-open').click();
+      const search = page.getByRole('combobox', { name: 'Contrato existente del proyecto' });
+      await search.click();
+      const options = page.getByRole('listbox', { name: 'Documentos del proyecto' });
+      await expect(options.getByRole('option').first()).toContainText('Legal / Firmados');
+      await expect(options.getByRole('option').last()).toContainText('Revisión del conteo diario');
+      await search.fill('no existe');
+      await expect(options).toContainText('Sin coincidencias');
+      await expect(page.getByTestId('billing-link-contract-submit')).toBeDisabled();
+      await search.fill('CAMACHO garcia');
+      await expect(options.getByRole('option')).toHaveCount(2);
+      await expect(options.locator('mark').first()).toHaveText('Camacho_García');
+      await expect(options.getByRole('option').last()).toContainText('Legal / Anteriores');
+      await expect.poll(async () => {
+        const box = await options.boundingBox();
+        return Boolean(box && box.x >= 0 && box.x + box.width <= viewportUse(profile).viewport.width + 1);
+      }).toBe(true);
+      await search.press('Enter');
+      await page.getByTestId('billing-link-contract-submit').click();
 
-    await expect.poll(() => calls.filter((call) => (
-      call.apiPath === 'admin/billing-context/projects/10/contracts/link/'
-    )).length).toBe(1);
-    await expect(page.getByTestId('billing-contract')).toHaveValue(String(contract.id));
-    await page.getByTestId('collection-form-preview').click();
-    await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-KORE-001');
+      await expect.poll(() => calls.filter((call) => (
+        call.apiPath === 'admin/billing-context/projects/10/contracts/link/'
+      )).length).toBe(1);
+      await expect(page.getByTestId('billing-contract')).toHaveValue(String(contract.id));
+      await page.getByTestId('collection-form-preview').click();
+      await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-KORE-001');
 
-    const linkCall = calls.find((call) => call.apiPath.endsWith('/contracts/link/'));
-    expect(linkCall.body).toMatchObject({
-      source_type: contractSource.source_type,
-      source_id: contractSource.id,
+      const linkCall = calls.find((call) => call.apiPath.endsWith('/contracts/link/'));
+      expect(linkCall.body).toMatchObject({
+        source_type: contractSource.source_type,
+        source_id: contractSource.id,
+      });
+      const previewCall = calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/');
+      expect(previewCall.body).toMatchObject({
+        billing_nature: 'contract', contract_id: contract.id,
+      });
     });
-    const previewCall = calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/');
-    expect(previewCall.body).toMatchObject({
-      billing_nature: 'contract', contract_id: contract.id,
-    });
-  });
+
+  }
 
   // Bug caught: a rejected contract link used to erase the billing context or
   // let the preview run with an unregistered document.
@@ -2363,8 +2387,8 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
     await page.getByTestId('income-action-generate-collection-1').click();
     await page.getByTestId('billing-nature').selectOption('contract');
     await page.getByTestId('billing-link-contract-open').click();
-    await page.getByTestId('billing-link-contract-source')
-      .selectOption(`${contractSource.source_type}:${contractSource.id}`);
+    await page.getByTestId('billing-link-contract-source').fill('Marco David');
+    await page.getByTestId('billing-link-contract-source').press('Enter');
     await page.getByTestId('billing-link-contract-submit').click();
 
     await expect(page.getByTestId('billing-link-contract-error'))

@@ -3087,3 +3087,14 @@ despliegue ni cambios en datos desplegados.
 ## 2026-10-29 — Documentos PDF subidos
 
 En implementación en la rama de sesión `feat/29102026-pdf-documents`: PDF manual privado, identidad común, metadatos editables, reemplazo con versión e historial y búsqueda del texto vigente sin OCR. Panel y MCP comparten validación, permisos y servicios; las copias comerciales/legales permanecen separadas. Migración aditiva `0304_uploaded_pdf_documents`, padre `0303_merge_editorial_requirement_packages`, sin aplicar desde el worktree. El deploy posterior requiere la excepción de transporte Nginx versionada; esta sesión no despliega. PA-125 y la incorporación automática de contratos firmados quedan separados. Pruebas locales aprobadas y registradas en `docs/audits/2026-10-29-uploaded-pdf-qa.md`; PR #549. El estado del CI se consulta en el PR. Sin merge ni deploy.
+
+## 2026-10-29 — Buscador de contrato existente en cuenta de cobro
+
+Rama `feat/29102026-contract-source-search`, worktree exclusivo
+`contract-source-search`. Reemplaza sólo el selector de fuente al vincular por
+un combobox con grupos, metadatos, coincidencias normalizadas y resaltado seguro.
+`contract_sources` añade fecha/carpeta/propuesta/clasificación; MCP consulta y
+filtra las mismas fuentes y conserva el enlace confirmado por el servicio actual.
+Sin cambios de modelos, migraciones, reglas de pendiente ni emisión; esos cruces
+pertenecen a las otras sesiones. Validación focalizada y PR verde en curso; el
+merge pertenece a «Coordina las sesiones activas».
