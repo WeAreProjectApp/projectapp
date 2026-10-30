@@ -22,7 +22,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def access(superuser):
-    DocumentType.objects.get_or_create(code='markdown', defaults={'name': 'Markdown', 'label': 'Markdown'})
+    DocumentType.objects.get_or_create(code='markdown', defaults={'name': 'Markdown'})
     connector, _ = McpConnector.objects.get_or_create(slug='documents')
     connector.is_active = True
     connector.save(update_fields=['is_active'])
