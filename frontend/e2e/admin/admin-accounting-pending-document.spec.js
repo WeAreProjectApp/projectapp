@@ -112,7 +112,7 @@ test('creates an explicitly pending account, filters it and completes it without
   await modal.getByRole('button', { name: 'Guardar asociación', exact: true }).click();
   await expect(modal.getByTestId('pending-billing-document-icon')).toHaveCount(0);
   await expect(modal).toBeVisible();
-  await modal.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await page.getByRole('dialog').filter({ has: modal }).getByRole('button', { name: 'Cerrar', exact: true }).click();
   await expect(page.getByTestId('collection-open-9')).toHaveCount(0);
   await expect(page.getByTestId('collection-open-42')).toBeVisible();
 });
