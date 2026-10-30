@@ -73,8 +73,14 @@ def test_mcp_cannot_forge_deferral_audit_fields(runtime, project, income):
         project, income, document_pending=True, pending_by=999, pending_at='2020-01-01T00:00:00Z',
     ))
     rejected = _call(tools, context, 'confirm_action', {'confirmation_id': result['confirmation_id']})
-    assert rejected['error']['code'] == 'VALIDATION_ERROR'
+    assert rejected['error']['code'] == 'unknown_field'
+    assert {error['field']: error['code'] for error in rejected['error']['details']['errors']} == {
+        'pending_at': 'unknown_field',
+        'pending_by': 'unknown_field',
+    }
     assert not Document.objects.filter(income_record=income).exists()
+    assert not CollectionAccountContext.objects.exists()
+    assert not BillingContextEvent.objects.exists()
 
 
 def test_mcp_completion_requires_current_version(runtime, account, contract):
