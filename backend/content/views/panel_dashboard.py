@@ -31,7 +31,7 @@ def dashboard_attention(request, kind, record_id=None):
 
     if kind not in TYPES:
         return Response({'detail': 'Tipo de alerta no encontrado.'}, status=404)
-    if kind == 'recurring_due' and not request.user.is_superuser:
+    if kind in ('recurring_due', 'collection_documents_pending') and not request.user.is_superuser:
         return Response({'detail': 'No tienes permiso para consultar estos pagos.'}, status=403)
     today, now = today_bogota(), timezone.now()
     records = attention_records(kind, today, now)

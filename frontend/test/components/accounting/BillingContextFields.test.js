@@ -25,6 +25,34 @@ function mountFields(modelValue, props = {}) {
 }
 
 describe('BillingContextFields', () => {
+  it('records an explicit deferral and discards every link while keeping the chosen nature', async () => {
+    const wrapper = mountFields({ billing_nature: 'contract', contract_id: 11, amendment_id: 111 })
+    await wrapper.get('[data-testid="billing-document-pending"]').trigger('click')
+    const deferred = wrapper.emitted('update:modelValue')[0][0]
+    expect(deferred).toEqual({ billing_nature: 'contract', document_pending: true,
+      contract_id: null, amendment_id: null, project_hosting_id: null, hosting_payment_id: null })
+    await wrapper.setProps({ modelValue: deferred })
+    expect(wrapper.find('[data-testid="billing-contract"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="billing-document-pending-help"]').text()).toContain('quién')
+    await wrapper.get('[data-testid="billing-nature"]').setValue('')
+    expect(wrapper.emitted('update:modelValue')[1][0]).toMatchObject({ billing_nature: null, document_pending: true })
+  })
+
+  it('requires selecting links again after turning off the deferral', async () => {
+    const wrapper = mountFields({ billing_nature: 'contract', document_pending: true })
+    await wrapper.get('[data-testid="billing-document-pending"]').trigger('click')
+    const context = wrapper.emitted('update:modelValue')[0][0]
+    await wrapper.setProps({ modelValue: context })
+    expect(context.document_pending).toBe(false)
+    expect(wrapper.get('[data-testid="billing-contract"]').element.value).toBe('')
+  })
+
+  it('offers completion without a deferral switch in the administrative editor', () => {
+    const wrapper = mountFields({ billing_nature: 'contract' }, { allowPending: false })
+    expect(wrapper.find('[data-testid="billing-document-pending"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="billing-contract"]').exists()).toBe(true)
+  })
+
   it('clears every association when the nature changes', async () => {
     // Falla si un cobro cambia de naturaleza y conserva relaciones incompatibles.
     const wrapper = mountFields({

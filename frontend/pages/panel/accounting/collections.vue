@@ -154,6 +154,8 @@
         <!-- El número es la dirección del detalle: un enlace de verdad, no sólo
              el ojo de la columna de acciones. -->
         <template #cell-public_number="{ row }">
+          <span class="inline-flex items-center gap-1">
+          <PendingBillingDocumentIcon v-if="row.context?.document_pending" />
           <BaseRowLink
             :to="accountDetailTo(row.id)"
             :stretch="!isGrouped"
@@ -163,6 +165,7 @@
           >
             {{ row.public_number || `#${row.id}` }}
           </BaseRowLink>
+          </span>
         </template>
         <template #cell-origin="{ row }">
           <BaseBadge
@@ -303,6 +306,7 @@
     <CollectionAccountDetailModal
       :open="detailOpen"
       :record="detailRow"
+      @saved="loadRecords"
       @close="closeDetail"
       @download="downloadPdf"
       @go-to-income="goToIncome"
@@ -331,6 +335,7 @@ import AccountingErrorState from '~/components/accounting/AccountingErrorState.v
 import AccountingFilterPanel from '~/components/accounting/AccountingFilterPanel.vue';
 import ProposalFilterTabs from '~/components/proposals/ProposalFilterTabs.vue';
 import CollectionAccountFormModal from '~/components/accounting/CollectionAccountFormModal.vue';
+import PendingBillingDocumentIcon from '~/components/accounting/billing/PendingBillingDocumentIcon.vue';
 import CollectionAccountDetailModal from '~/components/accounting/CollectionAccountDetailModal.vue';
 import CollectionActionsModal from '~/components/accounting/CollectionActionsModal.vue';
 import IncomeLiquidateModal from '~/components/accounting/IncomeLiquidateModal.vue';
@@ -489,6 +494,7 @@ const {
     // out of the one tab whose name promises everything still owed — the same
     // omission "Solo esperados" made with the parciales.
     { id: 'open', name: 'Por cobrar', filters: { status: ['issued', 'overdue'] } },
+    { id: 'document-pending', name: 'Documento pendiente', filters: { documentPending: ['pending'] } },
     { id: 'overdue', name: 'Vencidas', filters: { status: ['overdue'] } },
     { id: 'no-project', name: 'Sin proyecto', filters: { projects: [NO_PROJECT_KEY] } },
   ],
@@ -500,6 +506,7 @@ const {
     clients: [],
     projects: [],
     status: [],
+    documentPending: [],
     issueAfter: '',
     issueBefore: '',
     totalMin: '',
@@ -509,6 +516,7 @@ const {
     clients: matchClients,
     projects: matchProjects,
     status: matchCommercialStatus,
+    documentPending: matchAnyToken('documentPending', { pending: row => Boolean(row.context?.document_pending) }),
     issue: matchDateRange('issue_date', 'issueAfter', 'issueBefore'),
     total: matchNumberRange('total', 'totalMin', 'totalMax'),
   },
@@ -638,6 +646,10 @@ const filterFields = computed(() => [
   {
     kind: 'multi', key: 'projects', label: 'Proyecto',
     options: projectFilterOptions.value,
+  },
+  {
+    kind: 'multi', key: 'documentPending', label: 'Documento vinculado',
+    options: [{ value: 'pending', label: `Pendiente (${filteredRows.value.filter(row => row.context?.document_pending).length})` }],
   },
   {
     kind: 'daterange', label: 'Emisión',
@@ -882,7 +894,7 @@ const {
   toFor: accountDetailTo,
   open: openDetailById,
   close: closeDetail,
-} = useDetailQueryParam('account', { rows: sortedRows });
+} = useDetailQueryParam('account', { rows: () => store.collectionAccounts });
 
 function openDetail(row) {
   openDetailById(row.id);

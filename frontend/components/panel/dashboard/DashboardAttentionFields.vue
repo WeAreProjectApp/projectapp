@@ -18,11 +18,13 @@ const fields = computed(() => ({
   recurring_due: ['amount', 'due_date', 'payment_method'],
   tasks_overdue: props.compact ? ['assignee', 'due_date', 'priority'] : ['assignee', 'due_date', 'priority', 'description'],
   documents_overdue: ['client', 'amount', 'due_date'],
+  collection_documents_pending: ['client', 'amount', 'pending_at'],
   proposals_stale: ['client', 'sent_at', 'days_unopened'],
 }[props.record.type] || []));
 function value(field) {
   const row = props.record;
   if (field === 'amount') return row.amount == null ? text.value.unavailable : formatMoney(row.amount, row.currency, { decimals: row.currency === 'USD' ? 2 : 0 });
+  if (field === 'pending_at') return formatDateTime(row.pending_at, { fallback: text.value.unavailable });
   if (field === 'sent_at') return formatDateTime(row.sent_at, { fallback: text.value.unavailable });
   if (field === 'due_date') return formatDate(row.due_date, { fallback: text.value.unavailable });
   if (field === 'recipient') return [...(row.to_recipients || []), ...(row.cc_recipients || [])].map((entry) => entry.email).filter(Boolean).join(', ') || row.recipient || text.value.unavailable;

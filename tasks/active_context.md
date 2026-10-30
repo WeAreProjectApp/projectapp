@@ -1,3 +1,7 @@
+## 2026-10-29 — Documento pendiente en cuentas de cobro
+
+En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
+
 > **Enlaces seguros — jerarquía, 2026-10-26:** implementación en rama de sesión
 > de árbol propio con raíces de proyecto, carpetas y subcarpetas; navegación
 > por cliente, filtros contextuales y archivo reversible que no revoca enlaces.

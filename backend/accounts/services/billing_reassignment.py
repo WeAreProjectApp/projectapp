@@ -51,6 +51,7 @@ def validate_document_reassignment(document, *, changes=None, lock=False):
         # Reassignment validates relationships. Readiness to emit is a separate
         # check: a historical association can still await evidence reconciliation.
         resolve_context(proposed, {
+            'document_pending': context.document_pending,
             'billing_nature': context.nature, 'contract_id': context.contract_id,
             'amendment_id': context.amendment_id, 'project_hosting_id': context.hosting_id,
         }, lock_relations=lock)

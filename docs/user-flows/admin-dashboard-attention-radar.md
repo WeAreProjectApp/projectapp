@@ -14,3 +14,7 @@
   6. Closing the modal returns focus to the selected record.
 - **Outcomes:** display (identification, empty state, responsive detail); success (incremental pages, exact destinations); error (record deleted or access denied); failure (recoverable list/detail requests).
 - **E2E Specs:** `e2e/admin/admin-dashboard-attention.spec.js`, `e2e/admin/admin-dashboard.spec.js`.
+
+## Documento vinculado pendiente
+
+El radar incluye cuentas con documento vinculado pendiente para superusuarios: borradores, emitidas y pagadas, excluyendo anuladas, archivadas y datos retenidos. Abre la cuenta exacta y permite completar el vínculo. La decisión resuelta desaparece en la siguiente lectura del radar; la autoría se conserva.

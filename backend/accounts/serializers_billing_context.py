@@ -12,7 +12,8 @@ class BillingContractLinkSerializer(StrictSerializer):
 
 
 class BillingContextFields(serializers.Serializer):
-    billing_nature = serializers.ChoiceField(choices=('contract', 'hosting'), required=False)
+    document_pending = serializers.BooleanField(required=False, default=False)
+    billing_nature = serializers.ChoiceField(choices=('contract', 'hosting'), required=False, allow_null=True)
     contract_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     amendment_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     project_hosting_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
@@ -23,6 +24,11 @@ class BillingContextAssignmentSerializer(BillingContextFields):
     billing_nature = serializers.ChoiceField(choices=('contract', 'hosting'))
     expected_version = serializers.IntegerField(min_value=0)
     reason = serializers.CharField(max_length=2000, allow_blank=False)
+
+    def validate_document_pending(self, value):
+        if value:
+            raise serializers.ValidationError('Completa el vínculo; una asociación existente no puede quedar pendiente.')
+        return value
 
 
 class HostingReconciliationSerializer(serializers.Serializer):

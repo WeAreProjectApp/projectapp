@@ -1,3 +1,7 @@
+## Cuentas de cobro — documento pendiente explícito (2026-10-29)
+
+`CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.
+
 > **Jerarquía de Enlaces seguros — 2026-10-26:** `SecureLinkFolder` separa
 > ubicación interna de asociación y audiencia. El servicio transaccional de
 > carpetas serializa movimientos, creación y cascadas; panel y MCP lo consumen.

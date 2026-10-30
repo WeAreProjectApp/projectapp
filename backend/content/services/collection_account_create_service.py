@@ -239,7 +239,7 @@ def _create_income_collection_account(
         **document_fields,
     )
     from accounts.services.billing_context import associate_account
-    if document.project_id:
+    if document.project_id or data.get('document_pending'):
         associate_account(document.pk, acting_user, data, creating=True)
     due_date = data.get('due_date')
     if due_date:

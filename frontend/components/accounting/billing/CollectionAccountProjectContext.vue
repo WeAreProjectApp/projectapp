@@ -26,7 +26,7 @@ let contextRevision = 0
 watch(() => props.modelValue, () => { contextRevision += 1 }, { deep: true, flush: 'sync' })
 onBeforeUnmount(() => { sequence += 1 })
 const validationMessage = computed(() => {
-  if (!props.projectId) return ''
+  if (!props.projectId || props.modelValue.document_pending) return ''
   if (loading.value) return 'Espera a que carguen las opciones de cobro del proyecto.'
   if (error.value) return error.value
   const context = props.modelValue
@@ -101,11 +101,11 @@ watch(() => props.projectId, load, { immediate: true, flush: 'sync' })
 <template>
   <section v-if="projectId" class="space-y-2" data-testid="collection-form-project-context">
     <h4 class="text-sm font-semibold text-text-default">Cobro del proyecto</h4>
-    <p class="text-xs text-text-muted">Indica qué estás cobrando y selecciona el contrato o el período de hosting al que corresponde.</p>
+    <p class="text-xs text-text-muted">Selecciona el tipo y el vínculo del cobro, o deja explícitamente el documento pendiente para completarlo después.</p>
     <p v-if="loading" role="status" class="text-sm text-text-muted">Consultando vínculos del proyecto…</p>
     <div v-else-if="error" role="alert" class="text-sm text-danger-strong"><p>{{ error }}</p><button type="button" @click="load(projectId)">Reintentar</button></div>
-    <BillingContextFields v-else :model-value="modelValue" :options="options" :payments="payments" @update:model-value="emit('update:modelValue', $event)" />
-    <div v-if="!loading && !error && modelValue.billing_nature === 'contract'" class="space-y-3">
+    <BillingContextFields :model-value="modelValue" :options="options" :payments="payments" @update:model-value="emit('update:modelValue', $event)" />
+    <div v-if="!loading && !error && !modelValue.document_pending && modelValue.billing_nature === 'contract'" class="space-y-3">
       <BaseButton variant="link" size="sm" data-testid="billing-link-contract-open" @click="showLinkForm = !showLinkForm">Vincular contrato existente</BaseButton>
       <section v-if="showLinkForm" class="rounded-xl border border-border-muted p-3 space-y-3" data-testid="billing-link-contract-form">
         <p class="text-xs text-text-muted">Elige el documento que corresponde al contrato. Se registrará en el seguimiento del proyecto sin copiarlo ni cambiar su contenido.</p>

@@ -26,6 +26,10 @@ const actions = computed(() => {
     { ...HISTORY_ROW_ACTION, id: 'view-detail', event: 'detail' },
   ]
 
+  if (row.context?.document_pending) {
+    list.push({ id: 'complete-document', action: 'edit', label: 'Completar documento vinculado', event: 'detail' })
+  }
+
   if (row.notes) {
     list.push({
       id: 'notes', action: 'notes', label: 'Ver notas internas',
