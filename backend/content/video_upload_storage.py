@@ -6,7 +6,7 @@ from django.utils.deconstruct import deconstructible
 @deconstructible
 class McpUploadStorage(Storage):
     def _storage(self, name):
-        return storages['private'] if name.startswith('mcp-video-uploads/') else default_storage
+        return storages['private'] if name.startswith(('mcp-video-uploads/', 'mcp-document-uploads/')) else default_storage
 
     def _open(self, name, mode='rb'):
         return self._storage(name).open(name, mode)
@@ -27,6 +27,6 @@ class McpUploadStorage(Storage):
         return self._storage(name).path(name)
 
     def url(self, name):
-        if name.startswith('mcp-video-uploads/'):
+        if name.startswith(('mcp-video-uploads/', 'mcp-document-uploads/')):
             raise ValueError('MCP videos require authenticated access.')
         return default_storage.url(name)

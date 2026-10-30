@@ -174,6 +174,13 @@ class ClientProjectReadMixin:
 class GeneratedDocumentReadMixin:
     """Derived status and immutable-source metadata for document readers."""
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from content.services.uploaded_pdf_service import pdf_metadata
+        data['content_format'] = instance.content_format
+        data['pdf'] = pdf_metadata(instance)
+        return data
+
     def get_display_state(self, obj):
         document_type = getattr(obj, 'document_type', None)
         if getattr(document_type, 'code', None) != COLLECTION_ACCOUNT:
@@ -486,6 +493,11 @@ class DocumentCreateUpdateSerializer(EditorialModelSerializer):
         }
 
     def to_internal_value(self, data):
+        if self.instance is not None and self.instance.content_format == 'pdf':
+            from content.services.uploaded_pdf_service import PDF_COMPOSITION_FIELDS
+            forbidden = PDF_COMPOSITION_FIELDS.intersection(data)
+            if forbidden:
+                raise serializers.ValidationError({name: 'El contenido PDF sólo se cambia con Reemplazar PDF.' for name in forbidden})
         if self.instance is not None and self.instance.is_contract_mirror:
             from content.services.contract_mirror_service import mirror_read_only_message
             raise serializers.ValidationError({'detail': mirror_read_only_message(self.instance)})
@@ -540,6 +552,18 @@ class DocumentCreateUpdateSerializer(EditorialModelSerializer):
     @historical_write
     @transaction.atomic
     def update(self, instance, validated_data):
+        if instance.content_format == 'pdf':
+            from content.services.uploaded_pdf_service import lock_pdf_document
+            target = validated_data.get('project')
+            instance = lock_pdf_document(instance.pk, extra_project_ids=[target.pk if target else None])
+            # Validate the original request against the locked, current record.
+            # A stale metadata PATCH must never restore an older PDF/version.
+            extra = {key: value for key, value in validated_data.items()
+                     if key not in self.validated_data or self.validated_data[key] != value}
+            current = type(self)(instance, data=self.initial_data, partial=self.partial, context=self.context)
+            current.is_valid(raise_exception=True)
+            validated_data = {**current.validated_data, **extra}
+            self.instance = instance
         if getattr(instance.document_type, 'code', None) == 'collection_account':
             from accounts.services.billing_locks import lock_billing_document
             target = validated_data.get('project')

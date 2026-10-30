@@ -270,7 +270,7 @@ def _node_source(context, node, role, actor):
         title = node.title
         warnings.append('La copia exacta firmada no está disponible. No se usó el contenido actual.')
     else:
-        file = doc.generated_file if doc else source.file
+        file = (doc.generated_file or (doc.uploaded_pdf if doc.content_format == 'pdf' else None)) if doc else source.file
         raw, issues = _file_bytes(file) if file else (b'', [])
         warnings.extend(issues)
         # Bytes/file presence takes priority; a missing file never becomes live text.
@@ -329,7 +329,7 @@ def _attachment_source(context, item):
         raw, issues, filename, snapshot = b'', ['No consta la copia exacta firmada del anexo; no se usó contenido vivo.'], '', {}
         version, version_kind, title, date = None, 'unknown', doc.title, doc.signed_at
     else:
-        file = doc.generated_file if doc else proposal.file
+        file = (doc.generated_file or (doc.uploaded_pdf if doc.content_format == 'pdf' else None)) if doc else proposal.file
         raw, issues = _file_bytes(file) if file else (b'', [])
         filename = file.name if file else ''
         if doc and not file:
