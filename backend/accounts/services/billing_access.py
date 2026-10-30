@@ -56,6 +56,10 @@ def coherent_documents(qs):
                        | Q(project__client_id=F(f'{relation}__{client_path}')))
     return qs.filter(
         Q(billing_context__isnull=True)
+        | Q(project__isnull=False, billing_context__document_pending=True,
+            billing_context__contract__isnull=True, billing_context__amendment__isnull=True,
+            billing_context__hosting__isnull=True, billing_context__pending_by__isnull=False,
+            billing_context__pending_at__isnull=False)
         | Q(billing_context__nature='contract', billing_context__contract__project_id=F('project_id'))
         | Q(billing_context__nature='hosting', billing_context__hosting__project_id=F('project_id')),
     ).filter(Q(billing_context__amendment__isnull=True)
