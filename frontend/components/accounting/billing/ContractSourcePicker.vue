@@ -66,7 +66,10 @@ function beginComposition() {
 }
 function endComposition(event) { composing.value = false; search(event.target.value) }
 function onKeydown(event) {
-  if (composing.value || event.isComposing || event.keyCode === 229) return
+  if (composing.value || event.isComposing || event.keyCode === 229) {
+    event.stopPropagation()
+    return
+  }
   if (event.key === 'Tab') { close(); return }
   if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) return
   event.preventDefault()

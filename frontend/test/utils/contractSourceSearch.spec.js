@@ -29,4 +29,24 @@ describe('contract source search', () => {
     expect(contractSourceParts('<Contrato>', '')).toEqual([{ text: '<Contrato>', match: false }]);
     expect(contractSourceParts('<Contrato>', 'nada')).toEqual([{ text: '<Contrato>', match: false }]);
   });
+
+  it('merges overlapping original ranges from decomposed syllables', () => {
+    const title = '가가가';
+
+    const parts = contractSourceParts(title, 'ᅡᄀ');
+
+    expect(parts).toEqual([{ text: title, match: true }]);
+    expect(parts.map(part => part.text).join('')).toBe(title);
+  });
+
+  it('preserves surrounding text around merged Unicode matches', () => {
+    const title = '📄 가가가 <final>';
+
+    const parts = contractSourceParts(title, 'ᅡᄀ');
+
+    expect(parts).toEqual([
+      { text: '📄 ', match: false }, { text: '가가가', match: true }, { text: ' <final>', match: false },
+    ]);
+    expect(parts.map(part => part.text).join('')).toBe(title);
+  });
 });

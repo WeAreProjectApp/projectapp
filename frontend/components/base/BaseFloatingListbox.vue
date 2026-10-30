@@ -117,8 +117,9 @@ function onPointerDown(event) {
 
 function onKeydown(event) {
   if (event.key !== 'Escape') return;
-  event.preventDefault();
   event.stopImmediatePropagation();
+  if (event.isComposing || event.keyCode === 229) return;
+  event.preventDefault();
   emit('close');
 }
 

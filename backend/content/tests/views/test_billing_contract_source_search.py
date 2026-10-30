@@ -1,13 +1,17 @@
 """Contract picker metadata, ordering and shared substring search."""
-from datetime import datetime, timezone
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from accounts.models import Project
+from accounts.services.billing_contracts import (
+    contract_source_options,
+    filter_contract_source_options,
+    normalize_source_search,
+)
 from django.core.files.base import ContentFile
 
-from accounts.models import Project
-from accounts.services.billing_contracts import contract_source_options, filter_contract_source_options, normalize_source_search
 from content.models import Document, DocumentFolder, DocumentType, ProposalDocument
 from content.tests.views.test_billing_context_contract_link import _proposal_contract
 
@@ -35,9 +39,9 @@ def test_picker_keeps_versions_with_folder_paths_and_contracts_first(project):
     original = Document.objects.create(title='Contrato_base', project=project, folder=folder)
     revised = Document.objects.create(title='Contrato_base', project=project, folder=root)
     evidence = Document.objects.create(title='Evidencia reciente', project=project)
-    Document.objects.filter(pk=original.pk).update(created_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
-    Document.objects.filter(pk=revised.pk).update(created_at=datetime(2026, 2, 1, tzinfo=timezone.utc))
-    Document.objects.filter(pk=evidence.pk).update(created_at=datetime(2026, 3, 1, tzinfo=timezone.utc))
+    Document.objects.filter(pk=original.pk).update(created_at=datetime(2026, 1, 1, tzinfo=UTC))
+    Document.objects.filter(pk=revised.pk).update(created_at=datetime(2026, 2, 1, tzinfo=UTC))
+    Document.objects.filter(pk=evidence.pk).update(created_at=datetime(2026, 3, 1, tzinfo=UTC))
 
     options = contract_source_options(project)
 
@@ -47,7 +51,7 @@ def test_picker_keeps_versions_with_folder_paths_and_contracts_first(project):
     assert [row['is_contract_like'] for row in options] == [True, True, False]
 
 
-@pytest.mark.parametrize('code,title', [
+@pytest.mark.parametrize(('code', 'title'), [
     ('contract_service', 'Acuerdo de prestación'),
     ('amendment', 'Cambio de condiciones'),
     ('markdown', 'OTROSÍ_Actualizado'),
@@ -97,6 +101,23 @@ def test_folder_metadata_queries_are_batched(project, django_assert_num_queries)
         options = contract_source_options(project)
 
     assert [row['folder_path'] for row in options] == ['Contratos raíz / Firmados'] * 2
+
+
+def test_five_level_folder_paths_use_queries_per_level(project, django_assert_num_queries):
+    root = DocumentFolder.objects.create(name='Legal', project=project)
+    level_two = DocumentFolder.objects.create(name='Contratos', project=project, parent=root)
+    level_three = DocumentFolder.objects.create(name='2026', project=project, parent=level_two)
+    level_four = DocumentFolder.objects.create(name='Firmados', project=project, parent=level_three)
+    leaf = DocumentFolder.objects.create(name='Versiones', project=project, parent=level_four)
+    sources = Document.objects.bulk_create([
+        Document(title=f'Contrato {index}', project=project, folder=leaf) for index in range(8)
+    ])
+
+    with django_assert_num_queries(2 + 5):
+        options = contract_source_options(project)
+
+    assert {row['id'] for row in options} == {source.pk for source in sources}
+    assert [row['folder_path'] for row in options] == ['Legal / Contratos / 2026 / Firmados / Versiones'] * 8
 
 
 def test_legacy_folder_cycle_terminates_without_repeating_folder_queries(project, django_assert_num_queries):
