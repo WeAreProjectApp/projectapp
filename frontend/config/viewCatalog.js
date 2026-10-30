@@ -724,7 +724,7 @@ export const viewCatalogSections = [
         reference: 'vista de creación de documento',
         audience: 'admin',
         viewType: 'create',
-        notes: 'Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar.',
+        notes: 'Crea documentos desde Markdown o PDF de hasta 25 MiB. El PDF conserva título, notas, cliente, proyecto y carpeta, se ve como archivo original y no se edita como texto. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar.',
       },
       {
         label: 'Editar documento',
@@ -734,7 +734,7 @@ export const viewCatalogSections = [
         reference: 'vista de edición de documento',
         audience: 'admin',
         viewType: 'edit',
-        notes: 'Los documentos de cierre abren la fuente estructurada compartida o permiten sustituir adjuntos habilitados en borrador. El paquete vigente y su historial se conservan hasta confirmar otra versión; los conflictos conservan el archivo elegido. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; los tres espejos contractuales se abren en solo lectura con versión, sincronización, PDF y Markdown en vivo; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Notas y borradores comparten el editor; WhatsApp ofrece sus formatos nativos.',
+        notes: 'Los PDF subidos conservan identificación editable, descarga original y reemplazo versionado con historial. El reemplazo se bloquea cuando sustenta evidencia firmada o publicada. La búsqueda del gestor incluye únicamente texto extraído del PDF vigente, sin OCR. Los documentos de cierre abren la fuente estructurada compartida o permiten sustituir adjuntos habilitados en borrador. El paquete vigente y su historial se conservan hasta confirmar otra versión; los conflictos conservan el archivo elegido. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; los tres espejos contractuales se abren en solo lectura con versión, sincronización, PDF y Markdown en vivo; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Notas y borradores comparten el editor; WhatsApp ofrece sus formatos nativos.',
       },
       {
         label: 'Estados de documentos',

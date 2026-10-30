@@ -549,7 +549,7 @@ def update_document(request, document_id):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer.save(updated_by=request.user)
+    document = serializer.save(updated_by=request.user)
 
     # Re-parse markdown if it changed
     if 'content_markdown' in request.data or 'text_formats' in request.data:
@@ -789,6 +789,14 @@ def duplicate_document(request, document_id):
         status=Document.Status.DRAFT,
         content_markdown=document.content_markdown,
         content_json=copy.deepcopy(document.content_json),
+        content_format=document.content_format,
+        uploaded_pdf=document.uploaded_pdf.name,
+        pdf_filename=document.pdf_filename,
+        pdf_size=document.pdf_size,
+        pdf_sha256=document.pdf_sha256,
+        pdf_version=1 if document.content_format == 'pdf' else 0,
+        pdf_search_text=document.pdf_search_text,
+        pdf_text_status=document.pdf_text_status,
         text_formats={path: fmt for path, fmt in document.text_formats.items() if path == '/content_markdown'},
         # A communication draft belongs to one concrete delivery. Copying it
         # into another document risks sending stale client-facing text.
@@ -823,6 +831,20 @@ def download_document_pdf(request, document_id):
     shared = shared_document_download(document)
     if shared is not None:
         return shared
+
+    if document.content_format == 'pdf' and not document.generated_file:
+        from django.http import FileResponse
+        try:
+            stream = document.uploaded_pdf.open('rb')
+        except (OSError, ValueError):
+            return Response({'detail': 'El PDF no está disponible.'}, status=404)
+        response = FileResponse(stream, content_type='application/pdf')
+        response['Content-Disposition'] = content_disposition_header(
+            not request.query_params.get('inline'), document.pdf_filename or f'{safe_slug(document.title)}.pdf',
+        )
+        response['Cache-Control'] = 'private, no-store'
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response
 
     if is_contract_mirror(document):
         # Rendered live from the one contract: the same draft the client

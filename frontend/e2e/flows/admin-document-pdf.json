@@ -1,0 +1,10 @@
+{
+  "id": "admin-document-pdf",
+  "name": "Admin uploaded PDF documents",
+  "module": "admin",
+  "roles": ["admin"],
+  "priority": "P2",
+  "description": "Crear un PDF desde selección o arrastre, ver el original sin editor Markdown, descargarlo, actualizar identificación y reemplazar con versión e historial. Los rechazos de validación o concurrencia conservan la selección; el visor fallido mantiene descarga. El archivo PDF tiene límite de 25 MiB y los metadatos conservan permisos y publicación del gestor.",
+  "expectedSpecs": 1,
+  "outcomes": ["success", "error", "failure", "display"]
+}

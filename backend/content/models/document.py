@@ -8,6 +8,7 @@ from django.db import models
 from content.models.history_tracked import HistoryTrackedModel
 
 from content.utils import safe_slug
+from content.storage import get_private_storage
 
 
 class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
@@ -170,6 +171,14 @@ class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
     is_client_visible = models.BooleanField(default=False, db_index=True)
     content_markdown = models.TextField(blank=True, default='')
     content_json = models.JSONField(default=dict, blank=True)
+    content_format = models.CharField(max_length=16, default='markdown', choices=[('markdown', 'Markdown'), ('pdf', 'PDF')])
+    uploaded_pdf = models.FileField(storage=get_private_storage, upload_to='documents/uploaded/%Y/%m/', max_length=500, blank=True)
+    pdf_filename = models.CharField(max_length=255, blank=True)
+    pdf_size = models.PositiveIntegerField(default=0)
+    pdf_sha256 = models.CharField(max_length=64, blank=True)
+    pdf_version = models.PositiveIntegerField(default=0)
+    pdf_search_text = models.TextField(blank=True)
+    pdf_text_status = models.CharField(max_length=16, blank=True)
     client_name = models.CharField(max_length=255, blank=True, default='')
     # Internal copy prepared for the operator to send manually. It is
     # deliberately separate from the document body: none of these fields is

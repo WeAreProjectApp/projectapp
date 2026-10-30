@@ -176,8 +176,12 @@ DRIFT_BACKLOG = frozenset()
 
 EXCLUDED_TOOLS = {
     ('documents', 'cancel_action'): 'owned by PR #503',
+    ('documents', 'compare_document_history'): 'owned by PR #503',
     ('documents', 'confirm_action'): 'owned by PR #503',
     ('documents', 'describe_capabilities'): 'owned by PR #503',
+    ('documents', 'download_document_history_file'): 'owned by PR #503',
+    ('documents', 'get_document_history_version'): 'owned by PR #503',
+    ('documents', 'list_document_history'): 'owned by PR #503',
     ('projects', 'cancel_action'): 'owned by PR #503',
     ('projects', 'compare_project_history'): 'owned by PR #503',
     ('projects', 'confirm_action'): 'owned by PR #503',

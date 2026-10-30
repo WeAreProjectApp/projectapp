@@ -77,6 +77,37 @@ export const useDocumentStore = defineStore('documents', {
   },
 
   actions: {
+    async createFromPdf(file, metadata) {
+      return this._writePdf('documents/create-from-pdf/', file, metadata);
+    },
+
+    async replacePdf(id, file, expectedVersion) {
+      return this._writePdf(`documents/${id}/replace-pdf/`, file, { expected_version: expectedVersion });
+    },
+
+    async _writePdf(url, file, metadata) {
+      this.isUpdating = true;
+      this.error = null;
+      const payload = new FormData();
+      payload.append('file', file);
+      Object.entries(metadata).forEach(([key, value]) => {
+        if (value !== undefined) payload.append(key, value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value));
+      });
+      try {
+        const response = await create_request(url, payload);
+        this.currentDocument = response.data;
+        this._reconcileScope(Number(response.data.id), response.data);
+        return { success: true, data: response.data };
+      } catch (error) {
+        this.error = 'pdf_upload_failed';
+        const normalized = normalizeApiError(error, 'No se pudo guardar el PDF.');
+        if (normalized.status === 413) normalized.message = 'El PDF no puede superar 25 MiB; reduce el archivo o sus metadatos.';
+        return { success: false, ...normalized };
+      } finally {
+        this.isUpdating = false;
+      }
+    },
+
     /**
      * fetchDocuments: List all documents (admin), applying current filters.
      * Pass `{ folder, scope, tags, order }` to override for this call.

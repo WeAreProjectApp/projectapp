@@ -11,7 +11,7 @@
           Volver a documentos
         </NuxtLink>
         <h1 class="text-2xl font-light text-text-default mt-2">Nuevo Documento</h1>
-        <p class="text-sm text-text-muted mt-1">Crea un documento a partir de Markdown (pegado o subido).</p>
+        <p class="text-sm text-text-muted mt-1">{{ t('documentPdf.createDescription') }}</p>
       </div>
       <!-- Sólo acciones: lo que falta para crear se dice bajo cada campo al
            intentarlo, así la fila no cambia de alto ni desalinea Cancelar. -->
@@ -173,7 +173,7 @@
 
           <hr class="border-border-muted" />
 
-          <div class="space-y-4">
+          <div v-if="!isPdfUpload" class="space-y-4">
             <h2 class="text-xs uppercase tracking-wide font-semibold text-text-muted">Opciones de exportación</h2>
             <div>
               <label class="block text-sm font-medium text-text-default mb-1">Idioma</label>
@@ -261,7 +261,7 @@
           v-if="mode === 'upload'"
           v-slot="{ errorId, invalid }"
           ref="contentField"
-          label="Archivo Markdown (.md)"
+          :label="t('documentPdf.fileLabel')"
           required
           :error="contentError"
           class="flex flex-1 flex-col"
@@ -281,15 +281,15 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
             <p class="mt-3 text-sm text-text-muted">
-              Arrastra un archivo <code class="text-xs px-1 py-0.5 bg-surface-raised rounded">.md</code> aquí
+              {{ t('documentPdf.dropHint') }}
             </p>
-            <p class="text-xs text-text-subtle mt-1">o</p>
+            <p class="text-xs text-text-subtle mt-1">{{ t('documentPdf.sizeHint') }}</p>
             <label
               class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium
                      hover:bg-primary cursor-pointer transition-colors shadow-sm"
             >
               Seleccionar archivo
-              <input type="file" accept=".md,.markdown,.txt" class="hidden" @change="handleFileUpload" />
+              <input type="file" accept=".pdf,.md,.markdown,.txt" data-testid="doc-create-file" class="hidden" @change="handleFileUpload" />
             </label>
             <p v-if="uploadedFileName" class="mt-4 text-xs text-text-muted">
               <span class="font-medium">Archivo:</span> {{ uploadedFileName }}
@@ -297,7 +297,9 @@
           </div>
           <!-- El campo enlaza su aviso al primer control, que aquí es el input
                de archivo oculto: el contenido cargado lleva su propio enlace. -->
+          <PdfPreviewPane v-if="isPdfUpload" :src="pdfPreviewSrc" class="mt-4 h-96" test-id-prefix="doc-create-pdf" />
           <textarea
+            v-else
             v-model="form.content_markdown"
             rows="12"
             readonly
@@ -363,7 +365,8 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, watch, nextTick } from 'vue';
+import { reactive, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import PdfPreviewPane from '~/components/base/PdfPreviewPane.vue';
 import DocumentEditorContent from '~/components/panel/documents/DocumentEditorContent.vue';
 import DocumentClientNoteModal from '~/components/panel/documents/DocumentClientNoteModal.vue';
 import DocumentFolderSelect from '~/components/panel/documents/DocumentFolderSelect.vue';
@@ -381,6 +384,7 @@ import { describeIncludedPages } from '~/utils/documentCoverPages';
 import { folderPathLabel, resolveFolderPreselection } from '~/utils/folderOptions';
 
 const localePath = useLocalePath();
+const { t } = useI18n();
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
 const documentStore = useDocumentStore();
@@ -389,6 +393,15 @@ const clientsStore = useProposalClientsStore();
 const notify = usePanelNotify();
 const mode = ref('paste');
 const uploadedFileName = ref('');
+const selectedFile = ref(null);
+const fileError = ref('');
+const isPdfUpload = computed(() => mode.value === 'upload' && selectedFile.value?.name.toLowerCase().endsWith('.pdf'));
+const pdfPreviewSrc = ref('');
+watch(selectedFile, (file) => {
+  if (pdfPreviewSrc.value) URL.revokeObjectURL(pdfPreviewSrc.value);
+  pdfPreviewSrc.value = file?.name.toLowerCase().endsWith('.pdf') ? URL.createObjectURL(file) : '';
+});
+onBeforeUnmount(() => { if (pdfPreviewSrc.value) URL.revokeObjectURL(pdfPreviewSrc.value); });
 const showClientNote = ref(false);
 const isDragging = ref(false);
 const route = useRoute();
@@ -424,6 +437,8 @@ const form = reactive({
 
 const CREATE_FIELD_LABELS = {
   title: 'título',
+  selectedFile: 'archivo',
+  mode: 'modo de entrada',
   client: 'cliente',
   project: 'proyecto',
   language: 'idioma',
@@ -452,7 +467,7 @@ const {
   handleSecondaryAction,
   handleCancelled,
 } = useUnsavedGuard({
-  snapshot: () => ({ ...form }),
+  snapshot: () => ({ ...form, selectedFile: selectedFile.value ? `${selectedFile.value.name}:${selectedFile.value.size}:${selectedFile.value.lastModified}` : null, mode: mode.value }),
   labels: CREATE_FIELD_LABELS,
 });
 
@@ -510,8 +525,8 @@ const titleError = computed(() => (
 ));
 
 const contentError = computed(() => (
-  apiFieldErrors.markdown
-  || (validationAttempted.value && !form.content_markdown.trim()
+  (mode.value === 'upload' ? fileError.value : '') || apiFieldErrors.markdown
+  || (validationAttempted.value && !isPdfUpload.value && !form.content_markdown.trim()
     ? 'Pega, escribe o carga el contenido Markdown.'
     : '')
 ));
@@ -667,13 +682,39 @@ const modeTabs = [
 
 function readMarkdownFile(file) {
   if (!file) return;
+  selectedFile.value = null;
+  fileError.value = '';
+  uploadedFileName.value = '';
+  if (!/\.(pdf|md|markdown|txt)$/i.test(file.name)) {
+    fileError.value = t('documentPdf.invalidFormat');
+    return;
+  }
+  if ((file.name.toLowerCase().endsWith('.pdf') && file.size > 25 * 1024 * 1024) || file.size === 0) {
+    fileError.value = t('documentPdf.invalidSize');
+    return;
+  }
+  selectedFile.value = file;
   uploadedFileName.value = file.name;
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    form.content_markdown = '';
+    apiFieldErrors.markdown = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
-    form.content_markdown = e.target?.result || '';
+    if (selectedFile.value === file && mode.value === 'upload') form.content_markdown = e.target?.result || '';
   };
   reader.readAsText(file);
 }
+
+watch(mode, () => {
+  apiFieldErrors.markdown = '';
+  fileError.value = '';
+  if (mode.value === 'paste') {
+    selectedFile.value = null;
+    uploadedFileName.value = '';
+  }
+});
 
 function handleFileUpload(event) {
   readMarkdownFile(event.target.files?.[0]);
@@ -717,7 +758,14 @@ async function handleSubmit() {
     template_style: form.template_style,
   };
 
-  const result = await documentStore.createFromMarkdown(payload);
+  const result = isPdfUpload.value
+    ? await documentStore.createFromPdf(selectedFile.value, {
+      title: payload.title, client: payload.client, project: payload.project, folder_id: payload.folder_id,
+      language: payload.language, client_email_subject: payload.client_email_subject,
+      client_email_body: payload.client_email_body, client_whatsapp_message: payload.client_whatsapp_message,
+      client_custom_notes: payload.client_custom_notes,
+    })
+    : await documentStore.createFromMarkdown(payload);
   if (result.success) {
     notify.success({ title: 'Documento creado' });
     // Lo del formulario ya está persistido: re-fijar la baseline desarma el
@@ -727,14 +775,14 @@ async function handleSubmit() {
   } else {
     // Título y contenido tienen campo propio; el resto de rechazos sigue en la
     // notificación con el formato de siempre.
-    const { title = '', markdown = '', ...otherFieldErrors } = result.fieldErrors || {};
+    const { title = '', markdown = '', file = '', ...otherFieldErrors } = result.fieldErrors || {};
     apiFieldErrors.title = title;
-    apiFieldErrors.markdown = markdown;
+    apiFieldErrors.markdown = markdown || file;
     const fieldDetail = Object.entries(otherFieldErrors)
       .map(([k, v]) => `${k}: ${v}`)
       .join(' · ');
-    if (title || markdown) await revealFirstInvalidField();
-    if (fieldDetail || !(title || markdown)) {
+    if (title || markdown || file) await revealFirstInvalidField();
+    if (fieldDetail || !(title || markdown || file)) {
       notify.error({
         title: 'No se pudo crear el documento',
         detail: fieldDetail || result.message,

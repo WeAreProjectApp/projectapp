@@ -50,9 +50,11 @@ class TestDocumentListSerializer:
             'active_states',
             'content_excerpt', 'created_at', 'updated_at',
             'is_archived', 'archived_at', 'archived_cause',
-            'thread_summary', 'movable',
+            'thread_summary', 'movable', 'content_format', 'pdf',
         }
         assert set(data.keys()) == expected
+        assert data['content_format'] == 'markdown'
+        assert data['pdf'] is None
 
     def test_ordinary_document_is_not_the_contract_window(self, document):
         data = DocumentListSerializer(document).data
@@ -126,8 +128,12 @@ class TestDocumentDetailSerializer:
             'created_at', 'updated_at',
             'is_archived', 'archived_at', 'archived_cause',
             'thread_summary', 'editable', 'movable', 'move_blockers', 'etag',
+            'content_format', 'pdf', 'content_editable', 'pdf_replaceable',
         }
         assert set(data.keys()) == expected
+        assert data['content_editable'] is True
+        assert data['pdf_replaceable'] is False
+        assert data['pdf'] is None
 
     def test_includes_collection_account_annotations(self):
         document = Document.objects.create(
@@ -555,3 +561,30 @@ class TestMoveIntoAnAssociatedFolder:
         assert serializer.is_valid(), serializer.errors
         serializer.save()
         assert not hasattr(Document, 'adopt_folder_client')
+
+
+@pytest.mark.django_db
+def test_pdf_summary_exposes_metadata_without_private_storage_path(document):
+    document.content_format = 'pdf'
+    document.uploaded_pdf = 'documents/uploaded/private-original.pdf'
+    document.pdf_filename = 'original.pdf'
+    document.pdf_size = 42
+    document.pdf_sha256 = '9' * 64
+    document.pdf_version = 3
+    document.pdf_text_status = 'indexed'
+    data = DocumentListSerializer(document).data
+    assert data['content_format'] == 'pdf'
+    assert data['pdf'] == {'filename': 'original.pdf', 'size': 42, 'sha256': '9' * 64,
+                           'version': 3, 'text_status': 'indexed'}
+    assert 'documents/uploaded/' not in str(data)
+
+
+@pytest.mark.django_db
+def test_pdf_detail_distinguishes_metadata_editing_from_file_replacement(document):
+    document.content_format = 'pdf'
+    document.pdf_version = 1
+    data = DocumentDetailSerializer(document).data
+    assert data['editable'] is True
+    assert data['content_editable'] is False
+    assert data['pdf_replaceable'] is True
+    assert data['pdf']['version'] == 1

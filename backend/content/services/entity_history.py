@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from functools import wraps
 from inspect import signature
 import uuid
+import logging
 
 from django.db import DEFAULT_DB_ALIAS, transaction
 from django.urls import Resolver404, resolve
@@ -16,6 +17,7 @@ from content.services.entity_history_registry import (
 
 _operation = ContextVar('entity_history_operation', default=None)
 _disabled = ContextVar('entity_history_disabled', default=False)
+logger = logging.getLogger(__name__)
 
 
 def history_active():
@@ -35,6 +37,8 @@ class HistoryOperation:
     operation_id: object = field(default_factory=uuid.uuid4)
     before: dict = field(default_factory=dict)
     evidence: dict = field(default_factory=dict)
+    rollback_files: list = field(default_factory=list)
+    committed: bool = False
 
 
 def changes_between(before, after, path=''):
@@ -159,23 +163,50 @@ def _flush(op):
                         operation_id=op.operation_id, evidence=op.evidence.get((kind, pk)))
 
 
+def cleanup_rollback_files(files):
+    """Compensate only newly saved objects; retained historical files never enter here."""
+    for storage, name in files:
+        try:
+            storage.delete(name)
+        except Exception:
+            logger.exception('Could not clean a rolled-back history artifact')
+
+
+def retain_file_on_rollback(storage, name):
+    op = _operation.get()
+    if op is not None:
+        op.rollback_files.append((storage, name))
+    return op
+
+
 @contextmanager
 def history_operation(*, actor=None, source='system'):
-    """Group a logical write into one revision per aggregate, atomically."""
+    """Group a logical write into one revision and compensate new files on failure."""
     if _disabled.get() or _operation.get() is not None:
         yield
         return
     op = HistoryOperation(actor=actor, source=source)
-    with transaction.atomic():
-        token = _operation.set(op)
-        try:
-            yield
-            if not transaction.get_rollback():
-                _flush(op)
-        finally:
-            # on_commit callbacks may write other records. They must start a
-            # new operation after this one has been flushed, not append to it.
-            _operation.reset(token)
+    rollback = False
+    try:
+        with transaction.atomic():
+            # Register first: a later on_commit callback may fail after SQL has
+            # committed. Such an exception must never delete committed files.
+            transaction.on_commit(lambda: setattr(op, 'committed', True))
+            token = _operation.set(op)
+            try:
+                yield
+                rollback = transaction.get_rollback()
+                if not rollback:
+                    _flush(op)
+            finally:
+                _operation.reset(token)
+    except BaseException:
+        if not op.committed:
+            cleanup_rollback_files(op.rollback_files)
+        raise
+    else:
+        if rollback:
+            cleanup_rollback_files(op.rollback_files)
 
 
 @contextmanager

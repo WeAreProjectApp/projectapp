@@ -18,6 +18,7 @@ from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import McpUpload
+from content.services.uploaded_pdf_service import pdf_bridge_artifacts
 
 factory = APIRequestFactory()
 
@@ -209,7 +210,7 @@ def _request_for(method, url, *, query, data, files, if_match):
     if query:
         url = f'{url}?{urlencode(query, doseq=True)}'
     # Multipart cannot encode nested objects; the Panel parsers accept JSON strings.
-    encoded = {key: json.dumps(value) if isinstance(value, (dict, list)) else value
+    encoded = {key: json.dumps(value) if isinstance(value, (dict, list)) else ('' if value is None else value)
                for key, value in data.items()} if files else data
     payload = {**encoded, **files}
     request_factory = getattr(factory, method)
@@ -222,8 +223,13 @@ def _request_for(method, url, *, query, data, files, if_match):
     )
 
 
+@pdf_bridge_artifacts
 @transaction.atomic
 def _execute(operation, arguments):
+    if operation['name'] == 'update_pdf_document':
+        from content.models import Document
+        if not Document.objects.filter(pk=arguments.get('document_id'), content_format='pdf').exists():
+            raise ToolError('El documento no es un PDF subido.', code='NOT_FOUND')
     args = deepcopy(arguments)
     envelope_aliases = operation.get('envelope_aliases', True)
     if not envelope_aliases:

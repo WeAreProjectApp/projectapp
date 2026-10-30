@@ -526,7 +526,7 @@
 
           <hr class="border-border-muted" />
 
-          <div class="space-y-4">
+          <div v-if="!uploadedPdf" class="space-y-4">
             <h2 class="text-xs uppercase tracking-wide font-semibold text-text-muted">Opciones de exportación</h2>
             <div>
               <label class="block text-sm font-medium text-text-default mb-1">Idioma</label>
@@ -574,8 +574,9 @@
         </div>
       </aside>
 
+      <UploadedPdfPanel v-if="uploadedPdf" :document="documentStore.currentDocument" @pending="pendingPdfReplacement = $event" />
       <section
-        v-if="pdfPreviewDocument"
+        v-else-if="pdfPreviewDocument"
         class="w-full max-w-4xl justify-self-center bg-surface rounded-xl shadow-sm border border-border-muted p-5 sm:p-6 flex min-w-0 flex-col"
         data-testid="doc-generated-snapshot-panel"
       >
@@ -819,6 +820,7 @@ import DashboardRadarDestination from '~/components/panel/dashboard/DashboardRad
 import ProposalSharedDocuments from '~/components/BusinessProposal/admin/ProposalSharedDocuments.vue';
 import ProposalSharedBinary from '~/components/BusinessProposal/admin/ProposalSharedBinary.vue';
 import VatBreakdown from '~/components/accounting/VatBreakdown.vue';
+import UploadedPdfPanel from '~/components/panel/documents/UploadedPdfPanel.vue';
 import EntityHistoryTabs from '~/components/history/EntityHistoryTabs.vue';
 import { reactive, ref, computed, onMounted } from 'vue';
 import MarkdownPreviewModal from '~/components/panel/documents/MarkdownPreviewModal.vue';
@@ -853,6 +855,7 @@ const localePath = useLocalePath();
 const route = useRoute();
 const router = useRouter();
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
+const { t } = useI18n();
 
 const documentStore = useDocumentStore();
 const folderStore = useDocumentFolderStore();
@@ -874,6 +877,8 @@ const loadError = ref(false);
 // Requisito 6: an issued cuenta is a fact — read-only here, forever.
 const lockedCuenta = ref(false);
 const generatedSnapshot = ref(false);
+const pendingPdfReplacement = ref(null);
+const uploadedPdf = computed(() => documentStore.currentDocument?.content_format === 'pdf');
 // The window onto the one contract: rendered live, never edited here.
 const contractMirror = ref(false);
 const readOnlyDocument = computed(
@@ -952,6 +957,7 @@ function formatDate(value) {
 // Nombres sin artículo: se encadenan como los encadenaría una persona
 // ("cliente y proyecto sin guardar").
 const FIELD_LABELS = {
+  pdf_replacement: 'reemplazo de PDF',
   title: 'título',
   client: 'cliente',
   project: 'proyecto',
@@ -994,17 +1000,18 @@ const {
   handleSecondaryAction,
   handleCancelled,
 } = useUnsavedGuard({
-  snapshot: () => ({ ...form }),
+  snapshot: () => ({ ...form, pdf_replacement: pendingPdfReplacement.value }),
   labels: FIELD_LABELS,
   save: handleSave,
   // Una cuenta de cobro emitida no se guarda: el backend contesta 400
   // collection_account_locked. Ofrecer "Guardar y salir" ahí sería mentir.
-  canSave: () => !readOnlyDocument.value,
-  blockedReason: 'Este documento es de sólo lectura y no se puede modificar.',
+  canSave: () => !readOnlyDocument.value && !pendingPdfReplacement.value,
+  blockedReason: 'Resuelve los cambios pendientes de PDF o las restricciones del documento antes de guardar.',
   reload: reloadDocument,
 });
 
 const saveBlockReasons = computed(() => [
+  pendingPdfReplacement.value ? t('documentPdf.savePdfFirst') : '',
   lockedCuenta.value
     ? 'Esta cuenta de cobro ya fue emitida. Anúlala y crea una nueva para modificarla.'
     : '',
@@ -1315,6 +1322,10 @@ onMounted(reloadDocument);
 usePanelRefresh(guardedReload);
 
 async function handleSave() {
+  if (pendingPdfReplacement.value) {
+    notify.error({ title: t('documentPdf.savePdfFirst') });
+    return false;
+  }
   const payload = {
     title: form.title.trim(),
     // Siempre presentes, null incluido: es lo que permite desvincular.
@@ -1334,6 +1345,10 @@ async function handleSave() {
     folder_id: form.folder_id,
     template_style: form.template_style,
   };
+
+  if (uploadedPdf.value) {
+    ['content_markdown', 'include_portada', 'include_subportada', 'include_contraportada', 'template_style'].forEach((key) => delete payload[key]);
+  }
 
   // Se capturan ANTES de guardar: guardar limpia la lista.
   const savedLabels = [...dirtyLabels.value];
@@ -1362,6 +1377,7 @@ async function handleSave() {
 }
 
 const downloadItems = computed(() => {
+  if (uploadedPdf.value) return [{ action: 'download', label: t('documentPdf.download'), onClick: () => handleDownloadPdf() }];
   if (contractMirror.value) {
     return [
       { action: 'download', label: 'Descargar PDF', onClick: () => handleDownloadPdf() },
