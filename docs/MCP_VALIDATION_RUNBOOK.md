@@ -2891,3 +2891,12 @@ solicita confirmación; un cambio posterior de la carpeta o contenido añadido
 impide ejecutarla. Una credencial restringida no descubre ni ejecuta acciones
 fuera de su alcance y no gana permiso de lectura de secretos por administrar
 carpetas.
+
+### Contabilidad — documento vinculado pendiente (2026-10-29)
+
+- `create_collection_account` y `preview_collection_account` aceptan `document_pending: true`. Es una decisión explícita: `billing_nature` puede omitirse o conservar `contract`/`hosting`, pero no se aceptan IDs de vínculos parciales. Se reutilizan el serializer y el servicio del panel; no se modifica el período de hosting de PA-72.
+- `get_collection_account`, `get_collection_account_context` y `list_collection_accounts` devuelven `context.document_pending`, `pending_by`, `pending_at` y `version` (la lectura de contexto devuelve esos campos directamente). Autor y fecha se calculan en el servidor; no son entradas editables.
+- `list_collection_accounts` filtra con `document_pending: true`, `project_id` y `client_profile_id`; `meta.document_pending_count` cuenta las decisiones explícitas dentro del conjunto filtrado. No incluye históricos sin contexto como si fueran decisiones nuevas.
+- Para completar: consultar versión y opciones; ejecutar `associate_collection_account_context` con `project_id`, `account_id` y `payload` con `billing_nature`, vínculo válido, `expected_version` y `reason`; confirmar la operación. Retira el aviso y conserva el historial de la decisión, PDF, importes, pagos y estado comercial. El hosting conserva su validación de evidencia.
+- Crear y completar mantienen la confirmación sensible MCP y los permisos del panel. `document_pending` no habilita acceder a otro proyecto/cliente ni cambiar una asociación completa a pendiente.
+- Verificar: creación sin marca rechaza vacíos; con marca crea/emite/envía; list/read distinguen históricos; campos de auditoría falsificados y vínculos parciales son rechazados; completar con versión antigua falla; completar correctamente retira el filtro y el radar. Pruebas focales: `accounts/tests/billing/test_pending_document_mcp.py`.

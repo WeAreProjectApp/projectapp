@@ -97,3 +97,19 @@ it('counts pending elements rather than alert groups', () => {
   store.summary.attention.push({ type: 'recurring_due', count: 1 });
   expect(store.attentionCount).toBe(7);
 });
+
+it('identifies accounts with pending documents and opens their exact accounting destination', async () => {
+  const pending = { id: 42, type: 'collection_documents_pending', title: 'PA-ACME-042', client: 'ACME',
+    amount: '150000', currency: 'COP', pending_at: '2026-10-29T12:00:00Z', eligible: true,
+    destination: '/panel/accounting/collections?account=42&radar=1' };
+  get_request.mockResolvedValueOnce({ data: { results: [pending], total: 1, has_next: false } });
+  const wrapper = mountRadar([{ type: pending.type, count: 1, severity: 'warning', meta: {} }]);
+  expect(wrapper.text()).toContain('1 cuenta con documento pendiente');
+  await wrapper.get('[data-testid="attention-item-collection_documents_pending"]').trigger('click');
+  await flushPromises();
+  expect(wrapper.get('[data-testid="radar-record-collection_documents_pending-42"]').text()).toContain('PA-ACME-042');
+  get_request.mockResolvedValueOnce({ data: pending });
+  await wrapper.get('[data-testid="radar-record-collection_documents_pending-42"]').trigger('click');
+  await flushPromises();
+  expect(wrapper.get('[data-testid="radar-detail-destination"]').attributes('href')).toBe(pending.destination);
+});

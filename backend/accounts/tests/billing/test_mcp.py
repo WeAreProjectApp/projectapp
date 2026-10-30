@@ -321,7 +321,7 @@ def test_mcp_billing_registry_and_model_contract_expose_the_explicit_context_sur
         'preview_hosting_evidence', 'reconcile_hosting_evidence',
     } <= tool_names
     assert contracts['accounts.CollectionAccountContext'].read_write == frozenset({
-        'nature', 'contract', 'amendment', 'hosting',
+        'nature', 'contract', 'amendment', 'hosting', 'document_pending',
     })
     assert contracts['accounts.ProjectHosting'].read_only == frozenset({
         'id', 'project', 'version', 'created_at', 'updated_at',

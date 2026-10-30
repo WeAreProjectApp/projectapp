@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Dashboard attention accordions list five records at a time, open current details and navigate to exact records with visual focus. Counts represent pending elements; missing records, permission denials and network retries have explicit feedback.",
+  "description": "Dashboard attention accordions list five records at a time, open current details and navigate to exact records with visual focus. Counts represent pending elements; missing records, permission denials and network retries have explicit feedback. Incluye cuentas con documento vinculado pendiente como alerta financiera exclusiva de superusuarios, con destino al detalle exacto de la cuenta; excluye anuladas y archivadas y se retira al completar.",
   "expectedSpecs": 2,
   "outcomes": [
     "display",

@@ -58,3 +58,7 @@ que Ingresos, con Participaciones, Diferencia e IVA heredado. Consulta la vista
 previa y registra por el contrato compartido, también para un solo ingreso.
 La confirmación al cliente se revisa dentro del diálogo y se envía después
 del registro; el período opcional de hosting se conserva.
+
+## Documento vinculado pendiente
+
+La preparación permite activar «Dejar documento pendiente»: conserva sólo el tipo o deja también el tipo pendiente, sin IDs de vínculo. La elección persiste al volver de preview y no bloquea emitir/enviar por este vínculo; la validación conserva los demás requisitos.

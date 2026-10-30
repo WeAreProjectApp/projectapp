@@ -124,7 +124,7 @@ def collection_account_list_create_view(request):
         created_by=request.user,
         updated_by=request.user,
     )
-    if doc.project_id:
+    if doc.project_id or data.get('document_pending'):
         associate_account(doc.pk, request.user, data, creating=True)
     DocumentCollectionAccount.objects.create(
         document=doc,

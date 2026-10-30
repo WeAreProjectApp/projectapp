@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import BasePageShell from '~/components/base/BasePageShell.vue'
+import PendingBillingDocumentIcon from '~/components/accounting/billing/PendingBillingDocumentIcon.vue'
 import CollectionAccountContextEditor from '~/components/accounting/billing/CollectionAccountContextEditor.vue'
 import { get_request } from '~/stores/services/request_http'
 const route = useRoute()
@@ -16,4 +17,4 @@ async function load() {
 watch(() => route.params.id, load, { immediate: true })
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] })
 </script>
-<template><BasePageShell><h1 class="mb-4 text-2xl font-semibold">Asociación de cuenta de cobro</h1><p v-if="loading" role="status">Cargando cuenta…</p><div v-if="error" role="alert"><p>{{ error }}</p><button class="mt-2 text-text-brand" @click="load">Reintentar</button></div><template v-if="account"><p class="mb-4">{{ account.public_number }} · {{ account.total }} {{ account.currency }} · {{ account.commercial_status }}</p><CollectionAccountContextEditor v-if="account.project_id" :account-id="account.id" :project-id="account.project_id" /><p v-else>La cuenta no tiene proyecto; conserva su flujo contable existente.</p></template></BasePageShell></template>
+<template><BasePageShell><h1 class="mb-4 text-2xl font-semibold">Asociación de cuenta de cobro</h1><p v-if="loading" role="status">Cargando cuenta…</p><div v-if="error" role="alert"><p>{{ error }}</p><button class="mt-2 text-text-brand" @click="load">Reintentar</button></div><template v-if="account"><PendingBillingDocumentIcon v-if="account.context?.document_pending" /><p class="mb-4">{{ account.public_number }} · {{ account.total }} {{ account.currency }} · {{ account.commercial_status }}</p><CollectionAccountContextEditor v-if="account.project_id" :account-id="account.id" :project-id="account.project_id" @saved="load" /><p v-else>La cuenta no tiene proyecto; conserva su flujo contable existente.</p></template></BasePageShell></template>

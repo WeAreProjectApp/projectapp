@@ -1,5 +1,7 @@
 """Exclusive project-account associations; snapshots and finances are untouched."""
 from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 
 from accounts.models import (
     BillingContextEvent, CollectionAccountContext, ContractAmendment, ProjectContract,
@@ -15,9 +17,15 @@ from accounts.services.billing_locks import lock_billing_document
 def context_data(context):
     if not context:
         return {'nature': None, 'status': 'pending', 'version': 0,
-                'contract': None, 'amendment': None, 'hosting_id': None}
+                'contract': None, 'amendment': None, 'hosting_id': None,
+                'document_pending': False, 'pending_by': None, 'pending_at': None}
     return {
-        'nature': context.nature, 'status': 'associated', 'version': context.version,
+        'nature': context.nature or None,
+        'status': 'document_pending' if context.document_pending else 'associated',
+        'document_pending': context.document_pending,
+        'pending_by': context.pending_by_id,
+        'pending_at': context.pending_at.isoformat() if context.pending_at else None,
+        'version': context.version,
         'contract': {'id': context.contract_id, 'title': context.contract.title} if context.contract_id else None,
         'amendment': {'id': context.amendment_id, 'title': context.amendment.title} if context.amendment_id else None,
         'hosting_id': context.hosting_id,
@@ -43,6 +51,8 @@ def validate_document_ownership(document):
 
 def resolve_context(document, data, *, lock_relations=False):
     if not document.project_id:
+        if data.get('document_pending'):
+            invalid('El documento pendiente solo aplica a cuentas con proyecto.')
         if any(data.get(key) is not None for key in (
             'billing_nature', 'contract_id', 'amendment_id', 'project_hosting_id', 'hosting_payment_id',
         )):
@@ -50,6 +60,17 @@ def resolve_context(document, data, *, lock_relations=False):
         return None
     validate_document_ownership(document)
     nature = data.get('billing_nature')
+    if data.get('document_pending'):
+        if nature not in (None, '', 'contract', 'hosting'):
+            invalid('Elige un tipo de cobro válido.')
+        if any(data.get(key) is not None for key in (
+            'contract_id', 'amendment_id', 'project_hosting_id', 'hosting_payment_id',
+        )):
+            invalid('Una cuenta con documento pendiente no puede guardar vínculos parciales.')
+        if nature == 'contract' and document.hosting_record_id:
+            invalid('Una cuenta de contrato no puede tener naturaleza hosting.')
+        return {'nature': nature or '', 'contract': None, 'amendment': None, 'hosting': None,
+                'document_pending': True}
     if nature == 'contract':
         if data.get('project_hosting_id') or data.get('hosting_payment_id') or document.hosting_record_id:
             invalid('Una cuenta de contrato no puede tener naturaleza hosting.')
@@ -88,6 +109,7 @@ def validate_account_context(document):
     if not context:
         invalid('Cuenta pendiente de asociar: fija su contrato/otrosí o hosting antes de emitir.')
     resolve_context(document, {
+        'document_pending': context.document_pending,
         'billing_nature': context.nature, 'contract_id': context.contract_id,
         'amendment_id': context.amendment_id, 'project_hosting_id': context.hosting_id,
     }, lock_relations=True)
@@ -117,6 +139,8 @@ def associate_account(document_id, actor, data, *, creating=False):
     context = _lock_context(document, selected_amendment_id=data.get('amendment_id'))
     if not creating and data['expected_version'] != (context.version if context else 0):
         raise BillingConflict()
+    if data.get('document_pending') and (not creating or context):
+        invalid('Solo se puede dejar el documento pendiente al crear la cuenta.')
     fields = resolve_context(document, data, lock_relations=True)
     if fields is None:
         return None
@@ -128,6 +152,9 @@ def associate_account(document_id, actor, data, *, creating=False):
         if fields['hosting'] is None or fields['hosting'].pk != evidence.group.hosting_id:
             invalid('Primero corrige explícitamente la conciliación del hosting de esta cuenta.')
     before = context_data(context)
+    fields.setdefault('document_pending', False)
+    if fields['document_pending']:
+        fields.update(pending_by=actor, pending_at=timezone.now())
     if context:
         for field, value in fields.items():
             setattr(context, field, value)
@@ -139,9 +166,20 @@ def associate_account(document_id, actor, data, *, creating=False):
         from accounts.services.hosting_context import link_account_payment
         link_account_payment(document, fields['hosting'], data['hosting_payment_id'], actor,
                              data.get('reason', 'Creación de cuenta con obligación explícita.'))
+    if before['document_pending']:
+        validate_account_context(document)
     BillingContextEvent.objects.create(
-        project=document.project, document=document, actor=actor, operation='associate_account',
+        project=document.project, document=document, actor=actor,
+        operation='defer_account_document' if context.document_pending else 'associate_account',
         reason=data.get('reason', 'Contexto explícito al crear la cuenta.'),
         before={**before, 'document_id': document.pk}, after={**context_data(context), 'document_id': document.pk},
     )
     return context
+
+
+def pending_document_q(*, attention=False):
+    """Explicit deferrals only; legacy missing contexts are a separate state."""
+    query = Q(document_type__code='collection_account', billing_context__document_pending=True)
+    if attention:
+        query &= Q(is_archived=False, retention_context__isnull=True) & ~Q(commercial_status='cancelled')
+    return query

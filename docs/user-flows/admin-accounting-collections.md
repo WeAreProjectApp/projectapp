@@ -16,3 +16,7 @@ que Ingresos, con Participaciones, Diferencia e IVA heredado. Consulta la vista
 previa y registra por el contrato compartido, también para un solo ingreso.
 La confirmación al cliente se revisa dentro del diálogo y se envía después
 del registro; el período opcional de hosting se conserva.
+
+## Documento vinculado pendiente
+
+El filtro Documento vinculado muestra decisiones explícitas y su conteo dentro del conjunto filtrado. La exclamación amarilla tiene tooltip «Hace falta el documento vinculado» por foco o toque. La acción «Completar documento vinculado» abre el detalle; no se confunde con históricos sin contexto.

@@ -9,7 +9,9 @@ export default {
   recipient: 'Recipient', error_message: 'Failure reason', sent_at: 'Sent at',
   amount: 'Amount', due_date: 'Due date / next charge', payment_method: 'Payment method',
   assignee: 'Assignee', priority: 'Priority', client: 'Client', days_unopened: 'Days unopened', description: 'Description',
+  pending_at: 'Pending since',
   destination: {
+    collection_documents_pending: 'Complete linked document',
     emails_failed: 'View delivery in history', recurring_due: 'View recurring payment', tasks_overdue: 'View task',
     documents_overdue: 'View collection account', proposals_stale: 'View proposal',
   },

@@ -3686,6 +3686,10 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 - **Outcomes:** display (identification, empty state, responsive detail); success (incremental pages, exact destinations); error (record deleted or access denied); failure (recoverable list/detail requests).
 - **E2E Specs:** `e2e/admin/admin-dashboard-attention.spec.js`, `e2e/admin/admin-dashboard.spec.js`.
 
+## Documento vinculado pendiente
+
+El radar incluye cuentas con documento vinculado pendiente para superusuarios: borradores, emitidas y pagadas, excluyendo anuladas, archivadas y datos retenidos. Abre la cuenta exacta y permite completar el vínculo. La decisión resuelta desaparece en la siguiente lectura del radar; la autoría se conserva.
+
 ### FLOW: `admin-dashboard-error-retry`
 
 - **Module:** admin
@@ -6842,6 +6846,10 @@ previa y registra por el contrato compartido, también para un solo ingreso.
 La confirmación al cliente se revisa dentro del diálogo y se envía después
 del registro; el período opcional de hosting se conserva.
 
+## Documento vinculado pendiente
+
+El filtro Documento vinculado muestra decisiones explícitas y su conteo dentro del conjunto filtrado. La exclamación amarilla tiene tooltip «Hace falta el documento vinculado» por foco o toque. La acción «Completar documento vinculado» abre el detalle; no se confunde con históricos sin contexto.
+
 ### FLOW: `admin-accounting-collection-grouping`
 - **Module:** admin
 - **Role:** superuser admin
@@ -6874,6 +6882,10 @@ El resumen muestra base, IVA registrado y total de la cuenta, además del desglo
 ## Liquidación y cuenta pendiente (2026-10-10)
 
 Una cuenta emitida después del pago completo conserva el importe y el IVA del ingreso y queda pagada, sin otro movimiento ni instrucciones de pagar de nuevo.
+
+## Documento vinculado pendiente
+
+El resumen señala decisiones explícitas de documento pendiente y permite completarlas con motivo y versión. La respuesta del guardado actualiza el aviso aunque falle una lectura posterior, y las lecturas de otra cuenta o de un modal cerrado se descartan. El detalle permanece consultable si la cuenta deja de coincidir con el filtro de pendientes.
 
 ### FLOW: `admin-accounting-collection-create`
 
@@ -6935,6 +6947,10 @@ que Ingresos, con Participaciones, Diferencia e IVA heredado. Consulta la vista
 previa y registra por el contrato compartido, también para un solo ingreso.
 La confirmación al cliente se revisa dentro del diálogo y se envía después
 del registro; el período opcional de hosting se conserva.
+
+## Documento vinculado pendiente
+
+La preparación permite activar «Dejar documento pendiente»: conserva sólo el tipo o deja también el tipo pendiente, sin IDs de vínculo. La elección persiste al volver de preview y no bloquea emitir/enviar por este vínculo; la validación conserva los demás requisitos.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 
@@ -8177,6 +8193,10 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+## Documento vinculado pendiente
+
+Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, motivo y versión. Retira el ícono del listado/detalle, filtro y radar sin borrar autor/fecha originales, ni modificar PDF, importes o pagos. Los conflictos conservan la marca. La protección de respuestas tardías del enlace se compone con la sesión de búsqueda de contratos.
 
 ### FLOW: `admin-accounting-income-reminder-mute`
 

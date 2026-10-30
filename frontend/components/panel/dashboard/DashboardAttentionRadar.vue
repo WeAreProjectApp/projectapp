@@ -197,6 +197,10 @@ function plural(count, singular, plural_) {
 }
 
 const TYPE_CONFIG = {
+  collection_documents_pending: {
+    icon: DocumentTextIcon, module: 'Contabilidad', route: '/panel/accounting/collections',
+    text: ({ count }) => `${count} ${plural(count, 'cuenta con documento pendiente', 'cuentas con documento pendiente')}`,
+  },
   documents_overdue: {
     icon: DocumentTextIcon,
     module: 'Documentos',

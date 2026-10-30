@@ -28,7 +28,10 @@ class CollectionAccountContext(HistoryTrackedModel):
         HOSTING = 'hosting', 'Hosting'
 
     document = models.OneToOneField('content.Document', on_delete=models.CASCADE, related_name='billing_context')
-    nature = models.CharField(max_length=12, choices=Nature.choices)
+    nature = models.CharField(max_length=12, choices=Nature.choices, blank=True, default='')
+    document_pending = models.BooleanField(default=False, db_index=True)
+    pending_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    pending_at = models.DateTimeField(null=True, blank=True)
     contract = models.ForeignKey('accounts.ProjectContract', on_delete=models.PROTECT, null=True, blank=True, related_name='collection_contexts')
     amendment = models.ForeignKey('accounts.ContractAmendment', on_delete=models.PROTECT, null=True, blank=True, related_name='collection_contexts')
     hosting = models.ForeignKey(ProjectHosting, on_delete=models.PROTECT, null=True, blank=True, related_name='collection_contexts')
@@ -37,8 +40,14 @@ class CollectionAccountContext(HistoryTrackedModel):
 
     class Meta:
         constraints = [models.CheckConstraint(
-            condition=(models.Q(nature='contract', contract__isnull=False, hosting__isnull=True)
-                       | models.Q(nature='hosting', contract__isnull=True, amendment__isnull=True, hosting__isnull=False)),
+            condition=(
+                models.Q(document_pending=False) & (
+                    models.Q(nature='contract', contract__isnull=False, hosting__isnull=True)
+                    | models.Q(nature='hosting', contract__isnull=True, amendment__isnull=True, hosting__isnull=False)
+                ) | models.Q(document_pending=True, nature__in=['', 'contract', 'hosting'],
+                             contract__isnull=True, amendment__isnull=True, hosting__isnull=True,
+                             pending_by__isnull=False, pending_at__isnull=False)
+            ),
             name='billing_account_exclusive_nature',
         )]
 
