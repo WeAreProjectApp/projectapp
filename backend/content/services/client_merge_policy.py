@@ -21,6 +21,7 @@ def _keys(text):
 
 
 AUTHORSHIP_RELATIONS = _keys('''
+accounts.CollectionAccountContext.pending_by
 accounts.AppiConversation.actor accounts.AppiTurn.actor
 admin.LogEntry.user
 content.AccountingChangeLog.actor

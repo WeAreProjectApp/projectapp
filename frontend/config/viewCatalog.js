@@ -379,7 +379,7 @@ export const viewCatalogSections = [
         group: 'Acceso y dashboard',
         file: 'frontend/pages/panel/index.vue',
         reference: 'vista dashboard del panel',
-        notes: 'Radar desplegable de correos fallidos, recurrentes, tareas, cuentas de cobro y propuestas: listas de cinco, detalle en modal y acceso al registro exacto resaltado. El contador suma elementos. App instalable con ayuda por navegador y reintento sin conexión; los datos requieren internet.',
+        notes: 'Radar desplegable de correos fallidos, recurrentes, tareas, cuentas de cobro y propuestas: listas de cinco, detalle en modal y acceso al registro exacto resaltado. Incluye cuentas con documento vinculado pendiente como alerta financiera exclusiva de superusuarios. El contador suma elementos. App instalable con ayuda por navegador y reintento sin conexión; los datos requieren internet.',
         audience: 'admin',
         viewType: 'dashboard',
       },
@@ -994,7 +994,7 @@ export const viewCatalogSections = [
         reference: 'centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite buscar y seleccionar un contrato existente del proyecto o de sus propuestas sin copiar el documento: coincidencias sin distinguir mayúsculas, tildes ni guiones bajos, resaltado, contratos y otrosíes primero y todas las versiones con fecha y carpeta o propuesta. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. El contexto de cuentas de proyecto se asocia o corrige con razón y versión; históricos permanecen pendientes hasta decisión administrativa. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir. Marcar pagada una cuenta de un ingreso esperado abre el mismo modal unificado de liquidación con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión de la confirmación de pago al cliente.',
+        notes: 'Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite buscar y seleccionar un contrato existente del proyecto o de sus propuestas sin copiar el documento: coincidencias sin distinguir mayúsculas, tildes ni guiones bajos, resaltado, contratos y otrosíes primero y todas las versiones con fecha y carpeta o propuesta. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. Las cuentas de proyecto permiten dejar explícitamente el tipo o vínculo pendiente mediante interruptor: registra autor y fecha, muestra aviso amarillo en fila y detalle, ofrece filtro con conteo y alerta en el radar, y se completa después con razón y versión. El pendiente es interno y no bloquea emisión, envío ni liquidación por ese vínculo; históricos sin asociación conservan su criterio. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir. Marcar pagada una cuenta de un ingreso esperado abre el mismo modal unificado de liquidación con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión de la confirmación de pago al cliente.',
       },
       {
         label: 'Contabilidad — Asociación de cuenta',
@@ -1004,7 +1004,7 @@ export const viewCatalogSections = [
         reference: 'asociación explícita de cuenta al contrato, otrosí o hosting del mismo proyecto',
         audience: 'admin',
         viewType: 'edit',
-        notes: 'Sólo superusuarios mediante sesión y CSRF. Razón, control de versión y trazabilidad; no reescribe PDF, importes ni snapshot.',
+        notes: 'Sólo superusuarios mediante sesión y CSRF. Completa el documento vinculado pendiente o corrige una asociación con razón, control de versión y trazabilidad; retira el aviso al vincular, conserva la decisión original y no reescribe PDF, importes ni snapshot.',
       },
       {
         label: 'Contabilidad — Conciliación de hosting',

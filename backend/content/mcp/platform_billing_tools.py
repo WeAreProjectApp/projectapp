@@ -33,7 +33,9 @@ COMMON = {'expected_version': {'type': 'integer', 'minimum': 0},
           'reason': {'type': 'string', 'minLength': 1, 'maxLength': 2000}}
 ASSOCIATION = {**COMMON, 'billing_nature': {'type': 'string', 'enum': ['contract', 'hosting']},
                'contract_id': NULL_ID, 'amendment_id': NULL_ID, 'project_hosting_id': NULL_ID,
-               'hosting_payment_id': NULL_ID}
+               'hosting_payment_id': NULL_ID,
+               'document_pending': {'type': 'boolean', 'enum': [False],
+                                    'description': 'Al completar una cuenta, el documento deja de estar pendiente.'}}
 IDENTITY = {**COMMON, 'subscription_id': NULL_ID, 'hosting_record_ids': IDS, 'operational_record_id': NULL_ID}
 EVIDENCE = {**COMMON, 'label': {'type': 'string', 'minLength': 1, 'maxLength': 200},
             'group_id': NULL_ID, 'payment_ids': IDS, 'cycle_ids': IDS, 'document_ids': IDS}
@@ -201,9 +203,9 @@ PLATFORM_BILLING_TOOLS = [
           lambda args, actor, data: project_hosting_read(args['project_id'], actor)),
     _tool('get_project_hosting_inventory', 'Inventaría orígenes históricos, contradicciones, cuentas pendientes y decisiones auditadas.',
           lambda args, actor, data: hosting_inventory(args['project_id'], actor)),
-    _tool('get_collection_account_context', 'Consulta el contexto explícito de una cuenta o su asociación pendiente.',
+    _tool('get_collection_account_context', 'Consulta el contexto, document_pending, pending_by y pending_at; distingue decisiones explícitas de históricos sin asociación.',
           _read_account, required=('account_id',)),
-    _tool('associate_collection_account_context', 'Asocia o corrige contrato/otrosí O hosting sin cambiar PDF, importe ni estado financiero.',
+    _tool('associate_collection_account_context', 'Completa el documento pendiente o corrige contrato/otrosí O hosting con versión y motivo, sin cambiar PDF, importe ni estado financiero.',
           _associate, required=('account_id',), serializer=BillingContextAssignmentSerializer,
           fields=ASSOCIATION, sensitive=True),
     _tool('preview_project_hosting_reconciliation', 'Valida la conciliación de orígenes sin guardar asociaciones ni modificar dinero.',

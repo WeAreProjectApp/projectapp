@@ -5,6 +5,8 @@ service, permissions, transaction and audit behavior. Domain-native tools remain
 the preferred rich interface; these close the operational gaps without forking
 business logic.
 """
+import json
+
 from content.mcp.delivery_notification_tools import DELIVERY_NOTIFICATION_TOOLS
 from content.mcp.delivery_source_tools import DELIVERY_SOURCE_TOOLS
 from content.mcp.delivery_tools import DELIVERY_TOOLS
@@ -33,6 +35,47 @@ from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.mcp.schemas.documents_bridge import DOCUMENTS_BRIDGE_SCHEMAS
 from content.mcp.schemas.projects_bridge import PROJECTS_BRIDGE_SCHEMAS
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
+from content.serializers.collection_accounts_panel import CollectionAccountCreateSerializer
+
+# DRF emits Decimal bounds; the published JSON Schema needs JSON numbers.
+COLLECTION_ACCOUNT_CREATE_SCHEMA = json.loads(json.dumps(
+    writable_schema(CollectionAccountCreateSerializer), default=float,
+))
+COLLECTION_ACCOUNT_CREATE_SCHEMA['description'] = 'Cuenta de cobro validada por el mismo serializer del panel.'
+_COLLECTION_FIELD_DESCRIPTIONS = {
+    'document_pending': 'Decisión explícita de completar el documento después; no admite vínculos parciales.',
+    'billing_nature': 'Tipo de cobro contract u hosting; puede omitirse o ser null si document_pending es true.',
+    'contract_id': 'Contrato del proyecto seleccionado; omitir al dejar el documento pendiente.',
+    'amendment_id': 'Otrosí opcional del contrato; omitir al dejar el documento pendiente.',
+    'project_hosting_id': 'Hosting del proyecto; omitir al dejar el documento pendiente.',
+    'hosting_payment_id': 'Obligación de hosting que respalda la cuenta; omitir si el documento queda pendiente.',
+    'client_profile_id': 'Id del perfil cliente del ingreso que se cobra.',
+    'income_record_id': 'Id del ingreso vinculado a la cuenta.',
+    'vat_rate': 'Porcentaje de IVA de la cuenta, entre 0 y 100.',
+    'public_number': 'Consecutivo elegido; vacío deja que el servidor asigne el siguiente.',
+    'billing_concept': 'Concepto cobrado; vacío reutiliza el concepto del ingreso.',
+    'items': 'Conceptos e importes del documento, con cantidad y precio o importe con modalidad de IVA.',
+    'payment_term_days': 'Días para pagar desde la emisión, de 0 a 120.',
+    'due_date': 'Fecha fija de vencimiento en formato AAAA-MM-DD.',
+    'currency': 'Moneda del documento, por defecto COP.',
+    'city': 'Ciudad de emisión.',
+    'customer': 'Datos de facturación que sobrescriben los del cliente en el documento.',
+    'observations': 'Observaciones visibles en el documento.',
+    'notes': 'Notas internas, excluidas del PDF y del correo al cliente.',
+}
+for _field, _schema in COLLECTION_ACCOUNT_CREATE_SCHEMA['properties'].items():
+    _schema['description'] = _COLLECTION_FIELD_DESCRIPTIONS[_field]
+
+COLLECTION_ACCOUNT_QUERY_SCHEMA = closed_object({
+    'document_pending': {'type': 'boolean', 'description': 'Filtra la decisión explícita de documento pendiente; excluye los históricos sin asociación.'},
+    'client_profile_id': {'type': 'integer', 'minimum': 1, 'description': 'Id del perfil cliente por el que filtrar.'},
+    'project_id': {'type': 'integer', 'minimum': 1, 'description': 'Id del proyecto por el que filtrar.'},
+    'commercial_status': {'type': 'string', 'enum': ['draft', 'issued', 'paid', 'cancelled'], 'description': 'Estado comercial de la cuenta.'},
+    'origin': {'type': 'string', 'enum': ['hosting', 'income', 'project', 'other'], 'description': 'Origen contable de la cuenta.'},
+    'date_from': {'type': 'string', 'format': 'date', 'description': 'Fecha inicial de emisión, incluida.'},
+    'date_to': {'type': 'string', 'format': 'date', 'description': 'Fecha final de emisión, incluida.'},
+    'q': {'type': 'string', 'description': 'Busca por número, título o nombre del cliente impreso.'},
+})
 
 
 def _editorial_catalog_op(name, description, route, serializer_class, *, partial=False, path=()):
@@ -351,12 +394,12 @@ BILLING_PARITY_TOOLS = [
     _op('list_hosting_cycles', 'Lista ciclos facturados de un hosting.', 'list-hosting-cycles', path=('record_id',)),
     _op('create_hosting_cycle', 'Registra un ciclo de hosting.', 'create-hosting-cycle', 'POST', ('record_id',), 'sensitive', True),
     _op('delete_hosting_cycle', 'Elimina un ciclo de hosting permitido.', 'delete-hosting-cycle', 'DELETE', ('record_id', 'cycle_id'), 'sensitive', True),
-    _op('list_collection_accounts', 'Lista cuentas de cobro con filtros del Panel.', 'list-collection-accounts'),
-    _op('get_collection_account', 'Abre una cuenta de cobro con su snapshot.', 'retrieve-collection-account', path=('doc_id',)),
+    _op('list_collection_accounts', 'Lista cuentas de cobro con filtros del Panel.', 'list-collection-accounts', query_schema=COLLECTION_ACCOUNT_QUERY_SCHEMA),
+    _op('get_collection_account', 'Abre una cuenta de cobro con su snapshot.', 'retrieve-collection-account', path=('doc_id',), query_schema=closed_object({})),
     _op('download_collection_account_pdf', 'Conserva el PDF inmutable como asset temporal.', 'collection-account-pdf', path=('doc_id',)),
     _op('get_collection_account_next_number', 'Obtiene el siguiente consecutivo disponible.', 'collection-account-next-number'),
-    _op('preview_collection_account', 'Valida y previsualiza una cuenta sin emitirla.', 'preview-collection-account', 'POST'),
-    _op('create_collection_account', 'Emite una cuenta de cobro y conserva su PDF inmutable.', 'create-collection-account', 'POST', risk='sensitive', confirm=True),
+    _op('preview_collection_account', 'Valida y previsualiza una cuenta sin emitirla.', 'preview-collection-account', 'POST', payload_schema=COLLECTION_ACCOUNT_CREATE_SCHEMA),
+    _op('create_collection_account', 'Emite una cuenta de cobro y conserva su PDF inmutable.', 'create-collection-account', 'POST', risk='sensitive', confirm=True, payload_schema=COLLECTION_ACCOUNT_CREATE_SCHEMA),
     _op('resend_collection_account', 'Reenvía una cuenta emitida usando el snapshot.', 'resend-collection-account', 'POST', ('doc_id',), 'sensitive', True),
     _op('mark_collection_account_paid', 'Marca una cuenta emitida como pagada.', 'mark-collection-account-paid', 'POST', ('doc_id',), 'sensitive', True),
     _op('cancel_collection_account', 'Anula una cuenta de cobro.', 'cancel-collection-account', 'POST', ('doc_id',), 'sensitive', True),

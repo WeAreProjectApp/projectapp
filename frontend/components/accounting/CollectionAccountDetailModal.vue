@@ -15,6 +15,7 @@
           <div>
             <h3 id="collection-detail-title" class="text-lg font-bold text-text-default">
               {{ record?.public_number || `Cuenta #${record?.id}` }}
+              <PendingBillingDocumentIcon v-if="(detail || record)?.context?.document_pending" />
             </h3>
             <p class="text-sm text-text-muted mt-1">
               {{ record?.billing_concept || record?.title }}
@@ -84,7 +85,7 @@
           </div>
         </section>
 
-        <CollectionAccountContextEditor v-if="record?.project_id" :account-id="record.id" :project-id="record.project_id" @saved="load" />
+        <CollectionAccountContextEditor v-if="record?.project_id" :account-id="record.id" :project-id="record.project_id" @saved="contextSaved" />
 
         <!-- The document froze a name that no longer matches the relation.
              Surfacing it is the point: this is exactly the confusion the
@@ -327,9 +328,10 @@
 </template>
 
 <script setup>
+import PendingBillingDocumentIcon from './billing/PendingBillingDocumentIcon.vue';
 import VatBreakdown from './VatBreakdown.vue';
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import IncomePaymentStateCell from '~/components/accounting/IncomePaymentStateCell.vue';
@@ -353,7 +355,7 @@ const props = defineProps({
   record: { type: Object, default: null },
 });
 
-const emit = defineEmits(['close', 'go-to-income', 'download']);
+const emit = defineEmits(['close', 'go-to-income', 'download', 'saved']);
 
 const store = useAccountingStore();
 const TABS = [
@@ -366,6 +368,8 @@ const detail = ref(null);
 const income = ref(null);
 const incomeLoading = ref(false);
 const incomeError = ref(false);
+let loadSequence = 0;
+onBeforeUnmount(() => { loadSequence += 1; });
 
 function money(value) {
   return formatMoney(Number(value ?? 0), 'COP');
@@ -429,20 +433,35 @@ const settlements = computed(() => {
   );
 });
 
+function contextSaved(context) {
+  detail.value = { ...(detail.value || props.record), context };
+  emit('saved');
+}
+
 async function load() {
+  const request = ++loadSequence;
+  const record = props.record;
   detail.value = null;
   income.value = null;
   incomeError.value = false;
+  incomeLoading.value = false;
   tab.value = 'summary';
   pdfState.value = 'idle';
-  if (!props.record) return;
+  if (!record) return;
 
-  const documentResult = await store.fetchCollectionAccount(props.record.id);
-  if (documentResult.success) detail.value = documentResult.data;
+  const documentResult = await store.fetchCollectionAccount(record.id);
+  if (request !== loadSequence || !props.open || props.record?.id !== record.id) return;
+  if (documentResult.success) {
+    const currentContext = detail.value?.context;
+    detail.value = { ...documentResult.data,
+      context: currentContext?.version > documentResult.data.context?.version
+        ? currentContext : documentResult.data.context };
+  }
 
-  if (!props.record.income_record_id) return;
+  if (!record.income_record_id) return;
   incomeLoading.value = true;
-  const incomeResult = await store.fetchIncomeDetail(props.record.income_record_id);
+  const incomeResult = await store.fetchIncomeDetail(record.income_record_id);
+  if (request !== loadSequence || !props.open || props.record?.id !== record.id) return;
   incomeLoading.value = false;
   if (incomeResult.success) {
     income.value = { ...incomeResult.data.income, ...incomeResult.data };
@@ -455,6 +474,7 @@ watch(
   () => [props.open, props.record?.id],
   () => {
     if (props.open) load();
+    else loadSequence += 1;
   },
   { immediate: true },
 );

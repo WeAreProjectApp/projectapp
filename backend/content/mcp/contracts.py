@@ -1554,7 +1554,7 @@ PROJECT_BILLING_CONTRACTS = (
               excluded=_excluded(_AUTOMATION_STATE, 'wompi_transaction_id wompi_payment_link_id wompi_payment_link_url charge_attempts last_charge_error next_retry_at')),
     _contract('accounts.ProjectHosting', read_only='id project version created_at updated_at', read_write='subscription operational_accounting_source'),
     _contract('accounts.ProjectHostingAccountingSource', read_only='id created_at', read_write='hosting hosting_record'),
-    _contract('accounts.CollectionAccountContext', read_only='id document version updated_at', read_write='nature contract amendment hosting'),
+    _contract('accounts.CollectionAccountContext', read_only='id document version updated_at pending_by pending_at', read_write='nature contract amendment hosting document_pending'),
     _contract('accounts.HostingEvidenceGroup', read_only='id hosting created_at', read_write='label'),
     _contract('accounts.HostingEvidence', read_only='id', read_write='group payment cycle document'),
     _contract('accounts.BillingContextEvent', read_only='id project document actor operation reason before after created_at'),

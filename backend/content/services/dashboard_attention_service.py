@@ -8,7 +8,7 @@ from content.models import BusinessProposal, Document, EmailDeliverySnapshot, Em
 from content.services.diagnostic_privacy import safe_email_diagnostic
 from content.services.recurring_schedule import next_charge_date
 
-TYPES = ('documents_overdue', 'emails_failed', 'tasks_overdue', 'proposals_stale', 'recurring_due')
+TYPES = ('documents_overdue', 'emails_failed', 'tasks_overdue', 'proposals_stale', 'recurring_due', 'collection_documents_pending')
 FAILED = (EmailLog.Status.FAILED, EmailLog.Status.BOUNCED)
 
 
@@ -63,6 +63,11 @@ def failed_email_incidents(now):
 
 
 def attention_records(kind, today, now):
+    if kind == 'collection_documents_pending':
+        from accounts.services.billing_context import pending_document_q
+        return Document.objects.filter(pending_document_q(attention=True)).select_related(
+            'billing_context', 'collection_account',
+        ).order_by('billing_context__pending_at', 'pk')
     if kind == 'emails_failed':
         return failed_email_incidents(now)
     if kind == 'documents_overdue':
@@ -98,7 +103,7 @@ def record_model(kind):
     return {
         'emails_failed': EmailLog, 'recurring_due': RecurringPayment,
         'tasks_overdue': Task, 'documents_overdue': Document,
-        'proposals_stale': BusinessProposal,
+        'proposals_stale': BusinessProposal, 'collection_documents_pending': Document,
     }[kind]
 
 
@@ -136,6 +141,14 @@ def record_payload(kind, obj, today):
             description=obj.description, is_archived=obj.is_archived,
             board_type=obj.board_type,
             destination=f'/panel/tasks?task={obj.pk}&radar=1',
+        )
+    elif kind == 'collection_documents_pending':
+        data.update(
+            title=obj.public_number or obj.title, client=obj.client_name,
+            amount=str(obj.total) if obj.total is not None else None, currency=obj.currency,
+            pending_at=(obj.billing_context.pending_at.isoformat()
+                        if getattr(obj, 'billing_context', None) and obj.billing_context.pending_at else None),
+            destination=f'/panel/accounting/collections?account={obj.pk}&radar=1',
         )
     elif kind == 'documents_overdue':
         data.update(

@@ -6,7 +6,7 @@
     "superuser"
   ],
   "priority": "P1",
-  "description": "Asocia una cuenta de proyecto a contrato y otrosí opcional del mismo contrato, o al único hosting, con razón, control de versión y validación de coherencia; conserva snapshot, PDF, importes y pagos.",
+  "description": "Asocia una cuenta de proyecto a contrato y otrosí opcional del mismo contrato, o al único hosting, con razón, control de versión y validación de coherencia; conserva snapshot, PDF, importes y pagos. Completa una decisión explícita de documento pendiente y retira el aviso de listado/detalle, filtro/conteo y radar; conserva autor/fecha originales y maneja conflictos sin ocultar el pendiente. El guard de respuestas tardías al cambiar pendiente/proyecto se verifica además en el tren combinado con búsqueda de contratos.",
   "outcomes": [
     "display",
     "success",

@@ -133,6 +133,30 @@ beforeEach(() => {
 });
 
 describe('CollectionAccountDetailModal', () => {
+  it('does not replace the next account with a late response from the previous one', async () => {
+    let resolveOld;
+    const oldRequest = new Promise(resolve => { resolveOld = resolve; });
+    get_request.mockImplementationOnce(() => oldRequest)
+      .mockResolvedValueOnce({ data: { ...DOCUMENT, items: [{ id: 2, description: 'Cuenta actual', line_total: '150000' }] } });
+    const wrapper = mountModal(HOSTING_ROW);
+    await wrapper.setProps({ record: { ...HOSTING_ROW, id: 19 } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Cuenta actual');
+    resolveOld({ data: { ...DOCUMENT, items: [{ id: 1, description: 'Cuenta anterior', line_total: '1' }] } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Cuenta actual');
+    expect(wrapper.text()).not.toContain('Cuenta anterior');
+    wrapper.unmount();
+  });
+
+  it('uses the fresh detail to remove a resolved pending marker from a stale list row', async () => {
+    get_request.mockResolvedValueOnce({ data: { ...DOCUMENT, context: { document_pending: false, version: 2 } } });
+    const wrapper = mountModal({ ...HOSTING_ROW, context: { document_pending: true, version: 1 } });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="pending-billing-document-icon"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('shows the client and the project as two separate facts', async () => {
     const wrapper = mountModal(INCOME_ROW);
     await flushPromises();

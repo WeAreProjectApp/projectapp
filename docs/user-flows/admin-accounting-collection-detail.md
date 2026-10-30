@@ -18,3 +18,7 @@ El resumen muestra base, IVA registrado y total de la cuenta, además del desglo
 ## Liquidación y cuenta pendiente (2026-10-10)
 
 Una cuenta emitida después del pago completo conserva el importe y el IVA del ingreso y queda pagada, sin otro movimiento ni instrucciones de pagar de nuevo.
+
+## Documento vinculado pendiente
+
+El resumen señala decisiones explícitas de documento pendiente y permite completarlas con motivo y versión. La respuesta del guardado actualiza el aviso aunque falle una lectura posterior, y las lecturas de otra cuenta o de un modal cerrado se descartan. El detalle permanece consultable si la cuenta deja de coincidir con el filtro de pendientes.

@@ -74,7 +74,7 @@ def _base_qs():
         Document.objects.filter(document_type__code=COLLECTION_ACCOUNT)
         .select_related(
             'billing_context__contract', 'billing_context__amendment', 'billing_context__hosting',
-            'collection_account', 'hosting_record', 'project', 'income_record',
+            'collection_account', 'hosting_record', 'project', 'income_record', 'client_user__profile',
         )
         .prefetch_related('items', 'payment_methods')
     )
@@ -288,6 +288,18 @@ def list_collection_accounts(request):
     qs = _base_qs().order_by('-created_at')
     params = request.query_params
 
+    from accounts.services.billing_context import pending_document_q
+
+    for param, lookup in (('client_profile_id', 'client_user__profile__pk'), ('project_id', 'project_id')):
+        if params.get(param):
+            try:
+                value = int(params[param])
+                if value < 1:
+                    raise ValueError
+            except (ValueError, TypeError):
+                return error_response(f'El parámetro {param} debe ser un identificador positivo.')
+            qs = qs.filter(**{lookup: value})
+
     commercial_status = params.get('commercial_status')
     if commercial_status:
         qs = qs.filter(commercial_status=commercial_status)
@@ -334,7 +346,15 @@ def list_collection_accounts(request):
             | Q(collection_account__customer_name__icontains=search),
         )
 
+    pending_filter = params.get('document_pending')
+    if pending_filter is not None:
+        if pending_filter not in ('true', 'false', '1', '0'):
+            return error_response('El parámetro document_pending debe ser true o false.')
+        query = pending_document_q()
+        qs = qs.filter(query if pending_filter in ('true', '1') else ~query)
+
     totals = qs.aggregate(
+        document_pending_count=Count('id', filter=pending_document_q()),
         draft_count=Count('id', filter=Q(commercial_status='draft')),
         issued_count=Count('id', filter=Q(commercial_status='issued')),
         paid_count=Count('id', filter=Q(commercial_status='paid')),

@@ -79,3 +79,7 @@ Specs: `admin-accounting-incomes.spec.js` (búsqueda, vínculo y rechazo), más
 `ContractSourcePicker.spec.js` y `CollectionAccountProjectContext.spec.js` para
 teclado, limpieza y cambio de proyecto. Los campos Contrato y Otrosí del contexto
 no cambian. La búsqueda MCP usa las mismas fuentes y comprobaciones de enlace.
+
+## Documento vinculado pendiente
+
+La preparación permite activar «Dejar documento pendiente»: conserva sólo el tipo o deja también el tipo pendiente, sin IDs de vínculo. La elección persiste al volver de preview y no bloquea emitir/enviar por este vínculo; la validación conserva los demás requisitos.

@@ -216,7 +216,7 @@ def _attention_block(operations, today, now, *, include_finance):
 
     items = []
     for kind in TYPES:
-        if kind == 'recurring_due' and not include_finance:
+        if kind in ('recurring_due', 'collection_documents_pending') and not include_finance:
             continue
         records = attention_records(kind, today, now)
         count = record_count(records)
@@ -228,6 +228,8 @@ def _attention_block(operations, today, now, *, include_finance):
             severity, meta = ('danger' if high else 'warning'), {'high_priority': high}
         elif kind == 'proposals_stale':
             severity, meta = 'warning', {'days': STALE_PROPOSAL_DAYS}
+        elif kind == 'collection_documents_pending':
+            severity = 'warning'
         elif kind == 'recurring_due':
             days = (records[0].radar_charge_date - today).days
             severity, meta = ('warning' if days <= 3 else 'info'), {'next_days': days}

@@ -9,7 +9,9 @@ export default {
   recipient: 'Destinatario', error_message: 'Motivo del fallo', sent_at: 'Fecha de envío',
   amount: 'Valor', due_date: 'Vencimiento / próximo cobro', payment_method: 'Medio de pago',
   assignee: 'Responsable', priority: 'Prioridad', client: 'Cliente', days_unopened: 'Días sin abrir', description: 'Descripción',
+  pending_at: 'Pendiente desde',
   destination: {
+    collection_documents_pending: 'Completar documento vinculado',
     emails_failed: 'Ver envío en historial', recurring_due: 'Ver recurrente', tasks_overdue: 'Ver tarea',
     documents_overdue: 'Ver cuenta de cobro', proposals_stale: 'Ver propuesta',
   },

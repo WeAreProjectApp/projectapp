@@ -17,9 +17,14 @@ class BillingAccountListSerializer(serializers.ModelSerializer):
                   'currency', 'total', 'project_id', 'project_name', 'context', 'is_overdue')
 
     def get_context(self, obj):
+        context = context_data(getattr(obj, 'billing_context', None))
+        for field in ('document_pending', 'pending_by', 'pending_at'):
+            context.pop(field)
         if not obj.project_id:
-            return {**context_data(None), 'status': 'not_applicable'}
-        return context_data(getattr(obj, 'billing_context', None))
+            context['status'] = 'not_applicable'
+        elif context['status'] == 'document_pending':
+            context['status'] = 'pending'
+        return context
 
     def get_is_overdue(self, obj):
         return commercial_is_overdue(obj)
