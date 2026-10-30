@@ -36,16 +36,22 @@ export function contractSourceParts(title, query) {
   const { original, text, offsets } = indexedName(title);
   const needle = normalizeContractSource(query);
   if (!needle) return [{ text: original, match: false }];
-  const parts = [];
-  let cursor = 0;
+  const ranges = [];
   let found = text.indexOf(needle);
   while (found !== -1) {
     const start = offsets[found].start;
     const end = offsets[found + needle.length - 1].end;
+    const previous = ranges.at(-1);
+    if (previous && start < previous.end) previous.end = Math.max(previous.end, end);
+    else ranges.push({ start, end });
+    found = text.indexOf(needle, found + needle.length);
+  }
+  const parts = [];
+  let cursor = 0;
+  for (const { start, end } of ranges) {
     if (start > cursor) parts.push({ text: original.slice(cursor, start), match: false });
     parts.push({ text: original.slice(start, end), match: true });
     cursor = end;
-    found = text.indexOf(needle, found + needle.length);
   }
   if (cursor < original.length) parts.push({ text: original.slice(cursor), match: false });
   return parts;

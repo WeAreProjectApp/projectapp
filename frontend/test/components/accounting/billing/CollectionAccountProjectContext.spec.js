@@ -322,4 +322,26 @@ describe('CollectionAccountProjectContext', () => {
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
     expect(wrapper.emitted('valid').at(-1)).toEqual([true]);
   });
+
+  it('discards a post-link refresh after switching to another project', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockResolvedValue({ data: { id: 88 } });
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await flushPromises();
+    get_request.mockReturnValueOnce(late.promise);
+    await startLink(wrapper);
+    await wrapper.setProps({ projectId: 8 });
+    await flushPromises();
+
+    late.resolve({ data: { ...linkOptions(99), contracts: [{ id: 88, title: 'Contrato A' }] } });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[{}]]);
+    expect(wrapper.emitted('valid').at(-1)).toEqual([false]);
+    await startLink(wrapper);
+    expect(create_request).toHaveBeenLastCalledWith(
+      'admin/billing-context/projects/8/contracts/link/', expect.objectContaining({ source_id: 31 }),
+    );
+  });
 });
