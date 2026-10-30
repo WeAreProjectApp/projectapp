@@ -1,0 +1,9 @@
+[
+  { "title": "Revisión_CONTRATO_Final", "query": "VISION contrato", "normalized": "revision contrato final", "highlight": "visión_CONTRATO" },
+  { "title": "\ufeffRevisio\u0301n__Base  ", "query": "revisión base", "normalized": "revision base", "highlight": "Revisio\u0301n__Base" },
+  { "title": "Contrato\ufe0f_Base", "query": "CONTRATO BASE", "normalized": "contrato base", "highlight": "Contrato\ufe0f_Base" },
+  { "title": "📄 Revisión_Contrato", "query": "revisión contrato", "normalized": "📄 revision contrato", "highlight": "Revisión_Contrato" },
+  { "title": "ΟΣ", "query": "ος", "normalized": "ος", "highlight": "ΟΣ" },
+  { "title": "Contrato\u0085Base", "query": "contrato base", "normalized": "contrato base", "highlight": "Contrato\u0085Base" },
+  { "title": "Contrato\u0903_Base", "query": "contrato base", "normalized": "contrato base", "highlight": "Contrato\u0903_Base" }
+]

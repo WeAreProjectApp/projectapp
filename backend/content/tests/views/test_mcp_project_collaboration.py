@@ -358,6 +358,8 @@ def test_project_mcp_reuses_a_confirmed_billing_contract_source(call):
     assert preview['impact']['source'] == {
         'source_type': 'document', 'id': source.pk, 'title': 'MCP billing contract',
         'origin_label': 'Documento del proyecto',
+        'created_at': source.created_at.isoformat(), 'folder_path': '',
+        'proposal_title': '', 'is_contract_like': True,
     }
     assert first['result']['reused'] is False
     assert second['result'] == {

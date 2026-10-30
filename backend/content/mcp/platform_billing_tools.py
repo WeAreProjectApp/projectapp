@@ -9,7 +9,7 @@ from accounts.serializers_billing_context import (
 )
 from accounts.services.billing_access import require_billing_admin
 from accounts.services.billing_context import associate_account, context_data
-from accounts.services.billing_contracts import link_billing_contract
+from accounts.services.billing_contracts import filter_contract_source_options, link_billing_contract
 from accounts.services.billing_read import (
     account_for_actor,
     project_billing_options,
@@ -95,10 +95,11 @@ def _associate(arguments, actor, payload):
 
 
 def _tool(name, description, operation, *, serializer=None, fields=None, required=(), sensitive=False,
-          payload_required=None, prepare_operation=None, version_getter=None, impact_builder=None):
+          payload_required=None, prepare_operation=None, version_getter=None, impact_builder=None, read_fields=None):
     properties = {'project_id': {**ID, 'description': 'Identificador entero positivo del proyecto autorizado.'}}
     if required:
         properties['account_id'] = {**ID, 'description': 'Identificador entero positivo de la cuenta de cobro dentro del proyecto.'}
+    properties.update(read_fields or {})
     if serializer:
         properties['payload'] = {'type': 'object', 'additionalProperties': False, 'properties': fields,
                                  'description': PAYLOAD_DESCRIPTIONS[serializer],
@@ -151,6 +152,15 @@ def _tool(name, description, operation, *, serializer=None, fields=None, require
     return tool
 
 
+def _read_contract_options(arguments, actor, payload):
+    search_text = arguments.get('contract_source_search', '')
+    if not isinstance(search_text, str) or len(search_text) > 300:
+        raise ToolError('contract_source_search debe ser un texto de hasta 300 caracteres.')
+    options = project_billing_options(arguments['project_id'], actor)
+    options['contract_sources'] = filter_contract_source_options(options['contract_sources'], search_text)
+    return options
+
+
 def _prepare_contract(arguments, actor, payload):
     options = project_billing_options(arguments['project_id'], actor)
     if not any(row['source_type'] == payload['source_type'] and row['id'] == payload['source_id']
@@ -173,8 +183,10 @@ def _contract_impact(arguments):
 
 
 PLATFORM_BILLING_TOOLS = [
-    _tool('get_project_billing_options', 'Lista contratos/otrosí y el hosting único del proyecto sin conceder acceso documental.',
-          lambda args, actor, data: project_billing_options(args['project_id'], actor)),
+    _tool('get_project_billing_options', 'Lista contratos/otrosí, hosting y documentos vinculables del proyecto con fecha y carpeta; contratos primero. contract_source_search filtra nombres por coincidencia sin distinguir mayúsculas, tildes ni guiones bajos. No concede acceso documental ni busca en otros proyectos.',
+          _read_contract_options,
+          read_fields={'contract_source_search': {'type': 'string', 'maxLength': 300,
+                                 'description': 'Texto opcional contenido en el nombre del documento. Vacío devuelve todas las fuentes elegibles y versiones del proyecto.'}}),
     _tool('link_project_billing_contract', 'Registra un contrato existente del proyecto para habilitar sus cuentas de cobro; no emite documentos ni modifica importes.',
           lambda args, actor, data: link_billing_contract(args['project_id'], actor, data),
           serializer=BillingContractLinkSerializer,
