@@ -145,7 +145,8 @@ def entity_history_file(request, entity_type, object_id, revision_id):
     kind = canonical_type(entity_type)
     row = _version(_scope(entity_type, object_id, request), revision_id)
     field_name = {'document': 'generated_file', 'statement': 'pdf_file', 'proposal': 'generated_file'}.get(kind)
-    if kind == 'document' and (row.snapshot or {}).get('uploaded_pdf'):
+    if (kind == 'document' and (row.snapshot or {}).get('uploaded_pdf')
+            and not (row.snapshot or {}).get('generated_file')):
         field_name = 'uploaded_pdf'
     name = (row.snapshot or {}).get('archived_pdf' if kind == 'proposal' else field_name)
     if not name or not field_name:

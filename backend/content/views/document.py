@@ -549,7 +549,7 @@ def update_document(request, document_id):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer.save(updated_by=request.user)
+    document = serializer.save(updated_by=request.user)
 
     # Re-parse markdown if it changed
     if 'content_markdown' in request.data or 'text_formats' in request.data:
@@ -832,7 +832,7 @@ def download_document_pdf(request, document_id):
     if shared is not None:
         return shared
 
-    if document.content_format == 'pdf':
+    if document.content_format == 'pdf' and not document.generated_file:
         from django.http import FileResponse
         try:
             stream = document.uploaded_pdf.open('rb')

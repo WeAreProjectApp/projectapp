@@ -22,7 +22,6 @@ const original = pdfFixture('Original PDF');
 const next = pdfFixture('Replacement PDF');
 const file = { name: 'original.pdf', mimeType: 'application/pdf', buffer: original };
 const json = (data, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(data) });
-const tags = (outcome) => ['@flow:admin-document-pdf', '@role:admin', `@outcome:${outcome}`];
 
 async function setup(page, { createFailure = false, replaceFailure = false, previewFailure = false } = {}) {
   await setAuthLocalStorage(page, { token: 'pdf-e2e-token', userAuth: { id: 8700, role: 'admin', is_staff: true } });
@@ -36,6 +35,10 @@ async function setup(page, { createFailure = false, replaceFailure = false, prev
   let createBody = '';
   let replacementBody = '';
   let metadataBody = null;
+  await page.context().route('**/api/documents/71/pdf/', (route) => route.fulfill({
+    status: 200, contentType: 'application/pdf', body: document.pdf.version === 2 ? next : original,
+    headers: { 'Content-Disposition': 'attachment; filename="original.pdf"' },
+  }));
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
     if (apiPath === 'documents/') return json([document]);
@@ -72,15 +75,17 @@ async function setup(page, { createFailure = false, replaceFailure = false, prev
 }
 
 async function createPdf(page) {
-  await page.goto('/panel/documents/create', { waitUntil: 'domcontentloaded' });
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('link', { name: 'Gestor Documental', exact: true }).click();
+  await page.getByRole('link', { name: 'Nuevo Documento', exact: true }).click();
   await page.getByRole('button', { name: 'Cargar Archivo' }).click();
   await page.getByTestId('doc-create-file').setInputFiles(file);
-  await page.getByLabel('Título', { exact: true }).fill('Anexo PDF');
+  await page.getByRole('textbox', { name: /^Título/ }).fill('Anexo PDF');
   await page.getByRole('button', { name: 'Crear Documento', exact: true }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/documents\/71\/edit/);
 }
 
-test('creates a PDF through file selection', { tag: tags('success') }, async ({ page }) => {
+test('creates a PDF through file selection', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:success'] }, async ({ page }) => {
   const requests = await setup(page);
   await createPdf(page);
   await expect(page.getByTestId('doc-uploaded-pdf-panel')).toContainText('original.pdf');
@@ -89,9 +94,9 @@ test('creates a PDF through file selection', { tag: tags('success') }, async ({ 
   await expect(page.getByTestId('doc-markdown-editor-panel')).toHaveCount(0);
 });
 
-test('accepts a PDF dropped into the document form', { tag: tags('success') }, async ({ page }) => {
+test('accepts a PDF dropped into the document form', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:success'] }, async ({ page }) => {
   await setup(page);
-  await page.goto('/panel/documents/create', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel/documents/create', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Cargar Archivo' }).click();
   const transfer = await page.evaluateHandle((bytes) => {
     const dt = new DataTransfer();
@@ -103,21 +108,21 @@ test('accepts a PDF dropped into the document form', { tag: tags('success') }, a
   await expect(page.getByTestId('doc-create-pdf-frame')).toBeVisible();
 });
 
-test('shows a rejected PDF under its upload field', { tag: tags('error') }, async ({ page }) => {
+test('shows a rejected PDF under its upload field', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:error'] }, async ({ page }) => {
   await setup(page, { createFailure: true });
-  await page.goto('/panel/documents/create', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel/documents/create', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Cargar Archivo' }).click();
   await page.getByTestId('doc-create-file').setInputFiles(file);
-  await page.getByLabel('Título', { exact: true }).fill('Inválido');
+  await page.getByRole('textbox', { name: /^Título/ }).fill('Inválido');
   await page.getByRole('button', { name: 'Crear Documento', exact: true }).filter({ visible: true }).click();
   await expect(page.getByText('El contenido del archivo no es PDF.', { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/\/documents\/create/);
 });
 
-test('shows the original PDF after creating it', { tag: tags('display') }, async ({ page }) => {
+test('shows the original PDF after creating it', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:display'] }, async ({ page }) => {
   await setup(page);
   await createPdf(page);
-  await expect(page.getByTestId('doc-pdf-version')).toContainText('Versión 1 · original.pdf');
+  await expect(page.getByTestId('doc-pdf-version')).toContainText('Version 1 · original.pdf');
   await expect(page.getByTestId('doc-uploaded-pdf-frame')).toHaveAttribute('src', /inline=1&v=1/);
   const downloadEvent = page.waitForEvent('download');
   await page.getByTestId('doc-pdf-original-download').click();
@@ -125,9 +130,9 @@ test('shows the original PDF after creating it', { tag: tags('display') }, async
   expect(download.suggestedFilename()).toBe('original.pdf');
 });
 
-test('replaces a PDF without changing its identity', { tag: tags('success') }, async ({ page }) => {
+test('replaces a PDF without changing its identity', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:success'] }, async ({ page }) => {
   const requests = await setup(page);
-  await page.goto('/panel/documents/71/edit', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel/documents/71/edit', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('doc-pdf-replace-file').setInputFiles({ ...file, name: 'new.pdf', buffer: next });
   await page.getByTestId('doc-pdf-replace-save').click();
   await expect(page.getByTestId('doc-pdf-version')).toContainText('Versión 2 · new.pdf');
@@ -138,29 +143,29 @@ test('replaces a PDF without changing its identity', { tag: tags('success') }, a
   await expect(page.getByRole('link', { name: 'Ver PDF de esta versión' })).toHaveAttribute('href', /\/versions\/91\/file\//);
 });
 
-test('retains the selected file after a concurrent replacement', { tag: tags('failure') }, async ({ page }) => {
+test('retains the selected file after a concurrent replacement', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:failure'] }, async ({ page }) => {
   await setup(page, { replaceFailure: true });
-  await page.goto('/panel/documents/71/edit', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel/documents/71/edit', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('doc-pdf-replace-file').setInputFiles({ ...file, name: 'new.pdf', buffer: next });
   await page.getByTestId('doc-pdf-replace-save').click();
-  await expect(page.locator('#doc-pdf-replace-error')).toHaveText('El PDF cambió. Recarga el documento.');
+  await expect(page.getByTestId('doc-uploaded-pdf-panel').getByRole('alert')).toHaveText('El PDF cambió. Recarga el documento.');
   await expect(page.getByTestId('doc-pdf-replace-save')).toBeVisible();
   await expect(page.getByTestId('doc-pdf-version')).toContainText('Versión 1');
 });
 
-test('keeps metadata editable without submitting Markdown', { tag: tags('success') }, async ({ page }) => {
+test('keeps metadata editable without submitting Markdown', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:success'] }, async ({ page }) => {
   const requests = await setup(page);
-  await page.goto('/panel/documents/71/edit', { waitUntil: 'domcontentloaded' });
-  await page.locator('#edit-title').fill('Identificación nueva');
+  await page.goto('/es-co/panel/documents/71/edit', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('textbox', { name: /^Título/ }).fill('Identificación nueva');
   await page.getByTestId('doc-save').click();
   await expect(page.getByTestId('doc-editor-title')).toHaveText('Identificación nueva');
   expect(requests.metadataBody().content_markdown).toBeUndefined();
   expect(requests.metadataBody().include_portada).toBeUndefined();
 });
 
-test('offers the original download when the viewer fails', { tag: tags('failure') }, async ({ page }) => {
+test('offers the original download when the viewer fails', { tag: ['@flow:admin-document-pdf', '@role:admin', '@outcome:failure'] }, async ({ page }) => {
   await setup(page, { previewFailure: true });
   await createPdf(page);
-  await expect(page.getByTestId('doc-uploaded-pdf-error')).toContainText('El PDF no está disponible');
+  await expect(page.getByTestId('doc-uploaded-pdf-error')).toContainText('The PDF is unavailable');
   await expect(page.getByTestId('doc-pdf-original-download')).toHaveAttribute('href', /\/documents\/71\/pdf\//);
 });

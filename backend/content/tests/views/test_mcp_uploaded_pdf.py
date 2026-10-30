@@ -7,8 +7,14 @@ from unittest.mock import patch
 import pytest
 from django.core.files.storage import storages
 
-from content.models import Document, DocumentType, EntityHistory, McpConnector, McpUpload
 from content.mcp.upload_tools import store_artifact
+from content.models import (
+    Document,
+    DocumentType,
+    EntityHistory,
+    McpConnector,
+    McpUpload,
+)
 from content.tests.views.test_uploaded_pdf_documents import pdf_bytes
 
 pytestmark = pytest.mark.django_db
@@ -74,7 +80,7 @@ def test_download_asset_matches_original(api_client, access):
     output = McpUpload.objects.get(pk=result['structuredContent']['asset_id'])
     assert output.file.read() == Document.objects.get(pk=doc['id']).uploaded_pdf.read()
     assert output.file.name.startswith('mcp-document-uploads/')
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match='authenticated access'):
         _ = output.file.url
 
 
@@ -103,7 +109,7 @@ def test_metadata_update_reuses_panel_serializer(api_client, access):
     assert row.pdf_version == 1
 
 
-@pytest.mark.parametrize('tool,field', [('append_document', 'markdown'), ('update_document', 'markdown'), ('update_pdf_document', 'content_markdown')])
+@pytest.mark.parametrize(('tool', 'field'), [('append_document', 'markdown'), ('update_document', 'markdown'), ('update_pdf_document', 'content_markdown')])
 def test_text_writes_cannot_change_pdf(api_client, access, tool, field):
     doc = create(api_client, access)
     result = rpc(api_client, access, tool, {'document_id': doc['id'], field: '# Reescrito'})

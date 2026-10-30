@@ -65,7 +65,7 @@ def test_creation_preserves_folder_association(admin_client):
     assert 'singular' in document.pdf_search_text
 
 
-@pytest.mark.parametrize('content,name', [(b'not pdf', 'fake.pdf'), (b'%PDF-1.7 broken', 'broken.pdf'), (b'', 'empty.pdf'), (b'text', 'word.docx')])
+@pytest.mark.parametrize(('content', 'name'), [(b'not pdf', 'fake.pdf'), (b'%PDF-1.7 broken', 'broken.pdf'), (b'', 'empty.pdf'), (b'text', 'word.docx')])
 def test_invalid_upload_leaves_no_document(admin_client, content, name):
     before = Document.objects.count()
     response = admin_client.post('/api/documents/create-from-pdf/', {'title': 'Inválido', 'file': upload(content, name)}, format='multipart')

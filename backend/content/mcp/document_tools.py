@@ -700,7 +700,7 @@ def update_document(arguments):
         aliases = {'client_id': 'client', 'project_id': 'project'}
         data = {aliases.get(key, key): value for key, value in arguments.items() if key not in ignored}
         serializer = _valid_serializer(DocumentCreateUpdateSerializer(doc, data=data, partial=True))
-        serializer.save(updated_by=mcp_actor())
+        doc = serializer.save(updated_by=mcp_actor())
         return document_write_payload(doc, include_content=False)
 
     update_fields = set()

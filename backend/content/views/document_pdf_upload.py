@@ -53,6 +53,8 @@ def create_document_from_pdf(request):
 @permission_classes([IsAdminUser])
 def replace_document_pdf(request, document_id):
     get_object_or_404(Document, pk=document_id)
+    if len(request.FILES.getlist('file')) != 1:
+        raise serializers.ValidationError({'file': 'Adjunta exactamente un archivo PDF.'})
     upload = PdfReplacementSerializer(data=request.data)
     upload.is_valid(raise_exception=True)
     unknown = set(request.data) - {'file', 'expected_version'}

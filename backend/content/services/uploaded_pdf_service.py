@@ -54,7 +54,8 @@ def pdf_artifact_scope():
     try:
         yield
     except BaseException:
-        cleanup_rollback_files(files[start:])
+        cleanup_rollback_files([(storage, name) for storage, name, owner in files[start:]
+                                if owner is None or not owner.committed])
         del files[start:]
         raise
     finally:
@@ -147,10 +148,10 @@ def _assign_pdf(document, data, inspected, filename):
     document.pdf_text_status = inspected['status']
     document.uploaded_pdf.save(f'{uuid.uuid4().hex}.pdf', ContentFile(data), save=False)
     artifact = (document.uploaded_pdf.storage, document.uploaded_pdf.name)
-    retain_file_on_rollback(*artifact)
+    owner = retain_file_on_rollback(*artifact)
     files = _artifacts.get()
     if files is not None:
-        files.append(artifact)
+        files.append((*artifact, owner))
 
 
 def create_pdf_document(serializer, upload, *, actor):
@@ -178,19 +179,25 @@ def _project_ids(document):
     ).values_list('pk', flat=True))
 
 
-def replace_pdf_document(document_id, upload, *, expected_version, actor):
+def lock_pdf_document(document_id, *, extra_project_ids=()):
+    """Serialize PDF metadata and bytes with publication/signing project locks."""
     from accounts.models import Project
+
+    before = Document.objects.get(pk=document_id)
+    project_ids = _project_ids(before) | {pk for pk in extra_project_ids if pk is not None}
+    list(Project.objects.select_for_update().filter(pk__in=project_ids).order_by('pk'))
+    document = Document.objects.select_for_update().get(pk=document_id)
+    if document.project_id != before.project_id or not _project_ids(document) <= project_ids:
+        raise PdfVersionConflict()
+    return document
+
+
+def replace_pdf_document(document_id, upload, *, expected_version, actor):
     from content.services.document_write_service import movement_blockers
 
     data, inspected = inspect_upload(upload)
     with pdf_artifact_scope(), history_operation(actor=actor, source='service'), transaction.atomic():
-        before = Document.objects.get(pk=document_id)
-        project_ids = _project_ids(before)
-        # Same order as delivery publication and signing: Projects, then Document.
-        list(Project.objects.select_for_update().filter(pk__in=project_ids).order_by('pk'))
-        document = Document.objects.select_for_update().get(pk=document_id)
-        if document.project_id != before.project_id or not _project_ids(document) <= project_ids:
-            raise PdfVersionConflict()
+        document = lock_pdf_document(document_id)
         if document.content_format != 'pdf':
             raise ValidationError({'detail': 'Este documento no es un PDF subido.'})
         if movement_blockers(document) or pdf_is_protected(document):

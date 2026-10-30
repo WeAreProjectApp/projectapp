@@ -176,6 +176,7 @@ def retain_file_on_rollback(storage, name):
     op = _operation.get()
     if op is not None:
         op.rollback_files.append((storage, name))
+    return op
 
 
 @contextmanager
