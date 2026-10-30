@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BillingContextFields from './BillingContextFields.vue'
+import ContractSourcePicker from './ContractSourcePicker.vue'
 import { get_request, create_request } from '~/stores/services/request_http'
 const props = defineProps({
   projectId: { type: [String, Number], default: null },
@@ -18,11 +19,12 @@ const sourceValue = ref('')
 const linking = ref(false)
 const showLinkForm = ref(false)
 const linkError = ref('')
-const sourceOptions = computed(() => (options.value?.contract_sources || []).map(source => ({
-  value: `${source.source_type}:${source.id}`,
-  label: `${source.title} · ${source.origin_label}`,
-})))
+const sourceOptions = computed(() => options.value?.contract_sources || [])
 let sequence = 0
+let contextRevision = 0
+// Loading a project and choosing a billing context are separate intentions.
+watch(() => props.modelValue, () => { contextRevision += 1 }, { deep: true, flush: 'sync' })
+onBeforeUnmount(() => { sequence += 1 })
 const validationMessage = computed(() => {
   if (!props.projectId) return ''
   if (loading.value) return 'Espera a que carguen las opciones de cobro del proyecto.'
@@ -72,7 +74,10 @@ async function linkContract() {
   if (!sourceValue.value || linking.value || !options.value) return
   const [sourceType, sourceId] = sourceValue.value.split(':')
   const request = sequence
+  const revision = contextRevision
   const projectId = props.projectId
+  const canApply = () => request === sequence && revision === contextRevision
+    && Number(projectId) === Number(props.projectId)
   linking.value = true; linkError.value = ''
   try {
     const result = await create_request(`admin/billing-context/projects/${projectId}/contracts/link/`, {
@@ -80,18 +85,18 @@ async function linkContract() {
       expected_version: options.value.delivery_version,
       request_id: `billing-link-${Date.now()}-${sourceValue.value}`,
     })
-    if (request !== sequence) return
+    if (!canApply()) return
     const refreshed = await get_request(`admin/billing-context/projects/${projectId}/options/`)
-    if (request !== sequence) return
+    if (!canApply()) return
     options.value = refreshed.data
     emit('update:modelValue', { billing_nature: 'contract', contract_id: result.data.id,
       amendment_id: null, project_hosting_id: null, hosting_payment_id: null })
     showLinkForm.value = false; sourceValue.value = ''
   } catch (err) {
-    if (request === sequence) linkError.value = err.response?.data?.detail || 'No se pudo vincular el contrato. Actualiza las opciones e inténtalo de nuevo.'
+    if (canApply()) linkError.value = err.response?.data?.detail || 'No se pudo vincular el contrato. Actualiza las opciones e inténtalo de nuevo.'
   } finally { if (request === sequence) linking.value = false }
 }
-watch(() => props.projectId, load, { immediate: true })
+watch(() => props.projectId, load, { immediate: true, flush: 'sync' })
 </script>
 <template>
   <section v-if="projectId" class="space-y-2" data-testid="collection-form-project-context">
@@ -104,8 +109,8 @@ watch(() => props.projectId, load, { immediate: true })
       <BaseButton variant="link" size="sm" data-testid="billing-link-contract-open" @click="showLinkForm = !showLinkForm">Vincular contrato existente</BaseButton>
       <section v-if="showLinkForm" class="rounded-xl border border-border-muted p-3 space-y-3" data-testid="billing-link-contract-form">
         <p class="text-xs text-text-muted">Elige el documento que corresponde al contrato. Se registrará en el seguimiento del proyecto sin copiarlo ni cambiar su contenido.</p>
-        <BaseFormField v-if="sourceOptions.length" label="Contrato existente del proyecto">
-          <BaseSelect v-model="sourceValue" :options="sourceOptions" placeholder="Seleccionar documento…" data-testid="billing-link-contract-source" />
+        <BaseFormField v-if="sourceOptions.length" label="Contrato existente del proyecto" label-policy="wrap">
+          <ContractSourcePicker v-model="sourceValue" :sources="sourceOptions" :disabled="linking" />
         </BaseFormField>
         <p v-else class="text-sm text-text-muted" data-testid="billing-link-contract-empty">No hay documentos vinculables. Agrega el contrato a este proyecto o vincula la propuesta que lo contiene.</p>
         <BaseControlGate :reasons="sourceValue ? [] : ['Selecciona el documento que corresponde al contrato.']" align="start" label="Vincular contrato" v-slot="{ blocked, describedBy }">

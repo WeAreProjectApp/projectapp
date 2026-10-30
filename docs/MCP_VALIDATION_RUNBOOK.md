@@ -2618,6 +2618,39 @@ confirmaciones y adaptadores de `projects` y `accounting-billing` en
 `content/tests/views/test_mcp_contracts.py`. Las herramientas sensibles mantienen
 `financial_effect: none`; la emisión conserva el adaptador contable existente.
 No ejecutar validaciones mutantes contra conectores activos de producción.
+### Buscador de contrato existente (2026-10-29)
+
+`accounting.get_project_billing_options` conserva sus campos y admite `query`
+opcional (texto, máximo 300 caracteres). Filtra únicamente `contract_sources`
+por coincidencia continua en el título, sin distinguir mayúsculas, tildes ni
+guiones bajos; vacío devuelve todas las fuentes elegibles y todas sus versiones.
+Cada fuente añade `created_at`, `folder_path`, `proposal_title` e
+`is_contract_like`. Contratos y otrosíes van primero, después otros documentos;
+cada grupo se ordena por creación e ID descendentes. La clasificación usa el
+tipo documental o palabras contractuales completas del título legado: no cambia
+la elegibilidad ni autoriza acceso al archivo.
+
+Panel y MCP reutilizan `contract_source_options` y `link_billing_contract`, con
+los permisos administrativos y el límite de proyecto/cliente vigentes. No hay
+búsqueda entre proyectos, migraciones, copia de contenido ni cambios de dinero.
+El conector canónico es `accounting` (2.2.0); `accounting-billing` (3.1.0)
+conserva compatibilidad. `projects` solo conserva estas operaciones para sus
+credenciales legacy, no en su catálogo público actual. Las huellas de los dos
+conectores contables se regeneran con `mcp_schema_report --write-fingerprints`.
+`link_project_billing_contract` conserva serializer, control de versión,
+confirmación y reutilización del vínculo. `contracts.py` no necesita cambios:
+son proyecciones aditivas, sin campos nuevos en modelos ni cambios de escritura.
+
+Validar `test_billing_contract_source_search.py` y
+`test_mcp_billing_contract_search.py` en `content/tests/views/`: paridad de
+metadatos/búsqueda, todas las versiones, sin resultados, consulta inválida,
+denegación no administrativa y búsqueda → confirmación → vínculo correcto.
+Repetir búsqueda y confirmación con credenciales canónicas de `accounting` y
+`accounting-billing`; no acreditar paridad pública solo con la credencial legacy.
+Conservar los casos de fuente ajena, versión vieja y reintento de
+`test_mcp_project_collaboration.py`. Ejecutar lotes de hasta 20 con settings_test;
+nunca contra un conector de producción.
+
 ### Proyectos: eliminación de referencias vacías (2026-10-01)
 
 - `preview_project_delete` devuelve la misma lista de dependencias y cantidades que el modal del panel.

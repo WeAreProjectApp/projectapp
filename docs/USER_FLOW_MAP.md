@@ -6936,6 +6936,27 @@ previa y registra por el contrato compartido, también para un solo ingreso.
 La confirmación al cliente se revisa dentro del diálogo y se envía después
 del registro; el período opcional de hosting se conserva.
 
+## Buscador para vincular contrato existente (2026-10-29)
+
+Desde el formulario de cuenta, «Vincular contrato existente» abre un buscador
+personalizado. Lista primero contratos y otrosíes y debajo otros documentos
+elegibles del proyecto; muestra todas las versiones con fecha y carpeta o
+propuesta. Busca una coincidencia en cualquier parte del nombre sin distinguir
+mayúsculas, tildes ni guiones bajos y resalta el fragmento original.
+
+- **success:** buscar, elegir con Enter o clic y vincular selecciona el contrato
+  devuelto, conservando el documento original; escenarios en las cinco anchuras.
+- **display:** al abrir desde Ingresos se distinguen grupos y versiones por
+  ubicación; una consulta sin coincidencias muestra la explicación.
+- **error:** texto libre sin opción elegida mantiene bloqueado Vincular; cambiar
+  de proyecto limpia búsqueda y selección (integración unitaria).
+- **failure:** el rechazo del enlace conserva la fuente para corregir o reintentar.
+
+Specs: `admin-accounting-incomes.spec.js` (búsqueda, vínculo y rechazo), más
+`ContractSourcePicker.spec.js` y `CollectionAccountProjectContext.spec.js` para
+teclado, limpieza y cambio de proyecto. Los campos Contrato y Otrosí del contexto
+no cambian. La búsqueda MCP usa las mismas fuentes y comprobaciones de enlace.
+
 ### FLOW: `admin-accounting-hosting-cycles`
 
 - **Module:** admin

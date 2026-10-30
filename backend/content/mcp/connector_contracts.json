@@ -1,11 +1,11 @@
 {
   "accounting": {
-    "sha256": "49ab0f47cb1b697a5f05fc204e51aed0eb324d33c5da8799db00e957885485a2",
-    "version": "2.1.0"
+    "sha256": "162414019f1b822e22c8b3eb7d45d53748c1b6d8b5585e349bfff38627d9194d",
+    "version": "2.2.0"
   },
   "accounting-billing": {
-    "sha256": "9ede997afb70d0725778632b17f8d38c81d6d8bc0e6df7386e93ae97cc886d9e",
-    "version": "3.0.0"
+    "sha256": "6cd65f2e6a831f39f161c78f271c2c2f9d889d160e71aa830a4671c83af302a5",
+    "version": "3.1.0"
   },
   "accounting-cards": {
     "sha256": "854bbbc6afd805bdd7d91e128877d5c6ca4e4515425f879056cd2874dafe634e",

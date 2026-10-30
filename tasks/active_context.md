@@ -3082,3 +3082,14 @@ Cubren 82 líneas y ramas que faltaban en ese informe; el ajuste de IA lo realiz
 su dueño. La revisión independiente y el gate estricto aprobaron estos casos.
 La entrega sigue pendiente del CI del nuevo head. Esta nota no acredita merge,
 despliegue ni cambios en datos desplegados.
+
+## 2026-10-29 — Buscador de contrato existente en cuenta de cobro
+
+Rama `feat/29102026-contract-source-search`, worktree exclusivo
+`contract-source-search`. Reemplaza sólo el selector de fuente al vincular por
+un combobox con grupos, metadatos, coincidencias normalizadas y resaltado seguro.
+`contract_sources` añade fecha/carpeta/propuesta/clasificación; MCP consulta y
+filtra las mismas fuentes y conserva el enlace confirmado por el servicio actual.
+Sin cambios de modelos, migraciones, reglas de pendiente ni emisión; esos cruces
+pertenecen a las otras sesiones. Validación focalizada y PR verde en curso; el
+merge pertenece a «Coordina las sesiones activas».
