@@ -8,7 +8,7 @@ from content.mcp.protocol import ToolError
 
 logger = logging.getLogger(__name__)
 
-PRIVATE_FIELDS = {'archived_pdf', 'generated_file', 'file', 'secrets'}
+PRIVATE_FIELDS = {'archived_pdf', 'generated_file', 'uploaded_pdf', 'file', 'secrets'}
 
 
 def _public(value):
@@ -101,8 +101,8 @@ def history_tools(entity):
 
         tool['handler'] = handler
         tools.append(tool)
-    if entity == 'proposal':
-        file_tool = _op('download_proposal_history_file',
+    if entity in ('proposal', 'document'):
+        file_tool = _op(f'download_{entity}_history_file',
                         'Descarga el PDF conservado de una versión histórica como asset temporal de esta credencial.',
                         'entity-history-file', path=('entity_type', 'object_id', 'revision_id'))
         bridge = file_tool['handler']

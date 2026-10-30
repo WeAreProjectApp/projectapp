@@ -47,6 +47,7 @@ export default defineI18nLocale(async () => {
     videoResources,
     platformAI,
     platformHelp,
+    documentPdf,
   ] = await Promise.all([
     import('~/locales/global/en.js'),
     import('~/locales/richText/en.js'),
@@ -95,6 +96,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/videoResources/en.js'),
     import('~/locales/platformAI/en.js'),
     import('~/locales/platformHelp/en.js'),
+    import('~/locales/documentPdf/en.js'),
   ])
 
   return {
@@ -145,5 +147,6 @@ export default defineI18nLocale(async () => {
     videoResources: videoResources.default,
     platformAI: platformAI.default,
     platformHelp: platformHelp.default,
+    documentPdf: documentPdf.default,
   }
 })

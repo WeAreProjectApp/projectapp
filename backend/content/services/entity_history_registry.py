@@ -26,7 +26,8 @@ FIELDS = {
         client_email_subject client_email_body client_whatsapp_message client_custom_notes language
         cover_type include_portada include_subportada include_contraportada template_style
         requires_signature signed_at signed_by signature_name is_archived archived_at
-        archived_via_folder generated_file metadata'''.split(),
+        archived_via_folder generated_file metadata content_format uploaded_pdf pdf_filename
+        pdf_size pdf_sha256 pdf_version pdf_text_status'''.split(),
     'proposal': '''title client client_name client_email client_phone total_investment currency
         discount_percent status language project_type market_type slug expires_at reminder_days
         urgency_reminder_days show_contract_terms email_intro nationality hosting_percent
@@ -60,6 +61,10 @@ LABELS = {
     'archived_pdf': 'PDF enviado', 'current_state': 'Estado actual',
     'contract_modality': 'Modalidad de cierre',
     'text_formats': 'Formato de los textos',
+    'uploaded_pdf': 'Archivo PDF', 'pdf_filename': 'Nombre del PDF',
+    'pdf_size': 'Tamaño del PDF', 'pdf_sha256': 'Huella del PDF',
+    'pdf_version': 'Versión del PDF', 'pdf_text_status': 'Búsqueda del PDF',
+    'content_format': 'Formato del contenido',
 }
 
 

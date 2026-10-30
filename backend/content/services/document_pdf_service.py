@@ -99,6 +99,9 @@ class DocumentPdfService:
             bytes: PDF content, or None on failure.
         """
         try:
+            if document.content_format == 'pdf':
+                with document.uploaded_pdf.open('rb') as source:
+                    return source.read()
             _register_fonts()
 
             style = (

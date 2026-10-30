@@ -7,6 +7,8 @@ from content.video_upload_storage import McpUploadStorage
 
 def mcp_upload_path(instance, filename):
     prefix = 'mcp-video-uploads' if instance.content_type == 'video/mp4' else 'mcp-uploads'
+    if instance.content_type == 'application/pdf' and instance.connector.slug == 'documents':
+        prefix = 'mcp-document-uploads'
     return f'{prefix}/{instance.connector.slug}/{instance.id}/{filename}'
 
 

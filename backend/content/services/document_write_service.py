@@ -36,15 +36,22 @@ def movement_blockers(document):
 def document_capabilities(document):
     blockers = movement_blockers(document)
     mirror = is_contract_mirror(document)
+    from content.services.uploaded_pdf_service import pdf_is_protected
     return {
         "editable": not blockers and not mirror,
         "movable": not blockers,
         "move_blockers": blockers,
+        "content_editable": not blockers and document.content_format != 'pdf',
+        "pdf_replaceable": (not blockers and document.content_format == 'pdf'
+                            and not pdf_is_protected(document)),
     }
 
 
 def document_write_payload(document, *, include_content=False):
+    from content.services.uploaded_pdf_service import pdf_metadata
     data = {
+        "content_format": document.content_format,
+        "pdf": pdf_metadata(document),
         "id": document.pk,
         "title": document.title,
         "folder_id": document.folder_id,
@@ -107,6 +114,10 @@ DOCUMENT_WRITE_SCHEMA = {
         "etag": {"type": "string"},
         "updated_at": {"type": ["string", "null"]},
         "editable": {"type": "boolean"},
+        "content_editable": {"type": "boolean"},
+        "pdf_replaceable": {"type": "boolean"},
+        "content_format": {"type": "string"},
+        "pdf": {"type": ["object", "null"]},
         "movable": {"type": "boolean"},
         "move_blockers": {"type": "array", "items": {"type": "string"}},
         "markdown": {"type": "string", "description": "Sólo con include_content=true."},

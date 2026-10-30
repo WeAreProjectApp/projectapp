@@ -116,9 +116,10 @@ def client_document_pdf_view(request, doc_uuid):
                 pdf_bytes = source.read()
         except (OSError, ValueError):
             return Response({'detail': 'Evidencia no disponible.'}, status=status.HTTP_404_NOT_FOUND)
-    elif doc.generated_file:
+    elif doc.generated_file or doc.content_format == 'pdf':
         try:
-            with doc.generated_file.open('rb') as source:
+            file = doc.generated_file or doc.uploaded_pdf
+            with file.open('rb') as source:
                 pdf_bytes = source.read()
         except (OSError, ValueError):
             return Response({'detail': 'Documento no disponible.'}, status=status.HTTP_404_NOT_FOUND)

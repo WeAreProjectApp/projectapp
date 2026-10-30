@@ -4,7 +4,7 @@ from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 Tool registry for the Documents MCP connector.
 
 Lets claude.ai browse the panel's document manager (/panel/documents):
-list folders, list/read markdown documents, and create/edit/delete them.
+list folders, list/read Markdown and uploaded PDF documents, and administer them.
 Documents are authored in Markdown; the panel turns them into branded PDFs
 downstream, so producing correct Markdown is enough here.
 
@@ -100,14 +100,15 @@ COVER_TYPE_CHOICES = {c[0] for c in Document.CoverType.choices}
 # ── Querysets & lookups ──────────────────────────────────────────────────────
 
 def _markdown_qs():
-    """Only markdown documents — never commercial collection accounts.
+    """Generic Markdown/PDF documents — never commercial collection accounts.
 
     Lo archivado tampoco es visible por MCP: sale de circulación para todos los
     callers, no sólo para el panel. Esto cierra de una vez list/read/update/
     append/delete, que se apoyan en este queryset.
     """
+    from content.services.uploaded_pdf_service import with_pdf_protection
     return (
-        Document.objects
+        with_pdf_protection(Document.objects.all())
         .filter(document_type__code=MARKDOWN, is_archived=False)
         .select_related(
             'folder', 'project', 'client_user__profile', 'contract_template',
@@ -287,6 +288,7 @@ def _folder_payload(folder):
 
 
 def _doc_summary(doc):
+    from content.services.uploaded_pdf_service import pdf_metadata
     client_profile = (
         getattr(doc.client_user, 'profile', None) if doc.client_user_id else None
     )
@@ -296,6 +298,8 @@ def _doc_summary(doc):
         .order_by('state__group__order', 'state__order')
     )
     return {
+        'content_format': doc.content_format,
+        'pdf': pdf_metadata(doc),
         'id': doc.id,
         'title': doc.title,
         'slug': doc.slug,
@@ -538,6 +542,11 @@ def list_documents(arguments):
         raise ToolError('page y page_size deben ser enteros.')
 
     qs = _markdown_qs()
+    search = str(arguments.get('search') or '').strip()[:200]
+    if search:
+        from django.db.models import Q
+        qs = qs.filter(Q(title__icontains=search) | Q(client_name__icontains=search)
+                       | Q(content_format='pdf', pdf_search_text__icontains=search))
     folder_arg = arguments.get('folder_id')
     if folder_arg == 'none':
         qs = qs.filter(folder__isnull=True)
@@ -682,6 +691,18 @@ def update_document(arguments):
     if 'content_markdown' in arguments and 'markdown' not in arguments:
         arguments = {**arguments, 'markdown': arguments['content_markdown']}
 
+    if doc.content_format == 'pdf':
+        from content.serializers.document import DocumentCreateUpdateSerializer
+        from content.services.uploaded_pdf_service import PDF_COMPOSITION_FIELDS
+        if 'markdown' in arguments or PDF_COMPOSITION_FIELDS.intersection(arguments):
+            raise ToolError('El PDF no admite edición de texto; usa replace_document_pdf.', code='NOT_EDITABLE')
+        ignored = {'document_id', 'include_content', 'if_match', 'client_policy', 'portal_policy', 'folder_id'}
+        aliases = {'client_id': 'client', 'project_id': 'project'}
+        data = {aliases.get(key, key): value for key, value in arguments.items() if key not in ignored}
+        serializer = _valid_serializer(DocumentCreateUpdateSerializer(doc, data=data, partial=True))
+        serializer.save(updated_by=mcp_actor())
+        return document_write_payload(doc, include_content=False)
+
     update_fields = set()
     if 'title' in arguments:
         title = (arguments.get('title') or '').strip()
@@ -768,6 +789,8 @@ def append_document(arguments):
     the full markdown.
     """
     doc = _get_markdown_doc_or_error(arguments.get('document_id'))
+    if doc.content_format == 'pdf':
+        raise ToolError('El PDF no admite append; usa replace_document_pdf.', code='NOT_EDITABLE')
     _refuse_contract_mirror(doc)
     _check_document_etag(doc, arguments)
 
@@ -1118,6 +1141,7 @@ DOCUMENT_TOOLS = [
                 },
                 'page': {'type': 'integer', 'default': 1, 'description': 'Página solicitada; por defecto 1. Valores menores se ajustan a 1.'},
                 'page_size': {'type': 'integer', 'default': 20, 'maximum': 50, 'description': 'Documentos por página; por defecto 20, ajustados entre 1 y 50.'},
+                'search': {'type': 'string', 'description': 'Busca por título, cliente o texto extraído de PDF (hasta 200 caracteres).'},
             },
         },
         'handler': list_documents,
@@ -1479,6 +1503,22 @@ from content.mcp.folder_migration_tools import FOLDER_MIGRATION_TOOLS
 DOCUMENT_TOOLS += FOLDER_MIGRATION_TOOLS
 
 from content.mcp.operation_builder import _op as _shared_op
+from content.mcp.schemas.uploaded_pdf_documents import PDF_CREATE_SCHEMA, PDF_METADATA_SCHEMA
+
+_PDF_ASSET = {'source_asset_id': {'field': 'file', 'content_types': ['application/pdf']}}
+for _name, _description, _route, _path, _schema, _assets in (
+    ('create_document_from_pdf', 'Crea un documento PDF privado de hasta 25 MiB desde un asset completado. Conserva identificación, notas y permisos del Panel; no convierte a Markdown.', 'create-document-from-pdf', (), PDF_CREATE_SCHEMA, _PDF_ASSET),
+    ('replace_document_pdf', 'Reemplaza el PDF subido conservando su historial. Requiere expected_version vigente de read_document; no modifica contratos ni PDFs emitidos por el sistema.', 'replace-document-pdf', ('document_id',), {'type': 'object', 'properties': {'expected_version': {'type': 'integer', 'minimum': 1, 'description': 'Versión PDF vigente devuelta por read_document.'}}, 'required': ['expected_version'], 'additionalProperties': False}, _PDF_ASSET),
+    ('update_pdf_document', 'Administra identificación, notas, etiquetas, estado editorial y visibilidad de un PDF subido con los serializers y permisos del Panel. El archivo se cambia con replace_document_pdf.', 'update-document', ('document_id',), PDF_METADATA_SCHEMA, None),
+):
+    _tool = _shared_op(_name, _description, _route, 'PATCH' if _name == 'update_pdf_document' else 'POST', _path, 'write', assets=_assets, payload_schema=_schema, envelope_aliases=False)
+    if _assets:
+        _tool['input_schema']['required'].append('source_asset_id')
+    DOCUMENT_TOOLS.append(_tool)
+
+for _tool in DOCUMENT_TOOLS:
+    if _tool['name'] in ('list_documents', 'read_document', 'update_document'):
+        _tool['description'] += ' También admite PDFs subidos: consulta content_format y pdf; su contenido sólo se cambia con replace_document_pdf.'
 DOCUMENT_TOOLS.append(_shared_op('get_document_proposal_source', 'Consulta la identidad, revisiones y fuente estructurada compartida; editar la propuesta actualiza el mismo borrador.', 'document-proposal-source', path=('document_id',), query_schema={'type': 'object', 'properties': {}, 'additionalProperties': False}, envelope_aliases=False))
 
 from content.mcp.proposal_document_reconciliation_tools import RECONCILIATION_TOOLS
@@ -1492,3 +1532,6 @@ PROPOSAL_BINARY_TOOL = _shared_op('replace_document_proposal_binary',
     assets={'source_asset_id': {'field': 'file', 'content_types': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']}})
 PROPOSAL_BINARY_TOOL['input_schema']['required'].append('source_asset_id')
 DOCUMENT_TOOLS.append(PROPOSAL_BINARY_TOOL)
+
+from content.mcp.entity_history_tools import history_tools
+DOCUMENT_TOOLS += history_tools('document')

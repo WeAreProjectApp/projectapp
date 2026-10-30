@@ -882,7 +882,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
 | `projects` | 4.0.0 | 159 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, integridad de datos y ciclo de vida de hosting |
-| `documents` | 8.0.0 | 77 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
+| `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 3.0.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 3.0.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
@@ -2891,3 +2891,17 @@ solicita confirmación; un cambio posterior de la carpeta o contenido añadido
 impide ejecutarla. Una credencial restringida no descubre ni ejecuta acciones
 fuera de su alcance y no gana permiso de lectura de secretos por administrar
 carpetas.
+
+
+## Documentos PDF subidos — contrato 8.2.0
+
+- `begin_upload` → `upload_asset_chunk` (o PUT firmado) → `complete_upload` → `create_document_from_pdf(source_asset_id, title, ...)`. El asset debe pertenecer a la misma credencial, estar completo y contener PDF válido de hasta 26.214.400 bytes. Los nuevos temporales y artefactos PDF de documents se guardan en almacenamiento privado.
+- `read_document`, `list_documents(search=...)` y `browse_documents` incluyen `content_format=pdf` y `pdf` con nombre, tamaño, SHA-256, versión y estado del texto. No exponen rutas privadas ni permiten cambiar el archivo escribiendo Markdown. La búsqueda general usa sólo el texto vigente; el selector contractual conserva búsqueda por título.
+- `update_pdf_document` administra identificación, etiquetas, notas y publicación con el serializer del panel. Para mover usar `update_document` con sus políticas o `move_documents`; estados/observaciones/archivo conservan sus operaciones comunes. El contenido PDF no acepta `append_document` ni cambios de composición Markdown.
+- `replace_document_pdf(document_id, source_asset_id, expected_version)` conserva ID/UUID y archivos anteriores. Una versión obsoleta o evidencia protegida produce conflicto; el asset sigue disponible para reintento. Firma/entrega mantienen 10 MiB y captura de fuentes 15 MiB, independientemente del límite del gestor.
+- `render_document_pdf` devuelve un asset descargable del original. `list_document_history`, `get_document_history_version`, `compare_document_history` y `download_document_history_file` permiten consultar versiones internas sin rutas de storage. Un cliente del portal no accede a ese historial.
+- Verificar falla de persistencia/flush exterior/consumo: sin documento ni revisión nueva, sin archivo nuevo huérfano por ese error y sin consumir el asset; los bytes previos se conservan.
+
+Pruebas focalizadas (por archivo, máximo 20 tests por lote): `test_uploaded_pdf_documents.py`, `test_uploaded_pdf_integrity.py`, `test_mcp_uploaded_pdf.py`. El conjunto usa settings_test y SQLite temporal, sin leer .env.
+
+**Requisito de despliegue:** aplicar y validar la excepción versionada de `scripts/nginx/projectapp.conf` para las dos rutas de creación/reemplazo PDF (26M de transporte, 25 MiB de archivo). El resto conserva 10M. Esta entrega no aplica Nginx vivo ni acredita despliegue; sin aplicar esa configuración, el panel desplegado mantiene el límite anterior de transporte.

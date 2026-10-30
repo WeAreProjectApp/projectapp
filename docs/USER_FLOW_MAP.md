@@ -6077,6 +6077,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-document-move-folder` | admin | P1 | display,success,error,failure | 3 |
 | `admin-document-navigation` | admin | P1 | display,success,failure | 1 |
 | `admin-document-observation-delete` | admin | P1 | display,success,failure | 1 |
+| `admin-document-pdf` | admin | P2 | success,error,failure,display | 1 |
 | `admin-document-pdf-download` | admin | P2 | success,failure,display | 1 |
 | `admin-document-pdf-preview` | admin | P2 | display | 1 |
 | `admin-document-rename` | admin | P2 | success,failure | 1 |

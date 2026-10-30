@@ -95,7 +95,7 @@ _AUDIT_INTERNAL = 'Identificador de auditoría o integración administrado por e
 _PANEL_ONLY = 'Configuración avanzada reservada al panel; no forma parte del contrato MCP.'
 # Forced project deletion is a panel-only command, not a writable Project
 # model field. Existing MCP delete_project retains its empty-project boundary.
-_COMMERCIAL_DOCUMENT = 'Campo exclusivo de cuentas de cobro; el MCP sólo opera documentos markdown.'
+_COMMERCIAL_DOCUMENT = 'Campo exclusivo de cuentas de cobro; el MCP opera documentos Markdown y PDF subidos.'
 _PLATFORM_PROFILE = 'Dato del perfil de plataforma fuera del alcance del gestor comercial de clientes.'
 _AUTOMATION_STATE = 'Estado interno de automatización; se observa por resultados, no se manipula por MCP.'
 _DOCUMENT_THREAD_DERIVED_POSITION = (
@@ -167,15 +167,16 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.Document',
-            read_only='id slug status created_at updated_at tags is_archived',
+            read_only='id slug created_at updated_at is_archived content_format pdf_filename pdf_size pdf_sha256 pdf_version pdf_text_status',
             read_write=(
-                'folder project client_user title is_client_visible '
+                'folder project client_user title is_client_visible status tags uploaded_pdf '
                 'content_markdown client_name client_email_subject '
                 'client_email_body client_whatsapp_message client_custom_notes '
                 'language include_portada include_subportada include_contraportada'
             ),
             excluded=(
                 _excluded(_AUDIT_INTERNAL, 'uuid created_by updated_by content_json')
+                | _excluded('Texto derivado del PDF para búsqueda; no es contenido editable ni se expone íntegro.', 'pdf_search_text')
                 | _excluded(
                     _COMMERCIAL_DOCUMENT,
                     'document_type deliverable issuer hosting_record income_record '

@@ -269,6 +269,7 @@ def build_document_list_queryset(
         exact_id, predicate = id_search_predicate(search)
         if not exact_id:
             predicate |= Q(title__icontains=search) | Q(client_name__icontains=search)
+            predicate |= Q(content_format='pdf', pdf_search_text__icontains=search)
         documents = documents.filter(predicate)
 
     documents = documents.annotate(
