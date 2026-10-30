@@ -1300,12 +1300,20 @@ BILLING_CATALOG_CONTRACTS = (
             'commercial_status title slug status is_client_visible requires_signature '
             'is_archived archived_at archived_via_folder'
         ),
-        excluded=_excluded(
-            'Campos editoriales del Gestor de Documentos, ajenos al flujo de cobro.',
-            'content_markdown content_json client_name client_email_subject '
-            'client_email_body client_whatsapp_message client_custom_notes language '
-            'cover_type include_portada include_subportada include_contraportada '
-            'template_style tags',
+        excluded=(
+            _excluded(
+                'Campos editoriales del Gestor de Documentos, ajenos al flujo de cobro.',
+                'content_markdown content_json client_name client_email_subject '
+                'client_email_body client_whatsapp_message client_custom_notes language '
+                'cover_type include_portada include_subportada include_contraportada '
+                'template_style tags',
+            )
+            | _excluded(
+                'El PDF subido y sus metadatos se administran por documents; '
+                'el flujo de cobro genera su PDF mediante generated_file.',
+                'content_format uploaded_pdf pdf_filename pdf_size pdf_sha256 '
+                'pdf_version pdf_search_text pdf_text_status',
+            )
         ),
     ),
     _contract(

@@ -2901,6 +2901,7 @@ carpetas.
 - `replace_document_pdf(document_id, source_asset_id, expected_version)` conserva ID/UUID y archivos anteriores. Una versión obsoleta o evidencia protegida produce conflicto; el asset sigue disponible para reintento. Firma/entrega mantienen 10 MiB y captura de fuentes 15 MiB, independientemente del límite del gestor.
 - `render_document_pdf` devuelve un asset descargable del original. `list_document_history`, `get_document_history_version`, `compare_document_history` y `download_document_history_file` permiten consultar versiones internas sin rutas de storage. Un cliente del portal no accede a ese historial.
 - Verificar falla de persistencia/flush exterior/consumo: sin documento ni revisión nueva, sin archivo nuevo huérfano por ese error y sin consumir el asset; los bytes previos se conservan.
+- `accounting` y `accounting-billing` excluyen explícitamente los ocho campos del PDF subido: los administra `documents`. El flujo de cobro conserva su PDF generado mediante `generated_file` y no expone rutas ni bytes del archivo privado.
 
 Pruebas focalizadas (por archivo, máximo 20 tests por lote): `test_uploaded_pdf_documents.py`, `test_uploaded_pdf_integrity.py`, `test_mcp_uploaded_pdf.py`. El conjunto usa settings_test y SQLite temporal, sin leer .env.
 

@@ -34,4 +34,7 @@ def test_document_page_capabilities_keep_a_fixed_query_budget(ordinary_document_
     assert len(queries) <= 6
     assert _binding_query_count(queries) == 1
     assert len(rows) == 10
-    assert capabilities == [{'editable': True, 'movable': True, 'move_blockers': []}] * 10
+    assert capabilities == [{
+        'editable': True, 'movable': True, 'move_blockers': [],
+        'content_editable': True, 'pdf_replaceable': False,
+    }] * 10
