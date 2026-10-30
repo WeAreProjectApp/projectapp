@@ -13,7 +13,7 @@ from accounts.services.billing_reassignment import validate_document_reassignmen
 from accounts.tests.billing.test_pending_document import (  # noqa: F401
     BASE, creation_payload, income, panel, superuser,
 )
-from content.models import Document, PocketMovement
+from content.models import Document, IncomeRecord, PocketMovement
 from content.services.accounting_settlement_service import settle_expected_income
 from content.services.collection_account_create_service import create_income_collection_account
 from content.services.collection_account_snapshot_service import stored_collection_account_pdf
@@ -57,16 +57,69 @@ def test_pending_reassignment_still_rejects_different_owner_and_detachment(accou
     assert CollectionAccountContext.objects.get(document=account).document_pending is True
 
 
-def test_client_readers_omit_private_deferral_metadata(account, admin_user, client_user):
-    associate_account(account.pk, admin_user, {'document_pending': True}, creating=True)
+@pytest.mark.parametrize('nature', [None, 'contract', 'hosting'])
+def test_client_readers_omit_private_deferral_metadata(account, admin_user, client_user, nature):
+    associate_account(account.pk, admin_user, {'document_pending': True, 'billing_nature': nature}, creating=True)
     client = APIClient()
     client.force_authenticate(client_user)
-    listing = client.get('/api/accounts/collection-accounts/').data
-    detail = client.get(f'/api/accounts/collection-accounts/{account.pk}/').data
+    listing_response = client.get('/api/accounts/collection-accounts/')
+    detail_response = client.get(f'/api/accounts/collection-accounts/{account.pk}/')
+    assert listing_response.status_code == 200
+    assert detail_response.status_code == 200
+    listing, detail = listing_response.data, detail_response.data
+    assert [row['id'] for row in listing] == [account.pk]
     assert listing[0]['context']['status'] == 'pending'
     assert detail['context']['status'] == 'pending'
     assert {'pending_by', 'pending_at', 'document_pending'}.isdisjoint(listing[0]['context'])
     assert {'pending_by', 'pending_at', 'document_pending'}.isdisjoint(detail['context'])
+
+
+@pytest.mark.parametrize('mismatch', ['document_client', 'document_project', 'income_client', 'income_project'])
+def test_pending_client_reads_preserve_ownership_boundaries(account, income, project, admin_user, client_user, mismatch):
+    Document.objects.filter(pk=account.pk).update(income_record=income)
+    associate_account(account.pk, admin_user, {'document_pending': True}, creating=True)
+    other = Project.objects.create(name='Proyecto de otro titular', client=admin_user)
+    target, changes = {
+        'document_client': (Document.objects.filter(pk=account.pk), {'client_user_id': admin_user.pk}),
+        'document_project': (Document.objects.filter(pk=account.pk), {'project_id': other.pk}),
+        'income_client': (IncomeRecord.objects.filter(pk=income.pk), {'client_id': admin_user.profile.pk}),
+        'income_project': (IncomeRecord.objects.filter(pk=income.pk), {'project_id': other.pk}),
+    }[mismatch]
+    target.update(**changes)
+    client = APIClient()
+    client.force_authenticate(client_user)
+    listing = client.get('/api/accounts/collection-accounts/')
+    assert listing.status_code == 200
+    assert listing.data == []
+    assert client.get(f'/api/accounts/collection-accounts/{account.pk}/').status_code == 404
+
+
+def test_pending_draft_remains_hidden_from_client(account, admin_user, client_user):
+    associate_account(account.pk, admin_user, {'document_pending': True}, creating=True)
+    Document.objects.filter(pk=account.pk).update(commercial_status='draft')
+    client = APIClient()
+    client.force_authenticate(client_user)
+    listing = client.get('/api/accounts/collection-accounts/')
+    assert listing.status_code == 200
+    assert listing.data == []
+    assert client.get(f'/api/accounts/collection-accounts/{account.pk}/').status_code == 404
+
+
+@pytest.mark.parametrize('nature', [None, 'contract', 'hosting'])
+def test_public_pending_filter_includes_explicit_deferrals(account, project, contract, admin_user, client_user, nature):
+    fields = {'document_type': account.document_type, 'project': project,
+              'client_user': client_user, 'commercial_status': 'issued'}
+    pending = Document.objects.create(title='Documento pendiente', **fields)
+    associate_account(pending.pk, admin_user, {'document_pending': True, 'billing_nature': nature}, creating=True)
+    complete = Document.objects.create(title='Documento vinculado', **fields)
+    associate_account(complete.pk, admin_user, {'billing_nature': 'contract', 'contract_id': contract.pk,
+                                              'expected_version': 0, 'reason': 'Vínculo recibido.'})
+    client = APIClient()
+    client.force_authenticate(client_user)
+    response = client.get('/api/accounts/collection-accounts/', {'nature': 'pending'})
+    assert response.status_code == 200
+    assert {row['id'] for row in response.data} == {account.pk, pending.pk}
+    assert {row['context']['status'] for row in response.data} == {'pending'}
 
 
 def test_jwt_creation_without_project_does_not_silently_ignore_pending_flag(panel):

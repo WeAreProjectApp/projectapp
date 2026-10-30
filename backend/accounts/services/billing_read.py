@@ -37,7 +37,9 @@ def visible_accounts(actor, filters=None):
     nature = filters.get('nature')
     if nature:
         if nature == 'pending':
-            qs = qs.filter(billing_context__isnull=True, project__isnull=False)
+            qs = qs.filter(Q(project__isnull=False) & (
+                Q(billing_context__isnull=True) | Q(billing_context__document_pending=True)
+            ))
         elif nature in ('contract', 'hosting'):
             qs = qs.filter(billing_context__nature=nature)
         else:
