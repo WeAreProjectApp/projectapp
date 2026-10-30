@@ -65,9 +65,10 @@ def validated_pdf_bytes(file):
 
 
 def _raw_pdf(doc):
-    if doc.generated_file:
+    file = doc.generated_file or (doc.uploaded_pdf if doc.content_format == 'pdf' else None)
+    if file:
         try:
-            with doc.generated_file.open('rb') as source:
+            with file.open('rb') as source:
                 pdf = source.read(MAX_PDF_BYTES + 1)
         except (OSError, ValueError):
             fail('El PDF de origen no está disponible.', 'pdf_unavailable')

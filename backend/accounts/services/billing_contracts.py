@@ -1,11 +1,15 @@
 """Explicitly register an existing project source for billing, without copying it."""
+from datetime import datetime
+import re
+import unicodedata
+
 from django.db import transaction
 from django.db.models import Q
 
 from accounts.models import ProjectContract
 from accounts.services.billing_access import billing_project, invalid, require_billing_admin
 from accounts.services.delivery_workflow import mutate_node
-from content.models import Document, ProposalDocument
+from content.models import Document, DocumentFolder, ProposalDocument
 
 
 def contract_sources(project):
@@ -23,17 +27,75 @@ def contract_sources(project):
     return documents, proposals
 
 
+def normalize_source_search(value):
+    """Same substring normalization as the panel: accents/case/underscores."""
+    value = unicodedata.normalize('NFD', value)
+    value = ''.join(char for char in value if not unicodedata.category(char).startswith('M'))
+    # Unicode White_Space plus BOM; identical to the panel's search rule.
+    return re.sub(
+        r'[_\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+',
+        ' ', value.lower(),
+    ).strip(' ')
+
+
+def filter_contract_source_options(options, query=''):
+    needle = normalize_source_search(query)
+    return [row for row in options if needle in normalize_source_search(row['title'])]
+
+
+def _source_folder_paths(documents):
+    """Load only source folders and ancestors, in batches rather than per row."""
+    folders = {}
+    pending = {row.folder_id for row in documents if row.folder_id}
+    while pending:
+        batch = DocumentFolder.objects.filter(pk__in=pending).values_list('id', 'name', 'parent_id')
+        parents = set()
+        for folder_id, name, parent_id in batch:
+            folders[folder_id] = (name, parent_id)
+            if parent_id:
+                parents.add(parent_id)
+        pending = parents - folders.keys()
+    paths = {}
+    for folder_id in {row.folder_id for row in documents if row.folder_id}:
+        parts, seen = [], set()
+        current = folder_id
+        while current in folders and current not in seen:
+            seen.add(current)
+            name, current = folders[current]
+            parts.append(name)
+        paths[folder_id] = ' / '.join(reversed(parts))
+    return paths
+
+
 def contract_source_options(project):
     documents, proposals = contract_sources(project)
-    return [
-        {'source_type': kind, 'id': row.pk, 'title': row.title,
-         'origin_label': label}
-        for kind, label, rows in (
-            ('document', 'Documento del proyecto', documents),
-            ('proposal_document', 'Contrato de propuesta', proposals),
-        )
-        for row in rows
-    ]
+    documents = list(documents.select_related('document_type').only(
+        'id', 'title', 'created_at', 'folder_id', 'document_type__code',
+    ))
+    proposals = proposals.select_related('proposal').only('id', 'title', 'created_at', 'document_type', 'proposal__title')
+    paths = _source_folder_paths(documents)
+    options = []
+    contract_types = ProposalDocument.CONTRACT_DOC_TYPES | {'amendment'}
+    for kind, label, rows in (
+        ('document', 'Documento del proyecto', documents),
+        ('proposal_document', 'Contrato de propuesta', proposals),
+    ):
+        for row in rows:
+            document_type = (row.document_type.code if row.document_type else '') if kind == 'document' else row.document_type
+            words = set(re.findall(r'\w+', normalize_source_search(row.title)))
+            options.append({
+                'source_type': kind, 'id': row.pk, 'title': row.title, 'origin_label': label,
+                'created_at': row.created_at.isoformat(),
+                'folder_path': paths.get(row.folder_id, '') if kind == 'document' else '',
+                'proposal_title': row.proposal.title if kind == 'proposal_document' else '',
+                'is_contract_like': document_type in contract_types or bool(
+                    words & {'contrato', 'contract', 'otrosi', 'amendment'}
+                ),
+            })
+    return sorted(options, key=lambda row: (
+        not row['is_contract_like'], -datetime.fromisoformat(row['created_at']).timestamp(),
+        -row['id'], row['source_type'],
+    ))
 
 
 @transaction.atomic

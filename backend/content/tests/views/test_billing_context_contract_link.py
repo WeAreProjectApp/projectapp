@@ -69,16 +69,16 @@ def test_options_list_project_document_and_client_proposal_contract_sources(
     assert response.status_code == 200, response.data
     assert response.data['contract_sources'] == [
         {
-            'source_type': 'document',
-            'id': direct_contract.pk,
-            'title': 'Contrato directo Litigio',
-            'origin_label': 'Documento del proyecto',
+            'source_type': 'proposal_document', 'id': proposal_contract.pk,
+            'title': 'Contrato firmado de propuesta', 'origin_label': 'Contrato de propuesta',
+            'created_at': proposal_contract.created_at.isoformat(), 'folder_path': '',
+            'proposal_title': 'Propuesta Litigio', 'is_contract_like': True,
         },
         {
-            'source_type': 'proposal_document',
-            'id': proposal_contract.pk,
-            'title': 'Contrato firmado de propuesta',
-            'origin_label': 'Contrato de propuesta',
+            'source_type': 'document', 'id': direct_contract.pk,
+            'title': 'Contrato directo Litigio', 'origin_label': 'Documento del proyecto',
+            'created_at': direct_contract.created_at.isoformat(), 'folder_path': '',
+            'proposal_title': '', 'is_contract_like': True,
         },
     ]
 

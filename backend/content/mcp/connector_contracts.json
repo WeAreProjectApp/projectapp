@@ -1,10 +1,10 @@
 {
   "accounting": {
-    "sha256": "9aeb49c36e3f821f32851226a1c4ebf5da1cb4dd3a1c5308586da688a6b0106f",
+    "sha256": "ede7374f72bd636dc585e5a7b9aaed855067b7affb39f3d1c2d93c91ee74a4b1",
     "version": "2.2.0"
   },
   "accounting-billing": {
-    "sha256": "bb7e0d56c14a62196d6e19709a0e4dbc99bf5c4067c2eb2021d970e3c70b0959",
+    "sha256": "05d581005abf22285d15a06dd6723a297520a4761e311fca60946b3e7b387eb3",
     "version": "3.1.0"
   },
   "accounting-cards": {
@@ -52,8 +52,8 @@
     "version": "2.1.1"
   },
   "documents": {
-    "sha256": "eb5ddc7ebde9781ec8719fd4331d3f17524dbc9f66bbd83546e6eef17671873a",
-    "version": "8.1.1"
+    "sha256": "5f372afa8dc46a1706df1f38f500443235fd4eca056b82d39a1393cb2634a9ed",
+    "version": "8.2.0"
   },
   "linkedin-personal": {
     "sha256": "08d20a093b81d71375b38f5c483b7dce5a2d0c8a79b306d0fd05c3b5928923ff",

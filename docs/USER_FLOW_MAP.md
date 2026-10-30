@@ -6081,6 +6081,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-document-move-folder` | admin | P1 | display,success,error,failure | 3 |
 | `admin-document-navigation` | admin | P1 | display,success,failure | 1 |
 | `admin-document-observation-delete` | admin | P1 | display,success,failure | 1 |
+| `admin-document-pdf` | admin | P2 | success,error,failure,display | 1 |
 | `admin-document-pdf-download` | admin | P2 | success,failure,display | 1 |
 | `admin-document-pdf-preview` | admin | P2 | display | 1 |
 | `admin-document-rename` | admin | P2 | success,failure | 1 |
@@ -6947,6 +6948,27 @@ que Ingresos, con Participaciones, Diferencia e IVA heredado. Consulta la vista
 previa y registra por el contrato compartido, también para un solo ingreso.
 La confirmación al cliente se revisa dentro del diálogo y se envía después
 del registro; el período opcional de hosting se conserva.
+
+## Buscador para vincular contrato existente (2026-10-29)
+
+Desde el formulario de cuenta, «Vincular contrato existente» abre un buscador
+personalizado. Lista primero contratos y otrosíes y debajo otros documentos
+elegibles del proyecto; muestra todas las versiones con fecha y carpeta o
+propuesta. Busca una coincidencia en cualquier parte del nombre sin distinguir
+mayúsculas, tildes ni guiones bajos y resalta el fragmento original.
+
+- **success:** buscar, elegir con Enter o clic y vincular selecciona el contrato
+  devuelto, conservando el documento original; escenarios en las cinco anchuras.
+- **display:** al abrir desde Ingresos se distinguen grupos y versiones por
+  ubicación; una consulta sin coincidencias muestra la explicación.
+- **error:** texto libre sin opción elegida mantiene bloqueado Vincular; cambiar
+  de proyecto limpia búsqueda y selección (integración unitaria).
+- **failure:** el rechazo del enlace conserva la fuente para corregir o reintentar.
+
+Specs: `admin-accounting-incomes.spec.js` (búsqueda, vínculo y rechazo), más
+`ContractSourcePicker.spec.js` y `CollectionAccountProjectContext.spec.js` para
+teclado, limpieza y cambio de proyecto. Los campos Contrato y Otrosí del contexto
+no cambian. La búsqueda MCP usa las mismas fuentes y comprobaciones de enlace.
 
 ## Documento vinculado pendiente
 

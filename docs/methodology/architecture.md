@@ -2362,3 +2362,7 @@ Conversaciones privadas con vencimiento máximo de 90 días, índices Redis de h
 sin omitir reautorización. Se comparte la cuota lógica con reportes de voz mediante
 reservas y canje único del dictado. El historial no se expone por MCP administrativo.
 Contrato completo: [Appi](../APPI.md).
+
+## Documentos PDF subidos
+
+`Document.content_format` separa Markdown de PDF manual sin alterar la identidad ni el tipo comercial. El original y sus versiones usan `uploaded_pdf` en storage privado; los snapshots del sistema conservan `generated_file`. Panel y MCP comparten el servicio `uploaded_pdf_service`, serializers, compensación del historial y locks Project → Document. La búsqueda usa sólo texto derivado vigente y el historial conserva referencias binarias, con acceso interno. Contrato operativo y deploy pendiente en [Documentos PDF subidos](../uploaded-pdf-documents.md); evidencia focal en [QA PDF](../audits/2026-10-29-uploaded-pdf-qa.md).

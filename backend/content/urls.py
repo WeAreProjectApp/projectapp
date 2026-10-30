@@ -9,6 +9,7 @@ from content.views.proposal_activity import list_proposal_activity
 from content.views.proposal_approval import approval_review, approval_file_download
 from content.views.proposal_module_interests import proposal_module_interests
 from content.views.document_move import move_document_batch
+from content.views.document_pdf_upload import create_document_from_pdf, replace_document_pdf
 from content.views.building_with_us import (
     public_building_with_us_program, public_building_with_us_program_pdf,
     admin_building_with_us_overview, admin_building_with_us_program_versions,
@@ -399,6 +400,8 @@ from content.views.consulting import (
 )
 
 urlpatterns = [
+    path('documents/create-from-pdf/', create_document_from_pdf, name='create-document-from-pdf'),
+    path('documents/<int:document_id>/replace-pdf/', replace_document_pdf, name='replace-document-pdf'),
     path('consulting/public/', public_consulting_program, name='public-consulting-program'),
     path('consulting/public/pdf/', public_consulting_program_pdf, name='public-consulting-program-pdf'),
     path('consulting/admin/', admin_consulting_overview, name='admin-consulting-overview'),

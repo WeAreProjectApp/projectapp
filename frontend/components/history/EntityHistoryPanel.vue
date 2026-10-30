@@ -195,7 +195,7 @@ onBeforeUnmount(() => { listGeneration++; detailGeneration++; revealed.value = {
         </div>
         <pre v-if="change.lines?.length" class="max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs">{{ change.lines.join('\n') }}</pre>
       </div>
-      <BaseButton v-if="!comparison && (detail?.snapshot?.generated_file || detail?.snapshot?.pdf_file || detail?.snapshot?.archived_pdf)" as="a" :to="`/api/entity-history/${entityType}/${objectId}/versions/${detail.id}/file/`" target="_blank" rel="noopener noreferrer" variant="secondary">Ver PDF de esta versión</BaseButton>
+      <BaseButton v-if="!comparison && (detail?.snapshot?.uploaded_pdf || detail?.snapshot?.generated_file || detail?.snapshot?.pdf_file || detail?.snapshot?.archived_pdf)" as="a" :to="`/api/entity-history/${entityType}/${objectId}/versions/${detail.id}/file/`" target="_blank" rel="noopener noreferrer" variant="secondary">Ver PDF de esta versión</BaseButton>
       <details v-if="detail?.snapshot && !comparison" data-testid="history-full-version">
         <summary class="cursor-pointer py-2 font-medium">Ver versión completa</summary>
         <HistoryValue :value="detail.snapshot" :labels="detail.labels" />

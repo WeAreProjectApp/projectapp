@@ -1,4 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils';
+import { reactive } from 'vue';
 import CollectionAccountProjectContext from '../../../../components/accounting/billing/CollectionAccountProjectContext.vue';
 
 jest.mock('../../../../stores/services/request_http', () => ({
@@ -32,14 +33,6 @@ function mountContext(props = {}) {
         BillingContextFields: { props: ['modelValue', 'options', 'payments'], template: '<div />' },
         NuxtLink: { template: '<a><slot /></a>' },
         BaseFormField: { template: '<div><slot /></div>' },
-        BaseSelect: {
-          props: ['modelValue', 'options', 'placeholder'],
-          emits: ['update:modelValue'],
-          template: `<select v-bind="$attrs" :value="modelValue" @change="$emit('update:modelValue', $event.target.value)">
-            <option v-if="placeholder" value="">{{ placeholder }}</option>
-            <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>`,
-        },
         BaseControlGate: {
           props: ['reasons'],
           template: '<div><slot :blocked="reasons.length > 0" described-by="billing-link-gate-reason" /></div>',
@@ -52,6 +45,31 @@ function mountContext(props = {}) {
       },
     },
   });
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+function linkOptions(id = 31) {
+  return { contracts: [], delivery_version: 4, contract_sources: [
+    { source_type: 'document', id, title: 'Contrato Litigio', origin_label: 'Documento del proyecto' },
+  ] };
+}
+
+function sourceRequests() {
+  get_request.mockImplementation(url => Promise.resolve({ data: url.includes('/options/')
+    ? linkOptions() : { overview: { subscription: { associated: false } } } }));
+}
+
+async function startLink(wrapper) {
+  await flushPromises();
+  await wrapper.get('[data-testid="billing-link-contract-open"]').trigger('click');
+  await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('Litigio');
+  await wrapper.get('[data-testid="billing-link-contract-source"]').trigger('keydown', { key: 'Enter' });
+  await wrapper.get('[data-testid="billing-link-contract-submit"]').trigger('click');
 }
 
 describe('CollectionAccountProjectContext', () => {
@@ -130,7 +148,8 @@ describe('CollectionAccountProjectContext', () => {
     await flushPromises();
 
     await wrapper.get('[data-testid="billing-link-contract-open"]').trigger('click');
-    await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('document:31');
+    await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('Litigio');
+    await wrapper.get('[data-testid="billing-link-contract-source"]').trigger('keydown', { key: 'Enter' });
     await wrapper.get('[data-testid="billing-link-contract-submit"]').trigger('click');
     await flushPromises();
 
@@ -171,14 +190,158 @@ describe('CollectionAccountProjectContext', () => {
     await flushPromises();
 
     await wrapper.get('[data-testid="billing-link-contract-open"]').trigger('click');
-    await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('document:31');
+    await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('Litigio');
+    await wrapper.get('[data-testid="billing-link-contract-source"]').trigger('keydown', { key: 'Enter' });
     await wrapper.get('[data-testid="billing-link-contract-submit"]').trigger('click');
     await flushPromises();
 
     expect(wrapper.get('[data-testid="billing-link-contract-error"]').text())
       .toBe('El documento ya cambió.');
     expect(wrapper.get('[data-testid="billing-link-contract-source"]').element.value)
-      .toBe('document:31');
+      .toBe('Contrato Litigio');
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+
+  it('ignores project A options arriving after project B has loaded', async () => {
+    const late = deferred();
+    sourceRequests();
+    get_request.mockImplementationOnce(() => late.promise);
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await wrapper.setProps({ projectId: 8 });
+    await flushPromises();
+    late.resolve({ data: linkOptions(99) });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[{}]]);
+    create_request.mockResolvedValue({ data: { id: 88 } });
+    await startLink(wrapper);
+    expect(create_request).toHaveBeenCalledWith(
+      'admin/billing-context/projects/8/contracts/link/', expect.objectContaining({ source_id: 31 }),
+    );
+  });
+
+  it('ignores a project A link completing after switching to project B', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockReturnValue(late.promise);
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await startLink(wrapper);
+    await wrapper.setProps({ projectId: 8 });
+    await flushPromises();
+    late.resolve({ data: { id: 88 } });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[{}]]);
+    expect(get_request).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not overwrite the later pending choice when the link POST completes', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockReturnValue(late.promise);
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await startLink(wrapper);
+    await wrapper.setProps({ modelValue: { billing_nature: 'contract', document_pending: true } });
+    late.resolve({ data: { id: 88 } });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(get_request).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not overwrite the pending choice made during the post-link refresh', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockResolvedValue({ data: { id: 88 } });
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await flushPromises();
+    get_request.mockReturnValueOnce(late.promise);
+    await startLink(wrapper);
+    await flushPromises();
+    await wrapper.setProps({ modelValue: { billing_nature: 'contract', document_pending: true } });
+    late.resolve({ data: linkOptions() });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(get_request).toHaveBeenCalledTimes(3);
+  });
+
+  it('invalidates an earlier link even when the operator toggles pending back off', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockReturnValue(late.promise);
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await startLink(wrapper);
+    await wrapper.setProps({ modelValue: { billing_nature: 'contract', document_pending: true } });
+    await wrapper.setProps({ modelValue: { billing_nature: 'contract', document_pending: false } });
+    late.resolve({ data: { id: 88 } });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+
+  it('detects an in-place change of the billing context during a link', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockReturnValue(late.promise);
+    const modelValue = reactive({ billing_nature: 'contract', document_pending: false });
+    const wrapper = mountContext({ modelValue });
+    await startLink(wrapper);
+    modelValue.document_pending = true;
+    late.resolve({ data: { id: 88 } });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+
+  it('discards a link response after the context form is unmounted', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockReturnValue(late.promise);
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await startLink(wrapper);
+    wrapper.unmount();
+    late.resolve({ data: { id: 88 } });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(get_request).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the reviewed context while refreshing sources for the same project', async () => {
+    sourceRequests();
+    const modelValue = { billing_nature: 'contract', contract_id: 17 };
+    get_request.mockResolvedValue({ data: { ...linkOptions(), contracts: [{ id: 17, title: 'Contrato revisado' }] } });
+    const wrapper = mountContext({ modelValue });
+    await flushPromises();
+    await wrapper.get('[data-testid="billing-link-contract-open"]').trigger('click');
+    await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('Litigio');
+    await wrapper.findAll('button').find(button => button.text() === 'Actualizar opciones').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(wrapper.emitted('valid').at(-1)).toEqual([true]);
+  });
+
+  it('discards a post-link refresh after switching to another project', async () => {
+    const late = deferred();
+    sourceRequests();
+    create_request.mockResolvedValue({ data: { id: 88 } });
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await flushPromises();
+    get_request.mockReturnValueOnce(late.promise);
+    await startLink(wrapper);
+    await wrapper.setProps({ projectId: 8 });
+    await flushPromises();
+
+    late.resolve({ data: { ...linkOptions(99), contracts: [{ id: 88, title: 'Contrato A' }] } });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[{}]]);
+    expect(wrapper.emitted('valid').at(-1)).toEqual([false]);
+    await startLink(wrapper);
+    expect(create_request).toHaveBeenLastCalledWith(
+      'admin/billing-context/projects/8/contracts/link/', expect.objectContaining({ source_id: 31 }),
+    );
   });
 });

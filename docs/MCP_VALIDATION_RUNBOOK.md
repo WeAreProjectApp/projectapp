@@ -882,7 +882,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
 | `projects` | 4.0.0 | 159 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, integridad de datos y ciclo de vida de hosting |
-| `documents` | 8.0.0 | 77 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
+| `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 3.0.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 3.0.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
@@ -2618,6 +2618,39 @@ confirmaciones y adaptadores de `projects` y `accounting-billing` en
 `content/tests/views/test_mcp_contracts.py`. Las herramientas sensibles mantienen
 `financial_effect: none`; la emisión conserva el adaptador contable existente.
 No ejecutar validaciones mutantes contra conectores activos de producción.
+### Buscador de contrato existente (2026-10-29)
+
+`accounting.get_project_billing_options` conserva sus campos y admite `contract_source_search`
+opcional (texto, máximo 300 caracteres). Filtra únicamente `contract_sources`
+por coincidencia continua en el título, sin distinguir mayúsculas, tildes ni
+guiones bajos; vacío devuelve todas las fuentes elegibles y todas sus versiones.
+Cada fuente añade `created_at`, `folder_path`, `proposal_title` e
+`is_contract_like`. Contratos y otrosíes van primero, después otros documentos;
+cada grupo se ordena por creación e ID descendentes. La clasificación usa el
+tipo documental o palabras contractuales completas del título legado: no cambia
+la elegibilidad ni autoriza acceso al archivo.
+
+Panel y MCP reutilizan `contract_source_options` y `link_billing_contract`, con
+los permisos administrativos y el límite de proyecto/cliente vigentes. No hay
+búsqueda entre proyectos, migraciones, copia de contenido ni cambios de dinero.
+El conector canónico es `accounting` (2.2.0); `accounting-billing` (3.1.0)
+conserva compatibilidad. `projects` solo conserva estas operaciones para sus
+credenciales legacy, no en su catálogo público actual. Las huellas de los dos
+conectores contables se regeneran con `mcp_schema_report --write-fingerprints`.
+`link_project_billing_contract` conserva serializer, control de versión,
+confirmación y reutilización del vínculo. `contracts.py` no necesita cambios:
+son proyecciones aditivas, sin campos nuevos en modelos ni cambios de escritura.
+
+Validar `test_billing_contract_source_search.py` y
+`test_mcp_billing_contract_search.py` en `content/tests/views/`: paridad de
+metadatos/búsqueda, todas las versiones, sin resultados, consulta inválida,
+denegación no administrativa y búsqueda → confirmación → vínculo correcto.
+Repetir búsqueda y confirmación con credenciales canónicas de `accounting` y
+`accounting-billing`; no acreditar paridad pública solo con la credencial legacy.
+Conservar los casos de fuente ajena, versión vieja y reintento de
+`test_mcp_project_collaboration.py`. Ejecutar lotes de hasta 20 con settings_test;
+nunca contra un conector de producción.
+
 ### Proyectos: eliminación de referencias vacías (2026-10-01)
 
 - `preview_project_delete` devuelve la misma lista de dependencias y cantidades que el modal del panel.
@@ -2892,7 +2925,22 @@ impide ejecutarla. Una credencial restringida no descubre ni ejecuta acciones
 fuera de su alcance y no gana permiso de lectura de secretos por administrar
 carpetas.
 
-### Contabilidad — documento vinculado pendiente (2026-10-29)
+
+## Documentos PDF subidos — contrato 8.2.0
+
+- `begin_upload` → `upload_asset_chunk` (o PUT firmado) → `complete_upload` → `create_document_from_pdf(source_asset_id, title, ...)`. El asset debe pertenecer a la misma credencial, estar completo y contener PDF válido de hasta 26.214.400 bytes. Los nuevos temporales y artefactos PDF de documents se guardan en almacenamiento privado.
+- `read_document`, `list_documents(search=...)` y `browse_documents` incluyen `content_format=pdf` y `pdf` con nombre, tamaño, SHA-256, versión y estado del texto. No exponen rutas privadas ni permiten cambiar el archivo escribiendo Markdown. La búsqueda general usa sólo el texto vigente; el selector contractual conserva búsqueda por título.
+- `update_pdf_document` administra identificación, etiquetas, notas y publicación con el serializer del panel. Para mover usar `update_document` con sus políticas o `move_documents`; estados/observaciones/archivo conservan sus operaciones comunes. El contenido PDF no acepta `append_document` ni cambios de composición Markdown.
+- `replace_document_pdf(document_id, source_asset_id, expected_version)` conserva ID/UUID y archivos anteriores. Una versión obsoleta o evidencia protegida produce conflicto; el asset sigue disponible para reintento. Firma/entrega mantienen 10 MiB y captura de fuentes 15 MiB, independientemente del límite del gestor.
+- `render_document_pdf` devuelve un asset descargable del original. `list_document_history`, `get_document_history_version`, `compare_document_history` y `download_document_history_file` permiten consultar versiones internas sin rutas de storage. Un cliente del portal no accede a ese historial.
+- Verificar falla de persistencia/flush exterior/consumo: sin documento ni revisión nueva, sin archivo nuevo huérfano por ese error y sin consumir el asset; los bytes previos se conservan.
+- `accounting` y `accounting-billing` excluyen explícitamente los ocho campos del PDF subido: los administra `documents`. El flujo de cobro conserva su PDF generado mediante `generated_file` y no expone rutas ni bytes del archivo privado.
+
+Pruebas focalizadas (por archivo, máximo 20 tests por lote): `test_uploaded_pdf_documents.py`, `test_uploaded_pdf_integrity.py`, `test_mcp_uploaded_pdf.py`. El conjunto usa settings_test y SQLite temporal, sin leer .env.
+
+**Requisito de despliegue:** aplicar y validar la excepción versionada de `scripts/nginx/projectapp.conf` para las dos rutas de creación/reemplazo PDF (26M de transporte, 25 MiB de archivo). El resto conserva 10M. Esta entrega no aplica Nginx vivo ni acredita despliegue; sin aplicar esa configuración, el panel desplegado mantiene el límite anterior de transporte.
+
+## Contabilidad — documento vinculado pendiente (2026-10-29)
 
 - `create_collection_account` y `preview_collection_account` aceptan `document_pending: true`. Es una decisión explícita: `billing_nature` puede omitirse o conservar `contract`/`hosting`, pero no se aceptan IDs de vínculos parciales. Se reutilizan el serializer y el servicio del panel; no se modifica el período de hosting de PA-72.
 - `get_collection_account`, `get_collection_account_context` y `list_collection_accounts` devuelven `context.document_pending`, `pending_by`, `pending_at` y `version` (la lectura de contexto devuelve esos campos directamente). Autor y fecha se calculan en el servidor; no son entradas editables.
