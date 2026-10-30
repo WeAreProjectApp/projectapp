@@ -1,12 +1,9 @@
 """Project force-deletion service protects owned records, shared data, and files."""
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
-from django.core.files.base import ContentFile
-from django.db import transaction
-
 from accounts.models import (
     Deliverable,
     DeliverableFile,
@@ -16,6 +13,9 @@ from accounts.models import (
     ProjectPhase,
 )
 from accounts.tests.delivery_helpers import build_delivery_context
+from django.core.files.base import ContentFile
+from django.db import transaction
+
 from content.models import (
     AccountingChangeLog,
     BusinessProposal,
@@ -28,15 +28,14 @@ from content.models import (
     IncomeRecord,
     PocketMovement,
     ProjectBrandAsset,
-    ProposalDocument,
     ProjectRetentionContext,
+    ProposalDocument,
 )
 from content.services.project_force_deletion import (
     ProjectForceDeleteError,
     force_delete_project,
     forced_deletion_preview,
 )
-
 
 pytestmark = pytest.mark.django_db
 
@@ -62,6 +61,12 @@ def force_delete(project, actor):
         impact_token=preview['impact_token'],
         delete_keys=preview['delete_keys'],
     )
+
+
+def force_delete_with_rollback(project, actor):
+    with transaction.atomic():
+        force_delete(project, actor)
+        raise RuntimeError('rollback')
 
 
 def make_income(project, movement, *, concept='Project income'):
@@ -116,7 +121,7 @@ def test_force_delete_removes_owned_delivery_graph(superuser, owned_project):
         channel='whatsapp',
         direction='incoming',
         status='received',
-        occurred_at=datetime(2026, 10, 4, tzinfo=timezone.utc),
+        occurred_at=datetime(2026, 10, 4, tzinfo=UTC),
     )
 
     force_delete(owned_project, superuser)
@@ -286,11 +291,10 @@ def test_force_delete_defers_exclusive_file_cleanup_until_commit(
     )
     storage, name = asset.file.storage, asset.file.name
 
-    with django_capture_on_commit_callbacks(execute=False) as callbacks:
+    with django_capture_on_commit_callbacks(execute=True):
         force_delete(owned_project, superuser)
+        assert storage.exists(name)
 
-    assert storage.exists(name)
-    callbacks[0]()
     assert not storage.exists(name)
 
 
@@ -307,9 +311,7 @@ def test_force_delete_rollback_keeps_exclusive_file(superuser, owned_project):
     storage, name = asset.file.storage, asset.file.name
 
     with pytest.raises(RuntimeError, match='rollback'):
-        with transaction.atomic():
-            force_delete(owned_project, superuser)
-            raise RuntimeError('rollback')
+        force_delete_with_rollback(owned_project, superuser)
 
     assert ProjectBrandAsset.objects.filter(pk=asset.pk).exists()
     assert storage.exists(name)

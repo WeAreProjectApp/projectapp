@@ -27,7 +27,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def pdf_type():
-    return DocumentType.objects.get_or_create(code='markdown', defaults={'name': 'Markdown', 'label': 'Markdown'})[0]
+    return DocumentType.objects.get_or_create(code='markdown', defaults={'name': 'Markdown'})[0]
 
 
 def private_files():
