@@ -8,6 +8,8 @@ Procesos permite filtrar, ordenar, paginar y exportar hasta 5.000 coincidencias 
 
 Una fusión de clientes comerciales conserva las clasificaciones y búsquedas en su usuario original, incluso cuando ambos usuarios tienen registros homónimos. También conserva quién creó una alerta, solicitó una actualización o registró una actividad. Estas relaciones no se reasignan al cliente superviviente.
 
+Los dueños de clasificaciones y búsquedas tienen decisiones explícitas en los dos registros de integración: `NEVER` en la política de fusión y `exempt` en el inventario de integridad. Son datos personales del equipo y no vínculos comerciales que se deban limpiar. Al agregar relaciones a usuarios, revisar ambos registros.
+
 Búsquedas guardadas permite nombre, edición, favorito y borrado confirmado. Crear una alerta desde una búsqueda copia sus criterios: editar la búsqueda no cambia la alerta. Palabras clave y prefijos UNSPSC se combinan con O; los demás criterios con Y. Dentro de una frase deben coincidir todas las palabras en nombre o descripción. Listas de entidad/departamento/modalidad/tipo/estado admiten cualquiera de sus valores. Región es departamento de la entidad según la fuente, no lugar de ejecución garantizado. El motor se comparte entre panel, exportación, alertas y MCP.
 
 Las alertas tienen uno a diez destinatarios y frecuencia inmediata, diaria o semanal. Empiezan inactivas; correo y actualización automática global también apagados. Configurar destinatarios reales y revisar coincidencias antes de activar. No hay correo de Carlos fijado en código. Cada destinatario recibe un envío separado.
