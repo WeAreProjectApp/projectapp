@@ -3,13 +3,12 @@ from datetime import timedelta
 from smtplib import SMTPException, SMTPServerDisconnected
 
 from django.conf import settings as django_settings
-from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from content.services.email_delivery_service import DeliveryClassification, EmailDeliveryGateway
+from content.services.email_delivery_service import DeliveryClassification, EmailDeliveryGateway, EmailMultiAlternatives
 from procurement.filters import apply_filters
 from procurement.models import Alert, Delivery, Notification, Opportunity, Settings
 from procurement.serializers import OpportunityListSerializer
