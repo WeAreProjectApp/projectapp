@@ -64,7 +64,7 @@ class TestCreateClient:
 
         assert user.email == 'new@example.com'
         assert user.first_name == 'Ana'
-        assert user.is_active is True
+        assert user.is_active is False
         assert user.check_password(temp_password) is True
         assert user.profile.role == UserProfile.ROLE_CLIENT
         assert user.profile.is_onboarded is False

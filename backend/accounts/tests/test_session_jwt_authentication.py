@@ -334,6 +334,11 @@ def test_verification_token_completes_onboarding(api_client, pending_user):
     )
 
     pending_user.refresh_from_db()
+    access_token = response.json()['tokens']['access']
+    authenticated_profile = api_client.get(
+        '/api/accounts/me/',
+        HTTP_AUTHORIZATION=f'Bearer {access_token}',
+    )
     assert response.status_code == 200
-    assert response.json()['tokens']['access'].count('.') == 2
+    assert authenticated_profile.status_code == 200
     assert pending_user.profile.is_onboarded is True

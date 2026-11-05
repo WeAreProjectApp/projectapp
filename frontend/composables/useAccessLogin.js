@@ -3,7 +3,11 @@ import { usePlatformApi } from '~/composables/usePlatformApi';
 
 export function useAccessLogin(surface) {
   let csrf = '';
-  const options = () => ({ skipAuth: true, skipRefresh: true, headers: { 'X-CSRFToken': csrf } });
+  const options = () => ({
+    skipAuth: true, skipRefresh: true, headers: { 'X-CSRFToken': csrf },
+    // These endpoints are outside the platform client's /api/accounts/ base.
+    ...(surface === 'platform' ? { baseURL: '/' } : {}),
+  });
   async function config() {
     const response = surface === 'panel'
       ? await get_request('auth/config/')

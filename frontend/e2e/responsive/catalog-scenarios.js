@@ -106,6 +106,10 @@ function resolveCatalogUrl(url) {
 }
 
 function defaultCapabilities(view, owner) {
+  if (view.url === '/panel/access') return {
+    panelShell: true, table: false, tabs: true, filters: true,
+    modal: true, selection: false, touch: true,
+  };
   if (view.url === '/panel/platform/ai') return {
     panelShell: true, table: false, tabs: true, filters: true,
     modal: false, selection: false, touch: true,
@@ -142,6 +146,7 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
     reference: view.reference,
     flowId: kind === 'redirect' ? REDIRECT_FLOW_BY_URL[view.url]
       : PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
+        ?? (view.url === '/panel/access' ? 'admin-access-management' : null)
         ?? BILLING_FLOW_BY_URL[view.url]
         ?? (view.url === '/platform/projects/:id/secure-links' ? 'platform-secure-link-manage' : null)
         ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review'

@@ -191,6 +191,7 @@ def verify_view(request):
     user.save(update_fields=['password'])
 
     profile = user.profile
+    profile.refresh_from_db()
     was_onboarded = profile.is_onboarded
     profile.is_onboarded = True
     profile.save(update_fields=['is_onboarded'])
