@@ -16,12 +16,12 @@
       <BaseButton variant="ghost" @click="saveOpen = true">Guardar vista</BaseButton>
     </div>
     <details class="rounded-xl border border-border-default bg-surface p-3" :open="!compact">
-      <summary class="cursor-pointer text-sm text-text-muted">Filtros combinables · {{ activeFilters }} activos</summary>
+      <summary class="cursor-pointer text-sm text-text-muted">Filtros combinables · {{ activeFilters }} {{ activeFilters === 1 ? 'activo' : 'activos' }}</summary>
       <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <BaseFilterDropdown v-for="filter in filterOptions" :key="filter.key" :model-value="filters[filter.key]" :label="filter.label" :options="filter.options" :searchable="false" :test-id="`access-filter-${filter.key}`" @update:model-value="setFilter(filter.key, $event)" />
       </div>
     </details>
-    <p class="text-sm text-text-muted" role="status">{{ store.count }} cuentas · página {{ store.page }} de {{ store.pages }}</p>
+    <p class="text-sm text-text-muted" role="status">{{ store.count }} {{ store.count === 1 ? 'cuenta' : 'cuentas' }} · página {{ store.page }} de {{ store.pages }}</p>
     <BaseAlert v-if="store.error" variant="danger" role="alert">{{ store.error }} <BaseButton variant="link" @click="load">Reintentar</BaseButton></BaseAlert>
     <p v-if="store.loading" class="py-10 text-center text-text-muted" role="status">Cargando accesos…</p>
     <div v-else-if="!store.error && !store.hasResults" class="rounded-xl border border-border-default p-8 text-center">

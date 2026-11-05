@@ -100,7 +100,7 @@ test.describe('Panel access management', () => {
 
     const row = page.getByTestId('access-row-71');
     await row.getByTestId('access-actions-71').click();
-    await page.getByRole('button', { name: 'Deshabilitar acceso' }).click();
+    await page.getByRole('menuitem', { name: 'Deshabilitar acceso' }).click();
     await expect(page.getByRole('heading', { name: 'Deshabilitar acceso' })).toHaveText('Deshabilitar acceso');
     await page.getByTestId('confirm-modal-confirm').click();
 
@@ -130,7 +130,7 @@ test.describe('Panel access management', () => {
     await navigateToAccesses(page);
 
     await page.getByTestId('access-actions-71').click();
-    await page.getByRole('button', { name: 'Deshabilitar acceso' }).click();
+    await page.getByRole('menuitem', { name: 'Deshabilitar acceso' }).click();
     await page.getByTestId('confirm-modal-confirm').click();
 
     await expect.poll(() => calls.patches).toEqual([{ enabled: false }]);
