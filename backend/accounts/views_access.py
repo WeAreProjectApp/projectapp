@@ -146,7 +146,7 @@ def create_access_client(actor, data):
     from accounts.services.proposal_client_service import get_or_create_client_for_proposal
     email = access.normalized_email(data['email'])
     if get_user_model().objects.filter(email__iexact=email).exists():
-        raise ValidationError({'email': 'Este correo ya está registrado. Habilita la cuenta existente.'})
+        raise ValidationError({'email': ['Este correo ya está registrado. Habilita la cuenta existente.']})
     profile = get_or_create_client_for_proposal(name=data['name'], email=email, company=data.get('company', ''))
     access.record_event(profile.user, 'created', actor=actor)
     return access.access_payload(profile.user)
