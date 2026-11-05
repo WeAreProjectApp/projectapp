@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Deliverable, Project, ProjectPhase, UserProfile
 from accounts.services.project_phases import (
@@ -314,9 +315,9 @@ def test_profileless_token_cannot_list_own_project_phases(db):
     ProjectPhase.objects.create(
         project=project, business_proposal=business_proposal, order=1,
     )
-    tokens = get_tokens_for_user(owner)
+    # The application issuer rejects profileless accounts before minting tokens.
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(owner)}')
 
     response = client.get(f'/api/accounts/projects/{project.id}/phases/')
 
@@ -350,9 +351,9 @@ def test_profileless_user_cannot_list_foreign_project_phases(db, project, busine
         password='x',
     )
     add_phase(project, business_proposal)
-    tokens = get_tokens_for_user(foreign_user)
+    # Exercise API rejection independently of the application issuer's guard.
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(foreign_user)}')
 
     response = client.get(f'/api/accounts/projects/{project.id}/phases/')
 
