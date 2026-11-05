@@ -12,6 +12,7 @@ def get_tokens_for_user(user):
 
     profile = getattr(user, 'profile', None)
     if profile:
+        refresh['access_version'] = profile.access_version
         refresh['role'] = profile.role
         refresh['is_onboarded'] = profile.is_onboarded
         refresh['email'] = user.email
@@ -29,6 +30,7 @@ def get_verification_token_for_user(user):
     """
     refresh = RefreshToken.for_user(user)
     refresh['purpose'] = 'verification'
+    refresh['access_version'] = user.profile.access_version
     refresh['email'] = user.email
     return str(refresh.access_token)
 
@@ -48,6 +50,7 @@ def get_password_reset_request_token(user) -> str:
     token = AccessToken.for_user(user)
     token.set_exp(lifetime=REQUEST_TOKEN_LIFETIME)
     token['purpose'] = PASSWORD_RESET_REQUEST_PURPOSE
+    token['access_version'] = user.profile.access_version
     return str(token)
 
 
@@ -63,7 +66,7 @@ def get_password_reset_password_version(user) -> str:
     """Bind verified tokens to the current password without exposing its hash."""
     return salted_hmac(
         'accounts.password-reset-verified-v1',
-        json.dumps([user.pk, user.password]),
+        json.dumps([user.pk, user.password, user.profile.access_version]),
         algorithm='sha256',
     ).hexdigest()
 

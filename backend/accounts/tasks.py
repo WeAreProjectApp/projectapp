@@ -427,3 +427,5 @@ def _reverify_processing_payments():
     if resolved:
         logger.info('_reverify_processing_payments: %s payment(s) resolved', resolved)
     return resolved
+
+from accounts.tasks_access import deliver_login_code, cleanup_access_challenges  # noqa: E402,F401

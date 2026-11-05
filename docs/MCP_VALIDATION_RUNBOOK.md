@@ -2949,3 +2949,7 @@ Pruebas focalizadas (por archivo, máximo 20 tests por lote): `test_uploaded_pdf
 - Crear y completar mantienen la confirmación sensible MCP y los permisos del panel. `document_pending` no habilita acceder a otro proyecto/cliente ni cambiar una asociación completa a pendiente.
 - La lectura pública conserva las cuentas propias emitidas con documento pendiente y su estado público `pending`, sin exponer la marca ni su autoría. El filtro público `nature=pending` incluye también los históricos sin asociación; los filtros administrativos de documento pendiente siguen contando sólo decisiones explícitas. Se conservan los bloqueos de borradores y de relaciones incoherentes entre cliente, proyecto e ingreso.
 - Verificar: creación sin marca rechaza vacíos; con marca crea/emite/envía; list/read distinguen históricos; campos de auditoría falsificados y vínculos parciales son rechazados; completar con versión antigua falla; completar correctamente retira el filtro y el radar. Pruebas focales: `accounts/tests/billing/test_pending_document_mcp.py`.
+
+## Accesos autorizados — projects 4.5.0
+
+Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.

@@ -9,7 +9,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
-import { PLATFORM_LOGIN } from '../helpers/flow-tags.js';
+import { PLATFORM_LOGIN, AUTHORIZED_LOGIN } from '../helpers/flow-tags.js';
 import {
   setPlatformAuth,
   mockPlatformAdmin,
@@ -296,5 +296,104 @@ test.describe('Platform Login', () => {
     await page.getByRole('button', { name: /iniciar sesión/i }).click();
 
     await expect(page.getByText(/cuenta ha sido desactivada/)).toBeVisible();
+  });
+
+  test('email code login stores the client session and follows a safe documents redirect', {
+    tag: [...AUTHORIZED_LOGIN, '@outcome:success', '@role:platform-client'],
+  }, async ({ page }) => {
+    // Fails if code login does not persist the returned JWT/profile or ignores a
+    // local redirect requested by the client before arriving at the login form.
+    const requests = [];
+    await mockApi(page, async ({ route, apiPath, method }) => {
+      if (apiPath === 'auth/config/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ csrf_token: 'csrf', google_client_id: '' }) };
+      }
+      if (apiPath === 'auth/platform/email-request/' && method === 'POST') {
+        requests.push({ apiPath, body: route.request().postDataJSON() });
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ challenge_id: 'platform-challenge', detail: 'Si el correo está registrado y habilitado, recibirás un código.', retry_after: 0 }) };
+      }
+      if (apiPath === 'auth/platform/email-verify/' && method === 'POST') {
+        requests.push({ apiPath, body: route.request().postDataJSON() });
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ tokens: { access: 'code-access-token', refresh: 'code-refresh-token' }, user: mockPlatformClient }) };
+      }
+      if (apiPath === 'accounts/documents/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ documents: [], email: mockPlatformClient.email, email_verified: true }) };
+      }
+      if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ unread_count: 0 }) };
+      }
+      if (apiPath.startsWith('accounts/projects') && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
+      }
+      return null;
+    });
+
+    await page.goto('/platform/login?redirect=/platform/documents', { waitUntil: 'domcontentloaded' });
+    await loginFormReady(page);
+    await page.getByRole('tab', { name: 'Código por correo' }).click();
+    await page.getByTestId('access-email').fill('client@e2e-test.com');
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    await page.getByTestId('access-code').fill('12345');
+    await expect(page.getByRole('button', { name: 'Verificar e iniciar sesión' })).toBeDisabled();
+    await page.getByTestId('access-code').fill('123456');
+    await page.getByRole('button', { name: 'Verificar e iniciar sesión' }).click();
+
+    await expect(page).toHaveURL(/\/platform\/documents$/);
+    await expect.poll(async () => page.evaluate(() => localStorage.getItem('platform_access_token'))).toBe('code-access-token');
+    expect(requests).toEqual([
+      { apiPath: 'auth/platform/email-request/', body: { email: 'client@e2e-test.com', recaptcha_token: '' } },
+      { apiPath: 'auth/platform/email-verify/', body: { challenge_id: 'platform-challenge', code: '123456', next: '' } },
+    ]);
+  });
+
+  test('email code request shows its server rejection without exposing whether an account exists', {
+    tag: [...AUTHORIZED_LOGIN, '@outcome:error', '@role:guest'],
+  }, async ({ page }) => {
+    // Fails if rate-limit or account rejection responses disappear instead of
+    // keeping the visitor on the generic, non-enumerating access surface.
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/config/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ csrf_token: 'csrf', google_client_id: '' }) };
+      }
+      if (apiPath === 'auth/platform/email-request/' && method === 'POST') {
+        return { status: 429, contentType: 'application/json', body: JSON.stringify({ detail: 'Espera antes de pedir otro código.' }) };
+      }
+      return null;
+    });
+
+    await page.goto('/platform/login', { waitUntil: 'domcontentloaded' });
+    await loginFormReady(page);
+    await page.getByTestId('access-email').fill('unknown@example.com');
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+
+    await expect(page.getByRole('alert')).toHaveText('Espera antes de pedir otro código.');
+  });
+
+  test('email code verification exposes a recoverable server failure', {
+    tag: [...AUTHORIZED_LOGIN, '@outcome:failure', '@role:guest'],
+  }, async ({ page }) => {
+    // Fails if a failed verification leaves the visitor in a silent busy state
+    // rather than presenting a concrete retryable failure message.
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/config/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ csrf_token: 'csrf', google_client_id: '' }) };
+      }
+      if (apiPath === 'auth/platform/email-request/' && method === 'POST') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ challenge_id: 'unavailable-challenge', detail: 'Si el correo está registrado y habilitado, recibirás un código.', retry_after: 0 }) };
+      }
+      if (apiPath === 'auth/platform/email-verify/' && method === 'POST') {
+        return { status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'No pudimos completar el acceso. Intenta de nuevo.' }) };
+      }
+      return null;
+    });
+
+    await page.goto('/platform/login', { waitUntil: 'domcontentloaded' });
+    await loginFormReady(page);
+    await page.getByTestId('access-email').fill('client@e2e-test.com');
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    await page.getByTestId('access-code').fill('123456');
+    await page.getByRole('button', { name: 'Verificar e iniciar sesión' }).click();
+
+    await expect(page.getByRole('alert')).toHaveText('No pudimos completar el acceso. Intenta de nuevo.');
   });
 });

@@ -832,6 +832,16 @@ export const viewCatalogSections = [
         viewType: 'list',
       },
       {
+        label: 'Accesos',
+        url: '/panel/access',
+        group: 'Plataforma',
+        file: 'frontend/pages/panel/access/index.vue',
+        reference: 'cuentas habilitadas de clientes y equipo con historial de acceso',
+        audience: 'admin',
+        viewType: 'config',
+        notes: 'Búsqueda por nombre, correo o empresa; filtros combinables, vistas guardadas, conteos y dropdowns. Crear cliente sin proyecto ni acceso; habilitar, bloquear o desvincular Google con confirmación. El equipo administra clientes y sólo los superusuarios administran equipo. Actividad paginada por cuenta sin códigos ni tokens.',
+      },
+      {
         label: 'Proyectos (Plataforma)',
         url: '/panel/projects',
         group: 'Plataforma',

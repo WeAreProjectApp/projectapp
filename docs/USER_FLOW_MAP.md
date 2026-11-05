@@ -5937,6 +5937,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 
 | Flow | Module | Priority | Outcomes | expectedSpecs |
 |---|---|---|---|---|
+| `admin-access-management` | admin | P1 | success,error,failure,display | 3 |
 | `admin-accounting-ads` | admin | P3 | display,success,error | 4 |
 | `admin-accounting-card-catalog` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-cards` | admin | P2 | display,success,error | 10 |
@@ -6248,6 +6249,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-task-deadline-notification` | admin | P2 | — | 0 |
 | `admin-view-map` | admin | P4 | display,success,failure | 1 |
 | `admin-whatsapp-suggestion` | admin | P2 | — | 0 |
+| `authorized-login` | auth | P1 | success,error,failure,display | 3 |
 | `blog-detail` | blog | P2 | display,failure | 1 |
 | `blog-list` | blog | P2 | display | 1 |
 | `diagnostic-public-dark-mode` | diagnostic | P3 | success | 1 |

@@ -60,7 +60,7 @@ def _email_hash(email: str) -> str:
 def request_password_reset(email: str) -> str:
     """Step 1. Always returns a request token (real or decoy)."""
     email_lower = (email or '').lower().strip()
-    user = User.objects.filter(email__iexact=email_lower).first()
+    user = User.objects.filter(email__iexact=email_lower, is_active=True).first()
 
     if user is None:
         logger.info(
@@ -98,8 +98,8 @@ def verify_reset_code(request_token: str, code: str) -> str:
         # decoy token — generic failure
         raise PasswordResetError('invalid_code')
 
-    user = User.objects.filter(pk=user_id).first()
-    if not user:
+    user = User.objects.filter(pk=user_id, is_active=True).select_related('profile').first()
+    if not user or payload.get('access_version', 0) != user.profile.access_version:
         raise PasswordResetError('invalid_code')
 
     latest = (
@@ -142,7 +142,7 @@ def confirm_password_reset(verified_token: str, new_password: str) -> dict:
     if not user_id:
         raise PasswordResetError('invalid_or_expired_token', http_status=401)
 
-    user = User.objects.filter(pk=user_id).first()
+    user = User.objects.filter(pk=user_id, is_active=True).select_related('profile').first()
     if not user:
         raise PasswordResetError('invalid_or_expired_token', http_status=401)
 
@@ -164,6 +164,10 @@ def confirm_password_reset(verified_token: str, new_password: str) -> dict:
         updated = User.objects.filter(
             pk=user.pk, password=original_password,
         ).update(password=user.password)
+        if updated == 1:
+            from accounts.services.access import revoke
+            revoke(user)
+            user.profile.refresh_from_db()
     if updated != 1:
         raise PasswordResetError('invalid_or_expired_token', http_status=401)
 

@@ -79,6 +79,8 @@ entregas de Platform y formalización, y se completan con su propia revisión.
 | 55 | Seguridad y acceso | `verification_code_password_reset` | Código OTP de recuperación de contraseña. |
 | 56 | Seguridad y acceso | `verification_code_email_validation` | Código OTP de validación de correo. |
 
+| 57 | Seguridad y acceso | `login_code` | Código de inicio de sesión; sin copia ni contenido conservado. |
+
 ## Política de copia y trazabilidad
 
 1. El correo principal se intenta primero. Una falla principal conserva el
@@ -97,9 +99,7 @@ entregas de Platform y formalización, y se completan con su propia revisión.
 7. El Historial global muestra destinatario, estado, error, familia, cuerpo,
    enlaces, peso y adjuntos exactos. Un fallo al guardar esa evidencia bloquea
    el envío principal.
-8. Por decisión de producto, el cuerpo completo también se conserva para los
-   correos de Seguridad y acceso. Cualquier administrador autorizado para el
-   panel de Emails puede consultarlo; la interfaz lo advierte expresamente.
+8. Los mensajes que contienen credenciales (invitaciones, códigos y enlaces de acceso) no se copian ni conservan su cuerpo. El historial mantiene una constancia neutra y bloquea contenido y reenvío, también para registros históricos. Los avisos de seguridad sin credenciales conservan la regla habitual.
 
 ## Configuración y volumen
 
@@ -132,7 +132,7 @@ que la traza BCC del primer correo posterior al despliegue figura como Enviado.
 
 ## Evidencia de completitud
 
-- La prueba parametrizada compara exactamente las 56 claves, familia por
+- La prueba parametrizada compara exactamente las 57 claves, familia por
   familia, con este inventario ejecutable.
 - El gateway rechaza cualquier clave no registrada y exige una clasificación
   explícita, incluso para avisos internos o de seguridad.
@@ -144,3 +144,7 @@ que la traza BCC del primer correo posterior al despliegue figura como Enviado.
 - Las pruebas API cubren historial global, filtros, trazas anidadas, acceso al
   cuerpo y permisos de administrador; las pruebas de interfaz cubren CRUD,
   segmentación, advertencias y consulta de la traza.
+
+## Excepción de acceso autorizado
+
+`login_code` usa el gateway con clasificación security. La política por canal excluye códigos, invitaciones y magic links de copias y archivo completo. `password_changed` no contiene credenciales y sigue cubierto. Esta política prevalece sobre la selección de familias de destinatarios. Ver [Accesos](AUTHORIZED_ACCESS.md).

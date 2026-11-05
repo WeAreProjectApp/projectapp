@@ -14,6 +14,7 @@ from content.models import (
     Document,
     DocumentType,
     EmailBody,
+    EmailCopyRecipient,
     EmailDeliverySnapshot,
     EmailLog,
 )
@@ -25,6 +26,7 @@ from content.services.email_delivery_service import (
     EmailDeliveryGateway,
     EmailMultiAlternatives,
 )
+from content.services.email_privacy_policy import REDACTED_TEXT
 from content.services.email_snapshot_service import (
     _format_kind,
     _inferred_business_kind,
@@ -124,6 +126,32 @@ def test_client_delivery_uses_hidden_copy_envelope():
     assert mail.outbox[0].bcc == []
     assert mail.outbox[1].to == []
     assert mail.outbox[1].bcc == ['audit@example.com']
+
+
+def test_login_code_delivery_excludes_internal_copy_and_redacts_snapshot():
+    """Fails if an access secret reaches the internal copy mailbox or retained history."""
+    EmailCopyRecipient.objects.create(email='audit@example.com', families=[SECURITY])
+    secret_body = 'ACCESS_VALUE_FOR_TEST_ONLY'
+
+    result = EmailDeliveryGateway.send_plain(
+        subject='Access message',
+        body=secret_body,
+        from_email='team@projectapp.co',
+        recipients=['member@example.com'],
+        template_key='login_code',
+        classification=DeliveryClassification.SECURITY,
+    )
+
+    snapshot = EmailDeliverySnapshot.objects.get(template_key='login_code')
+    assert result == 1
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == ['member@example.com']
+    assert EmailLog.objects.filter(
+        template_key='login_code', delivery_role=EmailLog.DeliveryRole.COPY,
+    ).count() == 0
+    assert snapshot.body.text == REDACTED_TEXT
+    assert snapshot.body.html == ''
+    assert snapshot.attachment_count == 0
 
 
 def test_multi_recipient_delivery_uses_one_visible_envelope():
