@@ -1,4 +1,4 @@
-> **En curso — Calculadora de requerimientos (2026-11-05):** módulo comercial administrable por panel/MCP, definición documental generada, variantes por proyecto en Borrador/Aprobada y calibración con cierres reales. Implementación en worktree propio; sin migraciones contra el servicio.
+> **Calculadora de requerimientos — implementación de sesión, 2026-11-05:** Comercial administra definición, señales, parámetros internos y documento sincronizado por panel/MCP. Los proyectos conservan variantes en Borrador/Aprobada con aprobación del equipo y PDF congelado; actualizar la general no altera acuerdos anteriores. El chat externo clasifica XS–XL/Proyecto, sin ejecutar un modelo en el panel. Los cierres preservan evidencia, correcciones y definición exacta; sus listados/detalles se paginan. Los precios XS/S/M se comparten con Paquetes y las ofertas emitidas quedan fijas. Valores provisionales hasta tener mediciones reales. PR #555; cierre QA/CI en curso, sin migraciones ni despliegue sobre el servicio.
 
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 

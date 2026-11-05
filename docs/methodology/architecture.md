@@ -2386,5 +2386,7 @@ Panel session/CSRF y MCP usan las mismas vistas FBV/serializers/servicios staff.
 Claude/ChatGPT clasifica fuera de ProjectApp con el contexto versionado. Los
 registros de estimación preservan los parámetros efectivos y UUID idempotente;
 los cierres reales se corrigen por eventos. La calibración agrupa por huella y
-talla y propone revisión sin recotización automática. Horas, costos y precios
+talla y propone revisión sin recotización automática. El historial entrega resúmenes
+con tres cierres recientes; los detalles y la evidencia completa tienen consultas
+paginadas para conservar el acceso sin cargar todos los registros. Horas, costos y precios
 unitarios permanecen internos; el documento particular muestra clasificación.

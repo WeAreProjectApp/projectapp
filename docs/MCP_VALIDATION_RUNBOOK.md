@@ -1,4 +1,4 @@
-## Calculadora por talla — commercial 6.4.0 / projects 4.5.0 (2026-11-05)
+## Calculadora por talla — commercial 6.5.0 / projects 4.5.1 (2026-11-05)
 
 La clasificación se aplica desde Claude/ChatGPT con la definición que devuelve MCP.
 El panel conserva parámetros y documentos; no ejecuta modelos. Horas reales, costos
@@ -36,6 +36,9 @@ acreditar calibración económica.
    se rechaza. Registrar esfuerzo real con evidencia/causa; corregir mediante
    `supersedes_id` del último cierre, sin borrarlo. Consultar calibración separa
    definiciones efectivas y tallas, informa mediana, costo y consistencia revisada,
+   Los listados llevan resúmenes y tres cierres recientes; `get_requirement_estimate`
+   devuelve el texto completo y `list_requirement_actuals` pagina toda la evidencia.
+   El informe de cohortes también se pagina. La medición
    exige al menos tres muestras y sólo propone revisión: nunca cambia precios.
 7. Comprobar permiso staff, alcance de conector, actor y confirmación sensible.
    No se envían mensajes ni se publica al cliente durante este guion.

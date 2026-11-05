@@ -251,13 +251,6 @@ class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
             ),
         ]
 
-    @classmethod
-    def from_db(cls, db, field_names, values, **kwargs):
-        instance = super().from_db(db, field_names, values, **kwargs)
-        if 'metadata' in field_names:
-            instance._calculator_managed_at_load = bool((values[field_names.index('metadata')] or {}).get('requirement_calculator'))
-        return instance
-
     def delete(self, *args, **kwargs):
         from content.services.calculator_documents import protect_delete
         protect_delete(self)

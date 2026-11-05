@@ -1,4 +1,5 @@
 export default {
+  "fullRecord": "View full record and evidence",
   "title": "Requirement calculator",
   "intro": "Manage the definition Claude and ChatGPT use through MCP. Economic values and effort remain internal.",
   "parametersOnly": "Project variant: edit existing parameters. Text, structure and formulas remain fixed to the selected general revision.",

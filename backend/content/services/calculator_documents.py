@@ -27,10 +27,8 @@ def protect_save(document):
     """Protect generic writers, history restoration and direct model saves alike."""
     if _writing.get() or not document.pk:
         return
-    if getattr(document, '_calculator_managed_at_load', None) is False and not managed(document):
-        return
     from content.models import Document
-    previous = Document.objects.filter(pk=document.pk).first()
+    previous = Document.objects.filter(pk=document.pk, metadata__has_key='requirement_calculator').first()
     if previous is None or not managed(previous):
         return
     if previous.metadata['requirement_calculator'].get('kind') == 'general' and document.is_client_visible:
@@ -88,7 +86,8 @@ def render_definition(config, *, version, project_name=None, status=None):
     for row in config['sizes']:
         lines += [f'## {row["id"]} — {row["label"]}', '', row['definition'], '']
         lines += [f'- {example}' for example in row['examples']] + ['', f'Puntos de referencia: {row["points"]}.', '']
-    lines += ['## Cuándo corresponde un proyecto', ''] + [f'- {rule}' for rule in config['project_rules']]
+    lines += ['## Cuándo corresponde un proyecto', '',
+              'Un resultado Proyecto queda fuera del paquete de trabajo y no consume cupos de requerimientos.', ''] + [f'- {rule}' for rule in config['project_rules']]
     if project_name is not None:
         lines += ['', '## Señales de clasificación', '', 'La señal aplicable de mayor talla fija la base. Se distingue lo nuevo de lo que extiende una capacidad existente; cada clasificación cita y explica la señal aplicable.', '']
         for row in config['signals']:

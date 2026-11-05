@@ -126,4 +126,19 @@ def calculator_actuals(request):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def calculator_calibration(request):
-    return Response(calibration.report())
+    return Response(calibration.report(**pagination(request)))
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def calculator_estimate_detail(request, estimate_id):
+    return Response(calibration.estimate_detail(estimate_id))
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def calculator_actual_history(request, estimate_id):
+    values = pagination(request)
+    if 'limit' not in request.query_params:
+        values['limit'] = 3
+    return Response(calibration.actual_history(estimate_id, **values))

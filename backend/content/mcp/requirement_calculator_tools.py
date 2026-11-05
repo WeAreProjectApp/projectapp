@@ -13,7 +13,7 @@ def _schema(value, field=''):
         return {'type': 'array', 'items': _schema(value[0]) if value else {'type': 'string'}, 'maxItems': 500}
     if field in {'points', 'hours_min', 'hours_max', 'standard_value_cop', 'surcharge_percent',
                  'minimum', 'maximum', 'deviation_percent', 'hourly_cost_cop'}:
-        return {'type': ['number', 'string', 'null'] if value is None else ['number', 'string']}
+        return {'type': ['number', 'string', 'null'] if field in {'minimum', 'maximum', 'standard_value_cop', 'hourly_cost_cop'} else ['number', 'string']}
     if isinstance(value, int):
         return {'type': 'integer'}
     return {'type': 'string', 'maxLength': 30000}
@@ -54,8 +54,13 @@ CALCULATOR_TOOLS = [
           'Aplica las reglas, devuelve talla y explicación sin horas ni valores internos y registra el resultado con record_requirement_estimate.',
           'calculator-context', fields={'project_id': IDENTIFIER, 'project_version_id': IDENTIFIER,
                                        'requirement': {'type': 'string', 'maxLength': 30000}}),
-    _op('list_requirement_estimates', 'Lista estimaciones y cierres internos para seguimiento, sin crear documentos de definición.',
+    _op('list_requirement_estimates', 'Lista resúmenes paginados y tres cierres recientes por estimación. Usa get_requirement_estimate y list_requirement_actuals para el texto y evidencia completos.',
         'calculator-estimates', query_schema=PAGE, envelope_aliases=False),
+    _tool('get_requirement_estimate', 'Consulta el requerimiento y explicación completos de una estimación interna.',
+          'calculator-estimate-detail', path=('estimate_id',)),
+    _op('list_requirement_actuals', 'Consulta la evidencia completa de cierres y correcciones, tres por página.',
+        'calculator-actual-history', path=('estimate_id',), query_schema=closed_object({
+            'limit': {'type': 'integer', 'minimum': 1, 'maximum': 3}, 'offset': {'type': 'integer', 'minimum': 0}}), envelope_aliases=False),
     _tool('record_requirement_estimate', 'Registra la clasificación realizada en el chat con su versión exacta; no aprueba documentos ni descuenta cupos.',
           'calculator-estimates', method='POST', fields={
               'request_id': {'type': 'string', 'format': 'uuid'}, 'revision_id': IDENTIFIER,
@@ -70,12 +75,12 @@ CALCULATOR_TOOLS = [
     _tool('record_requirement_actual', 'Registra esfuerzo real con evidencia y costo interno opcional. Para corregir conserva el último evento en supersedes_id.',
           'calculator-actuals', method='POST', fields={
               'estimate_id': IDENTIFIER, 'actual_hours': {'type': 'number', 'exclusiveMinimum': 0},
-              'hourly_cost_cop': {'type': 'number', 'exclusiveMinimum': 0},
+              'hourly_cost_cop': {'type': ['number', 'null'], 'exclusiveMinimum': 0},
               'evidence': {'type': 'string', 'minLength': 1, 'maxLength': 8000},
               'cause': {'type': 'string', 'minLength': 1, 'maxLength': 8000}, 'supersedes_id': IDENTIFIER,
           }, required=('estimate_id', 'actual_hours', 'evidence', 'cause')),
     _tool('get_requirement_calibration', 'Consulta consistencia, medianas reales y cobertura de costos por talla y definición. Nunca recalibra automáticamente.',
-          'calculator-calibration'),
+          'calculator-calibration', fields=PAGE['properties']),
 ]
 
 PROJECT_CALCULATOR_TOOLS = [

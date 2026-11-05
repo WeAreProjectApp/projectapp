@@ -22,6 +22,8 @@ const preview = ref('');
 const success = ref('');
 const historyOffset = ref(0);
 const estimateOffset = ref(0);
+const calibrationOffset = ref(0);
+const estimateDetails = ref({});
 const actual = ref({ estimate_id: '', actual_hours: '', hourly_cost_cop: '', evidence: '', cause: '' });
 const selectedVersion = computed(() => store.projectVersion?.id === Number(selectedVersionId.value) ? store.projectVersion : null);
 const readOnly = computed(() => Boolean(projectId.value && selectedVersion.value?.status !== 'draft'));
@@ -118,7 +120,7 @@ async function selectTab(value) {
   tab.value = value;
   if (value === 'versions') await store.loadRevisions(historyOffset.value);
   if (value === 'calibration') {
-    await store.loadCalibration();
+    await store.loadCalibration(calibrationOffset.value);
     await store.loadEstimates(estimateOffset.value);
   }
 }
@@ -130,6 +132,14 @@ async function estimatesPage(direction) {
   estimateOffset.value += direction * 20;
   await store.loadEstimates(estimateOffset.value);
 }
+async function calibrationPage(direction) {
+  calibrationOffset.value += direction * 20;
+  await store.loadCalibration(calibrationOffset.value);
+}
+async function loadEstimateDetails(id, offset = 0) {
+  const [detail, history] = await Promise.all([store.getEstimate(id), store.loadActualHistory(id, offset)]);
+  if (detail && history) estimateDetails.value[id] = { ...detail, actuals: history.results, actualCount: history.count, offset };
+}
 async function saveActual() {
   const estimate = store.estimates.find((row) => row.id === Number(actual.value.estimate_id));
   const corrected = new Set(estimate?.actuals.map((row) => row.supersedes_id) || []);
@@ -140,6 +150,7 @@ async function saveActual() {
     ...(last ? { supersedes_id: last.id } : {}) });
   if (result) {
     actual.value = { estimate_id: '', actual_hours: '', hourly_cost_cop: '', evidence: '', cause: '' };
+    estimateDetails.value = {};
     await selectTab('calibration');
     success.value = t('requirementCalculator.actualSaved');
   }
@@ -208,8 +219,27 @@ async function saveActual() {
         <p v-if="cohort.propose_review" class="text-sm font-semibold text-danger-strong">{{ t('requirementCalculator.reviewSuggested') }}</p>
       </article>
       <div v-if="!store.calibration?.cohorts.length" class="text-sm text-text-muted">{{ t('requirementCalculator.noActuals') }}</div>
+      <div v-if="store.calibration?.count > 20" class="flex flex-wrap gap-3">
+        <BaseButton variant="secondary" :disabled="calibrationOffset === 0 || store.busy" :disabled-reason="t('requirementCalculator.firstPage')" @click="calibrationPage(-1)">{{ t('requirementCalculator.previous') }}</BaseButton>
+        <BaseButton variant="secondary" :disabled="calibrationOffset + 20 >= store.calibration.count || store.busy" :disabled-reason="t('requirementCalculator.lastPage')" @click="calibrationPage(1)">{{ t('requirementCalculator.next') }}</BaseButton>
+      </div>
       <h2 class="text-lg font-semibold text-text-default">{{ t('requirementCalculator.estimates') }}</h2>
-      <article v-for="estimate in store.estimates" :key="estimate.id" class="space-y-2 rounded-xl border border-border-default p-4"><p class="font-medium text-text-default">#{{ estimate.id }} · {{ estimate.size }} · {{ estimate.project_name }}</p><p class="whitespace-pre-wrap text-sm text-text-muted">{{ estimate.requirement }}</p><p class="text-sm text-text-default">{{ estimate.explanation }}</p><p v-for="event in estimate.actuals" :key="event.id" class="text-sm text-text-muted">#{{ event.id }} · {{ t('requirementCalculator.actual_hours') }}: {{ event.actual_hours }} · {{ event.evidence }} · {{ event.cause }}</p></article>
+      <article v-for="estimate in store.estimates" :key="estimate.id" class="space-y-2 rounded-xl border border-border-default p-4">
+        <p class="font-medium text-text-default">#{{ estimate.id }} · {{ estimate.size }} · {{ estimate.project_name }}</p>
+        <p class="whitespace-pre-wrap text-sm text-text-muted">{{ estimate.requirement }}</p>
+        <p class="text-sm text-text-default">{{ estimate.explanation }}</p>
+        <p v-for="event in estimate.actuals" :key="event.id" class="text-sm text-text-muted">#{{ event.id }} · {{ t('requirementCalculator.actual_hours') }}: {{ event.actual_hours }} · {{ event.evidence }} · {{ event.cause }}</p>
+        <BaseButton variant="secondary" :disabled="store.busy" :disabled-reason="t('requirementCalculator.loading')" :data-testid="`calculator-estimate-detail-${estimate.id}`" @click="loadEstimateDetails(estimate.id)">{{ t('requirementCalculator.fullRecord') }}</BaseButton>
+        <div v-if="estimateDetails[estimate.id]" class="space-y-3 border-t border-border-default pt-3">
+          <p class="whitespace-pre-wrap text-sm text-text-default">{{ estimateDetails[estimate.id].requirement }}</p>
+          <p class="whitespace-pre-wrap text-sm text-text-muted">{{ estimateDetails[estimate.id].explanation }}</p>
+          <p v-for="event in estimateDetails[estimate.id].actuals" :key="event.id" class="whitespace-pre-wrap text-sm text-text-muted">#{{ event.id }} · {{ event.evidence }} · {{ event.cause }}</p>
+          <div class="flex flex-wrap gap-3">
+            <BaseButton variant="secondary" :disabled="estimateDetails[estimate.id].offset === 0 || store.busy" :disabled-reason="t('requirementCalculator.firstPage')" @click="loadEstimateDetails(estimate.id, estimateDetails[estimate.id].offset - 3)">{{ t('requirementCalculator.previous') }}</BaseButton>
+            <BaseButton variant="secondary" :disabled="estimateDetails[estimate.id].offset + 3 >= estimateDetails[estimate.id].actualCount || store.busy" :disabled-reason="t('requirementCalculator.lastPage')" @click="loadEstimateDetails(estimate.id, estimateDetails[estimate.id].offset + 3)">{{ t('requirementCalculator.next') }}</BaseButton>
+          </div>
+        </div>
+      </article>
       <div class="flex flex-wrap gap-3"><BaseButton variant="secondary" :disabled="estimateOffset === 0 || store.busy" :disabled-reason="t('requirementCalculator.firstPage')" @click="estimatesPage(-1)">{{ t('requirementCalculator.previous') }}</BaseButton><BaseButton variant="secondary" :disabled="estimateOffset + 20 >= store.estimateCount || store.busy" :disabled-reason="t('requirementCalculator.lastPage')" @click="estimatesPage(1)">{{ t('requirementCalculator.next') }}</BaseButton></div>
       <form class="space-y-4 rounded-xl border border-border-default p-4" @submit.prevent="saveActual">
         <h2 class="font-semibold text-text-default">{{ t('requirementCalculator.recordActual') }}</h2>

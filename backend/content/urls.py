@@ -410,6 +410,8 @@ urlpatterns = [
     path('requirement-calculator/project-versions/<int:version_id>/', calculator_views.project_calculator_draft, name='project-calculator-draft'),
     path('requirement-calculator/project-versions/<int:version_id>/approve/', calculator_views.project_calculator_approve, name='project-calculator-approve'),
     path('requirement-calculator/estimates/', calculator_views.calculator_estimates, name='calculator-estimates'),
+    path('requirement-calculator/estimates/<int:estimate_id>/', calculator_views.calculator_estimate_detail, name='calculator-estimate-detail'),
+    path('requirement-calculator/estimates/<int:estimate_id>/actuals/', calculator_views.calculator_actual_history, name='calculator-actual-history'),
     path('requirement-calculator/actuals/', calculator_views.calculator_actuals, name='calculator-actuals'),
     path('requirement-calculator/calibration/', calculator_views.calculator_calibration, name='calculator-calibration'),
 

@@ -105,7 +105,7 @@ def overview():
 def list_revisions(*, limit=20, offset=0):
     if not 1 <= limit <= 50 or offset < 0:
         raise ValidationError('Usa limit entre 1 y 50 y offset no negativo.')
-    rows = CalculatorRevision.objects.all()
+    rows = CalculatorRevision.objects.defer('definition')
     return {'count': rows.count(), 'results': [revision_payload(row) for row in rows[offset:offset + limit]]}
 
 

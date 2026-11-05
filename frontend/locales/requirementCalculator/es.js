@@ -1,4 +1,5 @@
 export default {
+  "fullRecord": "Ver registro y evidencia completos",
   "title": "Calculadora de requerimientos",
   "intro": "Administra la definición que utilizan Claude y ChatGPT por MCP. Los valores económicos y el esfuerzo son internos.",
   "parametersOnly": "Variante del proyecto: puedes ajustar parámetros existentes. Los textos, la estructura y las fórmulas conservan la revisión general elegida.",

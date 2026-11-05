@@ -89,7 +89,7 @@ const panelCapabilities = [
         ['/panel/diagnostics', '/panel/diagnostics/create', '/panel/diagnostics/:id/edit'],
         { icon: 'file', stage: 'Diagnóstico' }),
       feature('panel-requirement-calculator', 'Administrar calculadora y versiones por proyecto',
-        'Configura señales, pesos, porcentajes y valores internos, conserva revisiones y sincroniza el documento general. Prepara variantes particulares por proyecto en borrador, ajusta sólo parámetros y registra su aprobación para congelar documento y PDF. Revisa cierres con evidencia y propuestas de calibración. La clasificación se realiza desde un chat externo por MCP.',
+        'Configura señales, pesos, porcentajes y valores internos, conserva revisiones y sincroniza el documento general. Prepara variantes particulares por proyecto en borrador, ajusta sólo parámetros y registra su aprobación para congelar documento y PDF. Revisa cierres con evidencia completa paginada y propuestas de calibración. La clasificación se realiza desde un chat externo por MCP.',
         'Mantiene criterios explicables y conserva las condiciones negociadas con cada proyecto.',
         ['/panel/requirement-calculator'], { icon: 'settings', stage: 'Configuración' }),
       feature('panel-consulting', 'Consultar y compartir Consultoría y asesoría',

@@ -25,7 +25,7 @@ La definición y los parámetros se administran en **Comercial → Calculadora d
 
 Registra el resultado mediante `record_requirement_estimate` con un `request_id` UUID estable, revisión, huella, proyecto/versión particular cuando apliquen, señales y explicación. Un reintento conserva el mismo identificador y payload. `expected_size` se usa sólo si existe una revisión humana de referencia; no inventes una respuesta esperada.
 
-Cuando el operador aporte un cierre real, usa `record_requirement_actual` con evidencia y esfuerzo confirmado. Las fechas de un PR no equivalen a horas trabajadas. Corregir requiere `supersedes_id` del último cierre y conserva el anterior. `get_requirement_calibration` informa muestras y posibles revisiones sin aplicar cambios.
+Cuando el operador aporte un cierre real, usa `record_requirement_actual` con evidencia y esfuerzo confirmado. Las fechas de un PR no equivalen a horas trabajadas. Corregir requiere `supersedes_id` del último cierre y conserva el anterior. `get_requirement_calibration` informa cohortes paginadas y posibles revisiones sin aplicar cambios. Los listados de estimaciones son resúmenes: `get_requirement_estimate` recupera el texto completo y `list_requirement_actuals` pagina toda la evidencia de cierres y correcciones.
 
 ## Administración explícitamente solicitada
 

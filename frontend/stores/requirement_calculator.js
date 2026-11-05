@@ -72,9 +72,15 @@ const useRequirementCalculatorStore = defineStore('requirementCalculator', {
     approveDraft(id, payload) {
       return this.perform(async () => (await create_request(`${root}project-versions/${id}/approve/`, payload)).data);
     },
-    loadCalibration() {
+    getEstimate(id) {
+      return this.perform(async () => (await get_request(`${root}estimates/${id}/`)).data);
+    },
+    loadActualHistory(id, offset = 0) {
+      return this.perform(async () => (await get_request(`${root}estimates/${id}/actuals/?limit=3&offset=${offset}`)).data);
+    },
+    loadCalibration(offset = 0) {
       return this.perform(async () => {
-        this.calibration = (await get_request(`${root}calibration/`)).data;
+        this.calibration = (await get_request(`${root}calibration/?limit=20&offset=${offset}`)).data;
         return this.calibration;
       });
     },
