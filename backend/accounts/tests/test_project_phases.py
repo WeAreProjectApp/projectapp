@@ -293,8 +293,8 @@ def test_client_lists_own_project_phases(client_user, project, business_proposal
     assert response.json()[0]['proposal']['id'] == business_proposal.pk
 
 
-def test_profileless_user_lists_own_project_phases(db):
-    """Fails if an owner without a profile loses access to their project phases."""
+def test_profileless_token_cannot_list_own_project_phases(db):
+    """Fails if owning a project grants access without an authorized account."""
     from content.models import BusinessProposal
 
     owner = User.objects.create_user(
@@ -321,8 +321,8 @@ def test_profileless_user_lists_own_project_phases(db):
     response = client.get(f'/api/accounts/projects/{project.id}/phases/')
 
     assert not UserProfile.objects.filter(user=owner).exists()
-    assert response.status_code == 200
-    assert response.json()[0]['proposal']['id'] == business_proposal.pk
+    assert response.status_code == 401
+    assert response.json()['code'] == 'token_not_valid'
 
 
 def test_client_cannot_list_foreign_project_phases(client_user, project, business_proposal):
@@ -343,7 +343,7 @@ def test_client_cannot_list_foreign_project_phases(client_user, project, busines
 
 
 def test_profileless_user_cannot_list_foreign_project_phases(db, project, business_proposal):
-    """Fails if a missing profile bypasses tenant filtering for project phases."""
+    """Fails if an unauthorized token can probe whether another project exists."""
     foreign_user = User.objects.create_user(
         username='profileless-foreign@example.com',
         email='profileless-foreign@example.com',
@@ -357,8 +357,8 @@ def test_profileless_user_cannot_list_foreign_project_phases(db, project, busine
     response = client.get(f'/api/accounts/projects/{project.id}/phases/')
 
     assert not UserProfile.objects.filter(user=foreign_user).exists()
-    assert response.status_code == 404
-    assert response.json() == {'detail': 'project_not_found'}
+    assert response.status_code == 401
+    assert response.json()['code'] == 'token_not_valid'
 
 
 def test_project_phase_list_query_budget_is_constant(authed_client, project, client_user):

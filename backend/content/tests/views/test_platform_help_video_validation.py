@@ -5,12 +5,12 @@ import subprocess
 from unittest.mock import Mock
 
 import pytest
+from accounts.models import UserProfile
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models import UserProfile
 from content.models import VideoResource
 from content.services import video_resource_service
 
@@ -95,8 +95,8 @@ def test_client_catalog_rejects_missing_profile(django_user_model):
 
     response = client.get('/api/platform/help/videos/')
 
-    assert response.status_code == 403
-    assert str(response.data['detail']) == 'Se requiere una cuenta de cliente activa.'
+    assert response.status_code == 401
+    assert response.data['code'] == 'token_not_valid'
 
 
 @pytest.mark.parametrize('module', [
