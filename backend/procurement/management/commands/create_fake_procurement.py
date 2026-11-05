@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
-from procurement.models import Alert, Classification, Opportunity, SavedSearch
+from procurement.models import Alert, Opportunity, SavedSearch
 from procurement.services.records import classify
 
 

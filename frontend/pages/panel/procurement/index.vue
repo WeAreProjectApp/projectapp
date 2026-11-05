@@ -93,6 +93,7 @@ async function saveForm() {
 }
 async function applySearch(search) {
   filters.value = copyFilters(search.filters)
+  if (search.frequency) filters.value.is_open = true
   await selectTab('processes')
 }
 async function requestSync() {
@@ -140,7 +141,7 @@ watch(() => route.query.tab, value => { if (tabs.includes(String(value))) tab.va
         <BaseButton variant="secondary" data-testid="procurement-sync" @click="requestSync"><BaseActionIcon action="refresh" />{{ tr('sync') }}</BaseButton>
       </div>
     </header>
-    <p class="mb-3 text-sm text-text-subtle">{{ tr('noInternalAI') }}</p>
+    <p class="mb-3 text-sm text-text-subtle">{{ tr('analysisHelp') }}</p>
     <p v-if="store.settings && !store.settings.email_enabled" class="mb-3 text-sm text-text-subtle">{{ tr('outboundOff') }}</p>
     <div v-if="store.sync" class="mb-4 text-sm text-text-subtle" data-testid="procurement-sync-status">
       {{ tr('openCount') }}: {{ store.sync.open_count }} · {{ tr('lastSync') }}: {{ store.sync.recent?.[0] ? tr(store.sync.recent[0].status) : tr('noSync') }}

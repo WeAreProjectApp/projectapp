@@ -1,5 +1,6 @@
 """One validated query language for the panel, alerts, export and MCP."""
 import re
+from collections.abc import Mapping
 from functools import reduce
 from operator import or_
 
@@ -10,6 +11,8 @@ from rest_framework import serializers
 
 class StrictSerializer(serializers.Serializer):
     def to_internal_value(self, data):
+        if not isinstance(data, Mapping):
+            return super().to_internal_value(data)
         unknown = set(data) - set(self.fields)
         if unknown:
             raise serializers.ValidationError({key: 'Campo no permitido.' for key in sorted(unknown)})

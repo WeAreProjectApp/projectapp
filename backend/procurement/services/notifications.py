@@ -1,5 +1,4 @@
 """Durable eligibility records and per-recipient outbox, shared by all channels."""
-import json
 from datetime import timedelta
 from smtplib import SMTPException, SMTPServerDisconnected
 
@@ -73,21 +72,19 @@ def prepare_delivery(frequency, cutoff=None):
                                         alert__frequency=frequency, alert__is_active=True).order_by('pk').first()
     if first is None:
         return None
-    rows = list(pending.select_for_update().filter(
-        recipient=first.recipient,
-        alert__frequency=frequency).select_related('alert', 'opportunity').defer('opportunity__description', 'opportunity__source_data').order_by('pk')[:100])
+    selected = pending.filter(recipient=first.recipient, alert__frequency=frequency)
+    opportunity_ids = list(selected.order_by('opportunity_id').values_list('opportunity_id', flat=True).distinct()[:100])
+    if frequency == 'immediate':
+        opportunity_ids = opportunity_ids[:1]
+    # Include every matching alert for the selected processes in the same digest.
+    rows = list(selected.select_for_update().filter(opportunity_id__in=opportunity_ids)
+                .select_related('alert', 'opportunity').defer('opportunity__description', 'opportunity__source_data').order_by('pk'))
     matches = eligible_ids(rows, frequency)
-    valid = []
-    for row in rows:
-        if row.pk in matches:
-            valid.append(row)
-        else:
-            row.status = 'skipped'
-            row.save(update_fields=['status'])
+    valid = [row for row in rows if row.pk in matches]
+    invalid_ids = [row.pk for row in rows if row.pk not in matches]
+    Notification.objects.filter(pk__in=invalid_ids).update(status='skipped')
     if not valid:
         return False
-    if frequency == 'immediate':
-        valid = [row for row in valid if row.opportunity_id == valid[0].opportunity_id]
     delivery = Delivery.objects.create(recipient=first.recipient, frequency=frequency)
     Notification.objects.filter(pk__in=[row.pk for row in valid]).update(delivery=delivery)
     return delivery.pk
@@ -115,8 +112,9 @@ def send_delivery(delivery_id):
         item = grouped.setdefault(row.opportunity_id, {
             **dict(OpportunityListSerializer(row.opportunity).data), 'matched_alerts': [],
         })
-        item['matched_alerts'].append({'name': row.alert.name, 'filters': row.alert.filters,
-                                     'filter_labels': filter_labels(row.alert.filters)})
+        effective_filters = {**row.alert.filters, 'is_open': True}
+        item['matched_alerts'].append({'name': row.alert.name, 'filters': effective_filters,
+                                     'filter_labels': filter_labels(effective_filters)})
     items = list(grouped.values())
     from procurement.services.source import BOGOTA
     from content.utils import format_cop_email

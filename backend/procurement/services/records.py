@@ -1,18 +1,16 @@
 """Shared administration boundaries for REST and MCP."""
-import base64
 from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch
 from rest_framework.exceptions import NotFound, ValidationError
 
 from procurement.filters import apply_filters
-from procurement.models import Activity, Alert, Classification, Delivery, Opportunity, SavedSearch, Settings, SyncRun
+from procurement.models import Activity, Alert, Classification, Opportunity, SavedSearch, Settings, SyncRun
 from procurement.serializers import (
     AlertSerializer, AlertWriteSerializer, ClassificationSerializer, ClassificationWriteSerializer,
-    DeliverySerializer, OpportunitySerializer, OpportunityListSerializer, QuerySerializer, SavedSearchSerializer,
+    OpportunitySerializer, OpportunityListSerializer, QuerySerializer, SavedSearchSerializer,
     SavedSearchWriteSerializer, SettingsSerializer, SettingsWriteSerializer, SyncRunSerializer, validated,
 )
 
@@ -135,7 +133,7 @@ def save_settings(data):
 
 def filter_catalog():
     fields = {'entity_names': 'entity_name', 'departments': 'department', 'methods': 'method',
-              'contract_types': 'contract_type', 'statuses': 'source_status'}
+              'contract_types': 'contract_type', 'statuses': 'source_status', 'unspsc_codes': 'unspsc_code'}
     return {key: list(Opportunity.objects.exclude(**{field: ''}).order_by(field).values_list(field, flat=True).distinct()[:500])
             for key, field in fields.items()}
 

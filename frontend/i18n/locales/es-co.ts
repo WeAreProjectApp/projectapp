@@ -1,4 +1,3 @@
-import procurement from '../../locales/procurement/es.js'
 export default defineI18nLocale(async () => {
   const [
     global,
@@ -49,6 +48,7 @@ export default defineI18nLocale(async () => {
     platformAI,
     platformHelp,
     documentPdf,
+    procurement,
   ] = await Promise.all([
     import('~/locales/global/es.js'),
     import('~/locales/richText/es.js'),
@@ -98,6 +98,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/platformAI/es.js'),
     import('~/locales/platformHelp/es.js'),
     import('~/locales/documentPdf/es.js'),
+    import('~/locales/procurement/es.js'),
   ])
 
   return {
@@ -149,6 +150,6 @@ export default defineI18nLocale(async () => {
     platformAI: platformAI.default,
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
-    procurement,
+    procurement: procurement.default,
   }
 })

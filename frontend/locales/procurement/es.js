@@ -106,7 +106,7 @@ export default {
   "restore": "Restaurar",
   "team": "Seguimiento del equipo",
   "history": "Historial de decisiones",
-  "noInternalAI": "El asistente externo consulta el correo y registra su análisis mediante el MCP de este módulo.",
+  "analysisHelp": "Abre una oportunidad para registrar el análisis y explicar por qué interesa o se descarta.",
   "viewSent": "Ver contenido enviado",
   "filtersApplied": "Filtros aplicados",
   "lastSync": "Última actualización",

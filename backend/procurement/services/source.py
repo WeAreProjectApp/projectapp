@@ -49,6 +49,8 @@ class PublicClient:
 
 
 def normalized_record(record):
+    if not isinstance(record, dict):
+        raise ValueError('Registro público no válido.')
     source_id = str(record.get('id_del_proceso') or '').strip()
     if not source_id or len(source_id) > 100:
         raise ValueError('Proceso sin identificador válido.')

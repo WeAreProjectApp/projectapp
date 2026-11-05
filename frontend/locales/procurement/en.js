@@ -106,7 +106,7 @@ export default {
   "restore": "Restore",
   "team": "Team tracking",
   "history": "Decision history",
-  "noInternalAI": "Your external assistant reads email and records its analysis through this module’s MCP connector.",
+  "analysisHelp": "Open an opportunity to record your analysis and explain why it is relevant or should be discarded.",
   "viewSent": "View sent content",
   "filtersApplied": "Applied filters",
   "lastSync": "Last synchronization",

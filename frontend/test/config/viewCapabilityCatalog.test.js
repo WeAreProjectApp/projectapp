@@ -46,6 +46,7 @@ describe('viewCapabilityCatalog', () => {
       'Control financiero',
       'Integraciones',
       'Gobierno del sistema',
+      'Contratación estatal',
     ])
   })
 

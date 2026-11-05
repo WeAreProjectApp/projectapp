@@ -106,6 +106,10 @@ function resolveCatalogUrl(url) {
 }
 
 function defaultCapabilities(view, owner) {
+  if (view.url.startsWith('/panel/procurement')) return {
+    panelShell: true, table: false, tabs: view.viewType === 'list', filters: view.viewType === 'list',
+    modal: view.viewType === 'list', selection: false, touch: true,
+  };
   if (view.url === '/panel/platform/ai') return {
     panelShell: true, table: false, tabs: true, filters: true,
     modal: false, selection: false, touch: true,

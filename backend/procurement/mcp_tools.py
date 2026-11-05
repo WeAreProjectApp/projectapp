@@ -1,8 +1,9 @@
 """Procurement MCP adapters. The external assistant supplies analysis, never executes inside ProjectApp."""
 import base64
+from copy import deepcopy
 
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, PermissionDenied
 
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
@@ -34,7 +35,11 @@ CONFIG = {'sync_enabled': {'type': 'boolean'}, 'email_enabled': {'type': 'boolea
 
 
 def owner(arguments):
-    return owner_for_mcp(arguments['owner_id']) if 'owner_id' in arguments else mcp_actor()
+    actor = mcp_actor()
+    selected = owner_for_mcp(arguments['owner_id']) if 'owner_id' in arguments else actor
+    if selected.pk != actor.pk and not actor.is_superuser:
+        raise PermissionDenied('Sólo el principal administrador puede actuar para otro dueño.')
+    return selected
 
 
 def operation(name, arguments):
@@ -89,6 +94,30 @@ def operation(name, arguments):
     raise ToolError('Operación de contratación no disponible.')
 
 
+ARGUMENT_DESCRIPTIONS = {
+    'id': 'Identificador del registro del módulo que se consulta o modifica.',
+    'owner_id': 'ID de un administrador activo dueño de la búsqueda o clasificación personal.',
+    'filters': 'Criterios compartidos con el panel; palabras clave O UNSPSC y los demás filtros con Y.',
+    'page': 'Página del listado, desde 1.', 'page_size': 'Oportunidades por página, entre 1 y 100.',
+    'ordering': 'Orden permitido del listado; el identificador resuelve empates.',
+    'classified': 'Limita a oportunidades clasificadas por el administrador seleccionado.',
+    'state': 'Estado personal de seguimiento; discarded exige motivo en notes.',
+    'notes': 'Análisis externo o nota del equipo; al descartar debe explicar el porqué.',
+    'name': 'Nombre visible de la alerta o búsqueda, hasta 150 caracteres.',
+    'recipients': 'Uno a diez correos únicos de destinatarios de esta alerta.',
+    'frequency': 'immediate al detectar coincidencias; daily o weekly en el horario Bogotá configurado.',
+    'is_active': 'Habilita o pausa esta alerta; además requiere el correo global activo para enviar.',
+    'is_favorite': 'Marca la única búsqueda inicial del administrador; desmarca su favorita anterior.',
+    'sync_enabled': 'Activa la sincronización pública automática del módulo.',
+    'email_enabled': 'Autoriza envíos automáticos de alertas activas; apagado impide entregas.',
+    'sync_time': 'Hora local Bogotá de sincronización diaria, HH:MM.',
+    'daily_time': 'Hora local Bogotá del resumen diario, HH:MM.',
+    'weekly_time': 'Hora local Bogotá del resumen semanal, HH:MM.',
+    'weekly_day': 'Día semanal: 0 lunes a 6 domingo.',
+    'lookback_days': 'Ventana inicial de publicaciones públicas, entre 1 y 365 días.',
+}
+
+
 def tool(name, description, properties=None, required=()):
     allowed = set(properties or {})
     def handler(arguments):
@@ -102,7 +131,8 @@ def tool(name, description, properties=None, required=()):
         except (APIException, ObjectDoesNotExist) as exc:
             detail = getattr(exc, 'detail', 'Datos inválidos o registro no disponible.')
             raise ToolError(str(detail)) from exc
-    schema = {'type': 'object', 'properties': properties or {}, 'required': list(required), 'additionalProperties': False}
+    described = {key: {**deepcopy(value), 'description': ARGUMENT_DESCRIPTIONS[key]} for key, value in (properties or {}).items()}
+    schema = {'type': 'object', 'properties': described, 'required': list(required), 'additionalProperties': False}
     return {'name': name, 'description': description, 'input_schema': schema, 'handler': handler,
             'strict_arguments': True, 'output_schema': {'type': 'object'},
             'risk': 'sensitive' if name in {'create_procurement_alert', 'update_procurement_alert', 'update_procurement_settings', 'retry_procurement_delivery', 'delete_procurement_search'} else ('read' if name.startswith(('list_', 'get_', 'export_', 'preview_')) else 'write')}

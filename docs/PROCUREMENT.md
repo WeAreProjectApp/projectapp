@@ -24,7 +24,7 @@ Los fallos admiten reintento acotado o manual. Un timeout, desconexión incierta
 
 API `/api/procurement/`, exclusiva de staff con sesión Django y CSRF. Recursos: oportunidades y detalle, clasificación/restauración, búsquedas propias, alertas compartidas, configuración, filtros, sincronización, entregas y su detalle/reintento, exportación. Oportunidades y entregas son paginadas; máximo 100 oportunidades por página. La respuesta cruda del origen no se expone.
 
-Conector único `procurement` con las capacidades equivalentes. Las acciones sensibles, incluidas activar correo/alertas y reintentar, usan confirmación MCP. Las operaciones personales requieren `owner_id` de staff activo; el actor y la credencial MCP quedan registrados aparte.
+Conector único `procurement` con las capacidades equivalentes. Las acciones sensibles, incluidas activar correo/alertas y reintentar, usan confirmación MCP. Las operaciones personales requieren `owner_id` de staff activo; el actor y la credencial MCP quedan registrados aparte. Actuar para otra persona requiere autoridad de superusuario del principal MCP; un actor staff sin ese privilegio sólo puede seleccionar su propio dueño.
 
 El asistente externo conecta su Gmail/Outlook y este MCP: lee el correo de SECOP, consulta procesos y registra en notas la selección y el porqué. El perfil comercial y la comprobación de requisitos los aporta el operador/asistente. ProjectApp no ejecuta modelos, almacena credenciales del buzón ni lee avisos privados del portal SECOP.
 
