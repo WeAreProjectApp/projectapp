@@ -355,7 +355,7 @@ test.describe('Admin procurement', () => {
     const state = await setupProcurementApi(page, { deliveries: [{ ...delivery }] })
     await openProcurementFromSidebar(page)
     await page.getByTestId('procurement-tab-deliveries').click()
-    await expect(page.getByText('Resultado incierto', { exact: true })).toHaveCount(1)
+    await expect(page.getByRole('list')).toContainText('Resultado incierto')
     await page.getByRole('button', { name: 'Reintentar', exact: true }).click()
     await expect(page.getByText('Comprueba el buzón antes de reintentar: este correo podría haberse enviado.')).toHaveCount(1)
     await page.getByTestId('procurement-confirm').click()

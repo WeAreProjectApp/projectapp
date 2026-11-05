@@ -5,5 +5,5 @@
 - **Priority:** P1
 - **Routes:** `/panel/procurement`
 - **Description:** Staff applies keyword OR UNSPSC filters with other criteria, uses URL state, clears and exports the same query. Invalid ranges and request failures remain visible.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)

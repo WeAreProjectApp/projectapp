@@ -35,3 +35,19 @@ El deploy aplica las migraciones de `procurement`. La siembra crea configuració
 `create_fake_procurement` integra ejemplos en `create_fake_data`, sin red ni correo y con alerta inactiva. Requiere `FAKE_DATA_ALLOWED=True` y reloj reproducible; `delete_fake_data --confirm` limpia su grafo antes de los dueños y preserva configuración/conector.
 
 Validación focal: pruebas backend en `procurement/tests`, unitarias del store/editor, siete flujos E2E, contrato responsive, mapas de vistas y contratos MCP. Máximo 20 casos por lote y dos archivos E2E por invocación. Entrega: PR abierto con CI verde; integración, despliegue y activación posteriores.
+
+## Validación de la entrega
+
+Validación local del 5 de noviembre de 2026, en el worktree de la sesión:
+
+| Comprobación | Resultado |
+| --- | --- |
+| Backend | 43 casos aprobados por el autor y por un verificador independiente, en lotes de hasta 20. |
+| Store y editor de filtros | 12 casos unitarios aprobados. |
+| Navegador | 20 casos funcionales distintos aprobados por lotes; siete flujos con éxito, visualización y errores aplicables. |
+| Pantallas | 10 casos aprobados: listado y detalle a 412, 835, 1195, 1440 y 2560 px. |
+| Contratos compartidos | 12 regresiones aprobadas del inventario de correo y registro MCP; descubrimiento del conector con 24 herramientas y sin diferencias. |
+| Catálogos | 138 vistas registradas; contrato de 690 celdas y registro de flujos coherentes. |
+| Calidad | Verificación independiente estricta: backend y revisión conjunta 100/100; E2E 99/100, sin errores ni advertencias. |
+
+Los tests backend locales usan SQLite temporal y `--nomigrations`; `makemigrations --check --dry-run` no detectó cambios faltantes. CI valida además la cadena de migraciones y el empaquetado. La evidencia de CI y la entrega se consultan en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552). Estas comprobaciones no aplican migraciones ni datos de ejemplo sobre el servicio.

@@ -40,15 +40,19 @@ const money = value => value === null ? tr('unknown') : new Intl.NumberFormat(lo
 const date = value => value ? new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(value)) : tr('unknown')
 let timer
 
-function explainError(exception) {
-  const data = exception?.response?.data
+async function explainError(exception) {
+  let data = exception?.response?.data
+  if (data instanceof Blob) {
+    try { data = JSON.parse(await data.text()) }
+    catch { return tr('exportError') }
+  }
   if (!data || typeof data !== 'object') return tr('saveError')
-  return Object.values(data).flat().map(value => typeof value === 'string' ? value : tr('saveError')).join(' ')
+  return Object.values(data).flat().map(value => typeof value === 'string' ? value : tr('saveError')).join(' ') || tr('saveError')
 }
 async function attempt(action, success = '') {
   error.value = ''; message.value = ''
   try { await action(); message.value = success; return true }
-  catch (exception) { error.value = explainError(exception); return false }
+  catch (exception) { error.value = await explainError(exception); return false }
 }
 async function refresh() {
   await attempt(async () => {

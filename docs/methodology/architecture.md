@@ -1,4 +1,4 @@
-> **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación y entrega pendientes de cierre.
+> **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
 
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 

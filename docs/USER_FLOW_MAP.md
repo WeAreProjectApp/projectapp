@@ -8220,8 +8220,8 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Priority:** P1
 - **Routes:** `/panel/procurement`
 - **Description:** Staff navigates from the panel to the paginated SECOP II list, reads source status, opens a process and retries a failed load.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 ### FLOW: `admin-procurement-filters-export`
 
@@ -8230,8 +8230,8 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Priority:** P1
 - **Routes:** `/panel/procurement`
 - **Description:** Staff applies keyword OR UNSPSC filters with other criteria, uses URL state, clears and exports the same query. Invalid ranges and request failures remain visible.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 ### FLOW: `admin-procurement-classification`
 
@@ -8240,8 +8240,8 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Priority:** P1
 - **Routes:** `/panel/procurement`
 - **Description:** Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 ### FLOW: `admin-procurement-saved-searches`
 
@@ -8250,8 +8250,8 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Priority:** P2
 - **Routes:** `/panel/procurement`
 - **Description:** Staff creates, edits, applies, favorites and confirms deletion of named searches. Alert creation copies criteria. Invalid names and failed requests preserve the form.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 ### FLOW: `admin-procurement-alerts`
 
@@ -8260,8 +8260,8 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Priority:** P1
 - **Routes:** `/panel/procurement`
 - **Description:** Staff administers independent filters, one to ten recipients, immediate/daily/weekly frequency, activation and matching-process preview. Recipient validation and failed saves remain visible.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 ### FLOW: `admin-procurement-settings-sync`
 
@@ -8270,8 +8270,8 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Priority:** P2
 - **Routes:** `/panel/procurement`
 - **Description:** Staff requests public synchronization and configures Bogotá schedules, lookback, automatic updates and global email activation. Invalid settings and failures are explicit.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 ### FLOW: `admin-procurement-deliveries`
 
@@ -8280,8 +8280,8 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Priority:** P2
 - **Routes:** `/panel/procurement`
 - **Description:** Staff reviews paginated deliveries, attempts, errors and sent snapshots, then confirms retries. Uncertain sends warn to inspect the mailbox; rejected retries retain their dialog.
-- **Coverage:** ❌ Missing
-- **E2E Spec:** —
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 
 ## Unsectioned flows
