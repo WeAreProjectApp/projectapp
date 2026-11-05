@@ -251,6 +251,18 @@ class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
             ),
         ]
 
+    @classmethod
+    def from_db(cls, db, field_names, values, **kwargs):
+        instance = super().from_db(db, field_names, values, **kwargs)
+        if 'metadata' in field_names:
+            instance._calculator_managed_at_load = bool((values[field_names.index('metadata')] or {}).get('requirement_calculator'))
+        return instance
+
+    def delete(self, *args, **kwargs):
+        from content.services.calculator_documents import protect_delete
+        protect_delete(self)
+        return super().delete(*args, **kwargs)
+
     def __str__(self):
         return self.title
 
@@ -268,6 +280,8 @@ class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
         return is_contract_mirror(self)
 
     def save(self, *args, **kwargs):
+        from content.services.calculator_documents import protect_save
+        protect_save(self)
         if not self.slug:
             self.slug = safe_slug(self.title)
         super().save(*args, **kwargs)

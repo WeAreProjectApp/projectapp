@@ -511,6 +511,10 @@ def _generated_snapshot_read_only_error(document):
 
 
 def _contract_mirror_read_only_error(document):
+    from content.services.calculator_documents import managed, MESSAGE
+    if managed(document):
+        return error_response(MESSAGE, code='calculator_document_managed', status=409)
+
     """409 for the Document-manager window onto the one contract."""
     if not is_contract_mirror(document):
         return None
@@ -531,7 +535,8 @@ def _contract_mirror_read_only_error(document):
 def update_document(request, document_id):
     """Update a document."""
     document = get_object_or_404(Document, pk=document_id)
-    mirror = _contract_mirror_read_only_error(document)
+    from content.services.calculator_documents import managed as calculator_managed
+    mirror = None if calculator_managed(document) else _contract_mirror_read_only_error(document)
     if mirror:
         return mirror
     generated = _generated_snapshot_read_only_error(document)

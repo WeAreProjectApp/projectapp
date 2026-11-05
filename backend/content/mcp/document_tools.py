@@ -120,6 +120,10 @@ def _markdown_qs():
 
 
 def _refuse_contract_mirror(doc):
+    from content.services.calculator_documents import managed, MESSAGE
+    if managed(doc):
+        raise ToolError(MESSAGE, code='calculator_document_managed')
+
     from content.services.proposal_shared_documents import binding_for
     if binding_for(doc):
         raise ToolError('Edita la fuente estructurada compartida con la propuesta.', code='NOT_EDITABLE',
@@ -345,6 +349,7 @@ def _doc_summary(doc):
         **document_capabilities(doc),
         'edit_blockers': [CONTRACT_MIRROR_BLOCKER] if is_contract_mirror(doc) else [],
         'is_contract_mirror': is_contract_mirror(doc),
+        'calculator': (doc.metadata or {}).get('requirement_calculator'),
     }
 
 
@@ -643,6 +648,9 @@ def update_document(arguments):
         )
     _check_document_etag(doc, arguments)
     changes = set(arguments) - {'document_id', 'include_content', 'if_match', 'client_policy', 'portal_policy'}
+    from content.services.calculator_documents import managed as calculator_managed, MESSAGE
+    if calculator_managed(doc) and changes - {'is_client_visible', *CLIENT_NOTE_FIELDS, 'client_custom_notes'}:
+        raise ToolError(MESSAGE, code='calculator_document_managed')
     if is_contract_mirror(doc) and not moving:
         _refuse_contract_mirror(doc)
     if moving:

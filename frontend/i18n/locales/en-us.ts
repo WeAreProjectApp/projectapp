@@ -48,6 +48,7 @@ export default defineI18nLocale(async () => {
     platformAI,
     platformHelp,
     documentPdf,
+    requirementCalculator,
   ] = await Promise.all([
     import('~/locales/global/en.js'),
     import('~/locales/richText/en.js'),
@@ -97,6 +98,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/platformAI/en.js'),
     import('~/locales/platformHelp/en.js'),
     import('~/locales/documentPdf/en.js'),
+    import('~/locales/requirementCalculator/en.js'),
   ])
 
   return {
@@ -148,5 +150,6 @@ export default defineI18nLocale(async () => {
     platformAI: platformAI.default,
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
+    requirementCalculator: requirementCalculator.default,
   }
 })

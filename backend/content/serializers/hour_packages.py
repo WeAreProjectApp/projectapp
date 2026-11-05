@@ -115,6 +115,15 @@ class HourPackageSettingsSerializer(EditorialModelSerializer):
             'alliance_s_count', 'alliance_m_count', 'exchange_rate', 'updated_at',
         )
 
+    def update(self, instance, validated_data):
+        from django.db import transaction
+        from content.services.requirement_calculator import publish_package_prices
+        request = self.context.get('request')
+        actor = getattr(request, 'user', None)
+        with transaction.atomic():
+            publish_package_prices(validated_data, actor=actor)
+            return super().update(instance, validated_data)
+
     def _validate_base_rate(self, value):
         if value <= 0:
             raise serializers.ValidationError('La tarifa base debe ser mayor a 0.')

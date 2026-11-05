@@ -1,3 +1,4 @@
+from content.views import requirement_calculator as calculator_views
 from content.views.proposal_shared_documents import document_proposal_source, confirm_proposal_revision, reconcile_proposal_documents
 from content.views.accounting_settlements import preview_income_settlement, income_settlement_detail
 from content.views.proposal_project_reassignment import proposal_project_reassignment
@@ -400,6 +401,18 @@ from content.views.consulting import (
 )
 
 urlpatterns = [
+    path('requirement-calculator/', calculator_views.calculator_definition, name='calculator-definition'),
+    path('requirement-calculator/preview/', calculator_views.calculator_preview, name='calculator-preview'),
+    path('requirement-calculator/revisions/', calculator_views.calculator_revisions, name='calculator-revisions'),
+    path('requirement-calculator/revisions/<int:revision_id>/', calculator_views.calculator_revision, name='calculator-revision'),
+    path('requirement-calculator/context/', calculator_views.calculator_context, name='calculator-context'),
+    path('requirement-calculator/projects/<int:project_id>/', calculator_views.project_calculator, name='project-calculator'),
+    path('requirement-calculator/project-versions/<int:version_id>/', calculator_views.project_calculator_draft, name='project-calculator-draft'),
+    path('requirement-calculator/project-versions/<int:version_id>/approve/', calculator_views.project_calculator_approve, name='project-calculator-approve'),
+    path('requirement-calculator/estimates/', calculator_views.calculator_estimates, name='calculator-estimates'),
+    path('requirement-calculator/actuals/', calculator_views.calculator_actuals, name='calculator-actuals'),
+    path('requirement-calculator/calibration/', calculator_views.calculator_calibration, name='calculator-calibration'),
+
     path('documents/create-from-pdf/', create_document_from_pdf, name='create-document-from-pdf'),
     path('documents/<int:document_id>/replace-pdf/', replace_document_pdf, name='replace-document-pdf'),
     path('consulting/public/', public_consulting_program, name='public-consulting-program'),

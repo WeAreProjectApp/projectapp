@@ -1,0 +1,13 @@
+{
+  "id": "admin-managed-calculator-document",
+  "name": "Consultar documento administrado de calculadora",
+  "module": "documents",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "El administrador abre desde una versión de proyecto su documento de calculadora, ve el aviso de contenido administrado y vuelve a la calculadora correspondiente. El editor documental permanece de sólo lectura.",
+  "outcomes": [
+    "display"
+  ]
+}

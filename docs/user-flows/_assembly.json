@@ -368,6 +368,17 @@
         "platform-appi-availability",
         "platform-appi-shared-quota-audio"
       ]
+    },
+    {
+      "title": "Section 39 — Requirement Calculator (Nov 5, 2026)",
+      "flows": [
+        "admin-requirement-calculator-definition",
+        "admin-requirement-calculator-revision-restore",
+        "admin-project-requirement-calculator-draft",
+        "admin-project-requirement-calculator-approve",
+        "admin-requirement-calculator-calibration",
+        "admin-managed-calculator-document"
+      ]
     }
   ]
 }

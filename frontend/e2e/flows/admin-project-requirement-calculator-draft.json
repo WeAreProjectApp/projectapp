@@ -1,0 +1,16 @@
+{
+  "id": "admin-project-requirement-calculator-draft",
+  "name": "Preparar y ajustar el borrador de calculadora de un proyecto",
+  "module": "projects",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Desde Acciones del proyecto, el administrador crea un único borrador desde una revisión general. El resumen carga sólo metadatos y la versión seleccionada carga sus parámetros e historial por separado. Sólo se ajustan parámetros existentes; un segundo borrador, un cambio estructural o una versión obsoleta se rechazan.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

@@ -52,6 +52,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Diagnósticos', href: lp('/panel/diagnostics'), icon: 'file' },
         { label: 'Nuevo diagnóstico', href: lp('/panel/diagnostics/create'), icon: 'plus' },
         { label: 'Consultoría y asesoría', href: lp('/panel/consulting'), icon: 'search' },
+        { label: 'Calculadora de requerimientos', href: lp('/panel/requirement-calculator'), icon: 'settings' },
         { divider: true },
         { label: 'Defaults', href: lp('/panel/defaults'), icon: 'settings' },
         { label: 'Entregabilidad email', href: lp('/panel/proposals/email-deliverability'), icon: 'mail' },

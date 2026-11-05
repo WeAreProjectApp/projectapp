@@ -1,0 +1,2079 @@
+{
+  "schema_version": 1,
+  "title": "Calculadora de requerimientos",
+  "methodology": "Clasifica cada resultado verificable por separado. Confirma qué existe y qué se construye. La señal aplicable de mayor talla fija la base; cita su identificador y explica su aplicación. Contrasta las familias espejo. Revisa los modificadores sin duplicar pantallas, modelos ni motores reutilizables. Los puntos describen magnitud y no se suman. Los porcentajes ajustan referencias internas de esfuerzo, no el valor estándar de una talla ni los cupos del paquete. Reutilizar algo existente puede justificar una talla menor: explica el motivo y la señal correspondiente. XL es una talla válida para una capacidad delimitada; no exige dividirla. Cuando el alcance combina capacidades autónomas, requiere descubrimiento sin límites verificables o constituye un producto nuevo, clasifícalo como Proyecto. Si faltan datos que cambien la talla, pregunta antes de clasificar; declara supuestos y bloqueos. La respuesta al cliente contiene talla, definición, explicación y supuestos. Las horas, costos, precios unitarios y recargos son internos. La fecha de entrega se acuerda por separado. Para referencias internas aplica banda × (1 + suma de porcentajes aditivos) × factor transversal + horas fijas; el factor nativo se aplica al final. PWA y nativa son excluyentes. Pantalla nueva y modelo de datos no se duplican sobre L. Un motor ya reutilizable anula el recargo de motor nuevo. Las referencias internas de esfuerzo no se muestran al cliente ni determinan por sí solas la talla.",
+  "project_rules": [
+    "Producto nuevo con varias capacidades independientes y arquitectura propia.",
+    "Alcance abierto que no puede delimitarse como un requerimiento XL con criterios verificables.",
+    "Migración masiva o transformación integral de la plataforma que exige un proyecto propio."
+  ],
+  "sizes": [
+    {
+      "id": "XS",
+      "label": "Cambio puntual",
+      "definition": "Ajuste acotado de una capacidad que ya existe.",
+      "examples": [
+        "Cambiar un texto o una validación sencilla.",
+        "Mostrar un dato ya registrado."
+      ],
+      "points": "1",
+      "hours_min": "2",
+      "hours_max": "7",
+      "standard_value_cop": null
+    },
+    {
+      "id": "S",
+      "label": "Ajuste pequeño",
+      "definition": "Extensión pequeña sobre una pantalla o capacidad existente.",
+      "examples": [
+        "Añadir un modal sencillo.",
+        "Ajustar una plantilla de correo."
+      ],
+      "points": "2",
+      "hours_min": "7",
+      "hours_max": "20",
+      "standard_value_cop": null
+    },
+    {
+      "id": "M",
+      "label": "Cambio de complejidad media",
+      "definition": "Capacidad acotada con lógica de negocio o varios componentes sobre una base existente.",
+      "examples": [
+        "Gestionar una entidad con validaciones.",
+        "Generar un documento desde una plantilla."
+      ],
+      "points": "3",
+      "hours_min": "20",
+      "hours_max": "50",
+      "standard_value_cop": null
+    },
+    {
+      "id": "L",
+      "label": "Funcionalidad completa",
+      "definition": "Una capacidad nueva y autocontenida con backend y frontend.",
+      "examples": [
+        "Construir un calendario de un recurso.",
+        "Crear un centro de plantillas."
+      ],
+      "points": "5",
+      "hours_min": "55",
+      "hours_max": "90",
+      "standard_value_cop": null
+    },
+    {
+      "id": "XL",
+      "label": "Requerimiento de gran alcance",
+      "definition": "Una capacidad compleja delimitada, con un resultado y criterios de aceptación verificables.",
+      "examples": [
+        "Integración compleja con alcance y límites acordados.",
+        "Un flujo avanzado acotado."
+      ],
+      "points": "8",
+      "hours_min": "90",
+      "hours_max": "200",
+      "standard_value_cop": null
+    }
+  ],
+  "signals": [
+    {
+      "id": "signal-dbe708d5f9b8",
+      "size": "XL",
+      "label": "Dinero y datos sensibles",
+      "description": "**Dinero y datos sensibles** — pagos, transacciones financieras, facturación electrónica (DIAN), open banking / conciliación bancaria directa, o cualquier integración con terceros críticos que maneje datos sensibles (pasarelas, entidades financieras).",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-9d99de4da494",
+      "size": "XL",
+      "label": "Cobro recurrente y comercio completo",
+      "description": "**Cobro recurrente y comercio completo** — suscripciones / facturación recurrente (planes, prorrateo, reintentos de cobro, *dunning*) y checkout e-commerce completo (carrito + pago + órdenes + inventario descontado). El carrito sin pago ronda `L`; el link de pago de pasarela es `L`.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-17292ee7d67f",
+      "size": "XL",
+      "label": "Cumplimiento regulatorio de dominio",
+      "description": "**Cumplimiento regulatorio de dominio** — facturación electrónica DIAN, nómina / liquidación laboral colombiana (prestaciones, PILA, retenciones), Habeas Data avanzado: normativa con cambios frecuentes que exige mantenimiento continuo.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-bfaf2f1c7fea",
+      "size": "XL",
+      "label": "Contabilidad de dominio",
+      "description": "**Contabilidad de dominio** — plan de cuentas (PUC), comprobantes y asientos de partida doble, libros auxiliares, balances y cierres de periodo: dominio normado (NIIF/PUC) que exige exactitud y cuadre contable. Casi siempre la respuesta comercial correcta es integrarse o exportar hacia un software contable existente (ver *Exportación contable en formato de tercero*, `M`), no construirla.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-3b12534bc7b0",
+      "size": "XL",
+      "label": "Flujo multi-etapa con traspaso de responsabilidad entre roles",
+      "description": "**Flujo multi-etapa con traspaso de responsabilidad entre roles** — **≥3 etapas o ≥2 traspasos** con escalamiento, SLA o notificación por etapa. Una aprobación de un solo paso (solicitante → aprobador) es `M` sobre lo existente o `L` como módulo desde cero; un wizard multi-paso de un solo usuario es `L`. \"Turnos\" aquí = traspaso de responsabilidad dentro del flujo; el turnero/digiturno de atención es `L` (señal propia). Ver familia *Aprobaciones / flujo*.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-e8217946c41e",
+      "size": "XL",
+      "label": "Motor de PDF complejo",
+      "description": "**Motor de PDF complejo** — posicionamiento preciso de múltiples elementos, contenido dinámico inyectado, merge de documentos. Una firma-imagen posicionada en un PDF propio es `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-6f69686b3d20",
+      "size": "XL",
+      "label": "Sincronización en tiempo real transversal / edición colaborativa concurrente",
+      "description": "**Sincronización en tiempo real transversal / edición colaborativa concurrente** — múltiples usuarios sobre el mismo estado o documento (CRDT/OT, cursores compartidos, resolución de conflictos).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-fb3d5d6aa333",
+      "size": "XL",
+      "label": "Arquitectura multiempresa / multi-tenant",
+      "description": "**Arquitectura multiempresa / multi-tenant** — aislamiento de datos, roles y configuración por cliente. Estructural y transversal.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-bc00e43c0b8f",
+      "size": "XL",
+      "label": "Migración masiva / ETL desde legacy",
+      "description": "**Migración masiva / ETL desde legacy** — extraer, mapear, limpiar, validar y reconciliar datos históricos. Por sí sola es un proyecto.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-220fdb8e6470",
+      "size": "XL",
+      "label": "Motor de workflow / BPM configurable",
+      "description": "**Motor de workflow / BPM configurable** — el cliente crea etapas, reglas, responsables, aprobaciones y condicionales.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-a680d22ce106",
+      "size": "XL",
+      "label": "Búsqueda full-text con motor de indexación (Elasticsearch/OpenSearch)",
+      "description": "**Búsqueda full-text con motor de indexación** (Elasticsearch/OpenSearch) — relevancia, facetas, sinónimos (la facetada \"a mano\" es `L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-7dade2d556fe",
+      "size": "XL",
+      "label": "Integración bidireccional con ERP/CRM (SAP, Salesforce, Siigo, World Office)",
+      "description": "**Integración bidireccional con ERP/CRM** (SAP, Salesforce, Siigo, World Office) — sincronización de maestros, colas, reconciliación.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-64c038b881ff",
+      "size": "XL",
+      "label": "Firma digital/electrónica certificada",
+      "description": "**Firma digital/electrónica certificada** — PKI, estampado cronológico, validez legal (distinta de \"firmar un PDF\").",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-e0737beac4ff",
+      "size": "XL",
+      "label": "Offline-first",
+      "description": "**Offline-first** — operar sin conexión y sincronizar al reconectar (comparte \"resolución de conflictos\" con la sync en tiempo real, pero el diferenciador es operar desconectado).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-146f97562803",
+      "size": "XL",
+      "label": "Agendamiento / reservas críticas",
+      "description": "**Agendamiento / reservas críticas** — es `XL` solo cuando concurren **al menos dos** de: múltiples recursos con solapamiento, pagos y reembolsos, concurrencia real por cupos limitados, zonas horarias. La reserva de citas de **un** recurso sin pago (agenda de un profesional, mesas) es `L` (calendario / agenda base).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-8ebab5f4f0d2",
+      "size": "XL",
+      "label": "Mensajería a escala",
+      "description": "**Mensajería a escala** — orquestación multicanal (SMS/WhatsApp/push con proveedor, reintentos, plantillas por canal, opt-in/out) y/o campañas masivas de correo (listas, segmentación, deliverability, bounces, reputación de dominio). Distinto de *notificar por evento* (`M`) y de *un canal único vía proveedor* (`L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ff7f69240e5d",
+      "size": "XL",
+      "label": "SSO corporativo / endurecimiento de seguridad empresarial",
+      "description": "**SSO corporativo / endurecimiento de seguridad empresarial** — SAML, LDAP, Active Directory, MFA, políticas de contraseña, auditoría avanzada, cifrado at-rest transversal, cumplimiento de estándar (OWASP/ISO) verificado.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-2cb223ead32e",
+      "size": "XL",
+      "label": "Motor de BI / analítica sobre volumen",
+      "description": "**Motor de BI / analítica sobre volumen** — agregaciones, drill-down, series temporales (distinto del dashboard `L` y del reporte parametrizable `M`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-3a1772a558bb",
+      "size": "XL",
+      "label": "Marketplace / plataforma de oferta y demanda",
+      "description": "**Marketplace / plataforma de oferta y demanda** — usuarios, publicaciones, pagos, reputación, mensajes, órdenes, administración.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-02ceb0eea66d",
+      "size": "XL",
+      "label": "Arquitectura de alto volumen / rendimiento",
+      "description": "**Arquitectura de alto volumen / rendimiento** — cuando el volumen **obliga a cambiar la arquitectura**: colas, caché distribuido, particionado, procesamiento paralelo, millones de registros. Operar sobre datasets grandes *dentro* de la arquitectura actual es el modificador *Volumen alto*.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-9b6af5366285",
+      "size": "XL",
+      "label": "Streaming de video/audio en vivo",
+      "description": "**Streaming de video/audio en vivo** — transmisión en directo (WebRTC).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-9d1244190624",
+      "size": "XL",
+      "label": "Pipeline de video bajo demanda",
+      "description": "**Pipeline de video bajo demanda** — upload + transcodificación + almacenamiento + reproducción.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-51e477c99d44",
+      "size": "XL",
+      "label": "API pública para terceros",
+      "description": "**API pública para terceros** — versionado, API keys, rate limiting, documentación, sandbox, soporte a integradores externos.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-4f7bf90cf1bc",
+      "size": "XL",
+      "label": "Entrenamiento / fine-tuning de un modelo de IA propio",
+      "description": "**Entrenamiento / fine-tuning de un modelo de IA propio** — recolección de datos y ajuste (distinto de *usar* una API de IA, que es `M`–`L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-89f19ad2eadd",
+      "size": "L",
+      "label": "Renderizado dinámico desde configuración",
+      "description": "**Renderizado dinámico desde configuración** — formularios o contenido generados desde un esquema o configuración (el usuario final **no** diseña el formulario; si lo diseña, ver constructor).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-32cfee73e255",
+      "size": "L",
+      "label": "Constructor visual con drag-and-drop desde cero",
+      "description": "**Constructor visual con drag-and-drop desde cero** — *form builder* interno acotado, *page builder*, tablero Kanban (columnas, tarjetas, persistencia del orden). Un motor de formularios configurable como producto (lógica condicional, versionado, publicación) es `XL`. Agregar DnD a una lista existente es `M`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-68be30f00807",
+      "size": "L",
+      "label": "Búsqueda / filtrado avanzado desde cero",
+      "description": "**Búsqueda / filtrado avanzado desde cero** — filtros combinados o facetados, autocompletado, paginado y/o preferencias y vistas guardadas por usuario. Con motor de indexación → `XL`; agregar un filtro a un listado existente → `M` o menos.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-3aaf3d07bd9b",
+      "size": "L",
+      "label": "Búsqueda global multi-entidad (omnibox)",
+      "description": "**Búsqueda global multi-entidad (omnibox)** — un solo campo que busca sobre varias entidades del sistema con resultados agrupados (con motor de indexación → `XL`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-6e9b7b434ef8",
+      "size": "L",
+      "label": "Trazabilidad de historial / auditoría / bitácora de eventos",
+      "description": "**Trazabilidad de historial / auditoría / bitácora de eventos** — construir el registro de quién hizo qué y cuándo: eventos de creación, edición y eliminación sobre uno o varios modelos, con su vista de consulta. Solo *mostrar* logs ya guardados es `M`; extender una bitácora existente a otro modelo es el atenuador (`M` o menos); auditoría avanzada con exigencia de cumplimiento → `XL` (seguridad empresarial).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-973d16432c86",
+      "size": "L",
+      "label": "Numeración consecutiva sin huecos con garantía de concurrencia",
+      "description": "**Numeración consecutiva sin huecos con garantía de concurrencia** — consecutivos legales o de facturación que no pueden duplicarse ni saltarse. Un ID único simple (UUID, slug) es `XS`–`S`.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-621e788fa269",
+      "size": "L",
+      "label": "Múltiples CRUD relacionados entre sí / panel de administración de entidades (CRUD + permisos + búsqueda sobre varios modelos).",
+      "description": "**Múltiples CRUD relacionados** entre sí / **panel de administración de entidades** (CRUD + permisos + búsqueda sobre varios modelos).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ae532638afc3",
+      "size": "L",
+      "label": "Autenticación / registro completo desde cero",
+      "description": "**Autenticación / registro completo desde cero** — login, signup, verificación de correo, recuperación, sesiones. Piezas sueltas sobre auth existente (OAuth social, recuperación) son `M`; 2FA/MFA es `L`; SSO corporativo es `XL`.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-2ed76025d846",
+      "size": "L",
+      "label": "Panel de administración de usuarios y roles (RBAC granular)",
+      "description": "**Panel de administración de usuarios y roles (RBAC granular)** — crear roles y asignar permisos por vista o por acción.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-e55ea3534796",
+      "size": "L",
+      "label": "Dashboard / panel de KPIs desde cero",
+      "description": "**Dashboard / panel de KPIs desde cero** — widgets, gráficas, agregaciones, rangos de fecha.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-12d4e3eb787d",
+      "size": "L",
+      "label": "Visualización interactiva compleja a medida",
+      "description": "**Visualización interactiva compleja a medida** — Gantt, organigrama, árbol jerárquico editable, mapa de procesos con edición/drag. Integrar un componente de terceros que ya lo hace es `M`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f51ff294b309",
+      "size": "L",
+      "label": "Importación masiva con validaciones",
+      "description": "**Importación masiva con validaciones** — parseo + validación + *preview* + commit + errores fila por fila + progreso. La importación trivial sin validación baja a `M`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-40dc2a939e16",
+      "size": "L",
+      "label": "Constructor de reportes/consultas por el usuario",
+      "description": "**Constructor de reportes/consultas por el usuario** — el usuario arma reportes dinámicos (no solo \"generar un PDF\").",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-0bccd3255c6f",
+      "size": "L",
+      "label": "Centro / bandeja de notificaciones in-app",
+      "description": "**Centro / bandeja de notificaciones in-app** — leído/no leído, agrupación, preferencias, tiempo real (distinto de *notificar por evento*, que es `M`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-d1fbbf168146",
+      "size": "L",
+      "label": "Gestor documental",
+      "description": "**Gestor documental** — cargar, clasificar, consultar, descargar, con permisos, categorías y estados.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-0dbd95ff2086",
+      "size": "L",
+      "label": "Centro de plantillas de documentos administrable",
+      "description": "**Centro de plantillas de documentos administrable** — el usuario crea y edita las plantillas (contratos, certificados, correos) con variables. Generar documentos desde una plantilla **fija** es `M`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f6e8fa364b7a",
+      "size": "L",
+      "label": "Calendario / agenda base",
+      "description": "**Calendario / agenda base** — vistas mensual/semanal, eventos, plantilla de disponibilidad con excepciones, recordatorios; incluye la reserva de citas de **un** recurso sin pago (→ `XL` si se vuelve scheduling multi-recurso con concurrencia y pagos).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-8d2d8c522621",
+      "size": "L",
+      "label": "Inventario básico desde cero",
+      "description": "**Inventario básico desde cero** — productos, entradas/salidas, existencias, alertas, movimientos.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-9ad60e5cc412",
+      "size": "L",
+      "label": "Geolocalización / mapas",
+      "description": "**Geolocalización / mapas** — pines, clustering, rutas, polígonos (Google Maps/Mapbox); tracking en vivo → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-4b7031178b45",
+      "size": "L",
+      "label": "Panel de configuración / parametrización del sistema",
+      "description": "**Panel de configuración / parametrización del sistema** — variables de negocio, reglas y textos administrables desde la UI.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-0842cf0826dc",
+      "size": "L",
+      "label": "Sistema de comentarios / hilos / anotaciones",
+      "description": "**Sistema de comentarios / hilos / anotaciones** — con menciones, adjuntos ligeros y notificación.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ffa987fa726b",
+      "size": "L",
+      "label": "Chat / mensajería en tiempo real propio",
+      "description": "**Chat / mensajería en tiempo real propio** — 1:1 o grupos, historial persistente, presencia. Embeber un widget de chat de terceros (Chatwoot, Tawk) es `M` (componente de terceros).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-5d78f2881c04",
+      "size": "L",
+      "label": "Gestión de etiquetas/taxonomías o de reseñas como feature completo",
+      "description": "**Gestión de etiquetas/taxonomías o de reseñas como feature completo** — agregar un rating a una entidad existente es `M`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-de6e09f67ee3",
+      "size": "L",
+      "label": "Onboarding / wizard multi-paso con persistencia de progreso (de un solo usuario; con traspaso entre roles → `XL`). ⇧50%",
+      "description": "**Onboarding / wizard multi-paso** con persistencia de progreso (de un solo usuario; con traspaso entre roles → `XL`).",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-ee678a653377",
+      "size": "L",
+      "label": "Integración con un servicio / API externo (piso)",
+      "description": "**Integración con un servicio / API externo (piso)** — toda integración de **datos con backend de terceros autenticada** es **al menos `L`** (incluye el link de pago de pasarela y la generación de guías con transportadoras — Servientrega, Coordinadora, Envía; multi-transportadora con reglas de selección o tracking en vivo → `XL`); sube a `XL` con pagos recurrentes/checkout, facturación, datos sensibles o bidireccionalidad. Excepciones que conservan su nivel: webhook saliente (`M`), componente FE de terceros (`M`), script/pixel (`S`).",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-6ce340e68f8a",
+      "size": "L",
+      "label": "Canal único de mensajería vía proveedor",
+      "description": "**Canal único de mensajería vía proveedor** — WhatsApp Business API, SMS o push con un proveedor: setup, plantillas aprobadas, envío y estados. Multicanal orquestado → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-02b64772c366",
+      "size": "L",
+      "label": "Funcionalidad basada en IA / resoluble con IA",
+      "description": "**Funcionalidad basada en IA / resoluble con IA** — piso `M`, típicamente `L`; **antes de dar precio**, validar alcance y factibilidad. Modelo propio / fine-tuning → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-d80266c22ebb",
+      "size": "L",
+      "label": "OCR / extracción de datos desde documentos",
+      "description": "**OCR / extracción de datos desde documentos** — facturas, cédulas, PDFs escaneados: captura + parsing + corrección manual del resultado.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-6c64bb6f574c",
+      "size": "L",
+      "label": "Chatbot / asistente con IA sobre datos propios (RAG)",
+      "description": "**Chatbot / asistente con IA sobre datos propios (RAG)** — ingesta de documentos, embeddings, recuperación, UI de conversación (→ `XL` si exige fine-tuning o volumen).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-5648783f48cf",
+      "size": "L",
+      "label": "Motor de cotizaciones / precios / descuentos / comisiones",
+      "description": "**Motor de cotizaciones / precios / descuentos / comisiones** — reglas de cálculo de negocio configurables que producen un valor (→ `XL` si el cliente arma las reglas como un BPM). Un cupón/código simple o una lista de precios por cliente es `M`; el motor es `L` cuando las reglas son combinables o configurables.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-70ba2394a2cb",
+      "size": "L",
+      "label": "Constructor de encuestas / formularios públicos con resultados",
+      "description": "**Constructor de encuestas / formularios públicos con resultados** — crear encuesta + responder público + resultados agregados (una encuesta fija simple es `M`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f43203e35fbb",
+      "size": "L",
+      "label": "CMS / portal público administrable",
+      "description": "**CMS / portal público administrable** — blog, landing o sitio con contenido editable desde el panel (una página estática es `S`; una landing sin CMS es `M`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-8e9259ec0d4f",
+      "size": "L",
+      "label": "Catálogo público con pedido por WhatsApp",
+      "description": "**Catálogo público con pedido por WhatsApp** — catálogo + carrito sin pasarela + deep link `wa.me` con el pedido armado (con pago en línea → `XL` comercio completo).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-a455e97dc6a1",
+      "size": "L",
+      "label": "Gamificación",
+      "description": "**Gamificación** — puntos, niveles, insignias, ranking, reglas de otorgamiento.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-9c9cbd2074aa",
+      "size": "L",
+      "label": "Estructura organizacional",
+      "description": "**Estructura organizacional** — sedes, sucursales, equipos, jerarquías con datos y permisos por nodo.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-b9f62ed2925f",
+      "size": "L",
+      "label": "Recepción y parseo de correo entrante",
+      "description": "**Recepción y parseo de correo entrante** — recibir emails hacia la app (inbound), extraer datos, adjuntos, responder.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-3fb923a675e1",
+      "size": "L",
+      "label": "Galería / biblioteca multimedia con procesamiento",
+      "description": "**Galería / biblioteca multimedia con procesamiento** — colecciones, miniaturas, orden, metadatos (subir una imagen a una entidad es `M`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-b7cc39ed2100",
+      "size": "L",
+      "label": "Portal de autoservicio del cliente final",
+      "description": "**Portal de autoservicio del cliente final** — vista externa limitada donde el cliente consulta sus propios datos/documentos/estados (hereda auth y permisos). Si la autenticación de clientes ya existe y es una sola vista de datos propios, baja a `M` (atenuador *extiende algo existente*); el portal completo desde cero es `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-929b8101ab80",
+      "size": "L",
+      "label": "Módulo de tickets / PQRS / mesa de ayuda",
+      "description": "**Módulo de tickets / PQRS / mesa de ayuda** — radicación (interna o formulario público) con número de caso, asignación a un responsable, estados, respuestas en hilo y notificación al solicitante. Con SLA, escalamiento automático o traspaso configurable entre áreas → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ff44c73018fa",
+      "size": "L",
+      "label": "Pipeline de documentos comerciales",
+      "description": "**Pipeline de documentos comerciales** — cadena cotización → orden/pedido → remisión → factura o cuenta de cobro, con conversión entre documentos (heredando ítems y totales), numeración y estados por documento. Cada documento suelto es `M`; el pipeline encadenado es `L`; con pago en línea o facturación DIAN → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-fbaf49c2a50c",
+      "size": "L",
+      "label": "Turnero / gestión de filas (digiturno)",
+      "description": "**Turnero / gestión de filas (digiturno)** — tomar turno (kiosco, QR o recepción), tablero de llamado con actualización en vivo, módulos/ventanillas de atención y estadísticas básicas de espera. Con priorización configurable, múltiples sedes o integración con pantallas físicas → suma modificadores o `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f84353d1c2a6",
+      "size": "L",
+      "label": "Módulo de caja",
+      "description": "**Módulo de caja** — apertura y cierre de turno de caja, registro de ingresos/egresos, arqueo con conteo y detección de descuadre por responsable.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f1d65737d48a",
+      "size": "L",
+      "label": "Analítica de comportamiento con panel propio",
+      "description": "**Analítica de comportamiento con panel propio** — tracking de eventos + agregaciones + panel de uso (sesiones, rutas más visitadas, tiempos, embudos simples). El tracking básico sin panel es `M`; sobre gran volumen o con series temporales complejas → `XL` (motor de BI).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-6620f771436f",
+      "size": "L",
+      "label": "Motor de emparejamiento / matching entre dos conjuntos",
+      "description": "**Motor de emparejamiento / matching entre dos conjuntos** — personas↔personas, personas↔publicaciones, demanda↔oferta, con criterios ponderados, sugerencias y opcionalmente mutualidad (ambas partes aceptan para conectar). Un listado \"recomendados\" que solo aplica filtros sobre una búsqueda existente es `M`; con colas en tiempo real, escala o modelo aprendido → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-73fabed082f3",
+      "size": "L",
+      "label": "Seguimiento de progreso con desbloqueo secuencial",
+      "description": "**Seguimiento de progreso con desbloqueo secuencial** — avance sobre una secuencia de contenidos o requisitos: unidades completadas, prerequisitos que desbloquean lo siguiente, reanudar donde se quedó, evento \"completado\" que dispara acciones. Un simple % de completitud calculado sobre campos llenos es `M` (campos calculados).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ab69ca6abf82",
+      "size": "L",
+      "label": "Credenciales / comprobantes verificables",
+      "description": "**Credenciales / comprobantes verificables** — emisión automática al cumplirse una condición (completar curso, pagar entrada, aprobar verificación) con código/QR único, verificación pública y ciclo de estados (válido / usado / vencido / revocado). Generar el PDF desde plantilla fija es `M`; con venta → `XL` (comercio); con control de acceso físico → modificador *Hardware*.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-c3766e28d915",
+      "size": "L",
+      "label": "Lista de espera con promoción automática",
+      "description": "**Lista de espera con promoción automática** — cola ordenada (o priorizada) cuando el cupo/stock está lleno; al liberarse un lugar se ofrece al siguiente con ventana de aceptación que expira y pasa el turno. Un \"avísame cuando haya disponibilidad\" que solo notifica sin reservar turno es `M`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-84695498c6d7",
+      "size": "L",
+      "label": "Re-enganche automático por abandono",
+      "description": "**Re-enganche automático por abandono** — detectar un flujo iniciado y no terminado (carrito, solicitud, reserva, registro) o inactividad, con secuencia programada de 2–3 recordatorios, enlace de reanudación al punto exacto y supresión al completar. Un recordatorio único por evento es `M`; con orquestación multicanal → `XL` (mensajería a escala).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-94f88ac8ea82",
+      "size": "L",
+      "label": "Moderación de contenido generado por usuarios (UGC)",
+      "description": "**Moderación de contenido generado por usuarios (UGC)** — reportar/denunciar con motivos, bandeja de revisión, acciones (aprobar / ocultar / eliminar) y sanciones acumulativas al autor (strikes, suspensión). Distinto del maker-checker (aprobación de operaciones internas): aquí dispara la denuncia del público y hay régimen de sanciones. Un botón \"reportar\" que solo crea un registro visible al admin es `M`; con IA o escalamiento entre roles → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-8b77a05cf8c8",
+      "size": "L",
+      "label": "Billetera / ledger de saldo y créditos internos",
+      "description": "**Billetera / ledger de saldo y créditos internos** — cuenta por usuario con saldo, movimientos inmutables (abonos/cargos con concepto), atomicidad en el débito y extracto — créditos, puntos canjeables, horas, tokens de uso; **sin dinero real**. Con recargas por pasarela o retiros/payouts → `XL` (dinero y datos sensibles). ≠ puntos de gamificación (premian, no se gastan como medio de pago).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-44bb7d237d14",
+      "size": "L",
+      "label": "Límites y features por plan (feature gating / entitlements)",
+      "description": "**Límites y features por plan (feature gating / entitlements)** — planes con límites cuantitativos (N usuarios, N registros, X GB), medición del consumo, bloqueo o aviso al alcanzar el límite y llamados a upgrade. No incluye el cobro (suscripciones → `XL`). Gatear features con un booleano por plan es `M` (como permisos por rol). Tiende a sumar el multiplicador *Transversal*.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-cc4e6feb209f",
+      "size": "L",
+      "label": "Asignación / despacho de tareas o pedidos (dispatch)",
+      "description": "**Asignación / despacho de tareas o pedidos (dispatch)** — distribuir unidades de trabajo (pedidos, citas, leads, casos) entre un pool de responsables con reglas — round-robin, carga, zona, habilidad — más aceptar/rechazar, reasignación y notificación. Un campo \"asignado a\" manual con notificación es `M`; despacho automático en tiempo real con geolocalización y rutas → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-3d93921fd170",
+      "size": "L",
+      "label": "Oferta / contraoferta entre dos partes (negociación)",
+      "description": "**Oferta / contraoferta entre dos partes (negociación)** — una parte ofrece, la otra acepta, rechaza o contraoferta; historial del hilo, expiración y notificación por movimiento. ≠ pipeline de documentos comerciales (ahí emite la empresa; aquí negocian dos usuarios). Una oferta simple sin réplica es `M`; subasta con pujas en tiempo real → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ba594a711670",
+      "size": "L",
+      "label": "Corte y liquidación periódica a contrapartes",
+      "description": "**Corte y liquidación periódica a contrapartes** — cierre de periodo que congela las transacciones incluidas, cálculo del neto (usa el motor de comisiones si existe), estado de cuenta y estados pagado/pendiente/en disputa (vendedores, repartidores, comisionistas, propietarios). La dispersión real del dinero es `XL` (pagos); la nómina es `XL` regulatorio.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-39bf45386380",
+      "size": "L",
+      "label": "Cartera / cuentas por cobrar recurrentes (sin pasarela)",
+      "description": "**Cartera / cuentas por cobrar recurrentes (sin pasarela)** — generación periódica de las obligaciones del ciclo (canon, pensión, mensualidad, cuota, aporte) a cada tercero según su plan, registro de pagos manuales (efectivo, transferencia reportada), saldos por tercero con edades de mora e intereses, y estado de cuenta / paz y salvo. ≠ *suscripciones* (`XL`): allá recauda la pasarela automáticamente con reintentos y dunning; aquí el recaudo es manual y el sistema lleva la cuenta. ≠ *cuenta de cobro simple* (`M`: un documento suelto, no el ciclo). Sólo alertar fechas de pago sin saldos es `M` (*vencimientos*). La generación masiva mensual suma *Tarea programada*; con recaudo en línea → `XL` (dinero); el cruce contra extracto es *Conciliación por archivo*. Es la contracara CxC de *Corte y liquidación a contrapartes* (CxP).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-348127cca577",
+      "size": "L",
+      "label": "Expediente de cumplimiento documental",
+      "description": "**Expediente de cumplimiento documental** — checklist de documentos requeridos por tipo de sujeto (empleado, proveedor, contratista, arrendatario, conductor), carga con estados (pendiente / cargado / aprobado / rechazado / vencido), semáforo de completitud por sujeto y vencimiento por documento con alertas y re-solicitud. ≠ *gestor documental* (`L`: repositorio libre, sin lista de requeridos ni semáforo); si el gestor ya existe, agregar la capa de requeridos baja a `M` (extiende). Un solo documento con vencimiento y alerta es `M`. Con verificación normativa (SARLAFT/SAGRILAFT, listas restrictivas) → `XL` regulatorio.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-fb6c03d96d5b",
+      "size": "L",
+      "label": "Inspección / checklist operativo con puntaje y evidencia",
+      "description": "**Inspección / checklist operativo con puntaje y evidencia** — diligenciar en campo una plantilla de ítems (cumple / no cumple / N.A.) con foto de evidencia por ítem, puntaje o resultado (apto / no apto) y hallazgos que abren acción correctiva con responsable. ≠ *renderizado dinámico desde configuración* (`L`: sólo pinta el formulario, sin puntaje ni hallazgos). Un checklist plano como campos de un registro existente es `M`. Si el cliente diseña sus plantillas de inspección → sumar *centro de plantillas / constructor* (`L` aparte); cierre de hallazgos con flujo multi-etapa → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-03aa4da7e466",
+      "size": "L",
+      "label": "Expediente / hoja de vida longitudinal de un sujeto",
+      "description": "**Expediente / hoja de vida longitudinal de un sujeto** — ficha 360: datos maestros + episodios acumulados en línea de tiempo (atenciones, actuaciones, mantenimientos, novedades) con adjuntos por episodio y vista cronológica unificada. Es la forma nombrada de *múltiples CRUD relacionados*. Si los CRUD ya existen y sólo se pide la línea de tiempo → `M` (extiende). ≠ *trazabilidad / auditoría* (`L`: la bitácora registra eventos del sistema — quién editó qué; el expediente registra hechos del dominio — qué le pasó al sujeto). ≠ *expediente de cumplimiento documental* (aquel dice qué papeles debe tener; este, qué le ha ocurrido). Historia clínica con exigencia normativa plena → `XL` regulatorio.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-b5697034afc3",
+      "size": "L",
+      "label": "Conciliación por archivo (cruce de fuente externa contra registros)",
+      "description": "**Conciliación por archivo (cruce de fuente externa contra registros)** — subir un archivo externo (extracto bancario, planilla de libranza, reporte de pasarela) y cruzarlo contra registros internos: matching automático por reglas (referencia, valor, fecha), cola de no-matcheados con resolución manual y aplicación masiva de pagos. ≠ *importación masiva con validaciones* (`L`: esa crea registros; esta cruza y aplica). ≠ *conciliación bancaria directa / open banking* (`XL`). Registrar un pago manual suelto es `M`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-8f7f84741d16",
+      "size": "L",
+      "label": "Quiz / evaluación con calificación automática",
+      "description": "**Quiz / evaluación con calificación automática** — banco de preguntas (opción múltiple, V/F), intentos limitados, tiempo, calificación contra clave, nota mínima aprobatoria y resultado que dispara el paso siguiente (aprobar módulo, emitir certificado). ≠ *constructor de encuestas* (`L`: la encuesta agrega opiniones, no califica contra respuestas correctas). Un cuestionario fijo con nota simple sobre un flujo existente es `M`. Banco adaptativo, proctoring o certificación a escala → `XL`. Compone en cadena natural con *desbloqueo secuencial* y *credenciales verificables*.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-a4a7203fedba",
+      "size": "L",
+      "label": "Crédito interno con tabla de amortización",
+      "description": "**Crédito interno con tabla de amortización** — solicitud + aprobación (*maker-checker*), desembolso registrado, plan de cuotas con interés (capital/interés por cuota), abonos con recálculo (abono a capital), mora con interés moratorio y estado de cuenta del deudor. ≠ *billetera / ledger* (`L`: el ledger registra movimientos ocurridos; aquí se proyecta un plan de pagos futuro y se recalcula). Una deuda simple con abonos y saldo, sin interés ni plan, es `M` sobre lo existente. Con desembolso/recaudo real por pasarela, centrales de riesgo o normativa financiera → `XL` (dinero + regulatorio).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-2771dd44d293",
+      "size": "L",
+      "label": "Registro de asistencia a sesiones",
+      "description": "**Registro de asistencia a sesiones** — sesiones programadas (clase, culto, turno, capacitación) con marcación por lista, QR o self check-in, estados presente/ausente/justificado, % de asistencia por persona y alertas por inasistencia acumulada. Tomar lista manual sobre un listado existente es `M` (*acciones masivas*). ≠ *turnero / digiturno* (`L`: la fila llama personas a ventanilla; aquí se registra presencia en sesiones). Con torniquete/biometría → modificador *Hardware*; como control de acceso físico a escala → borde `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-68ca0b288d9c",
+      "size": "L",
+      "label": "Acta / evidencia de ejecución en campo (POD)",
+      "description": "**Acta / evidencia de ejecución en campo (POD)** — al completar una entrega o servicio en sitio, captura guiada desde el móvil del paquete probatorio: foto(s), firma del receptor, geolocalización y timestamp, generando acta/POD en PDF numerado asociado a la orden y consultable después. Foto + firma sueltas adjuntas a un registro existente = `M` (composición de *carga de archivos* + *firma en canvas*). ≠ *inspección con puntaje* (`L`: esa evalúa un objeto contra plantilla; aquí sólo se prueba que la ejecución ocurrió). Con validez legal certificada → `XL` (firma); operar sin conexión y sincronizar → `XL` (offline-first).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-e36dcf2f60d8",
+      "size": "L",
+      "label": "Votación / elección con padrón y quórum",
+      "description": "**Votación / elección con padrón y quórum** — votaciones con padrón cerrado de habilitados (con poderes y coeficientes de copropiedad en PH), voto único por pregunta, quórum calculado en vivo y acta de resultados. ≠ *constructor de encuestas* (`L`: la encuesta es abierta y agrega; aquí hay padrón, voto único y quórum). Un sondeo entre usuarios existentes es `M` (*encuesta fija*). Asamblea virtual en vivo (streaming + voto en tiempo real a escala) → `XL` (composición).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ccbc157e04b6",
+      "size": "L",
+      "label": "Tablero de operación en vivo por estaciones (cola de trabajo / KDS)",
+      "description": "**Tablero de operación en vivo por estaciones (cola de trabajo / KDS)** — las órdenes entran y avanzan por estaciones (recibido → preparando → listo → entregado) en un tablero full-screen con actualización en vivo, alerta por tiempo excedido y agrupación por estación. ≠ *turnero* (`L`: llama personas; aquí avanzan órdenes). ≠ *Kanban* (`L`: el usuario arrastra tarjetas a voluntad; aquí el avance lo disparan eventos del flujo). Refrescar un dato en una vista es `M` (*actualización en vivo puntual*). Multi-sede o pantallas físicas → modificadores.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-20960c696a22",
+      "size": "L",
+      "label": "Producto compuesto / receta (BOM) con descuento de componentes",
+      "description": "**Producto compuesto / receta (BOM) con descuento de componentes** — definir un producto como lista de componentes con cantidades (receta, combo, kit), costo calculado desde los componentes y, al vender o producir, descuento en cascada de los componentes del inventario. Requiere *inventario básico* existente o se cotiza junto. El combo fijo sin descuento de stock por componentes es `M`. ≠ *clonar entidad con relaciones* (`M`). Órdenes de producción con etapas, mermas y trazabilidad → `XL` si es una capacidad delimitada; si rebasa la frontera explícita, se clasifica como Proyecto.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-de6af0cc41f0",
+      "size": "L",
+      "label": "Sesión por tiempo con tarificación al cierre",
+      "description": "**Sesión por tiempo con tarificación al cierre** — el check-in abre una estadía (vehículo, sala, cancha, locker, mascota), el check-out la cierra y calcula el valor con reglas de fracción, tope diario y franjas (nocturno/diurno), generando el cobro. Registrar entrada/salida con duración sin tarifa es `M`. ≠ *contador / temporizador en UI* (`S`: visual). ≠ *módulo de caja* (`L`: arquea el turno del cajero — conviven). Con talanquera/impresora de tiquete → modificador *Hardware*; mensualidades → *cartera CxC*; pago en línea → `XL`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-fbfe89abd4b9",
+      "size": "L",
+      "label": "Mapa de asientos / espacios con selección y bloqueo (seat map)",
+      "description": "**Mapa de asientos / espacios con selección y bloqueo (seat map)** — plano visual donde cada unidad tiene estado (libre / bloqueada / ocupada) y el usuario selecciona con bloqueo temporal anti doble-asignación que expira. Suma casi siempre el modificador *Concurrencia / atomicidad*. ≠ *visualización interactiva compleja* (`L`: esa edita estructuras — Gantt, organigrama; aquí se reservan unidades en concurrencia). La asignación manual por el admin sin concurrencia es `M`. Con venta y pago → `XL` (comercio / reservas críticas).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-47ea9afb0aaa",
+      "size": "M",
+      "label": "CRUD de una entidad con extras acotados",
+      "description": "**CRUD de una entidad con extras acotados** — validaciones, permisos básicos, búsqueda. Varios CRUD relacionados entre sí → `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-9c9efa67ae52",
+      "size": "M",
+      "label": "Combo de listado server-side",
+      "description": "**Combo de listado server-side** — paginación + ordenamiento + búsqueda (o scroll infinito) manteniendo los filtros. Es lo que casi todo CRUD termina pidiendo.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-b699ea840f9c",
+      "size": "M",
+      "label": "Acciones masivas / bulk",
+      "description": "**Acciones masivas / bulk** — seleccionar N registros y aplicar (eliminar, cambiar estado, exportar, asignar).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-a15043bc3eb1",
+      "size": "M",
+      "label": "Generación de reportes / archivos (Excel, PDF)",
+      "description": "**Generación de reportes / archivos** (Excel, PDF) — desde básicos hasta **parametrizables** (filtros/rangos) o **programados** (cron → suma *Tarea programada*). Incluye exportación simple desde una vista existente y \"descargar mis datos\" (portabilidad, Habeas Data).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-b7d9badc2c60",
+      "size": "M",
+      "label": "Soft delete / papelera / restauración",
+      "description": "**Soft delete / papelera / restauración** — borrado lógico + vista de eliminados + restaurar.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-44ed716ff6fe",
+      "size": "M",
+      "label": "Permisos / visibilidad por rol",
+      "description": "**Permisos / visibilidad por rol** — reglas de qué ve o hace cada rol, incluyendo mostrar u ocultar contenido según rol. Ocultar **un** elemento por rol es `XS`; panel RBAC granular es `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-afd177235de2",
+      "size": "M",
+      "label": "Lógica condicional en formularios.",
+      "description": "**Lógica condicional** en formularios.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-247fff2a21b3",
+      "size": "M",
+      "label": "Validaciones de negocio complejas",
+      "description": "**Validaciones de negocio complejas** — cross-field, contra el backend, con reglas (distintas de las validaciones básicas `XS`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-165751641212",
+      "size": "M",
+      "label": "Campos calculados / derivados",
+      "description": "**Campos calculados / derivados** — totales, subtotales, impuestos, saldos, vencidos que se recalculan.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-2b11ac2a16bb",
+      "size": "M",
+      "label": "Carga de imágenes / archivos con procesamiento y adjuntar archivos a una entidad existente.",
+      "description": "**Carga de imágenes / archivos con procesamiento** y **adjuntar archivos a una entidad existente**.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-139e02f4fb06",
+      "size": "M",
+      "label": "Clonar / duplicar una entidad con sus relaciones (más que duplicar un documento, que es `S`).",
+      "description": "**Clonar / duplicar una entidad con sus relaciones** (más que duplicar un documento, que es `S`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-ffb41867cf66",
+      "size": "M",
+      "label": "Versionado ligero / snapshots con reversión a una versión previa.",
+      "description": "**Versionado ligero / snapshots** con reversión a una versión previa.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-2c255ff1f551",
+      "size": "M",
+      "label": "Autoguardado / borradores (drafts).",
+      "description": "**Autoguardado / borradores (drafts).**",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-2b1204c19f8f",
+      "size": "M",
+      "label": "Preferencias de usuario / de app",
+      "description": "**Preferencias de usuario / de app** — columnas visibles, orden, vista o tema preferido; aplican en runtime.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-16a2c1c1bab8",
+      "size": "M",
+      "label": "Documento o correo con maquetación / branding",
+      "description": "**Documento o correo con maquetación / branding** — membretes, tipografías, identidad corporativa, marcas de agua ligeras. Incluye generar contratos, certificados o actas desde una **plantilla fija** con variables (centro de plantillas administrable → `L`; motor de PDF complejo → `XL`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-fd3df089ee3d",
+      "size": "M",
+      "label": "Cuenta de cobro / factura simple no-DIAN en PDF",
+      "description": "**Cuenta de cobro / factura simple no-DIAN en PDF** — documento de cobro con numeración y branding, sin facturación electrónica. La facturación electrónica DIAN es `XL` (regulatorio). Su numeración asume secuencia simple; si exigen consecutivo legal sin huecos bajo concurrencia, esa pieza sube a `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-4058b158d136",
+      "size": "M",
+      "label": "Notificaciones por evento (in-app o correo)",
+      "description": "**Notificaciones por evento** (in-app o correo) — detectar el evento, plantilla, envío. Periódica o resumen (digest) → suma *Tarea programada*.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-0ed2ee12710b",
+      "size": "M",
+      "label": "Máquina de estados / cambios de estado",
+      "description": "**Máquina de estados / cambios de estado** — transiciones y reglas sobre un registro (→ `L` si hay acciones/permisos por estado o varios actores). Cambiar el estado de un **conjunto** de registros a la vez es *Acciones masivas / bulk* (`M`); mostrar el estado es badge (`S`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-3d4c26348961",
+      "size": "M",
+      "label": "Mostrar historial ya registrado",
+      "description": "**Mostrar historial ya registrado** — si los logs ya se guardan y solo hay que exponerlos (construir la trazabilidad es `L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-660c218669b3",
+      "size": "M",
+      "label": "Integrar un componente de terceros en el FE",
+      "description": "**Integrar un componente de terceros en el FE** — mapa embebido, editor WYSIWYG, date-range picker, tabla avanzada, reCAPTCHA, recorte de imagen, widget de chat (Chatwoot/Tawk).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-731e28245658",
+      "size": "M",
+      "label": "Webhook saliente simple",
+      "description": "**Webhook saliente simple** — enviar un payload a un tercero cuando ocurre un evento.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-6dd3becf43f2",
+      "size": "M",
+      "label": "Login social (OAuth) o recuperación de contraseña sobre una autenticación que ya existe.",
+      "description": "**Login social (OAuth) o recuperación de contraseña** sobre una autenticación que ya existe.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-895f0a2f8bfa",
+      "size": "M",
+      "label": "Importación simple sin motor avanzado de validación o conciliación.",
+      "description": "**Importación simple** sin motor avanzado de validación o conciliación.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-92bc46933d86",
+      "size": "M",
+      "label": "Tema claro / oscuro (theming)",
+      "description": "**Tema claro / oscuro (theming)** — ligero pero **transversal**.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-8d23046cf68e",
+      "size": "M",
+      "label": "Configurar / parametrizar una regla de negocio antes fija en el código",
+      "description": "**Configurar / parametrizar una regla de negocio antes fija en el código** — UI para administrarla (→ `L` si es un panel de configuración completo).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-79dddc48e5d0",
+      "size": "M",
+      "label": "Generalizar una operación (crear/editar/eliminar) del caso base a N casos o modelos",
+      "description": "**Generalizar una operación (crear/editar/eliminar) del caso base a N casos o modelos** — creación en cascada (→ `L` si obliga a un motor completo).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-5ac3060282c9",
+      "size": "M",
+      "label": "Multidioma (i18n)",
+      "description": "**Multidioma (i18n)** — construir la capacidad; **transversal**. Entregar un feature en 2 idiomas sobre i18n ya existente es el modificador *Entregable bilingüe*.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-2f0f4feb942a",
+      "size": "M",
+      "label": "Firma dibujada en canvas / aceptación en pantalla",
+      "description": "**Firma dibujada en canvas / aceptación en pantalla** — trazo sobre canvas o botón \"acepto\" con evidencia (≠ firma-imagen posicionada en PDF `L`, ≠ certificada `XL`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-81b943918250",
+      "size": "M",
+      "label": "Generación / lectura de códigos QR o de barras",
+      "description": "**Generación / lectura de códigos QR o de barras** — generar el código es simple; escanear con cámara sube dentro de `M` o a `L` según el flujo.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-279d455b5f2d",
+      "size": "M",
+      "label": "Actualización en vivo de una vista puntual",
+      "description": "**Actualización en vivo de una vista puntual** — polling o un websocket acotado para refrescar un dato (≠ *sincronización en tiempo real transversal*, `XL`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-d68636ce779b",
+      "size": "M",
+      "label": "Multi-moneda / conversión de divisas",
+      "description": "**Multi-moneda / conversión de divisas** — mostrar y calcular montos en más de una moneda con tasa administrable.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-b7ba052742c7",
+      "size": "M",
+      "label": "Vencimientos / renovaciones con alertas",
+      "description": "**Vencimientos / renovaciones con alertas** — fechas de expiración de contratos, membresías o documentos + recordatorio (suma *Tarea programada*).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-20b69f375e12",
+      "size": "M",
+      "label": "Términos y condiciones con aceptación versionada / consentimientos",
+      "description": "**Términos y condiciones con aceptación versionada / consentimientos** — registrar quién aceptó qué versión y cuándo (Habeas Data básico).",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-214621fe9500",
+      "size": "M",
+      "label": "Sesiones activas / cierre remoto / bloqueo por inactividad",
+      "description": "**Sesiones activas / cierre remoto / bloqueo por inactividad** — listar dispositivos, cerrar sesión a distancia, timeout.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-640ec8e746b0",
+      "size": "M",
+      "label": "Impersonación (\"ingresar como usuario\") para admins",
+      "description": "**Impersonación (\"ingresar como usuario\") para admins** — con evidencia de auditoría y salida segura.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-80f92f2389c3",
+      "size": "M",
+      "label": "Rate limiting / anti-abuso / captcha en formularios o endpoints públicos. ⇧50%",
+      "description": "**Rate limiting / anti-abuso / captcha** en formularios o endpoints públicos.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-c5cd652acfef",
+      "size": "M",
+      "label": "Cifrado de campos sensibles / anonimización puntual",
+      "description": "**Cifrado de campos sensibles / anonimización puntual** — proteger columnas específicas (≠ endurecimiento de seguridad empresarial, `XL`).",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-19baecdaa4a1",
+      "size": "M",
+      "label": "Landing / página de marketing multi-sección con formulario",
+      "description": "**Landing / página de marketing multi-sección con formulario** — página nueva con varias secciones y captura de contacto, sin CMS (página estática simple = `S`; administrable = `L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-c8eb74c54f7f",
+      "size": "M",
+      "label": "Cotizador / calculadora pública embebida con captura de lead",
+      "description": "**Cotizador / calculadora pública embebida con captura de lead** — con reglas de cálculo simples fijas (con motor de reglas configurable → `L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-5974bd3bbc01",
+      "size": "M",
+      "label": "Tarea técnica no funcional pedida como requerimiento",
+      "description": "**Tarea técnica no funcional pedida como requerimiento** — actualizar framework, migrar hosting, SSL/dominio, optimización puntual: se clasifica y cotiza aparte del roadmap funcional.",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-03eb79f61183",
+      "size": "M",
+      "label": "Aprobación de un paso (maker-checker)",
+      "description": "**Aprobación de un paso (maker-checker)** — un usuario registra o solicita y otro aprueba/rechaza antes de que surta efecto: estado pendiente, notificación al aprobador y evidencia de quién aprobó (→ `L` si el módulo de solicitudes se construye desde cero; → `XL` con ≥3 etapas, escalamiento o reglas configurables).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-feb7b53ab512",
+      "size": "M",
+      "label": "Cupones / códigos de descuento simples",
+      "description": "**Cupones / códigos de descuento simples** — código con porcentaje o valor fijo, vigencia, límite de usos y validación al aplicar. Reglas combinables o configurables por el cliente (motor) → `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f26f8441d405",
+      "size": "M",
+      "label": "Exportación contable en formato de tercero",
+      "description": "**Exportación contable en formato de tercero** — archivo plano o Excel con la estructura exigida por un software contable (Siigo, World Office, contador), con homologación parametrizable de cuentas, terceros e impuestos (→ `L` si la homologación exige un panel de parametrización completo; la integración por API con el ERP es `XL`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-0c47883ce0e8",
+      "size": "M",
+      "label": "Listas de precios / precio especial por cliente o segmento",
+      "description": "**Listas de precios / precio especial por cliente o segmento** — asignar precios diferenciados sobre un catálogo existente, con vigencia y precio por defecto. Reglas de cálculo configurables (volumen, combinaciones) → motor `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-2145628a2bd2",
+      "size": "M",
+      "label": "Tracking de uso / telemetría propia básica",
+      "description": "**Tracking de uso / telemetría propia básica** — registrar eventos de navegación o acciones del usuario (endpoints visitados, vistas, tiempos) vía middleware o eventos, con consulta simple de los datos. Con panel de análisis propio → `L`; con script de terceros (GA/Hotjar) es `S`. Ojo Habeas Data: puede requerir consentimiento (ver *T&C / consentimientos*).",
+      "surcharge_percent": "50"
+    },
+    {
+      "id": "signal-3ad674798f14",
+      "size": "M",
+      "label": "Comparador de ítems lado a lado",
+      "description": "**Comparador de ítems lado a lado** — seleccionar N ítems de un catálogo existente y verlos en tabla comparativa de atributos, con persistencia de la selección. Si los atributos comparables los configura el admin o se comparan entidades heterogéneas → `L`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-1047db216f3e",
+      "size": "M",
+      "label": "Texto sugerido automáticamente por el sistema, editable por el usuario",
+      "description": "**Texto sugerido automáticamente por el sistema, editable por el usuario** — el sistema propone un texto a partir de datos ya registrados (movimientos, historial, plantillas de contexto) y el usuario lo complementa o sobrescribe antes de persistir: observaciones, descripciones, respuestas precargadas. Si la sugerencia la produce una IA → señal *Funcionalidad basada en IA* (`M`–`L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-691b111a1be2",
+      "size": "M",
+      "label": "Bloqueo/reserva exclusiva de un registro por usuario",
+      "description": "**Bloqueo/reserva exclusiva de un registro por usuario** — al iniciar el trabajo, el registro queda reservado a quien lo tomó y un segundo usuario recibe el mensaje de bloqueo (lock con `select_for_update` o equivalente). Suele sumar el modificador *Concurrencia / atomicidad*; la liberación por timeout/vencimiento se cotiza con su *Tarea programada*. ≠ edición colaborativa concurrente sobre el mismo estado (→ `XL` sincronización en tiempo real).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-a7c758f783c3",
+      "size": "M",
+      "label": "Contador de pendientes con badge en la navegación",
+      "description": "**Contador de pendientes con badge en la navegación** — endpoint de conteo por rol + número sobre el ítem de menú o campana + refresco periódico (polling). Replicarlo a un módulo nuevo cuando el patrón ya existe en otros activa el atenuador *extiende algo existente*. ≠ *badge / chip de estado* (`S`: sólo pinta un estado ya cargado en la vista); ≠ *centro / bandeja de notificaciones* (`L`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-9905dc3f7181",
+      "size": "M",
+      "label": "Consulta pública de estado por código (sin login)",
+      "description": "**Consulta pública de estado por código (sin login)** — página pública donde un tercero consulta el estado de su caso (guía, reparación, radicado, reserva) con un código/token no adivinable: sólo lectura, línea de estados y rate limiting. ≠ *portal de autoservicio* (`L`: autenticación y múltiples vistas). ≠ *credenciales verificables* (`L`: emiten comprobante con ciclo válido/usado/revocado). El enlace a una vista interna autenticada es `S` (*deep link*). Con datos sensibles sumar *cifrado de campos / consentimientos*; con mapa en vivo → `XL` (tracking).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-de1f8e642124",
+      "size": "S",
+      "label": "Cambios de estilo (UI) o de plantilla / ajustes menores a tarjetas, tablas, botones o formularios.",
+      "description": "Cambios de **estilo (UI) o de plantilla** / ajustes menores a tarjetas, tablas, botones o formularios.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-dc307b6c9aeb",
+      "size": "S",
+      "label": "Diálogo de confirmación (antes de una acción destructiva).",
+      "description": "**Diálogo de confirmación** (antes de una acción destructiva).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-dbfda85a141d",
+      "size": "S",
+      "label": "Toast / alerta efímera de éxito, error o advertencia.",
+      "description": "**Toast / alerta efímera** de éxito, error o advertencia.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-89248bc34825",
+      "size": "S",
+      "label": "Operaciones client-side sobre datos ya cargados",
+      "description": "**Operaciones client-side sobre datos ya cargados** — búsqueda, filtro, orden y/o paginación (incl. *typeahead* sobre un endpoint existente).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-db5cdfb2e3d5",
+      "size": "S",
+      "label": "Badge / chip de estado",
+      "description": "**Badge / chip de estado** — mostrar el estado visualmente (sin la máquina de estados `M`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-472d7f708dce",
+      "size": "S",
+      "label": "Copiar al portapapeles / compartir enlace.",
+      "description": "**Copiar al portapapeles / compartir enlace.**",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-00bd31ace10f",
+      "size": "S",
+      "label": "Descarga de archivo estático / enlace de descarga (sin generación dinámica).",
+      "description": "**Descarga de archivo estático** / enlace de descarga (sin generación dinámica).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-0cd960c6c238",
+      "size": "S",
+      "label": "Tabs / acordeón / secciones colapsables",
+      "description": "**Tabs / acordeón / secciones colapsables** — reorganizar una vista existente.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-4868f82db31f",
+      "size": "S",
+      "label": "Estados de carga",
+      "description": "**Estados de carga** — spinner, skeleton o empty state.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-d502e10674a5",
+      "size": "S",
+      "label": "Formato condicional visual",
+      "description": "**Formato condicional visual** — colorear filas/celdas/valores según una regla simple.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-fc330a1da20f",
+      "size": "S",
+      "label": "Tooltip / ayuda contextual.",
+      "description": "**Tooltip / ayuda contextual.**",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-d7ab4fcc99fc",
+      "size": "S",
+      "label": "Modales / popups.",
+      "description": "**Modales / popups.**",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-e461ce2d9c66",
+      "size": "S",
+      "label": "Validación regex específica en un campo (password, placa, formato).",
+      "description": "**Validación regex específica** en un campo (password, placa, formato).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-c5744090faa2",
+      "size": "S",
+      "label": "Imprimir una vista",
+      "description": "**Imprimir una vista** — *print stylesheet* / `window.print`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-cfbd0eb3b2b2",
+      "size": "S",
+      "label": "Página estática",
+      "description": "**Página estática** — términos, ayuda, política, información (sin CMS).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-6f54afc7ecf1",
+      "size": "S",
+      "label": "Plantillas de correo básicas (texto plano).",
+      "description": "**Plantillas de correo básicas** (texto plano).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-c732b23d7cc3",
+      "size": "S",
+      "label": "Duplicación de documentos.",
+      "description": "**Duplicación de documentos.**",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-c6b375772fc9",
+      "size": "S",
+      "label": "Contador / temporizador en UI",
+      "description": "**Contador / temporizador en UI** — countdown, cronómetro, o indicador de frescura (\"última actualización hace X\").",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f82b10b8de4f",
+      "size": "S",
+      "label": "Script de terceros simple",
+      "description": "**Script de terceros simple** — pixel, Hotjar, Google Analytics.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-963e31f21ce0",
+      "size": "S",
+      "label": "Ajuste responsive puntual de una sección (el responsive completo es un modificador).",
+      "description": "**Ajuste responsive puntual** de una sección (el responsive completo es un modificador).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-a9285d4caa9d",
+      "size": "S",
+      "label": "Meta tags / Open Graph / favicon por página",
+      "description": "**Meta tags / Open Graph / favicon por página** — configurar títulos, descripciones e imagen de compartir (reemplazar el asset del logo/favicon es `XS`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f3fca93d0443",
+      "size": "S",
+      "label": "Animaciones / micro-interacciones puntuales",
+      "description": "**Animaciones / micro-interacciones puntuales** — transiciones, hover, feedback visual.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-3fa10333c183",
+      "size": "S",
+      "label": "Deep link con restauración de estado",
+      "description": "**Deep link con restauración de estado** — abrir una vista en una pestaña/sección/filtro específico vía URL (query params → estado). El ancla o enlace simple es `XS`.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-d55ede40eadb",
+      "size": "S",
+      "label": "Retiro controlado de un comportamiento ya entregado",
+      "description": "**Retiro controlado de un comportamiento ya entregado** — eliminar un endpoint/acción y su UI, reescribiendo las pruebas que lo cubrían (≠ ocultar un elemento existente, `XS`; sube a `M` si exige decidir o archivar datos históricos del comportamiento retirado).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-c849365e3dd9",
+      "size": "S",
+      "label": "Conectar o reactivar una capacidad ya construida pero no cableada",
+      "description": "**Conectar o reactivar una capacidad ya construida pero no cableada** — unir dos piezas existentes (generador de archivo → correo que lo adjunta; tipo de evento declarado → su tarea programada) o restaurar código deliberadamente deshabilitado, reescribiendo las pruebas del comportamiento reactivado. ≠ activar un feature flag ya operativo (`XS`); ≠ construir la pieza faltante (nivel propio de la pieza). Es el espejo de *Retiro controlado de un comportamiento ya entregado*.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-03215e5b0684",
+      "size": "XS",
+      "label": "Cambio de copy",
+      "description": "**Cambio de copy** — texto, etiqueta, título, placeholder, mensaje de validación o typo (sin lógica). Incluye actualizar el contenido de una página estática existente (p. ej., textos legales).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f19746f6246a",
+      "size": "XS",
+      "label": "Cambio visual puntual",
+      "description": "**Cambio visual puntual** — color, ícono, logo/favicon/imagen de marca (reemplazo del asset, sin rediseño), imagen estática, espaciado, tamaño, variable CSS / theming menor.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-12d3b0a31371",
+      "size": "XS",
+      "label": "Cambiar el valor por defecto de un campo.",
+      "description": "**Cambiar el valor por defecto** de un campo.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-cc2ecd88d153",
+      "size": "XS",
+      "label": "Marcar un campo requerido/opcional o cambiar un límite (maxlength/rango) · validación básica.",
+      "description": "**Marcar un campo requerido/opcional** o cambiar un límite (maxlength/rango) · validación básica.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-4d062641ffdb",
+      "size": "XS",
+      "label": "Agregar / quitar una opción estática a un select o enum existente.",
+      "description": "**Agregar / quitar una opción estática** a un select o enum existente.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-0927743ff50b",
+      "size": "XS",
+      "label": "Ocultar / mostrar un elemento existente (por rol o condición simple).",
+      "description": "**Ocultar / mostrar un elemento existente** (por rol o condición simple).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-386190b8f2b6",
+      "size": "XS",
+      "label": "Agregar un checkbox/toggle o un enlace simple / cambiar una ruta, redirección o ancla.",
+      "description": "Agregar un **checkbox/toggle** o un **enlace simple** / cambiar una ruta, redirección o ancla.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-36f001fc333f",
+      "size": "XS",
+      "label": "Ajustar un permiso puntual",
+      "description": "**Ajustar un permiso puntual** — dar acceso de una vista a un rol.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-f83cff0a523f",
+      "size": "XS",
+      "label": "Cambiar formato de visualización",
+      "description": "**Cambiar formato de visualización** — fecha, moneda, número — o el orden por defecto.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-db3e3c80a381",
+      "size": "XS",
+      "label": "Reordenar campos o columnas / cambiar el criterio de un filtro fijo.",
+      "description": "**Reordenar campos o columnas** / cambiar el criterio de un filtro fijo.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-04582ca34dab",
+      "size": "XS",
+      "label": "Activar / desactivar un feature flag o configuración ya construida.",
+      "description": "**Activar / desactivar** un feature flag o configuración ya construida.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-fdef79cd761e",
+      "size": "XS",
+      "label": "Actualizar una variable de entorno / API key / URL (staging → producción).",
+      "description": "**Actualizar una variable de entorno** / API key / URL (staging → producción).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "signal-31c22c9d9720",
+      "size": "XS",
+      "label": "Exponer un dato ya persistido como columna o campo de un listado",
+      "description": "**Exponer un dato ya persistido como columna o campo de un listado** — agregar la columna con su formato (y ordenamiento si aplica); el dato ya existe en el modelo. El barrido del mismo dato sobre N listados es `S`. ≠ construir la trazabilidad que produce el dato (`L`); ≠ campo calculado nuevo (`M`).",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "project-boundary-1",
+      "size": "PROJECT",
+      "label": "Frontera de proyecto 1",
+      "description": "Producto nuevo con varias capacidades independientes y arquitectura propia.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "project-boundary-2",
+      "size": "PROJECT",
+      "label": "Frontera de proyecto 2",
+      "description": "Alcance abierto que no puede delimitarse como un requerimiento XL con criterios verificables.",
+      "surcharge_percent": "0"
+    },
+    {
+      "id": "project-boundary-3",
+      "size": "PROJECT",
+      "label": "Frontera de proyecto 3",
+      "description": "Migración masiva o transformación integral de la plataforma que exige un proyecto propio.",
+      "surcharge_percent": "0"
+    }
+  ],
+  "modifiers": [
+    {
+      "id": "modifier-e93d4e812735",
+      "label": "Pantalla nueva (frontend que hoy no existe) — **solo aplica a XS–M**: un L ya la incluye por definición",
+      "kind": "percentage",
+      "minimum": "15",
+      "maximum": "25",
+      "applies_to": [
+        "XS",
+        "S",
+        "M"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-56fe9426a35f",
+      "label": "Modelo de datos / migraciones (tablas, campos, relaciones) — **solo aplica a XS–M**: un L ya lo incluye",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "20",
+      "applies_to": [
+        "XS",
+        "S",
+        "M"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-aa2ec44c17b3",
+      "label": "Transversal (toca muchas pantallas o documentos) — **multiplicador**, no aditivo",
+      "kind": "percentage",
+      "minimum": "1.4",
+      "maximum": "1.8",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-db9e83cde5fc",
+      "label": "Motor nuevo (PDF de reportes, plantillas de correo, etiquetas)",
+      "kind": "percentage",
+      "minimum": "30",
+      "maximum": "80",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-99c34920d8c4",
+      "label": "Concurrencia / atomicidad (bloqueos, stock atómico)",
+      "kind": "percentage",
+      "minimum": "20",
+      "maximum": "40",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-22b8103e235f",
+      "label": "Tarea programada / cron (Huey) — **horas fijas**, se suman al final",
+      "kind": "fixed_hours",
+      "minimum": "8",
+      "maximum": "16",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-f19977db5ac6",
+      "label": "Aplica también a la PWA contratada",
+      "kind": "percentage",
+      "minimum": "30",
+      "maximum": "30",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": "platform"
+    },
+    {
+      "id": "modifier-7f2c6da86c5b",
+      "label": "Implementación como app móvil nativa (iOS/Android + tiendas) — se aplica ×1,6 al final, sobre el resultado ya modificado; la primera publicación en tiendas (cuentas, firma, revisión) puede cotizarse como ítem de *Despliegue/operación*",
+      "kind": "percentage",
+      "minimum": "60",
+      "maximum": "60",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": "platform"
+    },
+    {
+      "id": "modifier-894dd62a4ebd",
+      "label": "Diseño UI/UX **no** entregado por el cliente",
+      "kind": "percentage",
+      "minimum": "15",
+      "maximum": "30",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-87de1eab574c",
+      "label": "Responsive completo (móvil + tablet + desktop)",
+      "kind": "percentage",
+      "minimum": "15",
+      "maximum": "35",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-6b8811da7780",
+      "label": "Permisos por campo o por acción (granular, sobre algo existente)",
+      "kind": "percentage",
+      "minimum": "20",
+      "maximum": "40",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-ab9b71801b1e",
+      "label": "Carga inicial / *backfill* de datos al desplegar (≠ crear el modelo nuevo)",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "30",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-cead11c7d734",
+      "label": "Volumen alto de datos — el volumen se maneja **dentro** de la arquitectura actual (índices, paginación obligatoria, queries pesadas); si obliga a **cambiar** la arquitectura → señal XL",
+      "kind": "percentage",
+      "minimum": "20",
+      "maximum": "50",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-df1dafbec40f",
+      "label": "Pruebas con múltiples roles",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "25",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-14bdd14a720f",
+      "label": "Observabilidad / logging de errores exigido",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "20",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-e7da2c4adaeb",
+      "label": "Tests automatizados / cobertura mínima exigida",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "25",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-a1f84cddbde4",
+      "label": "Código legacy sin tests / deuda técnica",
+      "kind": "percentage",
+      "minimum": "15",
+      "maximum": "40",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-67c21e4f359d",
+      "label": "Dependencia de tercero externo (mal documentado o sandbox inestable)",
+      "kind": "percentage",
+      "minimum": "15",
+      "maximum": "40",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-fe01d6d57c8a",
+      "label": "Despliegue / operación en producción (dominios, correos, variables, backups, CI/CD, monitoreo, colas nuevas)",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "30",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-964f02277931",
+      "label": "Accesibilidad (WCAG) o SEO/SSR como requisito explícito",
+      "kind": "percentage",
+      "minimum": "20",
+      "maximum": "50",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-87382dd16df9",
+      "label": "Datos semilla / fake data para demo o capacitación",
+      "kind": "percentage",
+      "minimum": "5",
+      "maximum": "10",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-13ee1a992e01",
+      "label": "Documentación / manual de usuario exigido como entregable",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "20",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-ad1e53ac4f01",
+      "label": "Capacitación / acompañamiento exigido",
+      "kind": "separate",
+      "minimum": null,
+      "maximum": null,
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-da942c42a6ec",
+      "label": "Hardware o pruebas en sitio (dispositivos físicos, visitas)",
+      "kind": "percentage",
+      "minimum": "25",
+      "maximum": "60",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-26c4c59057aa",
+      "label": "Urgencia / entrega exprés exigida (cronograma comprimido)",
+      "kind": "percentage",
+      "minimum": "20",
+      "maximum": "50",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-bb71c290b675",
+      "label": "Coordinación con equipo/proveedor del cliente (comités, dependencia de su TI, reuniones recurrentes)",
+      "kind": "percentage",
+      "minimum": "10",
+      "maximum": "25",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-68c67455d68f",
+      "label": "Entregable bilingüe (ES/EN) sobre i18n ya existente (construir i18n desde cero es la señal M transversal)",
+      "kind": "percentage",
+      "minimum": "5",
+      "maximum": "15",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    },
+    {
+      "id": "modifier-bb3a578753ed",
+      "label": "**Arquetipo con recargo estructural** — la señal citada está marcada ⇧50% en el catálogo. Se aplica **encima** del nivel; si la señal es XL y se descompone, **cada fila hija lo hereda**. **Interno: no se itemiza en el documento**",
+      "kind": "percentage",
+      "minimum": "50",
+      "maximum": "50",
+      "applies_to": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "exclusive_group": ""
+    }
+  ],
+  "families": [
+    {
+      "label": "Búsqueda",
+      "small": "client-side sobre datos cargados",
+      "medium": "server-side en un listado",
+      "large": "facetada con autocompletado / global multi-entidad",
+      "extra_large": "full-text con indexación"
+    },
+    {
+      "label": "Importación",
+      "small": "—",
+      "medium": "simple sin validación",
+      "large": "masiva con validaciones",
+      "extra_large": "migración / ETL desde legacy"
+    },
+    {
+      "label": "Notificaciones",
+      "small": "toast efímero",
+      "medium": "por evento (in-app/correo) / contador de pendientes con badge en navegación",
+      "large": "centro in-app / canal único vía proveedor",
+      "extra_large": "mensajería a escala (multicanal, campañas)"
+    },
+    {
+      "label": "Datos / visualización",
+      "small": "badge de estado",
+      "medium": "métricas o reporte parametrizable",
+      "large": "dashboard / visualización interactiva a medida",
+      "extra_large": "motor de BI sobre volumen"
+    },
+    {
+      "label": "Autenticación",
+      "small": "—",
+      "medium": "OAuth / recuperación sobre lo existente",
+      "large": "módulo completo o 2FA/MFA",
+      "extra_large": "SSO corporativo"
+    },
+    {
+      "label": "Permisos",
+      "small": "ajuste puntual (XS)",
+      "medium": "permisos / visibilidad por rol",
+      "large": "panel RBAC granular",
+      "extra_large": "seguridad empresarial"
+    },
+    {
+      "label": "Documentos",
+      "small": "descarga estática",
+      "medium": "adjuntar a una entidad / plantilla fija con variables",
+      "large": "gestor documental / centro de plantillas",
+      "extra_large": "firma certificada / motor de PDF complejo"
+    },
+    {
+      "label": "Facturación / contabilidad",
+      "small": "—",
+      "medium": "cuenta de cobro / factura simple PDF · exportación contable formato tercero",
+      "large": "pipeline de documentos comerciales / cartera CxC recurrente sin pasarela",
+      "extra_large": "facturación electrónica DIAN / contabilidad de dominio"
+    },
+    {
+      "label": "Duplicar",
+      "small": "duplicar un documento (S)",
+      "medium": "clonar entidad con relaciones",
+      "large": "—",
+      "extra_large": "—"
+    },
+    {
+      "label": "Drag-and-drop",
+      "small": "—",
+      "medium": "agregar DnD a una lista existente",
+      "large": "constructor / Kanban desde cero",
+      "extra_large": "motor de formularios como producto"
+    },
+    {
+      "label": "Validación",
+      "small": "requerido/límite (XS), regex (S)",
+      "medium": "de negocio (cross-field)",
+      "large": "—",
+      "extra_large": "cumplimiento regulatorio"
+    },
+    {
+      "label": "Geo / mapas",
+      "small": "—",
+      "medium": "—",
+      "large": "mapa con pines y rutas",
+      "extra_large": "tracking en vivo / georreferenciación"
+    },
+    {
+      "label": "Tiempo real",
+      "small": "refresco manual / botón actualizar",
+      "medium": "polling o websocket en una vista",
+      "large": "chat o feed en vivo propio / tablero de operación por estaciones (KDS)",
+      "extra_large": "sincronización transversal / colaborativa"
+    },
+    {
+      "label": "Firma",
+      "small": "—",
+      "medium": "dibujada en canvas / aceptación",
+      "large": "firma-imagen posicionada en un PDF propio",
+      "extra_large": "certificada PKI / validez legal"
+    },
+    {
+      "label": "Pagos",
+      "small": "—",
+      "medium": "—",
+      "large": "link de pago de pasarela",
+      "extra_large": "checkout completo / suscripciones"
+    },
+    {
+      "label": "Correo",
+      "small": "plantilla básica texto plano",
+      "medium": "con branding / por evento / plantilla fija",
+      "large": "centro de plantillas administrable",
+      "extra_large": "campañas masivas / deliverability"
+    },
+    {
+      "label": "IA",
+      "small": "—",
+      "medium": "llamada a API con prompt fijo",
+      "large": "feature con IA + UI (RAG típico)",
+      "extra_large": "fine-tuning / modelo propio"
+    },
+    {
+      "label": "Plataforma",
+      "small": "responsive puntual (S)",
+      "medium": "responsive completo (mod +15–35%)",
+      "large": "PWA (mod +30%)",
+      "extra_large": "app nativa (mod +60%) — *toda la fila son modificadores; el nivel lo da la funcionalidad*"
+    },
+    {
+      "label": "Media / archivos",
+      "small": "descarga estática",
+      "medium": "upload con procesamiento",
+      "large": "galería / gestor multimedia",
+      "extra_large": "pipeline de video / streaming en vivo"
+    },
+    {
+      "label": "Encuestas / formularios",
+      "small": "—",
+      "medium": "encuesta fija simple",
+      "large": "constructor de encuestas / form builder interno",
+      "extra_large": "motor de formularios como producto"
+    },
+    {
+      "label": "Auditoría / eventos",
+      "small": "exponer como columna un dato ya registrado",
+      "medium": "mostrar historial ya registrado",
+      "large": "construir bitácora/auditoría (quién, qué, cuándo)",
+      "extra_large": "auditoría avanzada con cumplimiento (seguridad empresarial)"
+    },
+    {
+      "label": "Analítica de uso",
+      "small": "script de terceros (GA/pixel)",
+      "medium": "tracking/telemetría propia básica",
+      "large": "analítica de comportamiento con panel propio",
+      "extra_large": "motor de BI sobre volumen"
+    },
+    {
+      "label": "Aprobaciones / flujo",
+      "small": "—",
+      "medium": "maker-checker sobre lo existente",
+      "large": "módulo de solicitudes desde cero / tickets-PQRS",
+      "extra_large": "≥3 etapas con escalamiento/SLA / workflow configurable (BPM)"
+    },
+    {
+      "label": "Agendamiento / reservas",
+      "small": "—",
+      "medium": "vencimientos / recordatorios con alertas",
+      "large": "agenda base / cita de un recurso sin pago / selección de espacio en plano (seat map) sin pago",
+      "extra_large": "scheduling multi-recurso con concurrencia y pagos"
+    },
+    {
+      "label": "Precios / descuentos",
+      "small": "cambiar un precio o % fijo (XS)",
+      "medium": "cupón simple / lista de precios por cliente / parametrizar regla fija",
+      "large": "motor de reglas de precios / comisiones",
+      "extra_large": "el cliente configura reglas como BPM"
+    },
+    {
+      "label": "Integraciones",
+      "small": "script / pixel (S)",
+      "medium": "webhook saliente / componente FE de terceros",
+      "large": "API de datos autenticada / canal único de mensajería / link de pago",
+      "extra_large": "ERP-CRM bidireccional / pagos recurrentes / datos sensibles / API pública propia"
+    },
+    {
+      "label": "Inventario / stock",
+      "small": "—",
+      "medium": "campo de stock + alerta de mínimos sobre lo existente",
+      "large": "inventario básico desde cero / receta (BOM) con descuento de componentes",
+      "extra_large": "checkout con stock descontado / alto volumen con concurrencia"
+    },
+    {
+      "label": "Matching",
+      "small": "—",
+      "medium": "\"sugeridos\" por filtros fijos sobre búsqueda existente",
+      "large": "motor de emparejamiento con criterios y mutualidad",
+      "extra_large": "matching en tiempo real a escala / con modelo propio"
+    },
+    {
+      "label": "Espera / cupo",
+      "small": "—",
+      "medium": "\"avísame cuando haya disponibilidad\" (alerta pasiva)",
+      "large": "lista de espera con promoción automática y ventana",
+      "extra_large": "reservas críticas con pagos y concurrencia"
+    },
+    {
+      "label": "Créditos / saldo",
+      "small": "—",
+      "medium": "contador simple decrementable sin historial / deuda con abonos y saldo simple",
+      "large": "billetera / ledger con extracto y atomicidad / crédito con tabla de amortización",
+      "extra_large": "recargas / retiros de dinero real / originación regulada (centrales de riesgo)"
+    },
+    {
+      "label": "Asignación",
+      "small": "—",
+      "medium": "\"asignado a\" manual con notificación",
+      "large": "dispatch con reglas y aceptar/rechazar",
+      "extra_large": "despacho en tiempo real con tracking / rutas"
+    },
+    {
+      "label": "Negociación",
+      "small": "—",
+      "medium": "oferta simple sin réplica",
+      "large": "oferta / contraoferta con expiración",
+      "extra_large": "subasta con pujas en tiempo real"
+    },
+    {
+      "label": "Estados",
+      "small": "badge / chip de estado",
+      "medium": "máquina de estados de un registro / cambio masivo (bulk)",
+      "large": "acciones y permisos por estado o varios actores",
+      "extra_large": "flujo multi-etapa ≥3 / workflow configurable (BPM)"
+    },
+    {
+      "label": "Cumplimiento documental",
+      "small": "—",
+      "medium": "un documento con vencimiento y alerta",
+      "large": "expediente de requeridos con semáforo y vencimientos por sujeto",
+      "extra_large": "due diligence regulado (SARLAFT, listas restrictivas)"
+    },
+    {
+      "label": "Ficha / expediente",
+      "small": "vista de detalle de un registro (S)",
+      "medium": "CRUD de una entidad con extras",
+      "large": "expediente longitudinal con línea de tiempo multi-fuente",
+      "extra_large": "historia clínica regulada / interoperabilidad normativa"
+    },
+    {
+      "label": "Evaluación / inspección",
+      "small": "checkbox / toggle (XS)",
+      "medium": "checklist plano como campos / cuestionario fijo con nota simple",
+      "large": "inspección con puntaje y evidencia · quiz auto-calificado con banco",
+      "extra_large": "motor de formularios-inspecciones como producto / certificación a escala"
+    },
+    {
+      "label": "Autoservicio del cliente final",
+      "small": "deep link a vista interna (S)",
+      "medium": "consulta pública de estado por código · una vista de datos propios sobre auth existente",
+      "large": "portal de autoservicio completo desde cero",
+      "extra_large": "API pública para terceros"
+    },
+    {
+      "label": "Conciliación / cruce",
+      "small": "—",
+      "medium": "registro/marcado manual de pagos contra registros",
+      "large": "cruce por archivo con matching y resolución de diferencias",
+      "extra_large": "conciliación bancaria directa (open banking) / ERP bidireccional"
+    },
+    {
+      "label": "Asistencia / presencia",
+      "small": "—",
+      "medium": "tomar lista manual sobre un listado existente (bulk)",
+      "large": "módulo de sesiones con QR/self check-in, % y alertas",
+      "extra_large": "control de acceso físico a escala (hardware como corazón)"
+    },
+    {
+      "label": "Evidencia de ejecución",
+      "small": "marcar tarea como hecha (XS)",
+      "medium": "foto/firma adjuntas a un registro existente",
+      "large": "acta de campo completa (foto + firma + geo + PDF numerado)",
+      "extra_large": "firma certificada con validez legal / captura offline-first"
+    },
+    {
+      "label": "Votación / participación",
+      "small": "—",
+      "medium": "sondeo / encuesta fija entre usuarios",
+      "large": "votación con padrón, voto único, quórum y acta",
+      "extra_large": "asamblea virtual en vivo a escala (streaming + voto en tiempo real)"
+    },
+    {
+      "label": "Uso medido por tiempo",
+      "small": "contador / temporizador en UI (S)",
+      "medium": "registrar entrada/salida con duración calculada",
+      "large": "sesión con tarificación al cierre (fracción, tope, franjas)",
+      "extra_large": "tarificación con hardware/IoT como corazón / telemetría a escala"
+    }
+  ],
+  "calibration": {
+    "minimum_samples": 3,
+    "deviation_percent": "30",
+    "hourly_cost_cop": null
+  }
+}

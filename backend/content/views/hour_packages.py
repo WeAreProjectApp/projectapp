@@ -114,7 +114,7 @@ def update_hour_package_settings(request):
         for nationality, field in BASE_RATE_FIELD_BY_NATIONALITY.items()
     }
     serializer = HourPackageSettingsSerializer(
-        settings_obj, data=request.data, partial=True
+        settings_obj, data=request.data, partial=True, context={'request': request}
     )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

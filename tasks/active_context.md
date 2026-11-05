@@ -1,3 +1,5 @@
+> **En curso — Calculadora de requerimientos (2026-11-05):** módulo comercial administrable por panel/MCP, definición documental generada, variantes por proyecto en Borrador/Aprobada y calibración con cierres reales. Implementación en worktree propio; sin migraciones contra el servicio.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
