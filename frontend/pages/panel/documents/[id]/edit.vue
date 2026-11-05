@@ -308,6 +308,11 @@
         </template>
       </BaseAlert>
 
+      <BaseAlert v-if="calculatorDocument" variant="info" class="panel-landscape:col-span-2" data-testid="doc-calculator-alert">
+        <p>{{ t('requirementCalculator.parametersOnly') }}</p>
+        <BaseButton as="NuxtLink" variant="link" :to="localePath({ path: '/panel/requirement-calculator', query: documentStore.currentDocument.project ? { project: String(documentStore.currentDocument.project) } : {} })">{{ t('requirementCalculator.title') }}</BaseButton>
+      </BaseAlert>
+
       <!-- El botón Guardar habilitado se lee como "puedes guardar"; esto se
            lee como "te falta guardar", y nombra qué falta. -->
       <UnsavedChangesNotice
@@ -881,13 +886,15 @@ const pendingPdfReplacement = ref(null);
 const uploadedPdf = computed(() => documentStore.currentDocument?.content_format === 'pdf');
 // The window onto the one contract: rendered live, never edited here.
 const contractMirror = ref(false);
+const calculatorDocument = computed(() => Boolean(documentStore.currentDocument?.calculator));
 const readOnlyDocument = computed(
-  () => Boolean(documentStore.currentDocument?.proposal_source) || lockedCuenta.value || generatedSnapshot.value || contractMirror.value,
+  () => calculatorDocument.value || Boolean(documentStore.currentDocument?.proposal_source) || lockedCuenta.value || generatedSnapshot.value || contractMirror.value,
 );
 const pdfPreviewDocument = computed(
   () => generatedSnapshot.value || lockedCuenta.value || contractMirror.value,
 );
 const readOnlyReason = computed(() => {
+  if (calculatorDocument.value) return t('requirementCalculator.parametersOnly');
   if (documentStore.currentDocument?.proposal_source) {
     return 'Este documento comparte su fuente con la propuesta. Edita la fuente o prepara un adjunto en borrador para confirmar otra versión.';
   }

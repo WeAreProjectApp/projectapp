@@ -179,8 +179,15 @@ class Command(BaseCommand):
         BuildingOnDemandContractMirror.objects.all().delete()
         BuildingWithUsContractMirror.objects.all().delete()
 
+        # Calculator rules remain catalog configuration. Only this confirmed,
+        # non-production wipe may release its protected project histories.
+        from content.management.commands._calculator_seed_helpers import clear_fake_calculator_data
+        from content.services.calculator_documents import calculator_document_reset
+        calculator_document_ids = clear_fake_calculator_data()
+
         # Documents cascade to items, collection account, payment methods.
-        deleted, _ = Document.objects.all().delete()
+        with calculator_document_reset():
+            deleted, _ = Document.objects.exclude(pk__in=calculator_document_ids).delete()
         self.stdout.write(self.style.SUCCESS(f'Deleted documents ({deleted} rows)'))
 
         # Tags are independent (M2M cleared with documents already).

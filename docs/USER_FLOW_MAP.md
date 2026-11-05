@@ -2,8 +2,8 @@
 
 # User Flow Map
 
-> **Version:** 2.105.0
-> **Last updated:** 2026-10-26
+> **Version:** 2.106.0
+> **Last updated:** 2026-11-05
 > **Scope:** Complete map of end-to-end user navigation flows for projectapp, organized by role.
 > **Sources:** Frontend pages (`frontend/pages/`), backend API endpoints (`content/urls.py`, `accounts/urls.py`), route rules (`nuxt.config.ts`).
 
@@ -6116,6 +6116,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-linktree-templates` | admin | P1 | success,error,failure,display | — |
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
+| `admin-managed-calculator-document` | documents | P2 | display | — |
 | `admin-mcps` | admin | P2 | display,success,error,failure | 14 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
@@ -6151,6 +6152,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-project-idea-collection` | admin | P1 | success,error,failure,display | — |
 | `admin-project-inline-assign-offer` | admin | P2 | success | 1 |
 | `admin-project-lifecycle-states` | admin | P1 | display,success,error,failure | 7 |
+| `admin-project-requirement-calculator-approve` | projects | P1 | display,success,error,failure | — |
+| `admin-project-requirement-calculator-draft` | projects | P1 | display,success,error,failure | — |
 | `admin-project-state-catalog` | admin | P1 | display,success,error,failure | 9 |
 | `admin-proposal-actions-modal` | admin | P1 | display,success | 1 |
 | `admin-proposal-advanced-filters` | admin | P2 | display | 1 |
@@ -6234,6 +6237,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-pwa-install` | admin | P2 | success,display,failure | — |
 | `admin-pwa-offline` | admin | P2 | success,failure | — |
 | `admin-qr-cards` | admin | P2 | success | 1 |
+| `admin-requirement-calculator-calibration` | commercial | P2 | display,success,error,failure | — |
+| `admin-requirement-calculator-definition` | commercial | P1 | display,success,error,failure | — |
+| `admin-requirement-calculator-revision-restore` | commercial | P2 | display,success,failure | — |
 | `admin-secure-link-create` | admin | P1 | success,error,failure,display | — |
 | `admin-secure-link-manage` | admin | P1 | success,error,failure,display | — |
 | `admin-seller-inactivity-escalation` | admin | P2 | — | 0 |
@@ -8202,6 +8208,75 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 | success | Dictar una pregunta, revisar la transcripción en el campo y enviarla; la respuesta se crea con el mismo recibo y el marcador baja sólo una unidad. |
 | error | Alcanzar el cupo de la ventana móvil e intentar enviar o empezar una grabación; los controles permanecen bloqueados y se informa cuándo vuelve a haber cupo. |
 | failure | Fallar transcripción, envío o sondeo; se conserva la posibilidad de editar o descartar la grabación y un reintento con el mismo identificador no consume una segunda unidad. |
+
+
+## Section 39 — Requirement Calculator (Nov 5, 2026)
+
+### FLOW: `admin-requirement-calculator-definition`
+
+- **Module:** commercial
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/panel/requirement-calculator`
+- **Description:** El administrador consulta la definición vigente, previsualiza y publica una nueva revisión con motivo. El servidor rechaza parámetros inválidos y revisiones obsoletas; una falla no confirma la publicación.
+- **Steps:** Consultar tallas y señales → modificar un parámetro → escribir motivo → previsualizar → confirmar Guardar.
+- **Branches:** Parámetros inválidos o If-Match obsoleto muestran calculator-error; un 5xx conserva la edición.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`.
+
+### FLOW: `admin-requirement-calculator-revision-restore`
+
+- **Module:** commercial
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/panel/requirement-calculator`
+- **Description:** El administrador consulta revisiones paginadas, carga una anterior en el editor y la publica como una nueva revisión inmutable. Si falla la carga o publicación, no sustituye silenciosamente la definición vigente.
+- **Steps:** Abrir Versiones → consultar motivo y fecha → restaurar → comprobar el editor → confirmar Guardar.
+- **Branches:** Una falla al cargar conserva la definición actual y muestra el error; el pasado no se sobrescribe.
+- **Coverage:** ✅ Covered — `display`, `success`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`, incluida la publicación confirmada como nueva revisión.
+
+### FLOW: `admin-project-requirement-calculator-draft`
+
+- **Module:** projects
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/panel/projects → /panel/requirement-calculator?project=<id>`
+- **Description:** Desde Acciones del proyecto, el administrador crea un único borrador desde una revisión general. El resumen carga sólo metadatos y la versión seleccionada carga sus parámetros e historial por separado. Sólo se ajustan parámetros existentes; un segundo borrador, un cambio estructural o una versión obsoleta se rechazan.
+- **Steps:** Abrir Acciones → Calculadora de requerimientos → crear borrador con motivo → elegir versión → modificar parámetro → guardar → verificar historial.
+- **Branches:** No se permite otro borrador ni modificar textos o estructura. Conflictos y fallos se muestran sin asignar el documento.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-project-requirement-calculator.spec.js`.
+
+### FLOW: `admin-project-requirement-calculator-approve`
+
+- **Module:** projects
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/panel/requirement-calculator?project=<id>`
+- **Description:** El administrador confirma la aprobación de un borrador limpio. La aprobación genera el PDF, lo asigna al proyecto, guarda el evento en el historial y deja la versión congelada. Un conflicto, PDF no generado o falla de servidor conserva el borrador.
+- **Steps:** Abrir borrador limpio → escribir motivo → Aprobar → confirmar → comprobar estado, historial y tarjetas de sólo lectura.
+- **Branches:** Cambios pendientes deshabilitan Aprobar. Conflicto, PDF no generado o 5xx conserva el borrador.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-project-requirement-calculator.spec.js`.
+
+### FLOW: `admin-requirement-calculator-calibration`
+
+- **Module:** commercial
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/panel/requirement-calculator`
+- **Description:** El administrador consulta cohortes, muestras insuficientes, estimaciones y cierres. Registra horas reales, evidencia y causa; un cierre posterior corrige explícitamente el último cierre. Datos inválidos, una corrección no válida y fallas de servidor quedan visibles.
+- **Steps:** Abrir Calibración → consultar cohorte → seleccionar estimación → registrar esfuerzo, evidencia y causa → corregir → abrir registro completo → recorrer las páginas de evidencia y verificar ambos eventos.
+- **Branches:** Valores no positivos, campos requeridos o supersedes incorrecto se rechazan. Un fallo conserva el formulario para reintentar.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`, incluido acceso al registro completo.
+
+### FLOW: `admin-managed-calculator-document`
+
+- **Module:** documents
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/panel/documents/<id>/edit`
+- **Description:** El administrador abre desde una versión de proyecto su documento de calculadora, ve el aviso de contenido administrado y vuelve a la calculadora correspondiente. El editor documental permanece de sólo lectura.
+- **Steps:** Abrir documento de una versión → comprobar doc-calculator-alert y contenido → seguir enlace a la calculadora → comprobar contexto de proyecto.
+- **Branches:** Los errores de carga y permiso pertenecen a los flujos existentes del editor documental.
+- **Coverage:** ✅ Covered — `display`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-managed-calculator-document.spec.js`.
 
 
 ## Unsectioned flows

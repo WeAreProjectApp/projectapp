@@ -1,0 +1,16 @@
+{
+  "id": "admin-requirement-calculator-definition",
+  "name": "Administrar definición general de la calculadora",
+  "module": "commercial",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "El administrador consulta la definición vigente, previsualiza y publica una nueva revisión con motivo. El servidor rechaza parámetros inválidos y revisiones obsoletas; una falla no confirma la publicación.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

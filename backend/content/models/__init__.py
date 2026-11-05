@@ -166,3 +166,7 @@ from .income_completion_notice import IncomeCompletionNotice
 from .proposal_shared_document import ProposalApprovalPackage, ProposalDocumentBinding
 
 from .consulting import ConsultingProgram, ConsultingProgramRevision
+
+from .requirement_calculator import (
+    RequirementCalculator, CalculatorRevision, ProjectCalculatorVersion, CalculatorEstimate, CalculatorActual, ProjectCalculatorChange,
+)
