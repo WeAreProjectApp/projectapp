@@ -490,6 +490,23 @@ def test_disabling_account_revokes_existing_session_and_tokens():
     )
 
 
+def test_reactivated_account_rejects_unversioned_legacy_session():
+    """Fails if reactivation revives a session issued before version stamping."""
+    actor = make_account(email="legacy-owner@example.com", staff=True, superuser=True)
+    user = make_account(email="legacy-session@example.com", staff=True)
+    panel = Client()
+    panel.force_login(user)
+    session = panel.session
+    session.pop("access_version", None)
+    session.save()
+
+    access.change_access(user.pk, actor=actor, enabled=False)
+    access.change_access(user.pk, actor=actor, enabled=True)
+    response = panel.get("/panel/")
+
+    assert response.wsgi_request.user.is_authenticated is False
+
+
 def test_staff_cannot_manage_team_access():
     """Fails if a non-superuser panel operator can change a team account."""
     staff = make_account(email="staff@example.com", staff=True)

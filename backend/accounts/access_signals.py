@@ -12,8 +12,8 @@ def revoke_changed_identity(sender, instance, raw=False, update_fields=None, **k
         return
     previous = sender.objects.filter(pk=instance.pk).only(*fields).first()
     if previous and any(getattr(previous, name) != getattr(instance, name) for name in fields if update_fields is None or name in update_fields):
-        from accounts.services.access import revoke
         from accounts.access_models import GoogleIdentity
+        from accounts.services.access import revoke
         revoke(instance)
         if previous.email.lower().strip() != instance.email.lower().strip():
             GoogleIdentity.objects.filter(user=instance).delete()
@@ -21,9 +21,13 @@ def revoke_changed_identity(sender, instance, raw=False, update_fields=None, **k
 
 @receiver(user_logged_in)
 def stamp_native_login(sender, request, user, **kwargs):
-    profile = getattr(user, 'profile', None)
-    if profile:
-        request.session['access_version'] = profile.access_version
+    from accounts.models import UserProfile
+
+    access_version = UserProfile.objects.filter(
+        user_id=user.pk,
+    ).values_list('access_version', flat=True).first()
+    if access_version is not None:
+        request.session['access_version'] = access_version
         if not getattr(request, '_access_login_recorded', False):
             from accounts.services.access import record_event
             record_event(user, 'login', method='password', surface='panel', request=request)

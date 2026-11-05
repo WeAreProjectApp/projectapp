@@ -16,7 +16,10 @@ from accounts.services.onboarding import (
     generate_temp_password,
     resend_invitation,
 )
-from accounts.services.tokens import get_tokens_for_user, get_verification_token_for_user
+from accounts.services.tokens import (
+    get_tokens_for_user,
+    get_verification_token_for_user,
+)
 from accounts.services.verification import create_and_send_otp, validate_otp
 
 User = get_user_model()
@@ -283,15 +286,14 @@ class TestGetTokensForUser:
         assert decoded['is_onboarded'] is True
         assert decoded['email'] == 'claims@test.com'
 
-    def test_works_for_user_without_profile(self):
+    def test_rejects_user_without_profile(self):
+        """Fails if an incomplete account receives platform login tokens."""
         user = User.objects.create_user(
             username='noprof@test.com', email='noprof@test.com', password='pass',
         )
 
-        tokens = get_tokens_for_user(user)
-
-        assert 'access' in tokens
-        assert 'refresh' in tokens
+        with pytest.raises(ValueError, match='profile'):
+            get_tokens_for_user(user)
 
 
 # =========================================================================
@@ -304,6 +306,11 @@ class TestGetVerificationTokenForUser:
         user = User.objects.create_user(
             username='vt@test.com', email='vt@test.com', password='pass',
         )
+        UserProfile.objects.create(
+            user=user,
+            role=UserProfile.ROLE_CLIENT,
+            is_onboarded=False,
+        )
 
         token_str = get_verification_token_for_user(user)
 
@@ -311,6 +318,17 @@ class TestGetVerificationTokenForUser:
         decoded = AccessToken(token_str)
         assert decoded['purpose'] == 'verification'
         assert decoded['email'] == 'vt@test.com'
+
+    def test_rejects_user_without_profile(self):
+        """Fails if an incomplete account receives verification authority."""
+        user = User.objects.create_user(
+            username='vt-profileless@test.com',
+            email='vt-profileless@test.com',
+            password='pass',
+        )
+
+        with pytest.raises(ValueError, match='profile'):
+            get_verification_token_for_user(user)
 
 
 # =========================================================================

@@ -31,6 +31,11 @@ def staff_api(django_user_model):
     user = django_user_model.objects.create_user(
         'tutorial-validation-admin', password='test-only', is_staff=True,
     )
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
+    )
     client = APIClient()
     client.force_login(user)
     return client

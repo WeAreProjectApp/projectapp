@@ -6,16 +6,31 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 
+def _get_profile(user):
+    """Read current authority before issuing account-bound tokens."""
+    from accounts.models import UserProfile
+
+    profile = UserProfile.objects.filter(
+        user_id=user.pk,
+    ).first()
+    if profile is None:
+        raise ValueError('A platform profile is required to issue this token.')
+    return profile
+
+
+def _get_access_version(user) -> int:
+    return _get_profile(user).access_version
+
+
 def get_tokens_for_user(user):
     """Generate JWT access + refresh tokens with custom claims."""
+    profile = _get_profile(user)
     refresh = RefreshToken.for_user(user)
 
-    profile = getattr(user, 'profile', None)
-    if profile:
-        refresh['access_version'] = profile.access_version
-        refresh['role'] = profile.role
-        refresh['is_onboarded'] = profile.is_onboarded
-        refresh['email'] = user.email
+    refresh['access_version'] = profile.access_version
+    refresh['role'] = profile.role
+    refresh['is_onboarded'] = profile.is_onboarded
+    refresh['email'] = user.email
 
     return {
         'access': str(refresh.access_token),
@@ -30,7 +45,7 @@ def get_verification_token_for_user(user):
     """
     refresh = RefreshToken.for_user(user)
     refresh['purpose'] = 'verification'
-    refresh['access_version'] = user.profile.access_version
+    refresh['access_version'] = _get_access_version(user)
     refresh['email'] = user.email
     return str(refresh.access_token)
 
@@ -50,7 +65,7 @@ def get_password_reset_request_token(user) -> str:
     token = AccessToken.for_user(user)
     token.set_exp(lifetime=REQUEST_TOKEN_LIFETIME)
     token['purpose'] = PASSWORD_RESET_REQUEST_PURPOSE
-    token['access_version'] = user.profile.access_version
+    token['access_version'] = _get_access_version(user)
     return str(token)
 
 
@@ -66,7 +81,7 @@ def get_password_reset_password_version(user) -> str:
     """Bind verified tokens to the current password without exposing its hash."""
     return salted_hmac(
         'accounts.password-reset-verified-v1',
-        json.dumps([user.pk, user.password, user.profile.access_version]),
+        json.dumps([user.pk, user.password, _get_access_version(user)]),
         algorithm='sha256',
     ).hexdigest()
 

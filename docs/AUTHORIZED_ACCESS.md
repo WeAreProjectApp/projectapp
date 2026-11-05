@@ -2,6 +2,8 @@
 
 Panel y plataforma conservan contraseña y añaden código por correo y Google. Ningún login registra usuarios. El estado `User.is_active` es la autoridad de habilitación; el panel también exige `is_staff`. Clientes comerciales/proyectos no conceden acceso por existir. Accesos permite registrar un cliente sin proyecto ni habilitación, y habilitarlo después. Los controles anteriores reutilizan la misma autoridad. Las APIs existentes de administradores de plataforma conservan sus permisos sobre clientes; el módulo Accesos exige sesión staff. El equipo administra clientes; sólo superusuarios administran equipo, con protección contra autobloqueo y último superusuario.
 
+El acceso exige un perfil de cuenta preexistente. Los flujos de alta y su señal de confirmación ya lo provisionan; la autenticación no crea perfiles ni recupera cuentas incompletas. Una sesión antigua sin versión se valida como versión cero contra el perfil vigente.
+
 ## Código y Google
 
 `GET /api/auth/config/` prepara CSRF y navegador y publica el ID de cliente Google (público). `POST /api/auth/{panel|platform}/{email-request|email-verify|google-challenge|google-verify}/` exige CSRF. Solicitar código o preparar Google exige el captcha vigente; verificar usa el desafío ligado al navegador. La respuesta pública de solicitud es genérica.
