@@ -93,6 +93,7 @@ describe('viewCapabilityCatalog', () => {
       'panel-finance',
       'panel-integrations',
       'panel-governance',
+      'panel-procurement',
     ])
   })
 

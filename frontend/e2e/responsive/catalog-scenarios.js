@@ -141,7 +141,8 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
     label: view.label,
     reference: view.reference,
     flowId: kind === 'redirect' ? REDIRECT_FLOW_BY_URL[view.url]
-      : PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
+      : (view.url === '/panel/procurement' ? 'admin-procurement-opportunity-list' : view.url === '/panel/procurement/:id' ? 'admin-procurement-classification' : null)
+        ?? PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
         ?? BILLING_FLOW_BY_URL[view.url]
         ?? (view.url === '/platform/projects/:id/secure-links' ? 'platform-secure-link-manage' : null)
         ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review'

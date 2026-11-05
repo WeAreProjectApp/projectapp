@@ -1,3 +1,5 @@
+> **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación y entrega pendientes de cierre.
+
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 
 `CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.

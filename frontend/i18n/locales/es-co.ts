@@ -1,3 +1,4 @@
+import procurement from '../../locales/procurement/es.js'
 export default defineI18nLocale(async () => {
   const [
     global,
@@ -148,5 +149,6 @@ export default defineI18nLocale(async () => {
     platformAI: platformAI.default,
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
+    procurement,
   }
 })
