@@ -34,7 +34,7 @@ async function arrangeProjectCalculator(page, { createStatus = 201, approveStatu
     if (apiPath === 'project-state-groups/' && method === 'GET') return json([]);
     if (apiPath === 'projects/' && method === 'GET') return json({ results: [projectRow], meta: { total: 1, by_state: [], review_required: 0, clients_without_projects: 0, records_without_project: 0 } });
     if (apiPath === 'requirement-calculator/' && method === 'GET') return json(generalCalculator());
-    if (apiPath === 'requirement-calculator/revisions/?limit=20&offset=0' && method === 'GET') return json({ count: 0, results: [] });
+    if (apiPath === 'requirement-calculator/revisions/' && method === 'GET') return json({ count: 0, results: [] });
     if (apiPath === 'requirement-calculator/projects/20/' && method === 'GET') return json(projectCalculator({ versions: version ? [version] : [], calculatorDocumentId: version?.status === 'approved' ? version.document_id : null }));
     if (apiPath === 'requirement-calculator/project-versions/301/' && method === 'GET') return json(version || projectVersion());
     if (apiPath === 'requirement-calculator/projects/20/' && method === 'POST') {
@@ -69,14 +69,15 @@ test.describe('Admin project calculator versions', () => {
     // quality: allow-deep-link (panel root is fixture setup; the tested navigation continues by clicking Proyectos and its action menu).
     await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
     await page.getByRole('link', { name: 'Proyectos', exact: true }).or(page.getByTitle('Proyectos')).click();
-    await expect(page.getByTestId('project-card-20')).toContainText('Proyecto Aurora');
-    await page.getByTestId('project-card-20').getByRole('button', { name: /^Acciones de / }).click();
+    const project = page.getByRole('row', { name: /Proyecto Aurora/ });
+    await expect(project).toContainText('Proyecto Aurora');
+    await project.getByRole('button', { name: /^Acciones de / }).click();
     await page.getByTestId('project-actions-calculator').click();
     await expect(page).toHaveURL(/requirement-calculator\?project=20/);
-    await expect(page.getByText('Proyecto Aurora', { exact: true })).toHaveText('Proyecto Aurora');
+    await expect(page.getByTestId('calculator-note')).toHaveValue('');
   });
 
-  test('creates one project draft and exposes its document link', {
+  test('creates one project draft with its document link', {
     tag: [...ADMIN_PROJECT_REQUIREMENT_CALCULATOR_DRAFT, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     // Catches the bug where a successful draft creation loses the returned document and version.
@@ -122,7 +123,7 @@ test.describe('Admin project calculator versions', () => {
     // quality: allow-deep-link (the version page is setup; this test verifies the parameter editor interaction).
     await openProjectCalculator(page);
     await page.getByText('Señales de clasificación (1)', { exact: true }).click();
-    await expect(page.getByTestId('calculator-definition-editor')).toContainText('Parámetros Proyecto Aurora');
+    await expect(page.getByTestId('calculator-XS-points')).toHaveValue('1');
     await expect(page.getByTestId('calculator-project-version')).toHaveValue('301');
   });
 
@@ -137,7 +138,7 @@ test.describe('Admin project calculator versions', () => {
     expect(calls.some((call) => call.apiPath.endsWith('/approve/') && call.method === 'POST')).toBe(false);
   });
 
-  test('confirms and approves a clean draft before assigning it to the project', {
+  test('approves a confirmed clean draft for the project', {
     tag: [...ADMIN_PROJECT_REQUIREMENT_CALCULATOR_APPROVE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     // Catches the bug where approval bypasses confirmation or never switches the version to approved.
@@ -151,7 +152,7 @@ test.describe('Admin project calculator versions', () => {
     expect(calls.filter((call) => call.apiPath.endsWith('/approve/') && call.method === 'POST')).toHaveLength(1);
   });
 
-  test('shows an approval conflict and keeps the editable draft', {
+  test('shows an approval conflict with the editable draft', {
     tag: [...ADMIN_PROJECT_REQUIREMENT_CALCULATOR_APPROVE, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
     // Catches the bug where a stale approval conflict freezes the local draft anyway.
@@ -161,6 +162,6 @@ test.describe('Admin project calculator versions', () => {
     await page.getByTestId('calculator-approve').click();
     await page.getByTestId('confirm-modal-confirm').click();
     await expect(page.getByTestId('calculator-error')).toContainText('La versión cambió en otra sesión.');
-    await expect(page.getByTestId('calculator-definition-editor')).toContainText('Parámetros Proyecto Aurora');
+    await expect(page.getByTestId('calculator-XS-points')).toHaveValue('1');
   });
 });

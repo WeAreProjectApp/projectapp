@@ -2390,3 +2390,9 @@ talla y propone revisión sin recotización automática. El historial entrega re
 con tres cierres recientes; los detalles y la evidencia completa tienen consultas
 paginadas para conservar el acceso sin cargar todos los registros. Horas, costos y precios
 unitarios permanecen internos; el documento particular muestra clasificación.
+
+La definición general, sus revisiones y su documento son catálogo persistente
+para la renovación de datos de desarrollo. Los generadores no fabrican acuerdos
+ni evidencia de esfuerzo. El reinicio confirmado limpia su grafo de proyectos
+mediante un contexto de borrado separado, habilitado sólo cuando
+`FAKE_DATA_ALLOWED=True`; la protección documental ordinaria sigue vigente.

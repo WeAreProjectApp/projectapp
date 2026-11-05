@@ -202,6 +202,11 @@ class Command(BaseCommand):
             queryset = model.objects.all()
             if label == 'accounts.UserProfile':
                 queryset = queryset.filter(role='client')
+            elif label == 'content.Document':
+                # This protected document represents global catalog settings,
+                # so it intentionally survives delete_fake_data.
+                calculator = apps.get_model('content', 'RequirementCalculator')
+                queryset = queryset.exclude(pk__in=calculator.objects.values('document_id'))
             elif label in {
                 'content.ExpenseRecord',
                 'content.HostingRecord',

@@ -7,15 +7,18 @@ from decimal import Decimal
 
 import pytest
 from accounts.models import Project, UserProfile
+from django.core.management import call_command
 from rest_framework.exceptions import ValidationError
 
 from content.models import (
+    CalculatorActual,
     CalculatorEstimate,
     CalculatorRevision,
     Document,
     DocumentType,
     HourPackageSettings,
     ProjectCalculatorVersion,
+    RequirementCalculator,
 )
 from content.serializers.requirement_calculator import DefinitionSerializer
 from content.services import calculator_calibration as calibration
@@ -233,6 +236,30 @@ def _client_document_copy(document):
     ).casefold()
 
 
+def _seed_project_lifecycle_catalog():
+    from importlib import import_module
+
+    from django.apps import apps
+
+    from content.models import DocumentState
+
+    import_module(
+        "content.migrations.0214_seed_project_lifecycle_states"
+    ).seed_project_states(apps, None)
+    active = DocumentState.objects.get(catalog="projects", system_key="active")
+    DocumentState.objects.create(
+        catalog="projects",
+        name="En evolución",
+        normalized_name="en evolucion",
+        slug="evolving",
+        color="blue",
+        group=active.group,
+        order=2,
+        system_key="evolving",
+        operational_effect="operating",
+    )
+
+
 def test_project_document_excludes_internal_calibration_values(
     project_draft, calculator_admin
 ):
@@ -282,6 +309,88 @@ def test_bulk_update_rejects_adopted_calculator_content(adopted_general_document
 
     document.refresh_from_db()
     assert document.content_json == original_json
+
+
+def test_fake_refresh_preserves_general_calculator_definition(calculator_state):
+    """Fails if a fake-data refresh treats the published calculator catalog as business data."""
+    general = RequirementCalculator.objects.get()
+    document_id, revision_id = general.document_id, general.current_revision_id
+
+    call_command("delete_fake_data", "--confirm", verbosity=0)
+    _seed_project_lifecycle_catalog()
+    call_command(
+        "create_fake_data",
+        "--count",
+        "1",
+        "--skip-contacts",
+        "--skip-proposals",
+        "--skip-blog",
+        "--skip-portfolio",
+        "--skip-tasks",
+        "--skip-diagnostics",
+        "--skip-financing",
+        "--skip-accounting",
+        "--skip-documents",
+        "--skip-communications",
+        "--skip-auxiliary",
+        verbosity=0,
+    )
+
+    preserved = RequirementCalculator.objects.get()
+    assert (preserved.document_id, preserved.current_revision_id) == (
+        document_id,
+        revision_id,
+    )
+    assert (
+        Document.objects.get(pk=document_id).metadata["requirement_calculator"]["kind"]
+        == "general"
+    )
+
+
+def test_fake_reset_releases_project_calculator_graph(
+    calculator_state, calculator_project, project_draft, calculator_admin
+):
+    """Fails if a confirmed fake reset leaves protected negotiated calibration records behind."""
+    estimate = calibration.record_estimate(
+        _estimate_data(
+            calculator_state,
+            request_id="180756a1-92ee-4fe1-b86e-b855a892621b",
+            project_id=calculator_project.pk,
+            project_version_id=project_draft["id"],
+        ),
+        actor=calculator_admin,
+    )
+    closure = calibration.record_actual(
+        {
+            "estimate_id": estimate["id"],
+            "actual_hours": Decimal(3),
+            "hourly_cost_cop": Decimal(30000),
+            "evidence": "Initial close",
+            "cause": "Delivered scope",
+        },
+        actor=calculator_admin,
+    )
+    correction = calibration.record_actual(
+        {
+            "estimate_id": estimate["id"],
+            "supersedes_id": closure["id"],
+            "actual_hours": Decimal(4),
+            "hourly_cost_cop": Decimal(30000),
+            "evidence": "Corrected close",
+            "cause": "Measured again",
+        },
+        actor=calculator_admin,
+    )
+
+    call_command("delete_fake_data", "--confirm", verbosity=0)
+
+    assert not Project.objects.filter(pk=calculator_project.pk).exists()
+    assert not ProjectCalculatorVersion.objects.filter(pk=project_draft["id"]).exists()
+    assert not Document.objects.filter(pk=project_draft["document_id"]).exists()
+    assert not CalculatorEstimate.objects.filter(pk=estimate["id"]).exists()
+    assert not CalculatorActual.objects.filter(
+        pk__in=(closure["id"], correction["id"])
+    ).exists()
 
 
 def test_generic_document_save_rejects_calculator_body(calculator_state):

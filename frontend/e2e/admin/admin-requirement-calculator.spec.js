@@ -21,17 +21,34 @@ async function arrangeCalculator(page, { previewStatus = 200, revisionStatus = 2
   const calls = [];
   const definition = calculatorDefinition();
   let calibrationResponse = calibration;
+  let publishedDefinition = definition;
+  let publishedNote = '';
+  let publishedRevision = false;
   await setAuthLocalStorage(page, { token: 'calculator-e2e', userAuth: { id: 710, role: 'admin', is_staff: true } });
   await mockApi(page, async ({ route, apiPath, method }) => {
     calls.push({ apiPath, method, body: route.request().postData() });
     if (apiPath === 'auth/check/' && method === 'GET') return json({ user: { username: 'admin', is_staff: true } });
     if (apiPath === 'dashboard/summary/' && method === 'GET') return json({});
-    if (apiPath === 'requirement-calculator/' && method === 'GET') return json(generalCalculator(definition));
-    if (apiPath === 'requirement-calculator/' && method === 'POST') {
-      return json({ ...generalCalculator(definition), revision_id: 12, if_match: 'general-v12' });
+    if (apiPath === 'requirement-calculator/' && method === 'GET') {
+      return json({
+        ...generalCalculator(publishedDefinition),
+        revision_id: publishedRevision ? 12 : 11,
+        if_match: publishedRevision ? 'general-v12' : 'general-v11',
+      });
     }
-    if (apiPath === 'requirement-calculator/revisions/?limit=20&offset=0' && method === 'GET') {
-      return json({ count: 1, results: [{ id: 9, note: 'Regla anterior', created_at: '2026-10-01T09:00:00Z' }] });
+    if (apiPath === 'requirement-calculator/' && method === 'POST') {
+      const payload = JSON.parse(route.request().postData());
+      publishedDefinition = payload.definition;
+      publishedNote = payload.note;
+      publishedRevision = true;
+      return json({ ...generalCalculator(publishedDefinition), revision_id: 12, if_match: 'general-v12' });
+    }
+    if (apiPath === 'requirement-calculator/revisions/' && method === 'GET') {
+      const historical = { id: 9, note: 'Regla anterior', created_at: '2026-10-01T09:00:00Z' };
+      const results = publishedRevision
+        ? [{ id: 12, note: publishedNote, created_at: '2026-11-05T10:00:00Z' }, historical]
+        : [historical];
+      return json({ count: results.length, results });
     }
     if (apiPath === 'requirement-calculator/revisions/9/' && method === 'GET') {
       return revisionStatus === 200
@@ -44,11 +61,11 @@ async function arrangeCalculator(page, { previewStatus = 200, revisionStatus = 2
         : json({ detail: previewStatus === 400 ? 'La talla XS requiere puntos.' : 'No fue posible previsualizar.' }, previewStatus);
     }
     if (apiPath === 'requirement-calculator/calibration/' && method === 'GET') return json(calibrationResponse);
-    if (apiPath === 'requirement-calculator/estimates/?limit=20&offset=0' && method === 'GET') return json(estimates);
+    if (apiPath === 'requirement-calculator/estimates/' && method === 'GET') return json(estimates);
     if (apiPath === 'requirement-calculator/estimates/44/' && method === 'GET') {
       return json({ ...estimates.results[0], requirement: 'Alta de clientes con reglas de negocio completas', explanation: 'Formulario con validación y auditoría.' });
     }
-    if (apiPath === 'requirement-calculator/estimates/44/actuals/?limit=3&offset=0' && method === 'GET') {
+    if (apiPath === 'requirement-calculator/estimates/44/actuals/' && method === 'GET') {
       return json({ count: 4, results: [{ id: 77, evidence: 'Bitácora completa con enlaces', cause: 'Ajuste inicial', actual_hours: '22.00' }] });
     }
     if (apiPath === 'requirement-calculator/actuals/' && method === 'POST') {
@@ -79,7 +96,7 @@ test.describe('Admin requirement calculator', () => {
     await arrangeCalculator(page);
     // quality: allow-deep-link (panel root is fixture setup; the tested navigation uses the sidebar link).
     await openCalculatorFromNavigation(page);
-    await expect(page.getByTestId('calculator-definition-editor')).toContainText('Definición comercial vigente');
+    await expect(page.getByTestId('calculator-title')).toHaveValue('Definición comercial vigente');
     await expect(page.getByTestId('calculator-size-M')).toContainText('Talla M');
   });
 
@@ -141,16 +158,26 @@ test.describe('Admin requirement calculator', () => {
     await expect(page.getByText('Regla anterior', { exact: true })).toHaveText('Regla anterior');
   });
 
-  test('loads a historical revision into the editor without publishing it', {
+  test('restores a historical definition through a confirmed revision', {
     tag: [...ADMIN_REQUIREMENT_CALCULATOR_REVISION_RESTORE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    // Catches the bug where restoring a revision silently changes the active calculator.
+    // Catches the bug where restoring a revision either silently publishes or cannot create a confirmed revision.
     const calls = await arrangeCalculator(page);
     await openCalculatorFromNavigation(page);
     await page.getByRole('button', { name: 'Versiones', exact: true }).click();
     await page.getByRole('button', { name: 'Preparar restauración', exact: true }).click();
     await expect(page.getByTestId('calculator-title')).toHaveValue('Revisión histórica');
     expect(calls.some((call) => call.apiPath === 'requirement-calculator/' && call.method === 'POST')).toBe(false);
+    await page.getByTestId('calculator-note').fill('Restauración aprobada para Aurora');
+    await page.getByTestId('calculator-save').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+    await expect(page.getByRole('status')).toHaveText('Cambios guardados; documento sincronizado.');
+    const publication = calls.find((call) => call.apiPath === 'requirement-calculator/' && call.method === 'POST');
+    expect(JSON.parse(publication.body)).toMatchObject({
+      if_match: 'general-v11', note: 'Restauración aprobada para Aurora', definition: { title: 'Revisión histórica' },
+    });
+    await page.getByRole('button', { name: 'Versiones', exact: true }).click();
+    await expect(page.getByText('Restauración aprobada para Aurora', { exact: true })).toHaveText('Restauración aprobada para Aurora');
   });
 
   test('keeps the active definition when loading a revision fails', {
@@ -188,7 +215,7 @@ test.describe('Admin requirement calculator', () => {
     await page.getByRole('button', { name: 'Calibración', exact: true }).click();
     await page.getByTestId('calculator-estimate-detail-44').click();
     await expect(page.getByText('Alta de clientes con reglas de negocio completas', { exact: true })).toHaveText('Alta de clientes con reglas de negocio completas');
-    await expect(page.getByText('Bitácora completa con enlaces', { exact: true })).toHaveText('Bitácora completa con enlaces');
+    await expect(page.getByText(/#77 · Bitácora completa con enlaces · Ajuste inicial/)).toContainText('Bitácora completa con enlaces');
     expect(calls.filter((call) => call.apiPath === 'requirement-calculator/estimates/44/' && call.method === 'GET')).toHaveLength(1);
     expect(calls.filter((call) => call.apiPath === 'requirement-calculator/estimates/44/actuals/' && call.method === 'GET')).toHaveLength(1);
   });
@@ -208,7 +235,7 @@ test.describe('Admin requirement calculator', () => {
     await page.getByTestId('calculator-actual-submit').click();
     await expect(page.getByText('Cambios guardados; documento sincronizado.')).toHaveCount(0);
     const actual = calls.find((call) => call.apiPath === 'requirement-calculator/actuals/' && call.method === 'POST');
-    expect(JSON.parse(actual.body)).toMatchObject({ estimate_id: '44', supersedes_id: 77, actual_hours: '26', hourly_cost_cop: '61000' });
+    expect(JSON.parse(actual.body)).toMatchObject({ estimate_id: 44, supersedes_id: 77, actual_hours: 26, hourly_cost_cop: 61000 });
     expect(calls.filter((call) => call.apiPath === 'requirement-calculator/calibration/' && call.method === 'GET').length).toBeGreaterThanOrEqual(2);
     await expect(page.getByText(/Cierres: 2 \/ mínimo 3/)).toContainText('Mediana real interna: 26 h');
   });
@@ -226,7 +253,7 @@ test.describe('Admin requirement calculator', () => {
     await page.getByTestId('calculator-actual-cause').fill('Corrección');
     await page.getByTestId('calculator-actual-submit').click();
     await expect(page.getByTestId('calculator-error')).toContainText('La evidencia es obligatoria.');
-    await expect(page.getByText('Bitácora', { exact: true })).toHaveText('Bitácora');
+    await expect(page.getByText(/#77 · Horas reales internas: 22\.00 · Bitácora · Ajuste inicial/)).toContainText('Bitácora');
   });
 
   test('shows a server failure when recording a closure', {

@@ -162,7 +162,7 @@ async function saveActual() {
     <header class="mb-6 space-y-3">
       <h1 class="text-2xl font-light text-text-default">{{ t('requirementCalculator.title') }}</h1>
       <p class="text-sm text-text-muted">{{ projectId ? store.project?.project_name : t('requirementCalculator.intro') }}</p>
-      <BaseButton v-if="projectId" variant="link" :to="localePath('/panel/requirement-calculator')">{{ t('requirementCalculator.general') }}</BaseButton>
+      <BaseButton v-if="projectId" as="NuxtLink" variant="link" :to="localePath('/panel/requirement-calculator')">{{ t('requirementCalculator.general') }}</BaseButton>
     </header>
     <p v-if="store.busy" role="status" class="mb-4 text-sm text-text-muted">{{ t('requirementCalculator.loading') }}</p>
     <pre v-if="store.error" role="alert" class="mb-4 whitespace-pre-wrap break-words rounded-xl bg-danger-soft p-4 text-sm text-danger-strong" data-testid="calculator-error">{{ errorText }}</pre>
@@ -173,7 +173,7 @@ async function saveActual() {
     <section v-if="projectId && store.project" class="mb-6 space-y-4 rounded-xl border border-border-default p-4">
       <p class="text-sm text-text-muted">{{ store.project.calculator_document_id ? t('requirementCalculator.assigned') : t('requirementCalculator.unassigned') }}</p>
       <label v-if="store.project.versions.length" class="block text-sm text-text-default">{{ t('requirementCalculator.projectVersion') }}<select v-model="selectedVersionId" :class="fieldClass" data-testid="calculator-project-version" @change="loadSelectedVersion(selectedVersionId)"><option v-for="version in store.project.versions" :key="version.id" :value="version.id">#{{ version.id }} · {{ t(`requirementCalculator.${version.status}`) }} {{ version.document_id === store.project.calculator_document_id ? '✓' : '' }}</option></select></label>
-      <BaseButton v-if="selectedVersion" variant="link" :to="localePath(selectedVersion.document_url)">{{ t('requirementCalculator.openDocument') }}</BaseButton>
+      <BaseButton v-if="selectedVersion" as="NuxtLink" variant="link" :to="localePath(selectedVersion.document_url)">{{ t('requirementCalculator.openDocument') }}</BaseButton>
       <template v-if="!store.project.versions.some((row) => row.status === 'draft') && store.general?.initialized">
         <label class="block text-sm text-text-default">{{ t('requirementCalculator.baseVersion') }}<input v-model="baseRevisionId" type="number" min="1" :class="fieldClass"></label>
         <label class="block text-sm text-text-default">{{ t('requirementCalculator.note') }}<input v-model="note" :class="fieldClass" data-testid="calculator-note"></label>
@@ -195,7 +195,7 @@ async function saveActual() {
           <BaseButton variant="secondary" :disabled="store.busy" :disabled-reason="t('requirementCalculator.loading')" @click="showPreview">{{ t('requirementCalculator.preview') }}</BaseButton>
           <BaseButton :disabled="store.busy || !note.trim()" :disabled-reason="t('requirementCalculator.noteRequired')" data-testid="calculator-save" @click="projectId ? save() : confirmation = 'publish'">{{ t('requirementCalculator.save') }}</BaseButton>
           <BaseButton v-if="projectId" variant="accent" :disabled="store.busy || dirty || !note.trim()" :disabled-reason="dirty ? t('requirementCalculator.saveFirst') : t('requirementCalculator.noteRequired')" data-testid="calculator-approve" @click="confirmation = 'approve'">{{ t('requirementCalculator.approve') }}</BaseButton>
-          <BaseButton v-if="!projectId && store.general?.document_url" variant="link" :to="localePath(store.general.document_url)">{{ t('requirementCalculator.openDocument') }}</BaseButton>
+          <BaseButton v-if="!projectId && store.general?.document_url" as="NuxtLink" variant="link" :to="localePath(store.general.document_url)">{{ t('requirementCalculator.openDocument') }}</BaseButton>
         </div>
       </template>
       <pre v-if="preview" class="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-muted p-4 text-sm text-text-default" data-testid="calculator-preview">{{ preview }}</pre>

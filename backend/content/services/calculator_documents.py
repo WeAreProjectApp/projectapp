@@ -7,6 +7,7 @@ from content.services.document_content import build_content_json
 from rest_framework.exceptions import ValidationError
 
 _writing = ContextVar('calculator_document_writer', default=False)
+_resetting = ContextVar('calculator_document_reset', default=False)
 MESSAGE = 'Este documento se administra desde Calculadora de requerimientos; modifica sus parámetros allí o mediante su MCP.'
 
 
@@ -17,6 +18,17 @@ def calculator_document_write():
         yield
     finally:
         _writing.reset(token)
+
+
+@contextmanager
+def calculator_document_reset():
+    from content.fake_data import ensure_fake_data_allowed
+    ensure_fake_data_allowed('delete_fake_data')
+    token = _resetting.set(True)
+    try:
+        yield
+    finally:
+        _resetting.reset(token)
 
 
 def managed(document):
@@ -55,7 +67,7 @@ def protect_save(document):
 
 
 def protect_delete(document):
-    if managed(document):
+    if not _resetting.get() and managed(document):
         raise ValidationError(MESSAGE)
 
 

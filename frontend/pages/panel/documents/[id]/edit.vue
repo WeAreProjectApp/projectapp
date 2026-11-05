@@ -310,7 +310,7 @@
 
       <BaseAlert v-if="calculatorDocument" variant="info" class="panel-landscape:col-span-2" data-testid="doc-calculator-alert">
         <p>{{ t('requirementCalculator.parametersOnly') }}</p>
-        <BaseButton variant="link" :to="localePath({ path: '/panel/requirement-calculator', query: documentStore.currentDocument.project ? { project: String(documentStore.currentDocument.project) } : {} })">{{ t('requirementCalculator.title') }}</BaseButton>
+        <BaseButton as="NuxtLink" variant="link" :to="localePath({ path: '/panel/requirement-calculator', query: documentStore.currentDocument.project ? { project: String(documentStore.currentDocument.project) } : {} })">{{ t('requirementCalculator.title') }}</BaseButton>
       </BaseAlert>
 
       <!-- El botón Guardar habilitado se lee como "puedes guardar"; esto se

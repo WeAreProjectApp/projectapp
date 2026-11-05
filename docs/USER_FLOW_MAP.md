@@ -8221,7 +8221,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Description:** El administrador consulta la definición vigente, previsualiza y publica una nueva revisión con motivo. El servidor rechaza parámetros inválidos y revisiones obsoletas; una falla no confirma la publicación.
 - **Steps:** Consultar tallas y señales → modificar un parámetro → escribir motivo → previsualizar → confirmar Guardar.
 - **Branches:** Parámetros inválidos o If-Match obsoleto muestran calculator-error; un 5xx conserva la edición.
-- **Coverage:** ❌ Missing — `display`, `success`, `error`, `failure`.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`.
 
 ### FLOW: `admin-requirement-calculator-revision-restore`
 
@@ -8232,7 +8232,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Description:** El administrador consulta revisiones paginadas, carga una anterior en el editor y la publica como una nueva revisión inmutable. Si falla la carga o publicación, no sustituye silenciosamente la definición vigente.
 - **Steps:** Abrir Versiones → consultar motivo y fecha → restaurar → comprobar el editor → confirmar Guardar.
 - **Branches:** Una falla al cargar conserva la definición actual y muestra el error; el pasado no se sobrescribe.
-- **Coverage:** ❌ Missing — `display`, `success`, `failure`.
+- **Coverage:** ✅ Covered — `display`, `success`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`, incluida la publicación confirmada como nueva revisión.
 
 ### FLOW: `admin-project-requirement-calculator-draft`
 
@@ -8243,7 +8243,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Description:** Desde Acciones del proyecto, el administrador crea un único borrador desde una revisión general. El resumen carga sólo metadatos y la versión seleccionada carga sus parámetros e historial por separado. Sólo se ajustan parámetros existentes; un segundo borrador, un cambio estructural o una versión obsoleta se rechazan.
 - **Steps:** Abrir Acciones → Calculadora de requerimientos → crear borrador con motivo → elegir versión → modificar parámetro → guardar → verificar historial.
 - **Branches:** No se permite otro borrador ni modificar textos o estructura. Conflictos y fallos se muestran sin asignar el documento.
-- **Coverage:** ❌ Missing — `display`, `success`, `error`, `failure`.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-project-requirement-calculator.spec.js`.
 
 ### FLOW: `admin-project-requirement-calculator-approve`
 
@@ -8254,7 +8254,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Description:** El administrador confirma la aprobación de un borrador limpio. La aprobación genera el PDF, lo asigna al proyecto, guarda el evento en el historial y deja la versión congelada. Un conflicto, PDF no generado o falla de servidor conserva el borrador.
 - **Steps:** Abrir borrador limpio → escribir motivo → Aprobar → confirmar → comprobar estado, historial y tarjetas de sólo lectura.
 - **Branches:** Cambios pendientes deshabilitan Aprobar. Conflicto, PDF no generado o 5xx conserva el borrador.
-- **Coverage:** ❌ Missing — `display`, `success`, `error`, `failure`.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-project-requirement-calculator.spec.js`.
 
 ### FLOW: `admin-requirement-calculator-calibration`
 
@@ -8265,7 +8265,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Description:** El administrador consulta cohortes, muestras insuficientes, estimaciones y cierres. Registra horas reales, evidencia y causa; un cierre posterior corrige explícitamente el último cierre. Datos inválidos, una corrección no válida y fallas de servidor quedan visibles.
 - **Steps:** Abrir Calibración → consultar cohorte → seleccionar estimación → registrar esfuerzo, evidencia y causa → corregir → abrir registro completo → recorrer las páginas de evidencia y verificar ambos eventos.
 - **Branches:** Valores no positivos, campos requeridos o supersedes incorrecto se rechazan. Un fallo conserva el formulario para reintentar.
-- **Coverage:** ❌ Missing — `display`, `success`, `error`, `failure`.
+- **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`, incluido acceso al registro completo.
 
 ### FLOW: `admin-managed-calculator-document`
 
@@ -8276,7 +8276,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Description:** El administrador abre desde una versión de proyecto su documento de calculadora, ve el aviso de contenido administrado y vuelve a la calculadora correspondiente. El editor documental permanece de sólo lectura.
 - **Steps:** Abrir documento de una versión → comprobar doc-calculator-alert y contenido → seguir enlace a la calculadora → comprobar contexto de proyecto.
 - **Branches:** Los errores de carga y permiso pertenecen a los flujos existentes del editor documental.
-- **Coverage:** ❌ Missing — `display`.
+- **Coverage:** ✅ Covered — `display`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-managed-calculator-document.spec.js`.
 
 
 ## Unsectioned flows
