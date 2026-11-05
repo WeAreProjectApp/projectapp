@@ -14,11 +14,15 @@ Referencia: [validación oficial de Google ID tokens](https://developers.google.
 
 La versión de acceso invalida sesiones y JWT/refresh anteriores cuando cambia identidad, contraseña, habilitación o permisos; desvincular Google también revoca. Sesiones/tokens anteriores a esta versión se consideran versión cero. Deshabilitar y reactivar no recupera las sesiones previas.
 
+El ingreso nativo toma la versión vigente del perfil al crear la sesión. Las cuentas sin perfil no obtienen autoridad de recuperación: reciben la misma respuesta neutra que un correo no registrado, sin código ni envío.
+
 ## Administración y MCP
 
 `/panel/access`: clientes/equipo, búsqueda, dropdowns combinables, vistas guardadas, orden, paginación y actividad. API con sesión/CSRF: `/api/accounts/access/` GET/POST y `/api/accounts/access/{user_id}/` GET/PATCH. Crear recibe nombre/correo/empresa; el PATCH sólo acepta enabled y unlink_google. La actividad está paginada por cuenta y conserva fecha, acción, método, superficie, IP y navegador sin credenciales.
 
 MCP projects incorpora list_accesses, get_access, create_client_access y change_access (sensible). Usa el actor y la confirmación del conector, los servicios del panel y esquemas cerrados. El catálogo no expone desafíos, huellas ni identificadores privados Google.
+
+La fusión de clientes conserva auditoría y desafíos con su usuario original; los códigos del usuario retirado dejan de servir. Una identidad Google vinculada bloquea la fusión hasta desvincularla expresamente desde Accesos. Los datos de demostración no fabrican desafíos, límites de solicitudes, identidades Google ni eventos de seguridad.
 
 ## Correo y despliegue
 
