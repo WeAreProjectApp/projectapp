@@ -51,16 +51,21 @@ def _schema(properties, required=()):
     return {'type': 'object', 'additionalProperties': False, 'properties': properties, 'required': list(required)}
 
 
-_USER = {'type': 'integer', 'minimum': 1}
+_USER = {'type': 'integer', 'minimum': 1, 'description': 'Identificador de la cuenta existente que se consulta o modifica.'}
+_PAGE = {'type': 'integer', 'minimum': 1, 'description': 'Página de resultados, desde 1; cada página contiene hasta 20 registros.'}
 ACCESS_TOOLS = [
     {'name': 'list_accesses', 'description': 'Lista cuentas autorizadas y estados; clientes o equipo con búsqueda y filtros, sin secretos.', 'input_schema': _schema({
-        'group': {'type': 'string', 'enum': ['clients', 'team']}, 'search': {'type': 'string', 'maxLength': 200},
-        'enabled': {'type': 'string', 'enum': ['true', 'false', '']}, 'onboarded': {'type': 'string', 'enum': ['true', 'false', '']},
-        'verified': {'type': 'string', 'enum': ['true', 'false', '']}, 'google': {'type': 'string', 'enum': ['true', 'false', '']},
-        'last_access': {'type': 'string', 'enum': ['never', '7', '30', '']}, 'page': _USER,
-        'order': {'type': 'string', 'enum': ['email', 'name', 'recent']},
+        'group': {'type': 'string', 'enum': ['clients', 'team'], 'description': 'Grupo de cuentas: clientes por defecto; equipo requiere ser superusuario.'},
+        'search': {'type': 'string', 'maxLength': 200, 'description': 'Busca por correo, nombre, apellido o empresa.'},
+        'enabled': {'type': 'string', 'enum': ['true', 'false', ''], 'description': 'Filtra acceso habilitado (true), deshabilitado (false) o cualquier estado (vacío).'},
+        'onboarded': {'type': 'string', 'enum': ['true', 'false', ''], 'description': 'Filtra perfil completado (true), pendiente (false) o cualquier estado (vacío).'},
+        'verified': {'type': 'string', 'enum': ['true', 'false', ''], 'description': 'Filtra correo verificado (true), sin verificar (false) o cualquier estado (vacío).'},
+        'google': {'type': 'string', 'enum': ['true', 'false', ''], 'description': 'Filtra identidad Google vinculada (true), sin vincular (false) o cualquier estado (vacío).'},
+        'last_access': {'type': 'string', 'enum': ['never', '7', '30', ''], 'description': 'Filtra cuentas sin accesos (never), con acceso en los últimos 7 o 30 días, o sin filtro (vacío).'},
+        'page': _PAGE,
+        'order': {'type': 'string', 'enum': ['email', 'name', 'recent'], 'description': 'Ordena por correo (predeterminado), nombre o acceso más reciente.'},
     }), 'handler': list_accesses},
-    {'name': 'get_access', 'description': 'Consulta cuenta y actividad paginada. Equipo sólo para superusuarios.', 'input_schema': _schema({'user_id': _USER, 'page': _USER}, ['user_id']), 'handler': get_access},
-    {'name': 'create_client_access', 'risk': 'write', 'description': 'Registra un cliente sin acceso ni proyecto. No habilita ni envía credenciales.', 'input_schema': _schema({'email': {'type': 'string', 'format': 'email'}, 'name': {'type': 'string', 'maxLength': 150}, 'company': {'type': 'string', 'maxLength': 200}}, ['name', 'email']), 'handler': create_client_access},
-    {'name': 'change_access', 'risk': 'sensitive', 'description': 'Habilita/deshabilita o desvincula Google. Revoca sesiones anteriores. Equipo sólo para superusuarios; protege autobloqueo y último superusuario.', 'confirmation_message': 'Modificar el acceso de esta cuenta y revocar sus sesiones cuando corresponda.', 'input_schema': _schema({'user_id': _USER, 'enabled': {'type': 'boolean'}, 'unlink_google': {'type': 'boolean'}}, ['user_id']), 'handler': change_access},
+    {'name': 'get_access', 'description': 'Consulta cuenta y actividad paginada. Equipo sólo para superusuarios.', 'input_schema': _schema({'user_id': _USER, 'page': _PAGE}, ['user_id']), 'handler': get_access},
+    {'name': 'create_client_access', 'risk': 'write', 'description': 'Registra un cliente sin acceso ni proyecto. No habilita ni envía credenciales.', 'input_schema': _schema({'email': {'type': 'string', 'format': 'email', 'description': 'Correo único del cliente que se registra; no habilita su acceso automáticamente.'}, 'name': {'type': 'string', 'maxLength': 150, 'description': 'Nombre del cliente que se registra.'}, 'company': {'type': 'string', 'maxLength': 200, 'description': 'Nombre opcional de la empresa del cliente.'}}, ['name', 'email']), 'handler': create_client_access},
+    {'name': 'change_access', 'risk': 'sensitive', 'description': 'Habilita/deshabilita o desvincula Google. Revoca sesiones anteriores. Equipo sólo para superusuarios; protege autobloqueo y último superusuario.', 'confirmation_message': 'Modificar el acceso de esta cuenta y revocar sus sesiones cuando corresponda.', 'input_schema': _schema({'user_id': _USER, 'enabled': {'type': 'boolean', 'description': 'Habilita el acceso (true) o lo deshabilita y revoca las sesiones (false).'}, 'unlink_google': {'type': 'boolean', 'description': 'Si es true, desvincula la identidad Google y revoca las sesiones; false no la modifica.'}}, ['user_id']), 'handler': change_access},
 ]

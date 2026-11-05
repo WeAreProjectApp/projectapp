@@ -90,8 +90,10 @@ _decide(exempt('Contador de numeración propio del cliente: se va con él.'),
         'content.ClientDocumentNumberSequence.client_profile')
 _decide(exempt('Preferencias, códigos y avisos personales: se van con el usuario.'), '''
     accounts.CommunicationPanelPreference.user accounts.SavedFilterTab.user
-    accounts.VerificationCode.user accounts.Notification.user
+    accounts.VerificationCode.user accounts.Notification.user accounts.LoginChallenge.user
 ''')
+_decide(exempt('Credencial de Google ligada a una identidad personal: bloquea la fusión hasta desvincularla.'),
+        'accounts.GoogleIdentity.user')
 _decide(exempt('Preferencias de Ayuda y recorridos vistos por esta persona; se van con el usuario, '
                'sin reasignarse al corregir relaciones comerciales.'), '''
     accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user

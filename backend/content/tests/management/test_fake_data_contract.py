@@ -35,7 +35,14 @@ from django.db import transaction
 from django.db.models import Count, F, Q
 from django.db.models.deletion import ProtectedError
 
-from content.fake_data import SeedContext, covered_model_labels
+from content.fake_data import (
+    CATALOG_MODELS,
+    DERIVED_MODELS,
+    EXEMPT_MODELS,
+    SEEDED_MODELS,
+    SeedContext,
+    covered_model_labels,
+)
 from content.models import (
     AdditionalModule,
     AdditionalModuleShareLink,
@@ -201,6 +208,18 @@ def test_model_contract_classifies_every_concrete_business_model():
     }
 
     assert covered_model_labels() == actual
+
+
+def test_demo_contract_excludes_authentication_state():
+    authentication_models = {
+        'accounts.AccessEvent',
+        'accounts.AccessRateBucket',
+        'accounts.GoogleIdentity',
+        'accounts.LoginChallenge',
+    }
+
+    assert authentication_models <= EXEMPT_MODELS
+    assert authentication_models.isdisjoint(SEEDED_MODELS | DERIVED_MODELS | CATALOG_MODELS)
 
 
 def test_fake_delivery_reset_removes_only_owned_notice_roots(django_capture_on_commit_callbacks):
@@ -610,9 +629,10 @@ def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflo
 def test_mihuella_flush_rejects_custom_secure_folder_content(make_client_profile):
     """Resetting the demo cannot remove a custom secure folder or its independent link."""
     from accounts.management.commands.seed_mihuella import CLIENT_EMAIL, PROJECT_NAME
-    from content.tests.data_integrity_merge_factories import make_secure_link
     from secure_links import folder_services as filing
     from secure_links.models import SecureLinkFolder
+
+    from content.tests.data_integrity_merge_factories import make_secure_link
 
     profile = make_client_profile(
         username=CLIENT_EMAIL,
