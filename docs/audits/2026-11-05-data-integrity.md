@@ -50,6 +50,21 @@ de publicación y queda registrado con su nueva huella.
 - Las credenciales efímeras del fixture canónico tienen representación redactada
   para evitar que aparezcan en los diagnósticos de pytest.
 
+## Contrato de datos de demostración
+
+La prueba original reprodujo la falta de clasificación de los cuatro modelos
+operativos nuevos. Se declaran como evidencia y bloqueo generados por ejecuciones
+reales, sin inventar barridos ni decisiones durante la generación de ejemplos.
+El reinicio de desarrollo libera el lease existente y elimina revisiones,
+hallazgos y barridos antes de borrar usuarios, conservando la fila del mutex.
+Las guardas de entorno y confirmación permanecen intactas.
+
+La regresión focal aprobó ocho casos: clasificación completa de modelos, limpieza
+del grafo de integridad, rechazo sin capacidad o confirmación, limpieza de los
+grafos protegidos previos y repetibilidad de contactos. Calidad estricta de las
+tres pruebas nuevas: cero errores y cero advertencias. La ejecución usa sólo
+SQLite de pruebas, con `--nomigrations`; no ejecuta un reinicio del entorno.
+
 ## Condiciones operativas
 
 El helper QA del fleet rechazó la coordenada de este entorno de desarrollo;
