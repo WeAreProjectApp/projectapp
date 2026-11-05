@@ -58,7 +58,7 @@ const panelCapabilities = [
     'Ayuda al equipo a decidir qué atender primero y convertirlo en acciones visibles.',
     [
       feature('panel-command-center', 'Leer el estado del negocio',
-        'Resume pipeline, operación y señales financieras. El radar despliega seis tipos de alerta con listas paginadas, detalle en modal y acceso al registro exacto; cuenta elementos, retira correos resueltos por reintento y alerta a superusuarios sobre cuentas con documento vinculado pendiente. El panel se puede instalar como ProjectApp desde la navegación, con ayuda por navegador y reintento sin conexión.',
+        'Resume pipeline, operación y señales financieras. El radar despliega siete tipos de alerta con listas paginadas, detalle en modal y acceso al registro exacto; cuenta elementos, retira correos resueltos por reintento y alerta a superusuarios sobre cuentas con documento vinculado pendiente. Los administradores también consultan hallazgos de integridad y su última revisión. El panel se puede instalar como ProjectApp desde la navegación, con ayuda por navegador y reintento sin conexión.',
         'Reduce el tiempo necesario para detectar riesgos y oportunidades.', ['/panel'],
         { icon: 'dashboard', stage: 'Dirección' }),
       feature('panel-team-tasks', 'Organizar el trabajo del equipo',
@@ -264,6 +264,10 @@ const panelCapabilities = [
     'Conectores autorizados que exponen capacidades del panel a asistentes externos.',
     'Reduce trabajo repetitivo sin saltarse permisos ni reglas del producto.',
     [
+      feature('panel-data-integrity', 'Revisar integridad de datos',
+        'Revisa datos entre módulos, acepta hallazgos intencionales y corrige lotes con vista previa, motivo, historial y deshacer.',
+        'Permite a los administradores atender inconsistencias sin reescribir evidencia emitida.', ['/panel/data-integrity'],
+        { icon: 'shield', stage: 'Mantenimiento' }),
       feature('panel-mcp-connectors', 'Administrar conectores MCP',
         'Administra un conector por módulo, separa los accesos anteriores en retirada y muestra su reemplazo, último uso e inventario de consumidores. Las credenciales nuevas usan el catálogo unificado; las anteriores conservan su alcance. Las acciones sensibles se previsualizan y confirman en el mismo conector, incluidos contratos comerciales, envío privado, videos y lecturas explícitas de secretos.',
         'Extiende la operación del panel con accesos controlados y auditables.', ['/panel/mcps'],
@@ -608,7 +612,7 @@ export const viewCapabilityCatalog = {
     space('panel-internal', 'Panel interno',
       'El espacio donde el equipo dirige ventas, contenido, proyectos, comunicaciones y finanzas.',
       'Concentra la operación que sostiene cada relación comercial y cada entrega.',
-      ['admin-panel', 'panel-accounting', 'panel-mcps'], panelCapabilities,
+      ['admin-panel', 'panel-accounting', 'panel-data-integrity', 'panel-mcps'], panelCapabilities,
       [
         { from: 'panel-overview-work', to: 'panel-commercial', label: 'prioriza oportunidades' },
         { from: 'panel-offerings', to: 'panel-commercial', label: 'aporta soluciones' },

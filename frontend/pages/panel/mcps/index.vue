@@ -150,8 +150,8 @@
           <div v-if="connector.is_legacy || connector.aliases_retired_at || connector.pre_split_started_at" class="rounded-lg border border-border-muted p-3 text-sm text-text-muted" :data-testid="`mcp-migration-${connector.slug}`">
             <p v-if="connector.lifecycle === 'retired'">Conector retirado. Configura una credencial nueva de {{ connector.replacement }}.</p>
             <p v-else-if="connector.is_legacy">Migra a {{ connector.replacement }}. Este acceso se conserva al menos 30 días y hasta verificar los consumidores y 14 días sin llamadas antiguas.</p>
-            <p v-else-if="connector.pre_split_retired_at">El catálogo comercial anterior está retirado. Usa las credenciales nuevas de Comercial, Nuestra oferta y Programas.</p>
-            <p v-else-if="connector.pre_split_started_at">Las credenciales comerciales anteriores conservan su alcance durante la transición. Migra sus funciones a Comercial, Nuestra oferta y Programas según corresponda.</p>
+            <p v-else-if="connector.pre_split_retired_at">{{ connector.slug === 'projects' ? 'El catálogo anterior de Proyectos está retirado. Usa Proyectos e Integridad de datos.' : 'El catálogo comercial anterior está retirado. Usa las credenciales nuevas de Comercial, Nuestra oferta y Programas.' }}</p>
+            <p v-else-if="connector.pre_split_started_at">{{ connector.slug === 'projects' ? 'Los accesos anteriores de Proyectos conservan su alcance. Migra integridad de datos al conector propio.' : 'Las credenciales comerciales anteriores conservan su alcance durante la transición. Migra sus funciones a Comercial, Nuestra oferta y Programas según corresponda.' }}</p>
             <p v-else>Los accesos al catálogo anterior ya están retirados.</p>
             <p v-if="connector.last_legacy_use_at">Último uso antiguo: {{ formatDate(connector.last_legacy_use_at) }}.</p>
             <p v-if="connector.is_legacy">Inventario de consumidores: {{ connector.consumers_verified_at ? 'verificado' : 'pendiente de verificar' }}.</p>

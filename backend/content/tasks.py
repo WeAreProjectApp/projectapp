@@ -1694,3 +1694,31 @@ def mcp_migration_observation_heartbeat():
     """Keep a continuous retirement evidence window; never retire automatically."""
     from content.mcp.migration import observation_heartbeat
     observation_heartbeat()
+
+
+@task()
+def execute_data_integrity_scan(scan_id):
+    from content.services.data_integrity.observations import run_scan
+    run_scan(scan_id)
+
+
+@periodic_task(crontab(minute='*/5'))
+def recover_data_integrity_scans():
+    from content.models import DataIntegrityScan
+    from content.services.data_integrity.observations import run_scan
+    # Calling run_scan on an expired running row releases its lease; queued
+    # work is then recovered even if the original broker dispatch was lost.
+    for scan_id in DataIntegrityScan.objects.filter(status__in=['running', 'queued']).order_by('id').values_list('id', flat=True)[:20]:
+        run_scan(scan_id)
+
+
+@periodic_task(crontab(hour='*', minute='0'))
+def daily_data_integrity_scan():
+    from zoneinfo import ZoneInfo
+    from django.conf import settings
+    from django.utils import timezone
+    from content.services.data_integrity.observations import start_scan
+    from content.services.data_integrity.scope import resolve_scope
+    local = timezone.now().astimezone(ZoneInfo('America/Bogota'))
+    if getattr(settings, 'DATA_INTEGRITY_DAILY_ENABLED', True) and local.hour == getattr(settings, 'DATA_INTEGRITY_DAILY_HOUR', 3):
+        start_scan(resolve_scope('all'), source='scheduled', request_id=f'integrity-daily:{local.date().isoformat()}')

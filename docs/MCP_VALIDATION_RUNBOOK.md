@@ -1,3 +1,7 @@
+## Integridad de datos — validación 2026-11-05
+
+Verificar `mcp_inventory --check`, paridad de esquemas, 13 herramientas en Integridad (10 de negocio + 3 de control), permisos administrativos, confirmación de aplicar/deshacer/revisar y ausencia de integridad en nuevas credenciales de Proyectos. Los accesos legacy/pre_split deben seguir operando con aviso; migrar conserva actor, permisos y vencimiento. Tras deploy: activar destino, configurar consumidores sin exponer sus credenciales, comprobar una revisión real de lectura y el barrido de Bogotá. Nada de esto se acredita por tests locales. Contrato completo en `DATA_INTEGRITY.md`.
+
 ## IA de Plataforma — projects 4.1.1 (2026-10-24)
 
 El conector projects incorpora `get/update_platform_ai_settings`,

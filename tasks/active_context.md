@@ -1,3 +1,7 @@
+# Integridad de datos — implementación 2026-11-05
+
+Conector propio, revisiones persistentes diarias y a demanda, panel administrativo con correcciones y deshacer. Alcance contable individual y tres correcciones documentales nuevas (DC9–DC11). Todos los administradores pueden operar integridad financiera; los demás permisos contables conservan su contrato. Trabajo en la rama de sesión; despliegue y consumidores se verifican por separado.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

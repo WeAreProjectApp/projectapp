@@ -6,7 +6,11 @@
         "layout-navbar-navigation",
         "layout-icon-interaction-feedback",
         "layout-locale-switch",
-        "layout-footer-navigation"
+        "layout-footer-navigation",
+        "admin-data-integrity-findings",
+        "admin-data-integrity-review",
+        "admin-data-integrity-fix",
+        "admin-data-integrity-history"
       ]
     },
     {

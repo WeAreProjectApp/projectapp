@@ -2,6 +2,7 @@
 from dataclasses import dataclass, replace
 
 from content.mcp import registry
+from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
 from content.mcp.accounting_tools import ACCOUNTING_TOOLS
 from content.mcp.building_on_demand_contract_tools import BUILDING_ON_DEMAND_CONTRACT_TOOLS
 from content.mcp.building_on_demand_tools import BUILDING_ON_DEMAND_TOOLS
@@ -123,6 +124,7 @@ def accounting_area(area):
 
 
 SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
+    'data-integrity': ConnectorSpec('data-integrity', '1.0.0', (DATA_INTEGRITY_TOOLS,), confirm_sensitive=True),
     'blog': ConnectorSpec(
         'blog', '1.1.0', (BLOG_TOOLS,),
         compatibility=True, canonical_area='content',
@@ -270,7 +272,7 @@ def tools_for_credential(slug, credential):
     public = TOOLS_BY_SLUG[slug]
     # New section credentials cannot execute tools that moved elsewhere through
     # the hidden-alias compatibility path. Old credentials have their own catalog.
-    if slug == 'commercial':
+    if slug in {'commercial', 'projects', 'data-integrity'}:
         return public
     if credential is not None and credential.connector.aliases_retired_at:
         return public

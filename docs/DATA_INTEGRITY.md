@@ -3,8 +3,7 @@
 Motor que encuentra datos huérfanos, duplicados e inconsistentes en clientes,
 proyectos, documentos, comunicaciones, contabilidad y propuestas, y los corrige con
 vista previa, registro y deshacer. Lo usa la skill `data-integrity`
-(`.claude/skills/data-integrity/`) a través del conector MCP `projects` (Gestor de
-Proyectos), y el panel a través de `/api/projects/data-integrity/`.
+(`.claude/skills/data-integrity/`) a través del conector MCP `data-integrity` (Integridad de datos), y el panel a través de `/api/projects/data-integrity/`.
 
 ## Piezas
 
@@ -18,7 +17,7 @@ Proyectos), y el panel a través de `/api/projects/data-integrity/`.
 | Fusiones | `backend/content/services/client_merge*.py`, `backend/content/services/document_folder_merge.py` |
 | Registro de operaciones | `content.DataIntegrityOperation` (append-only) |
 | API del panel | `backend/content/views/data_integrity.py` |
-| Herramientas MCP | `backend/content/mcp/data_integrity_tools.py` (conector `projects`) |
+| Herramientas MCP | `backend/content/mcp/data_integrity_tools.py` (conector `data-integrity`; Proyectos conserva compatibilidad temporal) |
 | Inventario de relaciones | `backend/content/services/data_integrity/relation_inventory.py` |
 | Comando de sólo lectura | `manage.py audit_data_integrity` (`backend/content/management/commands/`) |
 | Qué impide borrar un cliente | `backend/accounts/services/client_deletion.py` |
@@ -154,3 +153,76 @@ Lo corre el operador en el VPS después del deploy; una sesión nunca.
   que se conserva (fusionando subcarpetas homónimas) y archiva la vacía.
 - **Carpetas de comunicaciones.** Sólo se renombran: el modelo no tiene archivo, así
   que una fusión terminaría en un borrado.
+
+
+## Catálogo 1.2.0 y módulo propio — 2026-11-05
+
+El conector canónico es **Integridad de datos**, slug `data-integrity`, versión
+1.0.0. Publica las siete herramientas existentes más `start_integrity_scan`,
+`get_integrity_scan` y `review_integrity_finding`, con confirmación local para
+aplicar, deshacer, aceptar o reabrir. Proyectos pasa a 5.0.0 y retira esas siete
+herramientas de sus nuevas credenciales. Los accesos existentes conservan su
+catálogo `legacy` o `pre_split`; no se amplían permisos ni se copian tokens.
+
+El catálogo conserva 51 reglas: **23 con corrección disponible y 28 de
+informe/derivación**. DC9–DC11 permiten elegir `params.folder_id` para mover un
+documento compatible sin adoptar el cliente o proyecto de la carpeta. Usan el
+serializer documental, bloqueos de movimiento, retención y archivado. Las
+carpetas de destino son dependencias de lectura bloqueadas; dos documentos
+pueden compartir destino, pero dos correcciones no pueden tocar el mismo
+documento en un lote. El registro conserva autoría y cambios reales; modificar
+el destino o documento después impide un deshacer que pisaría datos nuevos.
+Las 28 reglas restantes declaran su vía y motivo en `resolution` del catálogo.
+No se borran duplicados ni se reconstruyen importes, numeración o evidencia.
+
+### API, permisos y revisión
+
+La API canónica vive en `/api/data-integrity/`; las rutas antiguas bajo
+`projects/data-integrity/` siguen siendo alias compatibles. Todas requieren
+sesión administrativa y devuelven `no-store`. Todos los administradores pueden
+consultar y corregir integridad financiera aquí, por decisión de producto;
+esto no amplía permisos del resto de Contabilidad. MCP conserva su principal
+técnico y la lista de herramientas permitidas por credencial.
+
+- `POST scans/`: `{scope, request_id, domains?, rule_ids?, severity?}` inicia
+  trabajo privado sin corregir datos; `GET scans/<id>/` devuelve estado, fechas,
+  código de error y cobertura. `GET scans/` lista las últimas 20 revisiones y
+  la última completada, aunque sea anterior a esa página.
+- `GET findings/` mantiene detección en vivo al omitir `status` y `scan_id`.
+  Con esos parámetros consulta observaciones persistidas; admite estados
+  `pending`, `accepted`, `resolved`, `all` y `fingerprint` para foco exacto.
+- Alcances nuevos: `income`, `expense`, `hosting`, `pocket_movement`, con ID.
+  Incluyen sus relaciones contables y documentales; no todos los registros del
+  mismo cliente. `coverage` informa reglas evaluadas y omitidas.
+- `POST reviews/apply/`: `{fingerprint, action: accept|reopen, reason,
+  request_id}`. Las decisiones son append-only; una aceptación se conserva
+  para la misma huella y no oculta evidencia diferente. El historial expone
+  actor, motivo y fecha. Una revisión parcial no resuelve hallazgos ajenos.
+
+`DataIntegrityScanLease` serializa publicación y permite recuperar workers
+interrumpidos sin aceptar resultados tardíos. Sólo una revisión completada
+publica resultados y reconcilia ausencias de las reglas evaluadas; las fallidas
+conservan el último resultado válido. Aplicar/deshacer reevalúa las observaciones
+afectadas en la misma transacción. Los resultados están limitados a 5000 hallazgos
+y 8 MiB; el worker comprueba 25 segundos entre reglas. Un límite excedido termina
+con `scan_result_limit` o `scan_time_limit`, sin publicar una revisión parcial.
+
+La tarea horaria dispara a las **03:00 America/Bogota**, una vez por fecha.
+`DATA_INTEGRITY_DAILY_ENABLED` desactiva el barrido y
+`DATA_INTEGRITY_DAILY_HOUR` cambia la hora local. Una tarea de recuperación cada
+cinco minutos reclama trabajos en cola y vence leases detenidos de 30 minutos. Una ejecución interrumpida crea como máximo una revisión de recuperación con otro ID; el intento original queda fallido y no puede publicar tarde.
+El barrido nunca aplica correcciones.
+
+### Panel y puesta en servicio
+
+Sistema → Integridad de datos (`/panel/data-integrity`) permite revisar,
+filtrar, aceptar/reabrir, previsualizar lotes, confirmar con motivo y deshacer.
+El radar sólo lee observaciones pendientes y enlaza la huella exacta. Conserva su restricción financiera: los hallazgos del dominio contable se muestran allí sólo a superusuarios; todos los administradores pueden consultarlos desde Integridad. No ejecuta
+revisiones al cargar el Dashboard. El nuevo módulo figura en el Mapa de vistas,
+contrato responsivo y registro de flujos E2E.
+
+El deploy aplica content.0305–0306 y crea el conector inactivo, sin credenciales.
+Después se activa, se migran y verifican consumidores y se ejecuta una revisión
+real de lectura y el barrido diario. El catálogo pre_split de Proyectos se retira
+con el mismo mecanismo 30/14 días de PA-181, independientemente de Comercial.
+La entrega de código y CI no acredita ninguna de esas operaciones de producción.

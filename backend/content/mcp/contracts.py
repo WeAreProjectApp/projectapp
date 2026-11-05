@@ -1633,6 +1633,18 @@ MCP_MODEL_CONTRACTS['offerings'] = tuple(
 )
 MCP_MODEL_CONTRACTS['programs'] = ()
 
+MCP_MODEL_CONTRACTS['data-integrity'] = (
+    next(item for item in MCP_MODEL_CONTRACTS['projects'] if item.model_label == 'content.DataIntegrityOperation'),
+    _contract('content.DataIntegrityScan', read_only='id request_id scope filters source actor catalog_version status error_code coverage created_at started_at finished_at',
+              excluded={'results': 'Resultado privado consultable mediante el listado paginado de hallazgos.'}),
+    _contract('content.DataIntegrityFinding', read_only='id fingerprint rule_id domain severity payload is_present is_accepted first_seen_at last_seen_at resolved_at last_scan'),
+    _contract('content.DataIntegrityReview', read_only='id finding action reason actor source request_id created_at',
+              excluded={'payload_hash': 'Huella interna de idempotencia.'}),
+    _contract('content.DataIntegrityScanLease', excluded=_excluded('Coordinación interna y fencing del worker; no accesible por MCP.', 'key scan expires_at')),
+)
+MCP_MODEL_CONTRACTS['projects'] = tuple(item for item in MCP_MODEL_CONTRACTS['projects']
+    if item.model_label != 'content.DataIntegrityOperation')
+
 for canonical, (_, sources) in MODULE_CONNECTORS.items():
     grouped = {}
     for source in sources:

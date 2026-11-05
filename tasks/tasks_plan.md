@@ -1,3 +1,5 @@
+> **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../docs/DATA_INTEGRITY.md).
+
 > **Enlaces seguros — 2026-10-26:** jerarquía propia, navegación compartida,
 > clasificación inicial por proyecto y MCP de administración completo.
 > Migraciones mediante deploy; entrega y validación se verifican en el PR.

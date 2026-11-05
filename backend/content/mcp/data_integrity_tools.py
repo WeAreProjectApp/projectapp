@@ -12,7 +12,7 @@ from content.mcp.operation_builder import _op
 from content.mcp.proposal_schemas import check_known_fields, guarded_arguments, writable_schema
 from content.mcp.protocol import ToolError
 from content.mcp.schema_policy import closed_object, open_object
-from content.serializers.data_integrity import FixApplySerializer, FixPreviewSerializer, UndoSerializer
+from content.serializers.data_integrity import FixApplySerializer, FixPreviewSerializer, UndoSerializer, ScanStartSerializer, FindingReviewSerializer
 
 RULES = _op(
     'describe_integrity_rules',
@@ -70,6 +70,8 @@ _FIELD_DESCRIPTIONS = {
     'reason': 'Motivo de la corrección o del deshacer; queda en el registro.',
     'request_id': 'Identificador estable de esta solicitud para evitar repetirla.',
     'expected_impact_hash': 'Hash de impacto obtenido en la vista previa vigente.',
+    'domains': 'Dominios a revisar.', 'rule_ids': 'Reglas a revisar.', 'severity': 'Gravedades a revisar.',
+    'fingerprint': 'Huella del hallazgo observado.', 'action': 'Aceptar como intencional o reabrir el hallazgo.',
 }
 
 
@@ -103,7 +105,9 @@ def _close_integrity_input(tool, query_properties=None):
 
 _close_integrity_input(RULES, {})
 _close_integrity_input(FINDINGS, {
-    'scope_kind': {'type': 'string', 'enum': ['all', 'client', 'project', 'proposal', 'document', 'thread'],
+    'scan_id': {'type': 'integer', 'minimum': 1, 'description': 'Revisión persistida a consultar.'},
+    'status': {'type': 'string', 'enum': ['pending', 'accepted', 'resolved', 'all'], 'description': 'Estado de los hallazgos persistidos; omitir para detectar en vivo.'},
+    'scope_kind': {'type': 'string', 'enum': ['all', 'client', 'project', 'proposal', 'document', 'thread', 'income', 'expense', 'hosting', 'pocket_movement'],
                    'description': 'Tipo de registro que delimita la revisión.', 'default': 'all'},
     'scope_id': {'type': 'integer', 'minimum': 1, 'description': 'Identificador del registro que se revisa.'},
     'scope_query': {'type': 'string', 'maxLength': 200, 'description': 'Texto para buscar un cliente o proyecto sin un id conocido.'},
@@ -181,4 +185,40 @@ UNDO['prepare_arguments'] = lambda arguments: _prepare(UNDO, UndoSerializer, arg
 UNDO['impact_builder'] = _undo_impact
 UNDO['etag_resolver'] = lambda arguments: {'integrity_undo': _undo_preview(arguments)[0]['impact_hash']}
 
-DATA_INTEGRITY_TOOLS = [RULES, FINDINGS, PREVIEW, APPLY, OPERATIONS, UNDO_PREVIEW, UNDO]
+LEGACY_DATA_INTEGRITY_TOOLS = [RULES, FINDINGS, PREVIEW, APPLY, OPERATIONS, UNDO_PREVIEW, UNDO]
+START_SCAN = _op('start_integrity_scan',
+    'Inicia una revisión persistente en segundo plano. No corrige datos; devuelve el número para consultar su estado con get_integrity_scan.',
+    'data-integrity-scans', 'POST', risk='write', payload_schema=writable_schema(ScanStartSerializer))
+GET_SCAN = _op('get_integrity_scan',
+    'Consulta estado, fechas, cobertura y error de una revisión persistente. Sus hallazgos se consultan con list_integrity_findings y scan_id.',
+    'data-integrity-scan', path=('scan_id',))
+REVIEW = _op('review_integrity_finding',
+    'Acepta con motivo un hallazgo intencional o lo reabre. No corrige datos; conserva autor y decisión. Aceptarlo no oculta evidencia nueva.',
+    'data-integrity-review', 'POST', risk='sensitive', confirm=True, payload_schema=writable_schema(FindingReviewSerializer))
+for _tool in (START_SCAN, REVIEW):
+    _close_integrity_input(_tool)
+_close_integrity_input(GET_SCAN, {})
+DATA_INTEGRITY_TOOLS = [*LEGACY_DATA_INTEGRITY_TOOLS, START_SCAN, GET_SCAN, REVIEW]
+
+
+
+def _review_state(arguments):
+    from django.shortcuts import get_object_or_404
+    from content.models import DataIntegrityFinding
+    from content.services.data_integrity.hashing import digest
+    args = _prepare(REVIEW, FindingReviewSerializer, arguments)
+    finding = get_object_or_404(DataIntegrityFinding, fingerprint=args['fingerprint'])
+    return args, finding, digest({'fingerprint': finding.fingerprint, 'present': finding.is_present,
+                                 'accepted': finding.is_accepted})
+
+
+REVIEW['prepare_arguments'] = lambda arguments: _prepare(REVIEW, FindingReviewSerializer, arguments)
+def _review_impact(arguments):
+    args, finding, _ = _review_state(arguments)
+    if not finding.is_present:
+        raise ToolError('El hallazgo ya no está presente.', code='CONFLICT')
+    return {'finding': finding.payload['title'], 'action': args['action'], 'reason': args['reason']}
+
+
+REVIEW['impact_builder'] = _review_impact
+REVIEW['etag_resolver'] = lambda arguments: {'integrity_review': _review_state(arguments)[2]}
