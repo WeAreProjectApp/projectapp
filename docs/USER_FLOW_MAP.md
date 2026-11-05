@@ -3103,6 +3103,62 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/layout/layout-footer.spec.js`
 
+### FLOW: `admin-data-integrity-findings`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** Un administrador consulta resultados privados persistidos, inicia una revisión completa o acotada, filtra módulo/gravedad/estado y pagina. Una revisión fallida conserva el último resultado válido. El radar abre el fingerprint exacto y permite regresar a todos los hallazgos.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js` y `frontend/e2e/responsive/data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
+### FLOW: `admin-data-integrity-review`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** El administrador acepta como intencional o reabre un hallazgo presente con motivo y confirmación. La decisión conserva actor y fecha. Evidencia nueva vuelve a pendientes y un conflicto no cambia la decisión.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
+### FLOW: `admin-data-integrity-fix`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** El administrador selecciona hasta veinte hallazgos corregibles, elige parámetros y revisa antes/después y bloqueos. La aplicación requiere motivo y confirmación del impacto vigente. Un lote bloqueado o vencido no modifica registros.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js` y `frontend/e2e/responsive/data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
+### FLOW: `admin-data-integrity-history`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** El historial pagina operaciones y decisiones. El administrador revisa el deshacer exacto y confirma con motivo; cambios posteriores o una reversión previa bloquean la operación.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
 
 ## 4. Guest Flows
 
@@ -3689,6 +3745,8 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 ## Documento vinculado pendiente
 
 El radar incluye cuentas con documento vinculado pendiente para superusuarios: borradores, emitidas y pagadas, excluyendo anuladas, archivadas y datos retenidos. Abre la cuenta exacta y permite completar el vínculo. La decisión resuelta desaparece en la siguiente lectura del radar; la autoría se conserva.
+
+- **Integridad de datos:** los hallazgos presentes no aceptados son visibles para administradores. El destino `/panel/data-integrity?finding=<fingerprint>` filtra el hallazgo exacto; «Ver todos los hallazgos» retira el foco. El radar no ejecuta barridos al consultar.
 
 ### FLOW: `admin-dashboard-error-retry`
 
@@ -6034,6 +6092,10 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-dashboard-pipeline-value` | admin | P2 | display | 2 |
 | `admin-dashboard-quick-create` | admin | P3 | display,success | 2 |
 | `admin-dashboard-stats-modals` | admin | P2 | display | 1 |
+| `admin-data-integrity-findings` | admin | P1 | display,success,error,failure | — |
+| `admin-data-integrity-fix` | admin | P1 | display,success,error,failure | — |
+| `admin-data-integrity-history` | admin | P1 | display,success,error,failure | — |
+| `admin-data-integrity-review` | admin | P1 | display,success,error,failure | — |
 | `admin-defaults-unified` | admin | P2 | success,display | 1 |
 | `admin-diagnostic-activity` | admin | P2 | success | 1 |
 | `admin-diagnostic-advanced-filters` | admin | P2 | display,success | 1 |

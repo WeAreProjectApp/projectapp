@@ -37,6 +37,10 @@ from content.models import (
     ProjectRetentionContext,
     ProjectRetentionOperation,
     DataIntegrityOperation,
+    DataIntegrityScan,
+    DataIntegrityFinding,
+    DataIntegrityReview,
+    DataIntegrityScanLease,
     QRCard,
     Task,
     WebAppDiagnostic,
@@ -243,6 +247,15 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'Deleted data integrity operations ({deleted} rows)'
         ))
+
+        DataIntegrityScanLease.objects.all().update(scan=None, expires_at=None)
+        for model, label in (
+            (DataIntegrityReview, 'integrity reviews'),
+            (DataIntegrityFinding, 'integrity findings'),
+            (DataIntegrityScan, 'integrity scans'),
+        ):
+            deleted, _ = model.objects.all().delete()
+            self.stdout.write(self.style.SUCCESS(f'Deleted {label} ({deleted} rows)'))
 
         # Undo receipts protect the operation they revert; both precede contexts.
         ProjectRetentionOperation.objects.filter(reverts__isnull=False).delete()

@@ -1039,6 +1039,17 @@ export const viewCatalogSections = [
     ],
   },
   {
+    id: 'panel-data-integrity',
+    label: 'Integridad de datos',
+    views: [{
+      label: 'Integridad de datos', url: '/panel/data-integrity', group: 'Sistema',
+      file: 'frontend/pages/panel/data-integrity.vue',
+      reference: 'revisión transversal de inconsistencias y correcciones auditadas',
+      audience: 'admin', viewType: 'list',
+      notes: 'Administradores, incluida integridad financiera: revisiones diarias y a demanda, hallazgos pendientes/aceptados/resueltos, vista previa de lotes, motivo, historial y deshacer condicionado. No modifica la autorización del resto de Contabilidad.',
+    }],
+  },
+  {
     id: 'panel-mcps',
     label: 'MCPs (panel)',
     description: 'Gestión de conectores MCP por módulo y migración de accesos anteriores, solo superusuarios.',

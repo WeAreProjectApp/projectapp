@@ -47,6 +47,10 @@
     "sha256": "a7e34c0cd806d7aa777b444215c38187d6f69e52962bec3d3ac194a0b29ec41c",
     "version": "3.1.1"
   },
+  "data-integrity": {
+    "sha256": "60335c9ccf5f804b6c761e779c8d6ea0a96fbb74f6f6690fc203a630ff455a7a",
+    "version": "1.0.1"
+  },
   "diagnostics": {
     "sha256": "bfb34531bfbe3ffdff0ce2b0ba580298b549d896643fd3db4a845b59fb898885",
     "version": "2.1.1"
@@ -76,8 +80,8 @@
     "version": "3.1.0"
   },
   "projects": {
-    "sha256": "3fb314b11b6ccaf3772dbd4e36567a2636ba02228111d685af7b8e338558a55e",
-    "version": "4.4.2"
+    "sha256": "c7cac01865096b21c5d1c1bc456a9787bbf4390aade9952dccc5e23ebf19d2fa",
+    "version": "5.0.0"
   },
   "proposals": {
     "sha256": "e7e300ad2006101884edd6db93756cae4116419466be3ef2b3d054bd1a0ea7f2",

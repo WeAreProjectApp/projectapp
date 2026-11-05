@@ -8,7 +8,7 @@ from content.models import BusinessProposal, Document, EmailDeliverySnapshot, Em
 from content.services.diagnostic_privacy import safe_email_diagnostic
 from content.services.recurring_schedule import next_charge_date
 
-TYPES = ('documents_overdue', 'emails_failed', 'tasks_overdue', 'proposals_stale', 'recurring_due', 'collection_documents_pending')
+TYPES = ('data_integrity', 'documents_overdue', 'emails_failed', 'tasks_overdue', 'proposals_stale', 'recurring_due', 'collection_documents_pending')
 FAILED = (EmailLog.Status.FAILED, EmailLog.Status.BOUNCED)
 
 
@@ -62,12 +62,18 @@ def failed_email_incidents(now):
     return sorted(result, key=lambda row: (row['sent_at'], row['id']), reverse=True)
 
 
-def attention_records(kind, today, now):
+def attention_records(kind, today, now, *, include_finance=True):
     if kind == 'collection_documents_pending':
         from accounts.services.billing_context import pending_document_q
         return Document.objects.filter(pending_document_q(attention=True)).select_related(
             'billing_context', 'collection_account',
         ).order_by('billing_context__pending_at', 'pk')
+    if kind == 'data_integrity':
+        from content.models import DataIntegrityFinding
+        rows = DataIntegrityFinding.objects.filter(is_present=True, is_accepted=False)
+        if not include_finance:
+            rows = rows.exclude(domain='accounting')
+        return rows.order_by('-last_seen_at', '-id')
     if kind == 'emails_failed':
         return failed_email_incidents(now)
     if kind == 'documents_overdue':
@@ -100,7 +106,9 @@ def record_count(records):
 
 
 def record_model(kind):
+    from content.models import DataIntegrityFinding
     return {
+        'data_integrity': DataIntegrityFinding,
         'emails_failed': EmailLog, 'recurring_due': RecurringPayment,
         'tasks_overdue': Task, 'documents_overdue': Document,
         'proposals_stale': BusinessProposal, 'collection_documents_pending': Document,
@@ -110,7 +118,10 @@ def record_model(kind):
 def record_payload(kind, obj, today):
     """Small identification payload, with local destinations only."""
     data = {'id': obj.pk, 'type': kind}
-    if kind == 'emails_failed':
+    if kind == 'data_integrity':
+        data.update(title=obj.payload.get('title', obj.rule_id), description=obj.payload.get('message', ''),
+                    destination=f'/panel/data-integrity?finding={obj.fingerprint}', severity=obj.severity)
+    elif kind == 'emails_failed':
         from content.services.email_log_service import attach_delivery_recipients, delivery_recipient_payloads
         if not hasattr(obj, '_delivery_recipients'):
             attach_delivery_recipients([obj])

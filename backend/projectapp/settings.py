@@ -558,3 +558,7 @@ REQUIREMENT_ESTIMATES_FOLDER_ID = config('REQUIREMENT_ESTIMATES_FOLDER_ID', defa
 VIDEO_USE_X_ACCEL_REDIRECT = config('VIDEO_USE_X_ACCEL_REDIRECT', default=False, cast=bool)
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
+
+# Integrity observations are private; scheduled scans never apply fixes.
+DATA_INTEGRITY_DAILY_ENABLED = config('DATA_INTEGRITY_DAILY_ENABLED', default=True, cast=bool)
+DATA_INTEGRITY_DAILY_HOUR = config('DATA_INTEGRITY_DAILY_HOUR', default=3, cast=int)
