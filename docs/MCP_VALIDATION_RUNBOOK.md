@@ -885,7 +885,8 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 4.0.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 4.0.0 | 159 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, integridad de datos y ciclo de vida de hosting |
+| `projects` | 5.0.0 | 187 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial y ciclo de vida de hosting |
+| `data-integrity` | 1.0.0 | 13 | Integridad transversal: catálogo, revisiones persistentes, hallazgos, correcciones con motivo, decisiones y deshacer |
 | `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 3.0.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
@@ -899,9 +900,11 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `diagnostics` | 2.0.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 2.0.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
-Los 20 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
+Los conteos de `projects` y `data-integrity` se verificaron contra `TOOLS_BY_SLUG`
+y `connector_version` el 2026-11-05, sin acceder a datos reales. Los 20 conteos
+del inventario anterior procedían de `CONNECTORS` / `TOOLS_BY_SLUG` y de
 `mcp_schema_report` local con `projectapp.settings_test` el 2026-10-11, sin
-consultar datos reales: 1063 herramientas sumadas entre catálogos, incluidas las
+consultar datos reales: entonces eran 1063 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
 esperados, y `accounting-cards` incorporó `get_statement`. Los dos conectores
@@ -1446,13 +1449,18 @@ Los adaptadores resuelven la misma ruta DRF del Panel mediante
 serializer y servicio existentes decidan permisos, validación y transacción.
 No se implementa un segundo CRUD con escrituras ORM paralelas.
 
-### Proyectos: integridad de datos (2026-10-09)
+### Integridad de datos: correcciones auditadas (2026-11-05)
+
+El procedimiento canónico usa `data-integrity`. Los consumidores legacy/pre_split
+de Proyectos conservan sus siete herramientas anteriores durante la transición;
+en ese caso el registro conserva `source=mcp:projects`. Las credenciales nuevas
+de Proyectos no publican herramientas de integridad.
 
 1. `describe_integrity_rules` devuelve `catalog_version` y cada regla con
    dominio, gravedad, `fix_kinds` y `fixable_kinds` (las correcciones que el
    motor sabe aplicar).
-2. `list_integrity_findings` con `query.scope_kind=client` y
-   `query.scope_query` de un nombre ambiguo devuelve `scope_candidates` y ningún
+2. `list_integrity_findings` con `scope_kind=client` y
+   `scope_query` de un nombre ambiguo devuelve `scope_candidates` y ningún
    hallazgo; con un `scope_id` devuelve hallazgos con `fingerprint`, `inputs`,
    `suggestion` y, si aplica, `tool`. Repetir la búsqueda devuelve los mismos
    fingerprints, también en `scope_kind=all`.
@@ -1464,7 +1472,7 @@ No se implementa un segundo CRUD con escrituras ORM paralelas.
    hash vigente pide confirmación y no escribe hasta `confirm_action`. Repetir la
    confirmación devuelve el mismo resultado sin aplicar dos veces.
 5. Tras confirmar, el hallazgo desaparece de `list_integrity_findings` y
-   `list_integrity_operations` muestra la operación con `source=mcp:projects` y
+   `list_integrity_operations` muestra la operación con `source=mcp:data-integrity` y
    el actor técnico del conector.
 6. Editar a mano uno de los registros corregidos y pedir
    `preview_integrity_operation_undo`: informa `changed_since`. Sin esa edición,
