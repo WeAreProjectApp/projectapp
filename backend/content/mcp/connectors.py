@@ -124,7 +124,7 @@ def accounting_area(area):
 
 
 SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
-    'data-integrity': ConnectorSpec('data-integrity', '1.0.0', (DATA_INTEGRITY_TOOLS,), confirm_sensitive=True),
+    'data-integrity': ConnectorSpec('data-integrity', '1.0.1', (DATA_INTEGRITY_TOOLS,), confirm_sensitive=True),
     'blog': ConnectorSpec(
         'blog', '1.1.0', (BLOG_TOOLS,),
         compatibility=True, canonical_area='content',

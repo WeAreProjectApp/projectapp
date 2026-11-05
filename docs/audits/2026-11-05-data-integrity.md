@@ -29,6 +29,27 @@ panel y radar. Migraciones aditivas content.0305–0306. No acredita despliegue.
 - El cliente HTTP real queda cubierto desde Axios; una importación incorrecta
   detectada durante la validación ya está corregida.
 
+## Regresión de los contratos canónicos
+
+Integridad 1.0.1 declara el filtro por huella de los hallazgos persistidos y
+rechaza argumentos desconocidos antes de ejecutar también sus controles comunes.
+El inventario de esquemas incluye documentos, proyectos e integridad sin ampliar
+los techos ni las excepciones de drift. Su contrato coincide en los cuatro canales
+de publicación y queda registrado con su nueva huella.
+
+- 17 casos de transporte prueban los mismos escenarios de integridad sobre su
+  conector canónico y el catálogo anterior de Proyectos.
+- La última ronda aprobó 16 casos contables, 9 controles de esquemas y 8 casos
+  canónicos/de confirmación y deshacer. Los lotes de comportamiento usan SQLite
+  generado desde los modelos (`--nomigrations`); no sustituyen la evidencia
+  independiente de migraciones MySQL ni la regresión documental con migraciones.
+- Calidad semántica estricta en los tres archivos de comportamiento: 19 funciones
+  de prueba, cero errores y cero avisos. El archivo de guardas conserva un aviso
+  previo por ocho aserciones en una prueba de compatibilidad cuya lógica no cambió;
+  sus aserciones permanecen completas.
+- Las credenciales efímeras del fixture canónico tienen representación redactada
+  para evitar que aparezcan en los diagnósticos de pytest.
+
 ## Condiciones operativas
 
 El helper QA del fleet rechazó la coordenada de este entorno de desarrollo;

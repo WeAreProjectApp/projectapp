@@ -3,7 +3,7 @@
 Motor que encuentra datos huérfanos, duplicados e inconsistentes en clientes,
 proyectos, documentos, comunicaciones, contabilidad y propuestas, y los corrige con
 vista previa, registro y deshacer. Lo usa la skill `data-integrity`
-(`.claude/skills/data-integrity/`) a través del conector MCP `data-integrity` (Integridad de datos), y el panel a través de `/api/projects/data-integrity/`.
+(`.claude/skills/data-integrity/`) a través del conector MCP `data-integrity` (Integridad de datos), y el panel a través de `/api/data-integrity/`.
 
 ## Piezas
 
@@ -158,11 +158,16 @@ Lo corre el operador en el VPS después del deploy; una sesión nunca.
 ## Catálogo 1.2.0 y módulo propio — 2026-11-05
 
 El conector canónico es **Integridad de datos**, slug `data-integrity`, versión
-1.0.0. Publica las siete herramientas existentes más `start_integrity_scan`,
+1.0.1. Publica las siete herramientas existentes más `start_integrity_scan`,
 `get_integrity_scan` y `review_integrity_finding`, con confirmación local para
 aplicar, deshacer, aceptar o reabrir. Proyectos pasa a 5.0.0 y retira esas siete
 herramientas de sus nuevas credenciales. Los accesos existentes conservan su
 catálogo `legacy` o `pre_split`; no se amplían permisos ni se copian tokens.
+
+La revisión 1.0.1 declara también el filtro opcional `fingerprint` de
+`list_integrity_findings`: consulta un hallazgo persistido por su huella exacta.
+El contrato de entrada valida SHA-256 y coincide con la API; no modifica los
+requisitos de confirmación ni las correcciones disponibles.
 
 El catálogo conserva 51 reglas: **23 con corrección disponible y 28 de
 informe/derivación**. DC9–DC11 permiten elegir `params.folder_id` para mover un

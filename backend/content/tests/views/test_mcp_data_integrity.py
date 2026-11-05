@@ -1,5 +1,6 @@
-"""Data-integrity tools of the projects MCP connector: metadata, confirmation, replay and undo."""
+"""Canonical integrity and preserved Projects contracts: confirmation, replay and undo."""
 import json
+from dataclasses import dataclass, field
 
 import pytest
 from accounts.models import ProjectPhase
@@ -22,18 +23,27 @@ TOOL_NAMES = ('describe_integrity_rules', 'list_integrity_findings', 'preview_in
               'undo_integrity_operation')
 
 
-@pytest.fixture
-def token():
-    connector, _ = McpConnector.objects.get_or_create(slug='projects', defaults={'name': 'Projects'})
+@dataclass(frozen=True)
+class _McpTransport:
+    slug: str
+    token: str = field(repr=False)
+
+
+@pytest.fixture(params=[
+    pytest.param(('projects', 'legacy'), id='projects-legacy'),
+    pytest.param(('data-integrity', 'canonical'), id='data-integrity'),
+])
+def token(request):
+    slug, catalog = request.param
+    connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug})
     connector.is_active = True
     connector.save(update_fields=['is_active'])
     token = connector.generate_token()
-    # This suite preserves the old Projects consumer contract. New primary
-    # credentials are canonical and discover integrity through its own module.
+    # Exercise both the canonical owner and the preserved Projects consumer.
     credential = connector.credentials.get(label='Default')
-    credential.catalog = 'legacy'
+    credential.catalog = catalog
     credential.save(update_fields=['catalog'])
-    return token
+    return _McpTransport(slug, token)
 
 
 @pytest.fixture
@@ -48,7 +58,7 @@ def gap(make_client_profile):
 
 
 def _call(api_client, token, name, arguments):
-    response = api_client.post(f'/api/mcp/projects/{token}/', {
+    response = api_client.post(f'/api/mcp/{token.slug}/{token.token}/', {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': name, 'arguments': arguments},
     }, format='json')
     return json.loads(response.data['result']['content'][0]['text'])
@@ -106,7 +116,7 @@ def test_confirmation_applies_once_and_replays_after(api_client, token, gap):
 
     assert _orders() == [1, 2]
     operation = DataIntegrityOperation.objects.get()
-    assert operation.source == 'mcp:projects'
+    assert operation.source == f'mcp:{token.slug}'
     assert operation.actor.username.startswith('mcp_')
     assert 'error' not in first
 

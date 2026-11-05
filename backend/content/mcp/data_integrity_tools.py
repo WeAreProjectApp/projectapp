@@ -1,4 +1,4 @@
-"""Data-integrity tools of the projects connector: catalog, findings, fixes, log and undo.
+"""Cross-module integrity tools and their preserved Projects compatibility contract.
 
 Fixes and undos require the current preview's impact hash, a reason and a
 stable request_id, and always go through the confirmation step, exactly like
@@ -23,10 +23,12 @@ RULES = _op(
 FINDINGS = _op(
     'list_integrity_findings',
     'Busca datos huérfanos, duplicados e inconsistentes. scope_kind (all, client, project, proposal, '
-    'document, thread) con scope_id, o scope_query (texto) para un cliente o proyecto: si no hay '
+    'document, thread, income, expense, hosting o pocket_movement) con scope_id, o scope_query '
+    '(texto) para un cliente o proyecto: si no hay '
     'exactamente una coincidencia devuelve scope_candidates. domains, rule_ids y severity '
     'filtran (separados por comas); page pagina de a 50. Cada hallazgo trae fingerprint, entradas a '
-    'elegir, sugerencia y, si aplica, la herramienta existente que lo corrige.',
+    'elegir, sugerencia y, si aplica, la herramienta existente que lo corrige. scan_id, status o '
+    'fingerprint consultan los hallazgos persistidos; fingerprint selecciona una huella exacta.',
     'panel-data-integrity-findings',
 )
 PREVIEW = _op(
@@ -105,6 +107,7 @@ def _close_integrity_input(tool, query_properties=None):
 
 _close_integrity_input(RULES, {})
 _close_integrity_input(FINDINGS, {
+    'fingerprint': {'type': 'string', 'pattern': r'^[a-f0-9]{64}$', 'description': 'Huella exacta del hallazgo persistido que se consulta.'},
     'scan_id': {'type': 'integer', 'minimum': 1, 'description': 'Revisión persistida a consultar.'},
     'status': {'type': 'string', 'enum': ['pending', 'accepted', 'resolved', 'all'], 'description': 'Estado de los hallazgos persistidos; omitir para detectar en vivo.'},
     'scope_kind': {'type': 'string', 'enum': ['all', 'client', 'project', 'proposal', 'document', 'thread', 'income', 'expense', 'hosting', 'pocket_movement'],

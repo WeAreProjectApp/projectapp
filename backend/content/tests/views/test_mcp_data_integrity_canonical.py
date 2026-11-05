@@ -9,6 +9,13 @@ from content.models import DataIntegrityFinding, DataIntegrityScan, McpConnector
 pytestmark = pytest.mark.django_db
 
 
+class _TestCredential(str):
+    """Keep ephemeral authentication out of fixture diagnostics."""
+
+    def __repr__(self):
+        return "<temporary MCP credential>"
+
+
 def _rpc(name, arguments):
     return {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
@@ -27,7 +34,7 @@ def integrity_token():
         slug='data-integrity', defaults={'name': 'Integridad de datos', 'is_active': True},
     )
     connector.credentials.all().delete()
-    return connector.generate_token()
+    return _TestCredential(connector.generate_token())
 
 
 def _stored_finding():
@@ -37,7 +44,7 @@ def _stored_finding():
     )
     return DataIntegrityFinding.objects.create(
         fingerprint='e' * 64, rule_id='DC11', domain='documents', severity='medium',
-        payload={'title': 'Documento sin carpeta'}, last_seen_at=timezone.now(), last_scan=scan,
+        payload={'fingerprint': 'e' * 64, 'title': 'Documento sin carpeta'}, last_seen_at=timezone.now(), last_scan=scan,
     )
 
 
@@ -78,7 +85,7 @@ def test_new_projects_primary_credential_hides_integrity_tools(api_client):
         slug='projects', defaults={'name': 'Proyectos', 'is_active': True},
     )
     connector.credentials.all().delete()
-    token = connector.generate_token()
+    token = _TestCredential(connector.generate_token())
 
     listed = api_client.post(
         f'/api/mcp/projects/{token}/', {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'}, format='json',
@@ -89,3 +96,19 @@ def test_new_projects_primary_credential_hides_integrity_tools(api_client):
 
     assert 'list_integrity_findings' not in {tool['name'] for tool in listed.data['result']['tools']}
     assert rejected.data['error']['code'] == -32602
+
+
+def test_integrity_findings_filter_a_persisted_fingerprint(api_client, integrity_token):
+    """Fails if the canonical tool cannot select one stored finding by its observed fingerprint."""
+    finding = _stored_finding()
+    DataIntegrityFinding.objects.create(
+        fingerprint='f' * 64, rule_id='DC11', domain='documents', severity='medium',
+        payload={'fingerprint': 'f' * 64, 'title': 'Otro documento'},
+        last_seen_at=finding.last_seen_at, last_scan=finding.last_scan,
+    )
+
+    result = _call(api_client, 'data-integrity', integrity_token, 'list_integrity_findings', {
+        'fingerprint': finding.fingerprint,
+    })
+
+    assert [row['fingerprint'] for row in result['results']] == [finding.fingerprint]

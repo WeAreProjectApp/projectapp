@@ -886,7 +886,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
 | `projects` | 5.0.0 | 187 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial y ciclo de vida de hosting |
-| `data-integrity` | 1.0.0 | 13 | Integridad transversal: catálogo, revisiones persistentes, hallazgos, correcciones con motivo, decisiones y deshacer |
+| `data-integrity` | 1.0.1 | 13 | Integridad transversal: catálogo, revisiones persistentes, hallazgos, correcciones con motivo, decisiones y deshacer |
 | `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 3.0.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
