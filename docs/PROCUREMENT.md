@@ -6,6 +6,8 @@ Módulo interno en `/panel/procurement`. Desarrollo independiente; referencia fu
 
 Procesos permite filtrar, ordenar, paginar y exportar hasta 5.000 coincidencias a Excel. Mis clasificados conserva el seguimiento personal; las notas y su historial se ven en el equipo. Descartar exige motivo y restaurar recupera el estado anterior. Se muestra cierre, días restantes y urgencia con tres días o menos; no hay recordatorios de cierre.
 
+Una fusión de clientes comerciales conserva las clasificaciones y búsquedas en su usuario original, incluso cuando ambos usuarios tienen registros homónimos. También conserva quién creó una alerta, solicitó una actualización o registró una actividad. Estas relaciones no se reasignan al cliente superviviente.
+
 Búsquedas guardadas permite nombre, edición, favorito y borrado confirmado. Crear una alerta desde una búsqueda copia sus criterios: editar la búsqueda no cambia la alerta. Palabras clave y prefijos UNSPSC se combinan con O; los demás criterios con Y. Dentro de una frase deben coincidir todas las palabras en nombre o descripción. Listas de entidad/departamento/modalidad/tipo/estado admiten cualquiera de sus valores. Región es departamento de la entidad según la fuente, no lugar de ejecución garantizado. El motor se comparte entre panel, exportación, alertas y MCP.
 
 Las alertas tienen uno a diez destinatarios y frecuencia inmediata, diaria o semanal. Empiezan inactivas; correo y actualización automática global también apagados. Configurar destinatarios reales y revisar coincidencias antes de activar. No hay correo de Carlos fijado en código. Cada destinatario recibe un envío separado.
@@ -50,4 +52,4 @@ Validación local del 5 de noviembre de 2026, en el worktree de la sesión:
 | Catálogos | 138 vistas registradas; contrato de 690 celdas y registro de flujos coherentes. |
 | Calidad | Verificación independiente estricta: backend y revisión conjunta 100/100; E2E 99/100, sin errores ni advertencias. |
 
-Los tests backend locales usan SQLite temporal y `--nomigrations`; `makemigrations --check --dry-run` no detectó cambios faltantes. CI valida además la cadena de migraciones y el empaquetado. La evidencia de CI y la entrega se consultan en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552). Estas comprobaciones no aplican migraciones ni datos de ejemplo sobre el servicio.
+Los tests locales del módulo usan SQLite temporal y `--nomigrations`; las regresiones de fusión de clientes se ejecutan con las migraciones de la base de pruebas, porque requieren el catálogo inicial de estados. `makemigrations --check --dry-run` no detectó cambios faltantes. CI valida además la cadena de migraciones y el empaquetado. La evidencia de CI y la entrega se consultan en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552). Estas comprobaciones no aplican migraciones ni datos de ejemplo sobre el servicio.
