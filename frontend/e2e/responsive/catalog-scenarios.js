@@ -106,6 +106,10 @@ function resolveCatalogUrl(url) {
 }
 
 function defaultCapabilities(view, owner) {
+  if (view.url === '/panel/data-integrity') return {
+    panelShell: true, table: false, tabs: true, filters: true,
+    modal: true, selection: true, touch: true,
+  };
   if (view.url === '/panel/platform/ai') return {
     panelShell: true, table: false, tabs: true, filters: true,
     modal: false, selection: false, touch: true,

@@ -20,6 +20,7 @@ const RESPONSIVE_WARMUP_ROUTES = Object.freeze({
     '/es-co/panel/cells?tab=economics',
     '/es-co/panel/cells?tab=contract',
   ],
+  'frontend/pages/panel/data-integrity.vue': ['/es-co/panel', '/es-co/panel/data-integrity'],
   'frontend/pages/panel/documents/index.vue': ['/en-us/panel/documents'],
   'frontend/pages/panel/documents/create.vue': [
     '/en-us/panel/documents',

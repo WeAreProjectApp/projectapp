@@ -3114,7 +3114,7 @@ Two transitions that were previously bundled into other flows now have their own
 - **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
 - **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
 - **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
-- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js`.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js` y `frontend/e2e/responsive/data-integrity.spec.js`.
 - **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
 
 ### FLOW: `admin-data-integrity-review`
@@ -3142,7 +3142,7 @@ Two transitions that were previously bundled into other flows now have their own
 - **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
 - **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
 - **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
-- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js`.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js` y `frontend/e2e/responsive/data-integrity.spec.js`.
 - **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
 
 ### FLOW: `admin-data-integrity-history`

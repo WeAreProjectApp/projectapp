@@ -6,7 +6,6 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
-import { viewportUse } from '../helpers/viewports.js';
 import { buildDataIntegrityApi } from '../helpers/data-integrity-fixture.js';
 import {
   ADMIN_DATA_INTEGRITY_FINDINGS,
@@ -16,15 +15,6 @@ import {
 } from '../helpers/flow-tags.js';
 
 test.setTimeout(60_000);
-
-const displayTags = [
-  ...ADMIN_DATA_INTEGRITY_FINDINGS,
-  ...ADMIN_DATA_INTEGRITY_FIX,
-  ...ADMIN_DATA_INTEGRITY_HISTORY,
-  ...ADMIN_DATA_INTEGRITY_REVIEW,
-  '@role:admin',
-  '@outcome:display',
-];
 
 async function arrange(page, options = {}) {
   const fixture = buildDataIntegrityApi(options);
@@ -43,18 +33,10 @@ async function openFromDesktopDashboard(page) {
   await expect(page.getByTestId('data-integrity-page')).toBeVisible();
 }
 
-async function openFromMobileDashboard(page) {
-  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
-  const drawer = page.getByRole('dialog', { name: 'Menú principal', exact: true });
-  await drawer.getByRole('link', { name: 'Integridad de datos', exact: true }).click();
-  await expect(page).toHaveURL(/\/es-co\/panel\/data-integrity/);
-  await expect(page.getByTestId('data-integrity-page')).toBeVisible();
-}
-
 async function openIntegrity(page, options = {}) {
   const fixture = await arrange(page, options);
-  await openFromDesktopDashboard(page);
+  await page.goto('/es-co/panel/data-integrity', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('data-integrity-page')).toBeVisible();
   return fixture;
 }
 
@@ -68,34 +50,11 @@ async function fillReason(page, reason) {
   await page.getByLabel('Motivo', { exact: true }).fill(reason);
 }
 
-for (const [viewport, open] of [
-  ['compact', openFromMobileDashboard],
-  ['portrait', openFromMobileDashboard],
-  ['landscape', openFromDesktopDashboard],
-  ['desktop', openFromDesktopDashboard],
-  ['wide', openFromDesktopDashboard],
-]) {
-  test.describe(`Data integrity at ${viewport}`, () => {
-    test.use(viewportUse(viewport));
-
-    // Bug caught: the responsive shell makes persisted findings or the required preview unreachable.
-    test('shows a persisted correction preview', { tag: [...displayTags, '@responsive:data-integrity', `@viewport:${viewport}`] }, async ({ page }) => {
-      await arrange(page);
-      await open(page);
-      await expect(page.getByTestId('integrity-finding-DC9')).toContainText('Documento sin carpeta');
-      await selectFinding(page);
-      await expect(page.getByTestId('integrity-confirm-modal')).toContainText('Revisa antes de confirmar');
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-      expect(overflow).toBeLessThanOrEqual(1);
-    });
-  });
-}
-
 // Bug caught: a completed review is not refreshed into the persisted finding list.
 test('shows the finding after a completed review', { tag: [...ADMIN_DATA_INTEGRITY_FINDINGS, '@role:admin', '@outcome:success'] }, async ({ page }) => {
   const fixture = await openIntegrity(page);
   await page.getByTestId('integrity-scan').click();
-  await expect(page.getByRole('status')).toContainText('Completada');
+  await expect(page.getByText('Revisión más reciente: Completada', { exact: true })).toBeVisible();
   await expect(page.getByTestId('integrity-finding-DC9')).toContainText('Acta de entrega');
   expect(fixture.state.calls.scans).toHaveLength(1);
 });
@@ -112,6 +71,7 @@ test('preserves the last result after a failed review', { tag: [...ADMIN_DATA_IN
 test('shows a rejected review request', { tag: [...ADMIN_DATA_INTEGRITY_FINDINGS, '@role:admin', '@outcome:error'] }, async ({ page }) => {
   const fixture = await openIntegrity(page);
   await page.getByLabel('Qué revisar', { exact: true }).selectOption('client');
+  await expect(page.getByLabel('Identificador del registro', { exact: true })).toBeVisible();
   await page.getByTestId('integrity-scan').click();
   await expect(page.getByRole('alert')).toContainText('Completa identificador del registro.');
   expect(fixture.state.calls.scans).toHaveLength(0);
@@ -191,9 +151,10 @@ test('explains a conflicting review', { tag: [...ADMIN_DATA_INTEGRITY_REVIEW, '@
 });
 
 async function openHistory(page, options = {}) {
-  await openIntegrity(page, options);
+  const fixture = await openIntegrity(page, options);
   await page.getByRole('tab', { name: 'Historial', exact: true }).click();
   await expect(page.getByTestId('integrity-history')).toContainText('Corrección #701');
+  return fixture;
 }
 
 // Bug caught: a reversible correction cannot be restored after its undo preview is approved.
@@ -223,4 +184,27 @@ test('explains a rejected undo', { tag: [...ADMIN_DATA_INTEGRITY_HISTORY, '@role
   await page.getByTestId('integrity-confirm').click();
   await expect(page.getByRole('alert')).toContainText('La operación ya fue revertida.');
   await expect(page.getByTestId('integrity-confirm-modal')).toContainText('Revisa antes de confirmar');
+});
+
+
+test('shows the accepted finding decision', { tag: [...ADMIN_DATA_INTEGRITY_REVIEW, '@role:admin', '@outcome:display'] }, async ({ page }) => {
+  // quality: allow-deep-link (the localized Dashboard is the entry point; integrity is reached through its sidebar link)
+  await arrange(page, { finding: { is_accepted: true } });
+  await openFromDesktopDashboard(page);
+  await page.getByLabel('Estado', { exact: true }).selectOption('accepted');
+  await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+  const finding = page.getByTestId('integrity-finding-DC9');
+  await expect(finding).toContainText('Acta de entrega');
+  await expect(finding.getByRole('button', { name: 'Reabrir', exact: true })).toBeEnabled();
+});
+
+test('shows the persisted correction audit record', { tag: [...ADMIN_DATA_INTEGRITY_HISTORY, '@role:admin', '@outcome:display'] }, async ({ page }) => {
+  // quality: allow-deep-link (the localized Dashboard is the entry point; integrity is reached through its sidebar link)
+  await arrange(page);
+  await openFromDesktopDashboard(page);
+  await page.getByRole('tab', { name: 'Historial', exact: true }).click();
+  const history = page.getByTestId('integrity-history');
+  await expect(history).toContainText('Corrección #701');
+  await expect(history).toContainText('Corrección anterior');
+  await expect(history).toContainText('admin@example.test');
 });
