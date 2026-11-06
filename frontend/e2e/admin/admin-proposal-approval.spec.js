@@ -295,22 +295,21 @@ test('only the checked optional annex enters the packet', {
   expect(state.submissions[0].payload.selected_document_ids).toEqual([701]);
 });
 
-test('a pending review restores its previously selected annexes', {
+test('a revision restores only its previously selected annexes', {
   tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:display'],
 }, async ({ page }) => {
   // Catches reopening a pending review with no record of the previously selected annex subset.
   const restored = { id: 701, title: 'Anexo de alcance Atlas' };
   const unselected = { id: 702, title: 'Anexo de soporte Atlas' };
   const state = buildFixture({
-    status: 'accepted',
-    linkedProject: true,
+    status: 'negotiating',
+    confirmed: true,
     optionalDocuments: [restored, unselected],
     selectedDocumentIds: [701],
   });
   await mockApproval(page, state);
-  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('link', { name: 'Propuestas', exact: true }).click();
-  await page.getByTestId('approval-review-71').click();
+  await openList(page);
+  await openInlineApproval(page);
 
   const modal = page.getByTestId('proposal-approval-modal');
   await expect(modal.getByTestId('approval-optional-701')).toBeChecked();
