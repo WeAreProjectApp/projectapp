@@ -63,7 +63,21 @@ requieren paquetes Pro. No se adopta la [extensión Markdown beta de Tiptap](htt
   La vista previa construye el índice con los encabezados reales y diferencia
   los avisos. Las etiquetas e identificadores de lectura no se guardan.
 
-Imágenes, colaboración, IA y edición por bloques quedan fuera de esta entrega.
+## Prioridad y valor para los documentos
+
+El orden recomendado y aplicado a esta entrega es:
+
+| Prioridad | Mejora | Valor y criterio de aceptación |
+| --- | --- | --- |
+| 1 | Conservar la fuente, los estilos guardados y los borradores | Permite editar documentos existentes sin perder contenido al alternar modos, guardar o reabrir; las conversiones rechazadas deben poder corregirse. |
+| 2 | Aclarar los controles y la edición de enlaces | Los grupos y el estado de selección ayudan a encontrar el formato; prellenar, cancelar y quitar enlaces reduce correcciones accidentales. |
+| 3 | Exponer las acciones de tabla y hacer legible la edición | Las tablas sirven para alcances, presupuestos y comparaciones; filas, columnas y celdas combinadas deben conservarse en Fuente y Vista previa. |
+| 4 | Añadir accesos al índice, avisos, código y separadores | El índice facilita navegar documentos largos; los avisos distinguen observaciones, riesgos y decisiones; código y separadores ordenan instrucciones y apartados. |
+
+Las cuatro prioridades están incluidas. Las funciones adicionales utilizan el
+vocabulario editorial existente y deben superar la misma validación de
+persistencia que los formatos anteriores. Imágenes, colaboración, IA y edición
+por bloques quedan fuera de esta entrega.
 
 ## Compatibilidad
 
