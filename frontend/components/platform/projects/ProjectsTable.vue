@@ -1,8 +1,18 @@
 <template>
-  <div>
-    <!-- Desktop / tablet (>=md): tabla con scroll horizontal como red de seguridad -->
-    <div v-if="!isMobile" class="overflow-x-auto rounded-2xl border border-border-default bg-surface">
-    <table class="min-w-full text-left text-sm">
+  <div class="min-w-0">
+    <!-- Desktop / landscape: column widths must not depend on project names. -->
+    <div v-if="!isMobile" class="overflow-x-auto rounded-2xl border border-border-default bg-surface" data-testid="projects-table-container">
+    <table class="w-full table-fixed text-left text-sm [overflow-wrap:anywhere]">
+      <colgroup>
+        <col class="w-1/3" />
+        <col v-if="isAdmin" />
+        <col />
+        <col />
+        <col v-if="isAdmin" />
+        <col />
+        <col />
+        <col class="w-12" />
+      </colgroup>
       <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-green-light/70">
         <tr>
           <th class="px-4 py-3">Proyecto</th>
@@ -12,7 +22,7 @@
           <th v-if="isAdmin" class="px-4 py-3">Solicitudes pendientes</th>
           <th class="px-4 py-3">Valor total</th>
           <th class="px-4 py-3">Última actividad</th>
-          <th class="w-10 px-2"></th>
+          <th class="px-2"></th>
         </tr>
       </thead>
       <tbody>
@@ -24,7 +34,7 @@
           @click="$emit('navigate', p.id)"
         >
           <td class="px-4 py-3">
-            <div class="font-medium text-text-default">{{ p.name }}</div>
+            <div class="whitespace-normal font-medium text-text-default" :data-testid="`project-name-${p.id}`">{{ p.name }}</div>
             <span :class="statusChipClass(p.current_state)">{{ p.status_label }}</span>
           </td>
           <td v-if="isAdmin" class="px-4 py-3 text-green-light">
@@ -32,11 +42,11 @@
             <span class="text-xs text-green-light/60">{{ p.client_email }}</span>
           </td>
           <td class="px-4 py-3">
-            <div class="flex items-center gap-2">
-              <div class="h-1.5 w-20 overflow-hidden rounded-full bg-surface-muted">
+            <div class="flex min-w-0 items-center gap-2">
+              <div class="h-1.5 min-w-0 max-w-20 flex-1 overflow-hidden rounded-full bg-surface-muted">
                 <div class="h-full bg-primary" :style="{ width: `${p.progress || 0}%` }"></div>
               </div>
-              <span class="text-xs">{{ p.progress || 0 }}%</span>
+              <span class="shrink-0 text-xs">{{ p.progress || 0 }}%</span>
             </div>
           </td>
           <td class="px-4 py-3">
@@ -66,8 +76,9 @@
     </table>
     </div>
 
-    <!-- Móvil (<md): cada proyecto como tarjeta apilada -->
+    <!-- Compact / portrait: retain the complete project name in each card. -->
     <div v-else class="space-y-3">
+      <!-- design-tokens: allow-raw-button — the whole card is a project listing row. -->
       <button
         v-for="p in projects"
         :key="p.id"
@@ -78,7 +89,7 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <div class="truncate font-medium text-text-default">{{ p.name }}</div>
+            <div class="whitespace-normal font-medium text-text-default [overflow-wrap:anywhere]" :data-testid="`project-name-${p.id}`">{{ p.name }}</div>
             <span :class="statusChipClass(p.current_state)">{{ p.status_label }}</span>
           </div>
           <span class="shrink-0 text-green-light/40">›</span>
