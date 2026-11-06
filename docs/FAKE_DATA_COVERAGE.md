@@ -298,3 +298,52 @@ los casos en cuatro jobs, con lotes de veinte como máximo y resultados JUnit co
 artefactos. No se ejecutan pruebas automatizadas locales. La evidencia de entrega
 identifica la URL de la corrida, el SHA probado y su conclusión; el verde de CI no
 acredita entregas reales de correo, pagos, OAuth ni proveedores externos.
+
+
+### Receta concreta para la copia desechable
+
+Ejecutar desde el worktree propio, sustituyendo `CODE_SHA` por el SHA que se
+quiere reproducir. Los bloques siguientes son una receta, no comandos que esta
+sesión haya ejecutado. No levantar ningún servidor ni tocar el DEV activo.
+
+```bash
+CODE_SHA=<sha-completo>
+QA_SANDBOX=$(mktemp -d /tmp/projectapp-fake-data.XXXXXX)
+mkdir -p "$QA_SANDBOX/src" "$QA_SANDBOX/data/private"
+chmod 700 "$QA_SANDBOX" "$QA_SANDBOX/data" "$QA_SANDBOX/data/private"
+git archive "$CODE_SHA" | tar -x -C "$QA_SANDBOX/src"
+export FAKE_DATA_ROOT="$QA_SANDBOX/data"
+export DJANGO_ENV=development
+```
+
+Preparar las claves directamente en archivos privados, sin imprimir sus valores.
+La misma clave debe conservarse al reutilizar una base con datos cifrados.
+
+```bash
+~/webapps/projectapp/backend/venv/bin/python - <<'PYKEYS'
+import os
+import secrets
+from pathlib import Path
+from cryptography.fernet import Fernet
+private = Path(os.environ['FAKE_DATA_ROOT']) / 'private'
+for name, value in [('django-key', secrets.token_urlsafe(64).encode()),
+                    ('access-key', Fernet.generate_key())]:
+    fd = os.open(private / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(value)
+PYKEYS
+cd "$QA_SANDBOX/src/backend"
+~/webapps/projectapp/backend/venv/bin/python manage.py migrate --settings=projectapp.settings_fake_data
+~/webapps/projectapp/backend/venv/bin/python manage.py create_fake_data --settings=projectapp.settings_fake_data --count 60 --seed 20260826 --anchor-date 2026-11-06
+```
+
+Para repetir el mismo conjunto, desde esa copia y manteniendo `FAKE_DATA_ROOT`:
+
+```bash
+~/webapps/projectapp/backend/venv/bin/python manage.py create_fake_data --settings=projectapp.settings_fake_data --replace --count 60 --seed 20260826 --anchor-date 2026-11-06
+```
+
+`settings_fake_data` exige una raíz absoluta fuera del checkout, ignora `.env`,
+usa SQLite y storage propios, captura correo y no conecta Redis. Rechaza un
+`DJANGO_ENV=production` exportado. Los nombres de archivo y las claves privadas
+no forman parte del contrato de replay; el SHA, la semilla y la fecha sí.

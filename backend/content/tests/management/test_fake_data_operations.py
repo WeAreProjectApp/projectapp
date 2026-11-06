@@ -134,3 +134,32 @@ def test_successful_reset_removes_obsolete_files(django_capture_on_commit_callba
     with django_capture_on_commit_callbacks(execute=True):
         call_command('delete_fake_data', '--confirm', stdout=StringIO())
     assert not storage.exists(name)
+
+
+def test_representative_dataset_populates_every_declared_seeded_model():
+    from django.apps import apps
+    from content.fake_data import SEEDED_MODELS
+    run('create_fake_data', '--count', '60')
+    missing = sorted(label for label in SEEDED_MODELS if not apps.get_model(label).objects.exists())
+    assert missing == []
+
+
+def test_disposable_settings_ignore_ambient_database_targets(tmp_path):
+    import json
+    import os
+    import subprocess
+    import sys
+
+    private = tmp_path / 'private'
+    private.mkdir()
+    (private / 'django-key').write_text('isolated-settings-test-only')
+    env = {**os.environ, 'FAKE_DATA_ROOT': str(tmp_path), 'DJANGO_ENV': 'development',
+           'DJANGO_DB_NAME': '/must-not-be-opened.sqlite3', 'CACHE_REDIS_URL': 'redis://invalid:1/0'}
+    code = '''import json
+from projectapp import settings_fake_data as s
+print(json.dumps([s.DATABASES['default']['NAME'], s.CACHES['default']['BACKEND'],
+                  s.HUEY.immediate, s.PRIVATE_MEDIA_ROOT, s.FAKE_DATA_ALLOWED]))
+'''
+    result = subprocess.run([sys.executable, '-c', code], env=env, capture_output=True, text=True, check=True)
+    assert json.loads(result.stdout) == [str(tmp_path / 'db.sqlite3'),
+        'django.core.cache.backends.locmem.LocMemCache', True, str(tmp_path / 'private-media'), True]
