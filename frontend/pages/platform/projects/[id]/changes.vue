@@ -208,16 +208,16 @@
                 <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
-                  <input v-model="createForm.title" type="text" required placeholder="¿Qué cambio necesitas?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="createForm.title" type="text" required placeholder="¿Qué cambio necesitas?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Descripción</label>
-                  <textarea v-model="createForm.description" rows="3" placeholder="Describe el cambio con el mayor detalle posible..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <textarea v-model="createForm.description" rows="3" placeholder="Describe el cambio con el mayor detalle posible..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Módulo / Pantalla</label>
-                    <input v-model="createForm.module_or_screen" type="text" placeholder="Ej: Catálogo" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="createForm.module_or_screen" type="text" placeholder="Ej: Catálogo" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Prioridad sugerida</label>
@@ -302,7 +302,7 @@
                     rows="14"
                     spellcheck="false"
                     placeholder='[{"id": 1, "status": "approved", "admin_response": "...", "estimated_time": "2 semanas", "estimated_cost": 500000}]'
-                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/20 dark:focus:border-lemon/40"
+                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                   />
                 </div>
 
@@ -401,7 +401,7 @@
 
               <!-- Admin response -->
               <div v-if="detailCR.admin_response" class="mb-5 rounded-xl border-l-2 border-l-esmerald/30 bg-surface-muted/20 p-4 dark:border-l-lemon/40">
-                <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-esmerald/60 dark:text-lemon/60">Respuesta del equipo</p>
+                <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-brand dark:text-lemon/60">Respuesta del equipo</p>
                 <p class="text-sm leading-relaxed text-text-muted">{{ detailCR.admin_response }}</p>
                 <div v-if="detailCR.estimated_time || detailCR.estimated_cost" class="mt-3 flex flex-wrap gap-3">
                   <span v-if="detailCR.estimated_time" class="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-text-default dark:bg-white/10 dark:text-white">
@@ -442,7 +442,7 @@
                       </div>
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Respuesta</label>
-                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" admin id="change-response-evidence" />
                       <IssueContractReply v-model="contractReply" :project-id="projectId" kind="change" :ticket="detailCR" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
@@ -450,11 +450,11 @@
                       <div class="grid grid-cols-2 gap-3">
                         <div>
                           <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Tiempo estimado</label>
-                          <input v-model="evalForm.estimated_time" type="text" placeholder="Ej: 2 semanas" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                          <input v-model="evalForm.estimated_time" type="text" placeholder="Ej: 2 semanas" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                         </div>
                         <div>
                           <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Costo estimado</label>
-                          <input v-model.number="evalForm.estimated_cost" type="number" min="0" step="1000" placeholder="0" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                          <input v-model.number="evalForm.estimated_cost" type="number" min="0" step="1000" placeholder="0" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                         </div>
                       </div>
                       <div class="flex justify-end gap-2">
@@ -509,7 +509,7 @@
                     v-model="newComment"
                     type="text"
                     placeholder="Escribe un comentario..."
-                    class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40"
+                    class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                   />
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!newComment.trim()">
                     Enviar

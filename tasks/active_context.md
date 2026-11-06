@@ -1,6 +1,6 @@
 ## PA-227 — Modo oscuro de Panel y Plataforma (2026-11-06)
 
-Barrido y correcciones en `fix/06112026-pa227-dark-mode`, desde `b01448a2`. DEV desechable con datos ficticios; suites automatizadas sólo en CI. Inventario, matriz y evidencia en `docs/audits/PA-227/`. Validación y entrega pendientes.
+Barrido y correcciones en `fix/06112026-pa227-dark-mode`, desde `b01448a2`. DEV desechable con datos ficticios; suites automatizadas sólo en CI. Inventario, matriz y evidencia en `docs/audits/PA-227/`. PR #558 abierto. Herencia del tema, contraste de colores personalizados, portadas, paginación y textos secundarios corregidos. Los servidores propios se apagaron al centralizar QA en DevQA (2026-11-06); la revisión de estados y el contraste de Markdown continúan pendientes de ese turno. CI y evidencia final pendientes.
 
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 

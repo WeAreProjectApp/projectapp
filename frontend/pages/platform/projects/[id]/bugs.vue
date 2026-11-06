@@ -203,11 +203,11 @@
                 <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
-                  <input v-model="createForm.title" type="text" required placeholder="¿Qué está fallando?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="createForm.title" type="text" required placeholder="¿Qué está fallando?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Descripción</label>
-                  <textarea v-model="createForm.description" rows="2" placeholder="Describe el error con detalle..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <textarea v-model="createForm.description" rows="2" placeholder="Describe el error con detalle..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                 </div>
 
                 <!-- Steps to reproduce -->
@@ -216,12 +216,12 @@
                   <div class="space-y-2">
                     <div v-for="(step, i) in createForm.steps_to_reproduce" :key="i" class="flex items-center gap-2">
                       <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-text-muted dark:bg-white/10">{{ i + 1 }}</span>
-                      <input v-model="createForm.steps_to_reproduce[i]" type="text" :placeholder="`Paso ${i + 1}`" class="flex-1 rounded-lg border border-border-default bg-surface-muted/40 px-3 py-2 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                      <input v-model="createForm.steps_to_reproduce[i]" type="text" :placeholder="`Paso ${i + 1}`" class="flex-1 rounded-lg border border-border-default bg-surface-muted/40 px-3 py-2 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                       <BaseButton variant="danger-ghost" icon-only size="sm" class="shrink-0" aria-label="Eliminar" v-if="createForm.steps_to_reproduce.length > 1" @click="createForm.steps_to_reproduce.splice(i, 1)">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                       </BaseButton>
                     </div>
-                    <button type="button" class="text-xs font-medium text-esmerald/60 transition hover:text-text-default/60 dark:hover:text-white" @click="createForm.steps_to_reproduce.push('')">
+                    <button type="button" class="text-xs font-medium text-text-brand transition hover:text-text-default/60 dark:hover:text-white" @click="createForm.steps_to_reproduce.push('')">
                       + Agregar paso
                     </button>
                   </div>
@@ -230,11 +230,11 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Comportamiento esperado</label>
-                    <textarea v-model="createForm.expected_behavior" rows="2" placeholder="¿Qué debería pasar?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <textarea v-model="createForm.expected_behavior" rows="2" placeholder="¿Qué debería pasar?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Comportamiento actual</label>
-                    <textarea v-model="createForm.actual_behavior" rows="2" placeholder="¿Qué pasa realmente?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <textarea v-model="createForm.actual_behavior" rows="2" placeholder="¿Qué pasa realmente?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                 </div>
 
@@ -258,7 +258,7 @@
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Navegador</label>
-                    <input v-model="createForm.device_browser" type="text" placeholder="Chrome / iOS" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="createForm.device_browser" type="text" placeholder="Chrome / iOS" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                 </div>
 
@@ -335,7 +335,7 @@
                     rows="14"
                     spellcheck="false"
                     placeholder='[{"id": 1, "status": "fixing", "admin_response": "Reproducido, en corrección."}]'
-                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/20 dark:focus:border-lemon/40"
+                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                   />
                 </div>
 
@@ -457,7 +457,7 @@
 
               <!-- Admin response -->
               <div v-if="detailBug.admin_response" class="mb-5 rounded-xl border-l-2 border-l-esmerald/30 bg-surface-muted/20 p-4 dark:border-l-lemon/40">
-                <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-esmerald/60 dark:text-lemon/60">Respuesta del equipo</p>
+                <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-brand dark:text-lemon/60">Respuesta del equipo</p>
                 <p class="text-sm leading-relaxed text-text-muted">{{ detailBug.admin_response }}</p>
               </div>
 
@@ -488,7 +488,7 @@
                       </div>
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Respuesta</label>
-                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" admin id="bug-response-evidence" />
                       <IssueContractReply v-model="contractReply" :project-id="projectId" kind="bug" :ticket="detailBug" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
@@ -537,7 +537,7 @@
                 </div>
 
                 <form class="flex gap-2" @submit.prevent="handleAddComment">
-                  <input v-model="newComment" type="text" placeholder="Escribe un comentario..." class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="newComment" type="text" placeholder="Escribe un comentario..." class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!newComment.trim()">
                     Enviar
                   </BaseButton>

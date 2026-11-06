@@ -1275,8 +1275,12 @@ centred against the label and help block.
 
 Semantic theme tokens live in `frontend/assets/styles/theme.css` and are exposed
 as Tailwind colors (`bg-surface`, `text-text-default`, `border-input-border`,
-etc.). Light/dark values flip with the `.dark` class on `<html>`, toggled by
-`useDiagnosticDarkMode`. Base components in `frontend/components/base/`
+etc.). Light/dark values flip with the `.dark` class on `<html>`. Panel uses
+`useDiagnosticDarkMode`; Platform applies `usePlatformTheme` from its layout so
+portals under `body` inherit the same tokens. Platform releases its custom CSS
+variables before leaving the layout; the next layout restores its own saved
+preference. Custom palettes choose black/white button foregrounds and a readable
+brand shade independently; cover images keep opaque reading surfaces. Base components in `frontend/components/base/`
 (`BaseInput`, `BaseSelect`, `BaseTextarea`, `BaseButton`, `BaseBadge`,
 `BaseCard`, `BaseDrawer`) wrap native HTML using these tokens, so consumer markup does not
 need `dark:` variants. New views must prefer these tokens and components;

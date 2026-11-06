@@ -540,24 +540,24 @@
               <form v-if="cardStep === 'form'" class="space-y-3" @submit.prevent="submitCard">
                 <div>
                   <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Número de tarjeta</label>
-                  <input :value="cardForm.card_number" type="text" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" required autocomplete="cc-number" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-sm tracking-wider text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" @input="formatCardNumber" />
+                  <input :value="cardForm.card_number" type="text" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" required autocomplete="cc-number" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-sm tracking-wider text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" @input="formatCardNumber" />
                 </div>
                 <div>
                   <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Titular de la tarjeta</label>
-                  <input v-model="cardForm.card_holder" type="text" placeholder="Nombre como aparece en la tarjeta" required minlength="5" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="cardForm.card_holder" type="text" placeholder="Nombre como aparece en la tarjeta" required minlength="5" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                   <div>
                     <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Mes</label>
-                    <input v-model="cardForm.exp_month" type="text" inputmode="numeric" maxlength="2" placeholder="MM" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="cardForm.exp_month" type="text" inputmode="numeric" maxlength="2" placeholder="MM" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Año</label>
-                    <input v-model="cardForm.exp_year" type="text" inputmode="numeric" maxlength="2" placeholder="AA" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="cardForm.exp_year" type="text" inputmode="numeric" maxlength="2" placeholder="AA" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">CVC</label>
-                    <input v-model="cardForm.cvc" type="text" inputmode="numeric" maxlength="4" placeholder="123" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="cardForm.cvc" type="text" inputmode="numeric" maxlength="4" placeholder="123" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                 </div>
 

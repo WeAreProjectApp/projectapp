@@ -105,7 +105,7 @@
                     type="text"
                     required
                     placeholder="Ej: Plataforma E-commerce"
-                    class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40"
+                    class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                   />
                 </div>
 
@@ -115,7 +115,7 @@
                     v-model="createForm.description"
                     rows="3"
                     placeholder="Breve descripción del proyecto..."
-                    class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40"
+                    class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                   />
                 </div>
 
@@ -160,7 +160,7 @@
                           v-model="proposalSearch"
                           type="text"
                           placeholder="Buscar propuesta por nombre..."
-                          class="w-full rounded-lg border border-border-default bg-surface-muted/40 px-3 py-2 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40"
+                          class="w-full rounded-lg border border-border-default bg-surface-muted/40 px-3 py-2 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                           @keydown.esc.stop.prevent="closeProposalDropdown"
                         />
                       </div>

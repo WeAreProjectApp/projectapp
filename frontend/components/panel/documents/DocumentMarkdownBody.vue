@@ -228,41 +228,41 @@ const safeHtml = computed(() => {
 .markdown-preview :deep(.callout-caution .callout-label) { color: #f43f5e; }
 
 /* Dark mode */
-:global(.dark) .markdown-preview :deep(.md-h1) { color: #6ee7b7; border-bottom-color: #374151; }
-:global(.dark) .markdown-preview :deep(.md-h2) { color: #6ee7b7; }
-:global(.dark) .markdown-preview :deep(.md-h3) { color: #a7f3d0; }
-:global(.dark) .markdown-preview :deep(.md-h4),
-:global(.dark) .markdown-preview :deep(.md-h5),
-:global(.dark) .markdown-preview :deep(.md-h6) { color: #a7f3d0; }
-:global(.dark) .markdown-preview :deep(.md-p),
-:global(.dark) .markdown-preview :deep(.md-ul),
-:global(.dark) .markdown-preview :deep(.md-ol) { color: #d1d5db; }
-:global(.dark) .markdown-preview :deep(.md-ul li),
-:global(.dark) .markdown-preview :deep(.md-ol li) { color: #d1d5db; }
-:global(.dark) .markdown-preview :deep(.md-blockquote) {
+.dark .markdown-preview :deep(.md-h1) { color: #6ee7b7; border-bottom-color: #374151; }
+.dark .markdown-preview :deep(.md-h2) { color: #6ee7b7; }
+.dark .markdown-preview :deep(.md-h3) { color: #a7f3d0; }
+.dark .markdown-preview :deep(.md-h4),
+.dark .markdown-preview :deep(.md-h5),
+.dark .markdown-preview :deep(.md-h6) { color: #a7f3d0; }
+.dark .markdown-preview :deep(.md-p),
+.dark .markdown-preview :deep(.md-ul),
+.dark .markdown-preview :deep(.md-ol) { color: #d1d5db; }
+.dark .markdown-preview :deep(.md-ul li),
+.dark .markdown-preview :deep(.md-ol li) { color: #d1d5db; }
+.dark .markdown-preview :deep(.md-blockquote) {
   background-color: rgba(16, 185, 129, 0.1);
   border-left-color: #10b981;
   color: #9ca3af;
 }
-:global(.dark) .markdown-preview :deep(.md-code-block) { background-color: #1f2937; border-color: #374151; }
-:global(.dark) .markdown-preview :deep(.md-code-block code) { color: #e5e7eb; }
-:global(.dark) .markdown-preview :deep(.md-table th) { background-color: #1f2937; border-color: #374151; color: #d1d5db; }
-:global(.dark) .markdown-preview :deep(.md-table td) { border-color: #374151; color: #9ca3af; }
-:global(.dark) .markdown-preview :deep(.md-table tbody tr:nth-child(even)) { background-color: rgba(31, 41, 55, 0.5); }
-:global(.dark) .markdown-preview :deep(.md-hr) { border-top-color: #374151; }
-:global(.dark) .markdown-preview :deep(.md-link) { color: #6ee7b7; }
-:global(.dark) .markdown-preview :deep(.md-link:hover) { color: #a7f3d0; }
-:global(.dark) .markdown-preview :deep(del) { color: #9ca3af; }
-:global(.dark) .markdown-preview :deep(code) { background-color: #374151; color: #d1d5db; border-color: #4b5563; }
-:global(.dark) .markdown-preview :deep(.callout-note) { background-color: #0d2b24; border-color: #809490; }
-:global(.dark) .markdown-preview :deep(.callout-tip) { background-color: #052e16; border-color: #4ade80; }
-:global(.dark) .markdown-preview :deep(.callout-tip .callout-label) { color: #4ade80; }
-:global(.dark) .markdown-preview :deep(.callout-important) { background-color: #1e1b4b; border-color: #818cf8; }
-:global(.dark) .markdown-preview :deep(.callout-important .callout-label) { color: #818cf8; }
-:global(.dark) .markdown-preview :deep(.callout-warning) { background-color: #1c1400; border-color: #fbbf24; }
-:global(.dark) .markdown-preview :deep(.callout-warning .callout-label) { color: #fbbf24; }
-:global(.dark) .markdown-preview :deep(.callout-caution) { background-color: #200a0e; border-color: #fb7185; }
-:global(.dark) .markdown-preview :deep(.callout-caution .callout-label) { color: #fb7185; }
+.dark .markdown-preview :deep(.md-code-block) { background-color: #1f2937; border-color: #374151; }
+.dark .markdown-preview :deep(.md-code-block code) { color: #e5e7eb; }
+.dark .markdown-preview :deep(.md-table th) { background-color: #1f2937; border-color: #374151; color: #d1d5db; }
+.dark .markdown-preview :deep(.md-table td) { border-color: #374151; color: #9ca3af; }
+.dark .markdown-preview :deep(.md-table tbody tr:nth-child(even)) { background-color: rgba(31, 41, 55, 0.5); }
+.dark .markdown-preview :deep(.md-hr) { border-top-color: #374151; }
+.dark .markdown-preview :deep(.md-link) { color: #6ee7b7; }
+.dark .markdown-preview :deep(.md-link:hover) { color: #a7f3d0; }
+.dark .markdown-preview :deep(del) { color: #9ca3af; }
+.dark .markdown-preview :deep(code) { background-color: #374151; color: #d1d5db; border-color: #4b5563; }
+.dark .markdown-preview :deep(.callout-note) { background-color: #0d2b24; border-color: #809490; }
+.dark .markdown-preview :deep(.callout-tip) { background-color: #052e16; border-color: #4ade80; }
+.dark .markdown-preview :deep(.callout-tip .callout-label) { color: #4ade80; }
+.dark .markdown-preview :deep(.callout-important) { background-color: #1e1b4b; border-color: #818cf8; }
+.dark .markdown-preview :deep(.callout-important .callout-label) { color: #818cf8; }
+.dark .markdown-preview :deep(.callout-warning) { background-color: #1c1400; border-color: #fbbf24; }
+.dark .markdown-preview :deep(.callout-warning .callout-label) { color: #fbbf24; }
+.dark .markdown-preview :deep(.callout-caution) { background-color: #200a0e; border-color: #fb7185; }
+.dark .markdown-preview :deep(.callout-caution .callout-label) { color: #fb7185; }
 
 /* Card thumbnail (gallery mini-preview) */
 .markdown-preview--mini { font-size: 0.65rem; }
@@ -354,13 +354,13 @@ const safeHtml = computed(() => {
   background-color: #e5e7eb;
   border-color: #d1d5db;
 }
-:global(.dark) .markdown-preview--professional :deep(.md-h1),
-:global(.dark) .markdown-preview--professional :deep(.md-h2),
-:global(.dark) .markdown-preview--professional :deep(.md-h3) { color: #a7f3d0; }
-:global(.dark) .markdown-preview--professional :deep(.md-p),
-:global(.dark) .markdown-preview--professional :deep(.md-ul),
-:global(.dark) .markdown-preview--professional :deep(.md-ol) { color: #d1d5db; }
-:global(.dark) .markdown-preview--professional :deep(.md-blockquote) {
+.dark .markdown-preview--professional :deep(.md-h1),
+.dark .markdown-preview--professional :deep(.md-h2),
+.dark .markdown-preview--professional :deep(.md-h3) { color: #a7f3d0; }
+.dark .markdown-preview--professional :deep(.md-p),
+.dark .markdown-preview--professional :deep(.md-ul),
+.dark .markdown-preview--professional :deep(.md-ol) { color: #d1d5db; }
+.dark .markdown-preview--professional :deep(.md-blockquote) {
   background-color: rgba(250, 243, 224, 0.08);
   color: #e5e7eb;
 }
