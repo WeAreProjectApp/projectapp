@@ -1,3 +1,7 @@
+## PA-227 — Modo oscuro de Panel y Plataforma (2026-11-06)
+
+Barrido y correcciones en `fix/06112026-pa227-dark-mode`, desde `b01448a2`. DEV desechable con datos ficticios; suites automatizadas sólo en CI. Inventario, matriz y evidencia en `docs/audits/PA-227/`. Validación y entrega pendientes.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

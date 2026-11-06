@@ -1,0 +1,744 @@
+[
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/ads.vue",
+    "route": "/panel/accounting/ads",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/cards.vue",
+    "route": "/panel/accounting/cards",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/collection-context/[id].vue",
+    "route": "/panel/accounting/collection-context/:id",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/collections.vue",
+    "route": "/panel/accounting/collections",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/expenses.vue",
+    "route": "/panel/accounting/expenses",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/history.vue",
+    "route": "/panel/accounting/history",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/hostings.vue",
+    "route": "/panel/accounting/hostings",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/incomes.vue",
+    "route": "/panel/accounting/incomes",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/index.vue",
+    "route": "/panel/accounting",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/pocket.vue",
+    "route": "/panel/accounting/pocket",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/project-hosting/[id].vue",
+    "route": "/panel/accounting/project-hosting/:id",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/recurring.vue",
+    "route": "/panel/accounting/recurring",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/settings.vue",
+    "route": "/panel/accounting/settings",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/accounting/statements.vue",
+    "route": "/panel/accounting/statements",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/additional-modules/index.vue",
+    "route": "/panel/additional-modules",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/admins/index.vue",
+    "route": "/panel/admins",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/blog/[id]/edit.vue",
+    "route": "/panel/blog/:id/edit",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/blog/calendar.vue",
+    "route": "/panel/blog/calendar",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/blog/create.vue",
+    "route": "/panel/blog/create",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/blog/index.vue",
+    "route": "/panel/blog",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/building-with-us/index.vue",
+    "route": "/panel/building-with-us",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/cells/index.vue",
+    "route": "/panel/cells",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/clients/index.vue",
+    "route": "/panel/clients",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/communications/index.vue",
+    "route": "/panel/communications",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/consulting/index.vue",
+    "route": "/panel/consulting",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/defaults.vue",
+    "route": "/panel/defaults",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/diagnostics/[id]/edit.vue",
+    "route": "/panel/diagnostics/:id/edit",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/diagnostics/create.vue",
+    "route": "/panel/diagnostics/create",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/diagnostics/defaults.vue",
+    "route": "/panel/diagnostics/defaults",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/diagnostics/index.vue",
+    "route": "/panel/diagnostics",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/documents/[id]/edit.vue",
+    "route": "/panel/documents/:id/edit",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/documents/create.vue",
+    "route": "/panel/documents/create",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/documents/index.vue",
+    "route": "/panel/documents",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/documents/statuses.vue",
+    "route": "/panel/documents/statuses",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/emails/index.vue",
+    "route": "/panel/emails",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/financing/[id].vue",
+    "route": "/panel/financing/:id",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/financing/index.vue",
+    "route": "/panel/financing",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/financing/new.vue",
+    "route": "/panel/financing/new",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/hour-packages/[id]/edit.vue",
+    "route": "/panel/hour-packages/:id/edit",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/hour-packages/create.vue",
+    "route": "/panel/hour-packages/create",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/hour-packages/index.vue",
+    "route": "/panel/hour-packages",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/index.vue",
+    "route": "/panel",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/linkedin/index.vue",
+    "route": "/panel/linkedin",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/linktrees/[id]/edit.vue",
+    "route": "/panel/linktrees/:id/edit",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/linktrees/index.vue",
+    "route": "/panel/linktrees",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/login.vue",
+    "route": "/panel/login",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/mcps/index.vue",
+    "route": "/panel/mcps",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/monitoring/index.vue",
+    "route": "/panel/monitoring",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/partnership-program/[id].vue",
+    "route": "/panel/partnership-program/:id",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/partnership-program/index.vue",
+    "route": "/panel/partnership-program",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/partnership-program/new.vue",
+    "route": "/panel/partnership-program/new",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/platform/ai.vue",
+    "route": "/panel/platform/ai",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/platform/help.vue",
+    "route": "/panel/platform/help",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/portfolio/[id]/edit.vue",
+    "route": "/panel/portfolio/:id/edit",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/portfolio/create.vue",
+    "route": "/panel/portfolio/create",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/portfolio/index.vue",
+    "route": "/panel/portfolio",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/projects/[id]/ideas.vue",
+    "route": "/panel/projects/:id/ideas",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/projects/index.vue",
+    "route": "/panel/projects",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/projects/statuses.vue",
+    "route": "/panel/projects/statuses",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/proposals/[id]/edit.vue",
+    "route": "/panel/proposals/:id/edit",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/proposals/create.vue",
+    "route": "/panel/proposals/create",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/proposals/defaults.vue",
+    "route": "/panel/proposals/defaults",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/proposals/email-deliverability.vue",
+    "route": "/panel/proposals/email-deliverability",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/proposals/email-templates.vue",
+    "route": "/panel/proposals/email-templates",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/proposals/index.vue",
+    "route": "/panel/proposals",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/qr-cards/index.vue",
+    "route": "/panel/qr-cards",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/secure-links/index.vue",
+    "route": "/panel/secure-links",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/styleguide.vue",
+    "route": "/panel/styleguide",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/tasks/index.vue",
+    "route": "/panel/tasks",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "panel",
+    "file": "frontend/pages/panel/views.vue",
+    "route": "/panel/views",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/access.vue",
+    "route": "/platform/access",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/admin-login.vue",
+    "route": "/platform/admin-login",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/board.vue",
+    "route": "/platform/board",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/bugs.vue",
+    "route": "/platform/bugs",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/changes.vue",
+    "route": "/platform/changes",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/clients/[id].vue",
+    "route": "/platform/clients/:id",
+    "platformRole": "admin",
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/clients/index.vue",
+    "route": "/platform/clients",
+    "platformRole": "admin",
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/collection-accounts/[id].vue",
+    "route": "/platform/collection-accounts/:id",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/collection-accounts/index.vue",
+    "route": "/platform/collection-accounts",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/complete-profile.vue",
+    "route": "/platform/complete-profile",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/dashboard.vue",
+    "route": "/platform/dashboard",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/deliverables.vue",
+    "route": "/platform/deliverables",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/documents/index.vue",
+    "route": "/platform/documents",
+    "platformRole": "client",
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/forgot-password.vue",
+    "route": "/platform/forgot-password",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/index.vue",
+    "route": "/platform",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/login.vue",
+    "route": "/platform/login",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/notifications.vue",
+    "route": "/platform/notifications",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/payments.vue",
+    "route": "/platform/payments",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/profile.vue",
+    "route": "/platform/profile",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/access.vue",
+    "route": "/platform/projects/:id/access",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/board.vue",
+    "route": "/platform/projects/:id/board",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/bugs.vue",
+    "route": "/platform/projects/:id/bugs",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/changes.vue",
+    "route": "/platform/projects/:id/changes",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/collection-accounts.vue",
+    "route": "/platform/projects/:id/collection-accounts",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/data-model.vue",
+    "route": "/platform/projects/:id/data-model",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/deliverables/[deliverableId]/index.vue",
+    "route": "/platform/projects/:id/deliverables/:deliverableId",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/deliverables/index.vue",
+    "route": "/platform/projects/:id/deliverables",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/delivery.vue",
+    "route": "/platform/projects/:id/delivery",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/ideas.vue",
+    "route": "/platform/projects/:id/ideas",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/index.vue",
+    "route": "/platform/projects/:id",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/payments.vue",
+    "route": "/platform/projects/:id/payments",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/[id]/secure-links.vue",
+    "route": "/platform/projects/:id/secure-links",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/projects/index.vue",
+    "route": "/platform/projects",
+    "platformRole": null,
+    "redirect": false
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/reset-password.vue",
+    "route": "/platform/reset-password",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/verify-code.vue",
+    "route": "/platform/verify-code",
+    "platformRole": null,
+    "redirect": true
+  },
+  {
+    "surface": "platform",
+    "file": "frontend/pages/platform/verify.vue",
+    "route": "/platform/verify",
+    "platformRole": null,
+    "redirect": true
+  }
+]
