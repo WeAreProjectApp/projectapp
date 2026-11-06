@@ -271,7 +271,7 @@ test('deferring from the editor accepts without an implicit project', {
   expect(state.proposal.linked_project).toBeNull();
 });
 
-test('optional annexes start unselected and only the checked annex enters the packet', {
+test('only the checked optional annex enters the packet', {
   tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
 }, async ({ page }) => {
   // Catches every active annex being silently included when the operator selected one.

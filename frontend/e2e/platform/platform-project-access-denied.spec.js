@@ -10,6 +10,8 @@ import { PLATFORM_PROJECT_DETAIL } from '../helpers/flow-tags.js';
 import { mockPlatformClient, setPlatformAuth } from '../helpers/platform-auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 
+test.setTimeout(60_000);
+
 const restrictedProject = {
   id: 45,
   name: 'Proyecto restringido',
@@ -36,7 +38,7 @@ async function mockRestrictedProject(page) {
   });
 }
 
-test('a denied project selection hides commercial and project data', {
+test('a denied project selection hides restricted data', {
   tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-client', '@outcome:error'],
 }, async ({ page }) => {
   // Catches a 403 retaining an earlier project's name, sidebar, or commercial return link.

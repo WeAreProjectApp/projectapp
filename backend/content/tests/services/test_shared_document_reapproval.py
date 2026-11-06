@@ -81,6 +81,31 @@ def test_reapproval_without_selection_keeps_the_confirmed_annex(
     assert binding.current_file.package_id == package.pk
 
 
+def test_reapproval_recovers_legacy_annex_selection_from_original_files(
+    split_approved_proposal, admin_user,
+):
+    """Falla si una revisión histórica sin manifiesto de selección pierde su anexo aprobado."""
+    proposal, annex = split_approved_proposal
+    previous = proposal.approval_packages.get(number=1)
+    original = previous.files.get(source_key=f'original-{annex.pk}')
+    legacy_manifest = dict(previous.manifest)
+    legacy_manifest.pop('selected_document_ids')
+    previous.manifest = legacy_manifest
+    previous.save(update_fields=['manifest'])
+
+    package = reconfirm(
+        proposal.pk,
+        revision_payload(proposal, request_id='legacy-selection-revision', use_proposal_contracts=True),
+        actor=admin_user,
+    )
+
+    restored = package.files.get(source_key=f'original-{annex.pk}')
+    assert package.manifest['selected_document_ids'] == [annex.pk]
+    assert (restored.sha256, restored.file.read(), original.file.read()) == (
+        original.sha256, b'%PDF-1.4 annex', b'%PDF-1.4 annex',
+    )
+
+
 def test_reapproval_with_empty_selection_retires_the_current_annex(
     split_approved_proposal, admin_user,
 ):
