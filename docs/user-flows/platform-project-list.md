@@ -6,7 +6,7 @@ el administrador conserva las columnas de cliente y solicitudes.
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Consultar nombres de 175 caracteres, con y sin espacios, junto a otro corto. | Nombre completo en varias líneas; progreso, bugs, importe, actividad y acceso al detalle alcanzables. A 1440 × 900 todas las columnas caben desde la posición inicial. |
-| success | Abrir un proyecto desde su tarjeta o fila. | El detalle corresponde al proyecto seleccionado. |
+| success | Abrir un proyecto desde su tarjeta o fila. | El detalle corresponde al proyecto seleccionado; su nombre completo se ajusta en la ruta de navegación superior sin ensanchar la página. |
 | display | Consultar el listado sin registros. | Se muestra el estado vacío correspondiente al rol. |
 
 PA-229 se prueba en los cinco perfiles canónicos del proyecto. Las tarjetas de

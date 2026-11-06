@@ -142,6 +142,8 @@ for (const profile of RESPONSIVE_PROFILES) {
         await record.click()
         await expect(page).toHaveURL(/\/platform\/projects\/77$/)
         await expect(page.getByRole('link', { name: 'Bugs', exact: true })).toBeVisible()
+        await assertCompleteText(page.getByTestId('project-breadcrumb-name'), name)
+        await assertResponsiveScenario(page, testInfo, null, { profile })
       })
     }
 
