@@ -1,0 +1,46 @@
+name: Fake data contract
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'backend/**'
+      - 'scripts/ci/run-fake-data-contract.py'
+      - '.github/workflows/fake-data-contract.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: fake-data-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pkg-config default-libmysqlclient-dev ffmpeg
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Validate reproducible fake data
+        run: python ../scripts/ci/run-fake-data-contract.py --shard ${{ matrix.shard }}
+      - name: Preserve test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fake-data-contract-${{ matrix.shard }}
+          path: backend/fake-data-*.xml
