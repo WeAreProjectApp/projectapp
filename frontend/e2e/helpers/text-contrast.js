@@ -1,5 +1,15 @@
 /** Measure rendered sRGB text over its composed, solid ancestor backgrounds. */
 export async function textContrast(locator, { placeholder = false } = {}) {
+  await locator.evaluate(async (element) => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const animations = new Set();
+    for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+      ancestor.getAnimations().filter((animation) => (
+        animation.effect?.getTiming().iterations !== Infinity
+      )).forEach((animation) => animations.add(animation));
+    }
+    await Promise.allSettled([...animations].map((animation) => animation.finished));
+  });
   return locator.evaluate((element, usePlaceholder) => {
     const rgba = (value) => {
       const channels = value.match(/[\d.]+/g).map(Number);

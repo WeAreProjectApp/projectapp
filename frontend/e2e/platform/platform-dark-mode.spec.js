@@ -6,7 +6,7 @@ import { PANEL_VIEWPORTS } from '../../config/responsive.js';
 import { textContrast } from '../helpers/text-contrast.js';
 
 const project = {
-  id: 1, name: 'Proyecto de contraste', status: 'active', progress: 0,
+  id: 1, name: 'Proyecto de contraste', status: 'active', status_label: 'Sin clasificar', progress: 0,
   bugs_open_count: 0, changes_pending_count: 0, client_id: 9002,
   client_name: 'Client E2E', client_email: 'client@e2e-test.com',
 };

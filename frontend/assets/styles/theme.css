@@ -57,6 +57,7 @@
   --color-primary-strong: #001713;   /* esmerald-dark */
   --color-primary-soft: #E6EFEF;     /* esmerald-light */
   --color-accent: #F0FF3D;           /* lemon */
+  --color-accent-strong: #E8F26E;
   --color-accent-mid: #E8F26E;       /* lemon medio — saturado pero no estridente */
   --color-accent-soft: #F9FFB0;
 
@@ -65,6 +66,7 @@
   --color-primary-strong-rgb: 0 23 19;     /* #001713 */
   --color-primary-soft-rgb: 230 239 239;   /* #E6EFEF */
   --color-accent-rgb: 240 255 61;          /* #F0FF3D */
+  --color-accent-strong-rgb: 232 242 110;
   --color-accent-mid-rgb: 232 242 110;     /* #E8F26E */
   --color-accent-soft-rgb: 249 255 176;    /* #F9FFB0 */
 
