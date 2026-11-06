@@ -14,7 +14,7 @@ construcción.
 
 ## Inventario (60 canales documentados)
 
-La fuente ejecutable registra 65 canales; las filas que faltan aquí son de
+La fuente ejecutable registra 66 canales; las filas que faltan aquí son de
 entregas de Platform y formalización, y se completan con su propia revisión.
 
 | # | Familia configurable | Clave de plantilla | Salida / disparador |
@@ -132,7 +132,7 @@ que la traza BCC del primer correo posterior al despliegue figura como Enviado.
 
 ## Evidencia de completitud
 
-- La prueba parametrizada compara exactamente las 57 claves, familia por
+- La prueba de inventario compara exactamente las 66 claves, familia por
   familia, con este inventario ejecutable.
 - El gateway rechaza cualquier clave no registrada y exige una clasificación
   explícita, incluso para avisos internos o de seguridad.
