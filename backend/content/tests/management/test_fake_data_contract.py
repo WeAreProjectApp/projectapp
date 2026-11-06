@@ -312,6 +312,7 @@ def test_fake_reset_removes_reassignment_receipt_before_proposal(admin_user):
 
 
 def test_fake_reset_scopes_secure_link_cleanup_to_project_owners():
+    from secure_links import services
     from secure_links.models import SecureLink, SecureLinkEvent
 
     run_command('create_fake_secure_links')
@@ -324,12 +325,12 @@ def test_fake_reset_scopes_secure_link_cleanup_to_project_owners():
     platform_event_ids = set(SecureLinkEvent.objects.filter(
         link_id__in=platform_link_ids,
     ).values_list('pk', flat=True))
-    standalone_link = SecureLink.objects.filter(
-        project__isnull=True, retention_context__isnull=True,
-    ).order_by('pk').first()
+    standalone_link, _ = services.create_link(
+        secret_type='custom', title='Enlace independiente del dataset', origin='panel',
+        fields={'custom_name': 'Nota independiente', 'content': 'Contenido ficticio conservado.'},
+    )
 
     assert len(platform_event_ids) >= len(platform_link_ids) > len(platform_project_ids) > 0
-    assert standalone_link is not None
 
     run_command('delete_fake_data', '--confirm')
 
