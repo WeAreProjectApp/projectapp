@@ -79,7 +79,7 @@
         </div>
         <div v-else-if="payStore.phases.length" class="rounded-2xl border border-border-default bg-surface p-6">
           <h2 class="mb-1 text-lg font-bold text-text-default">Activa tu plan de hosting</h2>
-          <p class="mb-4 text-xs text-green-light">
+          <p class="mb-4 text-xs text-text-muted">
             El costo se calcula sumando el hosting de cada fase de tu proyecto. Elige con qué frecuencia quieres pagar.
           </p>
 
@@ -91,8 +91,8 @@
               type="button"
               class="rounded-full border px-4 py-2 text-xs font-semibold transition"
               :class="selectedPlan === opt.value
-                ? 'border-accent bg-accent text-text-default'
-                : 'border-border-default bg-surface text-green-light hover:text-text-default'"
+                ? 'border-accent bg-accent text-on-accent'
+                : 'border-border-default bg-surface text-text-muted hover:text-text-default'"
               @click="selectPlan(opt.value)"
             >{{ opt.label }}</button>
           </div>
@@ -116,7 +116,7 @@
                   </td>
                   <td class="px-4 py-3 text-right">
                     <span v-if="row.active" class="font-semibold text-text-default">${{ formatMoney(row.amount) }}</span>
-                    <span v-else class="text-xs text-green-light/50">—</span>
+                    <span v-else class="text-xs text-text-muted">—</span>
                   </td>
                 </tr>
               </tbody>
@@ -133,7 +133,7 @@
             </table>
           </div>
 
-          <p v-if="futurePhaseCount > 0" class="mt-3 text-[11px] text-green-light/60">
+          <p v-if="futurePhaseCount > 0" class="mt-3 text-[11px] text-text-muted">
             Las fases con inicio futuro se cobrarán prorrateadas (solo los días que falten del ciclo) cuando llegue su fecha.
           </p>
 
@@ -151,7 +151,7 @@
         </div>
 
         <div v-else class="rounded-3xl border border-dashed border-border-default py-16 text-center">
-          <p class="text-sm text-green-light">Este proyecto no tiene suscripción de hosting.</p>
+          <p class="text-sm text-text-muted">Este proyecto no tiene suscripción de hosting.</p>
         </div>
       </div>
 
@@ -161,7 +161,7 @@
           class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-muted bg-surface-muted px-4 py-3"
           data-enter
         >
-          <div class="flex items-center gap-2 text-xs text-green-light">
+          <div class="flex items-center gap-2 text-xs text-text-muted">
             <span class="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-semibold uppercase text-text-muted dark:text-text-subtle">Suscripción archivada</span>
             <span v-if="sub.archived_at">desde {{ formatDate(sub.archived_at) }}</span>
           </div>
@@ -189,12 +189,12 @@
                   <h2 class="text-lg font-bold text-text-default">Hosting {{ sub.plan_display }}</h2>
                   <span class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase" :class="subStatusClass(sub.status)">{{ sub.status_display }}</span>
                 </div>
-                <p class="mt-0.5 text-xs text-green-light">Inicio: {{ formatDate(sub.start_date) }}</p>
+                <p class="mt-0.5 text-xs text-text-muted">Inicio: {{ formatDate(sub.start_date) }}</p>
               </div>
             </div>
             <div class="text-right">
               <p class="text-2xl font-bold text-text-brand">${{ formatMoney(sub.billing_amount) }}</p>
-              <p class="text-xs text-green-light">COP / {{ sub.plan_display.toLowerCase() }}</p>
+              <p class="text-xs text-text-muted">COP / {{ sub.plan_display.toLowerCase() }}</p>
             </div>
           </div>
 
@@ -219,12 +219,12 @@
                 type="button"
                 class="rounded-full border px-4 py-2 text-xs font-semibold transition"
                 :class="selectedPlan === opt.value
-                  ? 'border-accent bg-accent text-text-default'
-                  : 'border-border-default bg-surface text-green-light hover:text-text-default'"
+                  ? 'border-accent bg-accent text-on-accent'
+                  : 'border-border-default bg-surface text-text-muted hover:text-text-default'"
                 @click="selectPlan(opt.value)"
               >{{ opt.label }}</button>
             </div>
-            <p class="mt-2 text-[11px] text-green-light/60">
+            <p class="mt-2 text-[11px] text-text-muted">
               Aún puedes cambiar la frecuencia. Quedará fija cuando registres tu tarjeta y se concrete el primer pago.
             </p>
           </div>
@@ -239,7 +239,7 @@
                   </td>
                   <td class="py-2.5 text-right">
                     <span v-if="row.active" class="font-medium text-text-default">${{ formatMoney(row.amount) }}</span>
-                    <span v-else class="text-xs text-green-light/50">—</span>
+                    <span v-else class="text-xs text-text-muted">—</span>
                   </td>
                 </tr>
                 <tr class="border-t-2 border-border-default">
@@ -266,7 +266,7 @@
                 <p class="text-sm font-medium text-text-default">
                   {{ sub.card_brand || 'Tarjeta' }} •••• {{ sub.card_last_four || '••••' }}
                 </p>
-                <p class="mt-0.5 text-xs text-green-light">
+                <p class="mt-0.5 text-xs text-text-muted">
                   <span v-if="sub.card_exp_month">Vence {{ sub.card_exp_month }}/{{ sub.card_exp_year }} · </span>Cobro automático activado
                 </p>
               </div>
@@ -280,7 +280,7 @@
               </BaseButton>
             </div>
           </div>
-          <p v-if="!authStore.isAdmin" class="mt-3 text-[11px] text-green-light/60">
+          <p v-if="!authStore.isAdmin" class="mt-3 text-[11px] text-text-muted">
             ¿Necesitas cancelar o pausar tu suscripción? Escríbenos y lo gestionamos por ti.
           </p>
         </div>
@@ -295,7 +295,7 @@
             <svg class="h-5 w-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
             <div class="flex-1">
               <p class="text-sm font-semibold text-text-default">Activa el cobro automático</p>
-              <p class="mt-1 text-xs text-green-light">
+              <p class="mt-1 text-xs text-text-muted">
                 Registra una tarjeta una sola vez. Tu hosting se cobrará y renovará automáticamente al vencer cada periodo.
               </p>
               <BaseButton variant="accent" size="md" class="mt-3" v-if="!authStore.isAdmin" @click="openCardModal">
@@ -318,7 +318,7 @@
                 <p class="text-sm font-semibold text-text-default">
                   {{ currentPayment.status === 'pending' ? (authStore.isAdmin ? 'Pago pendiente del cliente' : 'Próximo cobro') : currentPayment.status === 'processing' ? 'Procesando pago' : (authStore.isAdmin ? 'Requiere accion del cliente' : 'Cobro pendiente') }}
                 </p>
-                <p class="mt-0.5 text-xs text-green-light">
+                <p class="mt-0.5 text-xs text-text-muted">
                   {{ formatDate(currentPayment.billing_period_start) }} — {{ formatDate(currentPayment.billing_period_end) }}
                 </p>
                 <p v-if="currentPayment.status === 'failed'" class="mt-1 text-xs text-red-500 dark:text-red-400">
@@ -331,7 +331,7 @@
                 <p v-else-if="currentPayment.status === 'processing'" class="mt-1 text-xs text-blue-500 dark:text-blue-400">
                   Tu pago está siendo procesado. Esto puede tomar unos minutos.
                 </p>
-                <p v-else-if="currentPayment.status === 'pending' && sub.has_payment_source && !authStore.isAdmin" class="mt-1 text-xs text-green-light">
+                <p v-else-if="currentPayment.status === 'pending' && sub.has_payment_source && !authStore.isAdmin" class="mt-1 text-xs text-text-muted">
                   Se cobrará automáticamente a tu tarjeta el {{ formatDate(currentPayment.due_date) }}.
                 </p>
               </div>
@@ -374,7 +374,7 @@
         <div v-if="payStore.otherPayments.length > 0" data-enter>
           <button
             type="button"
-            class="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-green-light/60 transition hover:text-green-light"
+            class="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted transition hover:text-text-muted"
             @click="showHistory = !showHistory"
           >
             <svg class="h-3.5 w-3.5 transition-transform" :class="showHistory ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
@@ -415,7 +415,7 @@
           </transition>
         </div>
 
-        <div v-else-if="payStore.payments.length === 0" class="py-8 text-center text-sm text-green-light" data-enter>
+        <div v-else-if="payStore.payments.length === 0" class="py-8 text-center text-sm text-text-muted" data-enter>
           No hay pagos registrados aún.
         </div>
 </template>
@@ -424,7 +424,7 @@
       <div v-if="authStore.isAdmin" class="mt-6" data-enter>
         <button
           type="button"
-          class="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-green-light/60 transition hover:text-green-light"
+          class="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted transition hover:text-text-muted"
           @click="showManualForm = !showManualForm"
         >
           <svg class="h-3.5 w-3.5 transition-transform" :class="showManualForm ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
@@ -521,7 +521,7 @@
               <div class="mb-5 flex items-center justify-between">
                 <div>
                   <h2 class="text-lg font-bold text-text-default">{{ sub?.has_payment_source ? 'Cambiar tarjeta' : 'Registrar tarjeta' }}</h2>
-                  <p class="mt-0.5 text-xs text-green-light">Cobro automático de tu hosting</p>
+                  <p class="mt-0.5 text-xs text-text-muted">Cobro automático de tu hosting</p>
                 </div>
                 <BaseButton
                   unstyled
@@ -529,7 +529,7 @@
                   v-if="cardStep !== 'three_ds'"
                   type="button"
                   aria-label="Cerrar registro de tarjeta"
-                  class="flex h-8 w-8 items-center justify-center rounded-full text-green-light transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white"
+                  class="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white"
                   @click="closeCardModal"
                 >
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -540,24 +540,24 @@
               <form v-if="cardStep === 'form'" class="space-y-3" @submit.prevent="submitCard">
                 <div>
                   <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Número de tarjeta</label>
-                  <input :value="cardForm.card_number" type="text" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" required autocomplete="cc-number" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-sm tracking-wider text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" @input="formatCardNumber" />
+                  <input :value="cardForm.card_number" type="text" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" required autocomplete="cc-number" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-sm tracking-wider text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" @input="formatCardNumber" />
                 </div>
                 <div>
                   <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Titular de la tarjeta</label>
-                  <input v-model="cardForm.card_holder" type="text" placeholder="Nombre como aparece en la tarjeta" required minlength="5" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="cardForm.card_holder" type="text" placeholder="Nombre como aparece en la tarjeta" required minlength="5" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                   <div>
                     <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Mes</label>
-                    <input v-model="cardForm.exp_month" type="text" inputmode="numeric" maxlength="2" placeholder="MM" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="cardForm.exp_month" type="text" inputmode="numeric" maxlength="2" placeholder="MM" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Año</label>
-                    <input v-model="cardForm.exp_year" type="text" inputmode="numeric" maxlength="2" placeholder="AA" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="cardForm.exp_year" type="text" inputmode="numeric" maxlength="2" placeholder="AA" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">CVC</label>
-                    <input v-model="cardForm.cvc" type="text" inputmode="numeric" maxlength="4" placeholder="123" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="cardForm.cvc" type="text" inputmode="numeric" maxlength="4" placeholder="123" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-3 text-center text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                   </div>
                 </div>
 
@@ -571,7 +571,7 @@
                   {{ cardBusy ? 'Registrando…' : 'Guardar tarjeta' }}
                 </BaseButton>
 
-                <p class="text-center text-[10px] text-green-light/50">
+                <p class="text-center text-[10px] text-text-muted">
                   Tu tarjeta se guarda de forma segura en Wompi. Los cobros se hacen automáticamente al vencer cada periodo.
                 </p>
               </form>
@@ -581,7 +581,7 @@
                 <div class="rounded-xl border border-border-default bg-surface-muted/20 p-4 text-center">
                   <div class="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-border-default border-t-esmerald dark:border-t-lemon" />
                   <p class="mt-3 text-sm font-medium text-text-default">{{ threeDsMessage }}</p>
-                  <p class="mt-1 text-xs text-green-light">No cierres esta ventana.</p>
+                  <p class="mt-1 text-xs text-text-muted">No cierres esta ventana.</p>
                 </div>
                 <!-- 3DS frame: tiny/hidden for BROWSER_INFO & FINGERPRINT, visible for CHALLENGE -->
                 <iframe
@@ -601,7 +601,7 @@
                   <svg class="h-7 w-7 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
                 <p class="text-sm font-semibold text-text-default">Tarjeta registrada</p>
-                <p class="text-xs text-green-light">{{ cardDoneMessage }}</p>
+                <p class="text-xs text-text-muted">{{ cardDoneMessage }}</p>
                 <BaseButton variant="accent" size="md" class="mt-2 w-full" @click="closeCardModal">
                   Listo
                 </BaseButton>
@@ -621,8 +621,8 @@
 
               <!-- Security footer -->
               <div class="mt-4 flex items-center justify-center gap-2">
-                <svg class="h-3.5 w-3.5 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                <span class="text-[10px] text-green-light/40">Conexión segura · 3D Secure · Procesado por Wompi</span>
+                <svg class="h-3.5 w-3.5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                <span class="text-[10px] text-text-muted">Conexión segura · 3D Secure · Procesado por Wompi</span>
               </div>
             </div>
           </Transition>
@@ -640,7 +640,7 @@
                 <svg class="h-7 w-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </div>
               <h2 class="text-center text-lg font-bold text-text-default">¿Eliminar tarjeta?</h2>
-              <p class="mt-2 text-center text-sm text-green-light">
+              <p class="mt-2 text-center text-sm text-text-muted">
                 Se eliminará la tarjeta {{ sub?.card_brand || '' }} •••• {{ sub?.card_last_four || '••••' }} y se desactivará el cobro automático. Tendrás que registrar una tarjeta de nuevo para reactivarlo.
               </p>
 

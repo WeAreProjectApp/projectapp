@@ -27,7 +27,7 @@
 
       <div class="rounded-3xl border border-white/[0.1] bg-white/95 p-8 shadow-2xl backdrop-blur-2xl" data-enter>
         <h2 class="text-xl font-medium text-text-default">Confirma tu identidad</h2>
-        <p class="mt-2 text-sm leading-6 text-green-light">
+        <p class="mt-2 text-sm leading-6 text-text-muted">
           Enviamos un código de 6 dígitos a
           <span class="font-medium text-text-default">{{ authStore.pendingEmail || 'tu correo' }}</span>.
           Ingresa el código y define tu contraseña definitiva.
@@ -63,7 +63,7 @@
               v-model="form.newPassword"
               type="password"
               autocomplete="new-password"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
               placeholder="Mínimo 8 caracteres"
             >
           </div>
@@ -75,7 +75,7 @@
               v-model="form.confirmPassword"
               type="password"
               autocomplete="new-password"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
               placeholder="Repite tu contraseña"
             >
           </div>
@@ -87,7 +87,7 @@
 
         <button
           type="button"
-          class="mt-5 text-sm font-medium text-green-light transition hover:text-text-default disabled:cursor-not-allowed disabled:opacity-50"
+          class="mt-5 text-sm font-medium text-text-muted transition hover:text-text-default disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="authStore.isVerifying"
           @click="handleResendCode"
         >

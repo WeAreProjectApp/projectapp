@@ -22,7 +22,7 @@
           Ficha comercial
         </button>
       </div>
-      <p v-if="project" class="mt-1 text-sm text-green-light">
+      <p v-if="project" class="mt-1 text-sm text-text-muted">
         <template v-if="project.client_name">Cliente: {{ project.client_name }}</template>
         <template v-if="project.start_date"> · Inició: {{ formatDate(project.start_date) }}</template>
         <template v-if="project.next_deliverable"> · Próx. entrega: {{ formatDate(project.next_deliverable.due_date) }}</template>

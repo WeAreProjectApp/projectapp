@@ -9,7 +9,7 @@
         <h1 class="text-2xl font-bold text-text-default">
           Completa tu perfil
         </h1>
-        <p class="mt-2 text-sm text-green-light">
+        <p class="mt-2 text-sm text-text-muted">
           Necesitamos algunos datos antes de continuar.
         </p>
       </div>
@@ -39,7 +39,7 @@
               alt="Avatar"
               class="h-full w-full object-cover"
             />
-            <svg v-else class="h-8 w-8 text-green-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg v-else class="h-8 w-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -53,7 +53,7 @@
           />
           <button
             type="button"
-            class="text-xs text-green-light transition hover:text-text-default"
+            class="text-xs text-text-muted transition hover:text-text-default"
             @click="triggerFileInput"
           >
             {{ avatarPreview ? 'Cambiar foto' : 'Subir foto (opcional)' }}
@@ -68,7 +68,7 @@
               v-model="form.first_name"
               type="text"
               placeholder="Tu nombre"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
           <div>
@@ -77,7 +77,7 @@
               v-model="form.last_name"
               type="text"
               placeholder="Tu apellido"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
         </div>
@@ -90,7 +90,7 @@
             type="text"
             required
             placeholder="Nombre de tu empresa"
-            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
           />
         </div>
 
@@ -103,7 +103,7 @@
               type="tel"
               required
               placeholder="+57 300 000 0000"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
           <div>
@@ -113,7 +113,7 @@
               type="text"
               required
               placeholder="1020304050"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
         </div>
@@ -126,7 +126,7 @@
             type="date"
             required
             data-testid="date-of-birth"
-            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
           />
         </div>
 

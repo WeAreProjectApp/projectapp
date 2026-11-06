@@ -11,11 +11,11 @@
       <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" data-enter>
         <div>
           <h1 class="text-xl font-bold text-text-default sm:text-2xl">Recursos</h1>
-          <p class="mt-1 text-xs text-green-light/70">Archivos compartidos del proyecto.</p>
+          <p class="mt-1 text-xs text-text-muted">Archivos compartidos del proyecto.</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <span class="rounded-full border border-border-default px-3 py-1.5 text-xs font-semibold text-green-light">
+          <span class="rounded-full border border-border-default px-3 py-1.5 text-xs font-semibold text-text-muted">
             {{ store.totalCount }} archivos
           </span>
           <BaseButton variant="accent" size="md" @click="openCreateModal">
@@ -33,8 +33,8 @@
           type="button"
           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition"
           :class="activeCategory === tab.value
-            ? 'bg-primary text-white dark:bg-accent dark:text-text-default'
-            : 'text-green-light hover:bg-surface-muted/50 dark:hover:bg-white/10'"
+            ? 'bg-primary text-white dark:bg-accent dark:text-on-accent'
+            : 'text-text-muted hover:bg-surface-muted/50 dark:hover:bg-white/10'"
           @click="activeCategory = tab.value"
         >
           {{ tab.label }}
@@ -45,7 +45,7 @@
       <template v-if="filteredItems.length">
       <div v-if="!isMobile" class="overflow-x-auto rounded-2xl border border-border-default bg-surface" data-enter>
         <table class="min-w-full text-left text-sm">
-          <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-green-light/70">
+          <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-text-muted">
             <tr>
               <th class="px-4 py-3">Recurso</th>
               <th class="px-4 py-3">Categoría</th>
@@ -71,7 +71,7 @@
                   </span>
                   <div class="min-w-0">
                     <p class="truncate font-medium text-text-default">{{ d.title }}</p>
-                    <p class="truncate text-[11px] text-green-light/60">{{ d.file_name || '—' }}</p>
+                    <p class="truncate text-[11px] text-text-muted">{{ d.file_name || '—' }}</p>
                   </div>
                 </div>
               </td>
@@ -83,11 +83,11 @@
                   Archivado
                 </span>
               </td>
-              <td class="px-4 py-3 text-xs text-green-light">{{ d.uploaded_by_name }}</td>
-              <td class="px-4 py-3 text-xs text-green-light/70">{{ formatBytes(d.file_size) }}</td>
-              <td class="px-4 py-3 text-xs text-green-light/70">v{{ d.current_version }}</td>
-              <td class="px-4 py-3 text-xs text-green-light/70">{{ formatDate(d.updated_at) }}</td>
-              <td class="px-2 py-3 text-right text-green-light/40">›</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ d.uploaded_by_name }}</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ formatBytes(d.file_size) }}</td>
+              <td class="px-4 py-3 text-xs text-text-muted">v{{ d.current_version }}</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ formatDate(d.updated_at) }}</td>
+              <td class="px-2 py-3 text-right text-text-muted">›</td>
             </tr>
           </tbody>
         </table>
@@ -109,16 +109,16 @@
             </span>
             <div class="min-w-0 flex-1">
               <p class="truncate font-medium text-text-default">{{ d.title }}</p>
-              <p class="truncate text-[11px] text-green-light/60">{{ d.file_name || '—' }}</p>
+              <p class="truncate text-[11px] text-text-muted">{{ d.file_name || '—' }}</p>
             </div>
-            <span class="shrink-0 text-green-light/40">›</span>
+            <span class="shrink-0 text-text-muted">›</span>
           </div>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" :class="categoryBadgeClass(d.category)">{{ categoryLabel(d.category) }}</span>
             <span v-if="d.is_archived" class="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivado</span>
-            <span class="text-[10px] text-green-light/60">{{ formatBytes(d.file_size) }} · v{{ d.current_version }}</span>
+            <span class="text-[10px] text-text-muted">{{ formatBytes(d.file_size) }} · v{{ d.current_version }}</span>
           </div>
-          <div class="mt-2 flex items-center justify-between gap-2 text-xs text-green-light/70">
+          <div class="mt-2 flex items-center justify-between gap-2 text-xs text-text-muted">
             <span class="truncate">{{ d.uploaded_by_name }}</span>
             <span class="shrink-0">{{ formatDate(d.updated_at) }}</span>
           </div>
@@ -129,9 +129,9 @@
       <!-- Empty -->
       <div v-else class="py-16 text-center" data-enter>
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-muted/50 dark:bg-white/5">
-          <svg class="h-8 w-8 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+          <svg class="h-8 w-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
         </div>
-        <p class="text-sm text-green-light">No hay recursos aún.</p>
+        <p class="text-sm text-text-muted">No hay recursos aún.</p>
         <BaseButton variant="accent" size="md" class="mt-4" @click="openCreateModal">
           Subir primer recurso
         </BaseButton>
@@ -148,18 +148,18 @@
               <form class="space-y-4" @submit.prevent="handleCreate">
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
-                  <input v-model="createForm.title" type="text" required placeholder="Nombre del recurso" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="createForm.title" type="text" required placeholder="Nombre del recurso" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Descripción</label>
-                  <textarea v-model="createForm.description" rows="2" placeholder="Descripción opcional..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <textarea v-model="createForm.description" rows="2" placeholder="Descripción opcional..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Categoría</label>
-                  <select v-model="createForm.category" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40" @change="onCategoryChange">
+                  <select v-model="createForm.category" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40" @change="onCategoryChange">
                     <option v-for="opt in uploadableCategories" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                   </select>
-                  <p v-if="!authStore.isAdmin" class="mt-1 text-[10px] text-green-light/60">
+                  <p v-if="!authStore.isAdmin" class="mt-1 text-[10px] text-text-muted">
                     Contrato, otrosí, anexo legal y diseños los sube el equipo.
                   </p>
                 </div>
@@ -167,7 +167,7 @@
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">
                     Archivo <span class="text-red-400">*</span>
-                    <span class="ml-1 font-normal text-green-light/60">({{ acceptedExtensionLabel }})</span>
+                    <span class="ml-1 font-normal text-text-muted">({{ acceptedExtensionLabel }})</span>
                   </label>
                   <div
                     class="relative flex min-h-[80px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border-default bg-surface-muted/20 transition hover:border-border-default dark:hover:border-white/20"
@@ -177,9 +177,9 @@
                   >
                     <input ref="fileInput" type="file" class="hidden" :accept="acceptedExtension" @change="handleFileSelect" />
                     <div v-if="!selectedFile" class="py-4 text-center">
-                      <svg class="mx-auto mb-1.5 h-6 w-6 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                      <p class="text-[11px] text-green-light/50">Arrastra o haz clic para subir</p>
-                      <p class="mt-1 text-[10px] text-green-light/40">Se acepta {{ acceptedExtensionLabel }}</p>
+                      <svg class="mx-auto mb-1.5 h-6 w-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                      <p class="text-[11px] text-text-muted">Arrastra o haz clic para subir</p>
+                      <p class="mt-1 text-[10px] text-text-muted">Se acepta {{ acceptedExtensionLabel }}</p>
                     </div>
                     <div v-else class="flex w-full items-center gap-3 px-4 py-3">
                       <svg class="h-5 w-5 shrink-0 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -217,22 +217,22 @@
                 <div class="flex-1">
                   <div class="mb-2 flex flex-wrap items-center gap-2">
                     <span class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase" :class="categoryBadgeClass(detailItem.category)">{{ categoryLabel(detailItem.category) }}</span>
-                    <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-green-light dark:bg-white/10">v{{ detailItem.current_version }}</span>
+                    <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-text-muted dark:bg-white/10">v{{ detailItem.current_version }}</span>
                     <span v-if="detailItem.is_archived" class="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-semibold uppercase text-text-muted dark:text-text-subtle">
                       Archivado
                     </span>
                   </div>
-                  <p v-if="detailItem.is_archived && detailItem.archived_at" class="mb-1 text-[10px] text-green-light/70">
+                  <p v-if="detailItem.is_archived && detailItem.archived_at" class="mb-1 text-[10px] text-text-muted">
                     Archivado el {{ formatDate(detailItem.archived_at) }}
                   </p>
                   <h2 class="text-lg font-bold text-text-default">{{ detailItem.title }}</h2>
                 </div>
-                <BaseButton unstyled icon-only type="button" aria-label="Cerrar detalle" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-green-light transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="detailItem = null">
+                <BaseButton unstyled icon-only type="button" aria-label="Cerrar detalle" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-muted transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="detailItem = null">
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </BaseButton>
               </div>
 
-              <div v-if="detailItem.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-green-light">
+              <div v-if="detailItem.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-text-muted">
                 {{ detailItem.description }}
               </div>
 
@@ -247,7 +247,7 @@
                 <svg class="h-5 w-5 shrink-0 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 <div class="flex-1 min-w-0">
                   <p class="truncate text-sm font-medium text-text-default">{{ detailItem.file_name }}</p>
-                  <p class="text-[10px] text-green-light/60">Versión {{ detailItem.current_version }} · {{ detailItem.uploaded_by_name }} · {{ formatDate(detailItem.updated_at) }}</p>
+                  <p class="text-[10px] text-text-muted">Versión {{ detailItem.current_version }} · {{ detailItem.uploaded_by_name }} · {{ formatDate(detailItem.updated_at) }}</p>
                 </div>
                 <span class="text-xs font-medium text-text-brand">{{ downloadingFile === detailItem.file_url ? 'Descargando…' : 'Descargar' }}</span>
               </BaseButton>
@@ -262,22 +262,22 @@
               <!-- Meta -->
               <div class="mb-5 grid grid-cols-3 gap-3">
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Categoría</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Categoría</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ categoryLabel(detailItem.category) }}</p>
                 </div>
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Subido por</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Subido por</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ detailItem.uploaded_by_name }}</p>
                 </div>
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Versiones</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Versiones</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ detailItem.versions_count || detailItem.current_version }}</p>
                 </div>
               </div>
 
               <!-- Version history -->
               <div v-if="detailItem.versions && detailItem.versions.length" class="mb-5">
-                <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-green-light/60">Historial de versiones</p>
+                <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Historial de versiones</p>
                 <div class="space-y-2">
                   <BaseButton unstyled type="button"
                     v-for="v in detailItem.versions"
@@ -287,12 +287,12 @@
                     class="flex w-full items-center gap-3 rounded-xl border border-border-muted p-3 text-left transition hover:border-border-default disabled:opacity-60 dark:hover:border-white/12"
                     @click="downloadResource(v)"
                   >
-                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-green-light dark:bg-white/10">v{{ v.version_number }}</span>
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-text-muted dark:bg-white/10">v{{ v.version_number }}</span>
                     <div class="flex-1 min-w-0">
                       <p class="truncate text-xs font-medium text-text-default">{{ v.file_name }}</p>
-                      <p class="text-[10px] text-green-light/60">{{ v.uploaded_by_name }} · {{ formatDate(v.created_at) }}</p>
+                      <p class="text-[10px] text-text-muted">{{ v.uploaded_by_name }} · {{ formatDate(v.created_at) }}</p>
                     </div>
-                    <svg class="h-4 w-4 shrink-0 text-green-light/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3" /></svg>
+                    <svg class="h-4 w-4 shrink-0 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3" /></svg>
                   </BaseButton>
                 </div>
               </div>
@@ -316,8 +316,8 @@
           <Transition name="modal-content" appear>
             <div v-if="isVersionUploadOpen" class="w-full max-w-sm rounded-3xl border border-border-default bg-surface p-6 shadow-2xl sm:p-8">
               <h2 class="mb-4 text-lg font-bold text-text-default">Nueva versión</h2>
-              <p class="mb-1 text-xs text-green-light">Será la versión {{ (detailItem?.current_version || 0) + 1 }} de "{{ detailItem?.title }}"</p>
-              <p class="mb-4 text-[11px] text-green-light/60">Se acepta {{ versionAcceptedExtensionLabel }}</p>
+              <p class="mb-1 text-xs text-text-muted">Será la versión {{ (detailItem?.current_version || 0) + 1 }} de "{{ detailItem?.title }}"</p>
+              <p class="mb-4 text-[11px] text-text-muted">Se acepta {{ versionAcceptedExtensionLabel }}</p>
               <div
                 class="relative mb-4 flex min-h-[80px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border-default bg-surface-muted/20 transition hover:border-border-default dark:hover:border-white/20"
                 @click="$refs.versionFileInput.click()"
@@ -326,8 +326,8 @@
               >
                 <input ref="versionFileInput" type="file" class="hidden" :accept="versionAcceptedExtension" @change="handleVersionSelect" />
                 <div v-if="!versionFile" class="py-4 text-center">
-                  <svg class="mx-auto mb-1.5 h-6 w-6 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                  <p class="text-[11px] text-green-light/50">Selecciona el archivo</p>
+                  <svg class="mx-auto mb-1.5 h-6 w-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  <p class="text-[11px] text-text-muted">Selecciona el archivo</p>
                 </div>
                 <div v-else class="flex w-full items-center gap-3 px-4 py-3">
                   <span class="flex-1 truncate text-sm text-text-default">{{ versionFile.name }}</span>

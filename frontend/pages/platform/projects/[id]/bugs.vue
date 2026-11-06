@@ -56,8 +56,8 @@
           type="button"
           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition"
           :class="activeFilter === tab.value
-            ? 'bg-primary text-white dark:bg-accent dark:text-text-default'
-            : 'text-green-light hover:bg-surface-muted/50 dark:hover:bg-white/10'"
+            ? 'bg-primary text-white dark:bg-accent dark:text-on-accent'
+            : 'text-text-muted hover:bg-surface-muted/50 dark:hover:bg-white/10'"
           @click="activeFilter = tab.value"
         >
           {{ tab.label }}
@@ -69,7 +69,7 @@
       <template v-if="filteredBugs.length">
       <div v-if="!isMobile" class="overflow-x-auto rounded-2xl border border-border-default bg-surface" data-enter>
         <table class="min-w-full text-left text-sm">
-          <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-green-light/70">
+          <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-text-muted">
             <tr>
               <th class="px-4 py-3">Bug</th>
               <th class="px-4 py-3">Estado</th>
@@ -93,7 +93,7 @@
                     <BaseButton variant="link" size="sm" class="min-w-0 truncate text-left" @click="openDetailModal(bug)">{{ bug.title }}</BaseButton>
                     <span v-if="bug.is_recurring" class="rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-purple-600 dark:text-purple-400">Recurrente</span>
                     <span v-if="bug.is_archived" class="rounded-full bg-surface-raised px-1.5 py-0.5 text-[9px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivado</span>
-                    <svg v-if="bug.screenshot_url" class="h-3 w-3 shrink-0 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <svg v-if="bug.screenshot_url" class="h-3 w-3 shrink-0 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </div>
                   <p v-if="bug.source_requirement" class="mt-0.5 line-clamp-1 text-[10px] text-teal-600 dark:text-teal-300">
                     Sobre: {{ bug.source_requirement.title }}
@@ -104,7 +104,7 @@
                 <select
                   v-if="authStore.isAdmin && !bug.is_archived"
                   :value="bug.status"
-                  class="rounded-full border border-border-default bg-surface-muted/40 px-2 py-1 text-[10px] font-medium text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+                  class="rounded-full border border-border-default bg-surface-muted/40 px-2 py-1 text-[10px] font-medium text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
                   @click.stop
                   @change="onQuickStatus(bug, $event.target.value)"
                 >
@@ -130,10 +130,10 @@
                   {{ severityLabel(bug.severity) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-xs text-green-light/70">{{ envLabel(bug.environment) }}</td>
-              <td class="px-4 py-3 text-xs text-green-light">{{ bug.reported_by_name }}</td>
-              <td class="px-4 py-3 text-xs text-green-light/70">{{ formatDate(bug.created_at) }}</td>
-              <td class="px-2 py-3 text-right text-green-light/40">›</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ envLabel(bug.environment) }}</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ bug.reported_by_name }}</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ formatDate(bug.created_at) }}</td>
+              <td class="px-2 py-3 text-right text-text-muted">›</td>
             </tr>
           </tbody>
         </table>
@@ -156,18 +156,18 @@
                 <p class="font-medium text-text-default">{{ bug.title }}</p>
                 <span v-if="bug.is_recurring" class="rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-purple-600 dark:text-purple-400">Recurrente</span>
                 <span v-if="bug.is_archived" class="rounded-full bg-surface-raised px-1.5 py-0.5 text-[9px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivado</span>
-                <svg v-if="bug.screenshot_url" class="h-3 w-3 shrink-0 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <svg v-if="bug.screenshot_url" class="h-3 w-3 shrink-0 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               </div>
               <p v-if="bug.source_requirement" class="mt-0.5 line-clamp-1 text-[10px] text-teal-600 dark:text-teal-300">Sobre: {{ bug.source_requirement.title }}</p>
             </div>
-            <span class="shrink-0 text-green-light/40">›</span>
+            <span class="shrink-0 text-text-muted">›</span>
           </div>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" :class="statusBadgeClass(bug.status)">{{ statusLabel(bug.status) }}</span>
             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" :class="severityBadgeClass(bug.severity)">{{ severityLabel(bug.severity) }}</span>
-            <span class="text-[10px] text-green-light/60">{{ envLabel(bug.environment) }}</span>
+            <span class="text-[10px] text-text-muted">{{ envLabel(bug.environment) }}</span>
           </div>
-          <div class="mt-2 flex items-center justify-between gap-2 text-xs text-green-light/70">
+          <div class="mt-2 flex items-center justify-between gap-2 text-xs text-text-muted">
             <span class="truncate">{{ bug.reported_by_name }}</span>
             <span class="shrink-0">{{ formatDate(bug.created_at) }}</span>
           </div>
@@ -178,9 +178,9 @@
       <!-- Empty -->
       <div v-else class="py-16 text-center" data-enter>
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-muted/50 dark:bg-white/5">
-          <svg class="h-8 w-8 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+          <svg class="h-8 w-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
         </div>
-        <p class="text-sm text-green-light">
+        <p class="text-sm text-text-muted">
           {{ activeFilter === 'all' ? 'No hay bugs reportados aún.' : 'No hay bugs con este estado.' }}
         </p>
         <BaseButton variant="accent" size="md" class="mt-4" v-if="!authStore.isAdmin" @click="openCreateModal">
@@ -203,11 +203,11 @@
                 <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
-                  <input v-model="createForm.title" type="text" required placeholder="¿Qué está fallando?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="createForm.title" type="text" required placeholder="¿Qué está fallando?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Descripción</label>
-                  <textarea v-model="createForm.description" rows="2" placeholder="Describe el error con detalle..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <textarea v-model="createForm.description" rows="2" placeholder="Describe el error con detalle..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                 </div>
 
                 <!-- Steps to reproduce -->
@@ -215,8 +215,8 @@
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Pasos para reproducir</label>
                   <div class="space-y-2">
                     <div v-for="(step, i) in createForm.steps_to_reproduce" :key="i" class="flex items-center gap-2">
-                      <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-green-light dark:bg-white/10">{{ i + 1 }}</span>
-                      <input v-model="createForm.steps_to_reproduce[i]" type="text" :placeholder="`Paso ${i + 1}`" class="flex-1 rounded-lg border border-border-default bg-surface-muted/40 px-3 py-2 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                      <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-text-muted dark:bg-white/10">{{ i + 1 }}</span>
+                      <input v-model="createForm.steps_to_reproduce[i]" type="text" :placeholder="`Paso ${i + 1}`" class="flex-1 rounded-lg border border-border-default bg-surface-muted/40 px-3 py-2 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       <BaseButton variant="danger-ghost" icon-only size="sm" class="shrink-0" aria-label="Eliminar" v-if="createForm.steps_to_reproduce.length > 1" @click="createForm.steps_to_reproduce.splice(i, 1)">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                       </BaseButton>
@@ -230,18 +230,18 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Comportamiento esperado</label>
-                    <textarea v-model="createForm.expected_behavior" rows="2" placeholder="¿Qué debería pasar?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <textarea v-model="createForm.expected_behavior" rows="2" placeholder="¿Qué debería pasar?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Comportamiento actual</label>
-                    <textarea v-model="createForm.actual_behavior" rows="2" placeholder="¿Qué pasa realmente?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <textarea v-model="createForm.actual_behavior" rows="2" placeholder="¿Qué pasa realmente?" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                   </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Severidad</label>
-                    <select v-model="createForm.severity" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40">
+                    <select v-model="createForm.severity" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
                       <option value="low">Baja</option>
                       <option value="medium">Media</option>
                       <option value="high">Alta</option>
@@ -250,7 +250,7 @@
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Entorno</label>
-                    <select v-model="createForm.environment" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40">
+                    <select v-model="createForm.environment" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
                       <option value="production">Producción</option>
                       <option value="staging">Staging</option>
                       <option value="dev">Desarrollo</option>
@@ -258,11 +258,11 @@
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Navegador</label>
-                    <input v-model="createForm.device_browser" type="text" placeholder="Chrome / iOS" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="createForm.device_browser" type="text" placeholder="Chrome / iOS" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                   </div>
                 </div>
 
-                <label class="flex items-center gap-2 text-xs text-green-light">
+                <label class="flex items-center gap-2 text-xs text-text-muted">
                   <input v-model="createForm.is_recurring" type="checkbox" class="rounded border-border-default" />
                   Es un error recurrente
                 </label>
@@ -278,8 +278,8 @@
                   >
                     <input ref="screenshotInput" type="file" accept="image/*" class="hidden" @change="handleScreenshotSelect" />
                     <div v-if="!screenshotPreview" class="py-4 text-center">
-                      <svg class="mx-auto mb-1.5 h-6 w-6 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      <p class="text-[11px] text-green-light/50">Arrastra o haz clic para subir</p>
+                      <svg class="mx-auto mb-1.5 h-6 w-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <p class="text-[11px] text-text-muted">Arrastra o haz clic para subir</p>
                     </div>
                     <div v-else class="relative w-full p-2">
                       <img :src="screenshotPreview" alt="Preview" class="mx-auto max-h-32 rounded-lg object-contain" />
@@ -317,12 +317,12 @@
               <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <h2 class="text-lg font-bold text-text-default">Importar respuestas (JSON)</h2>
-                  <p class="mt-1 text-xs text-green-light/70">
+                  <p class="mt-1 text-xs text-text-muted">
                     Pega un array con `id` + los campos a actualizar (`status`, `admin_response`, `linked_bug_id`).
                     Los demás campos se ignoran.
                   </p>
                 </div>
-                <BaseButton unstyled icon-only type="button" aria-label="Cerrar importación" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-green-light transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="closeImportModal">
+                <BaseButton unstyled icon-only type="button" aria-label="Cerrar importación" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-muted transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="closeImportModal">
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </BaseButton>
               </div>
@@ -335,7 +335,7 @@
                     rows="14"
                     spellcheck="false"
                     placeholder='[{"id": 1, "status": "fixing", "admin_response": "Reproducido, en corrección."}]'
-                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-green-light/40 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/20 dark:focus:border-lemon/40"
+                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/20 dark:focus:border-lemon/40"
                   />
                 </div>
 
@@ -371,12 +371,12 @@
                     <span v-if="detailBug.is_archived" class="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivado</span>
                     <span v-if="detailBug.is_recurring" class="rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Recurrente</span>
                   </div>
-                  <p v-if="detailBug.is_archived && detailBug.archived_at" class="mb-1 text-[10px] text-green-light/60">
+                  <p v-if="detailBug.is_archived && detailBug.archived_at" class="mb-1 text-[10px] text-text-muted">
                     Archivado el {{ formatDate(detailBug.archived_at) }}
                   </p>
                   <h2 class="text-lg font-bold text-text-default">{{ detailBug.title }}</h2>
                 </div>
-                <BaseButton unstyled icon-only type="button" aria-label="Cerrar detalle" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-green-light transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="detailBug = null">
+                <BaseButton unstyled icon-only type="button" aria-label="Cerrar detalle" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-muted transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="detailBug = null">
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </BaseButton>
               </div>
@@ -385,12 +385,12 @@
               <div v-if="detailBug.source_requirement" class="mb-5 rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
                 <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-300">Sobre el requerimiento</p>
                 <p class="text-sm font-medium text-text-default">{{ detailBug.source_requirement.title }}</p>
-                <p v-if="detailBug.source_requirement.phase_title" class="mt-0.5 text-[11px] text-green-light/70">
+                <p v-if="detailBug.source_requirement.phase_title" class="mt-0.5 text-[11px] text-text-muted">
                   Fase: {{ detailBug.source_requirement.phase_title }}
                 </p>
                 <NuxtLink
                   :to="localePath(`/platform/projects/${projectId}/delivery?stage=${detailBug.source_requirement.stage_id}#requirement-${detailBug.source_requirement.id}`)"
-                  class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-text-brand underline decoration-text-brand/30 transition hover:decoration-text-brand dark:text-accent dark:decoration-accent/30 dark:hover:decoration-accent"
+                  class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-text-brand underline decoration-text-brand/30 transition hover:decoration-text-brand dark:text-text-brand dark:decoration-accent/30 dark:hover:decoration-accent"
                 >
                   {{ t('platformDelivery.seeDelivery') }}
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M5 12h16" /></svg>
@@ -400,7 +400,7 @@
               <IssueHistory :ticket="detailBug" />
 
               <!-- Description -->
-              <div v-if="detailBug.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-green-light">
+              <div v-if="detailBug.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-text-muted">
                 {{ detailBug.description }}
               </div>
 
@@ -414,9 +414,9 @@
 
               <!-- Steps to reproduce -->
               <div v-if="detailBug.steps_to_reproduce && detailBug.steps_to_reproduce.length" class="mb-5">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-green-light/60">Pasos para reproducir</p>
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Pasos para reproducir</p>
                 <ol class="space-y-1.5">
-                  <li v-for="(step, i) in detailBug.steps_to_reproduce" :key="i" class="flex items-start gap-2 text-sm text-green-light">
+                  <li v-for="(step, i) in detailBug.steps_to_reproduce" :key="i" class="flex items-start gap-2 text-sm text-text-muted">
                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold dark:bg-white/10">{{ i + 1 }}</span>
                     <span>{{ step }}</span>
                   </li>
@@ -427,30 +427,30 @@
               <div v-if="detailBug.expected_behavior || detailBug.actual_behavior" class="mb-5 grid grid-cols-2 gap-3">
                 <div v-if="detailBug.expected_behavior" class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
                   <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-brand">Esperado</p>
-                  <p class="text-xs leading-relaxed text-green-light">{{ detailBug.expected_behavior }}</p>
+                  <p class="text-xs leading-relaxed text-text-muted">{{ detailBug.expected_behavior }}</p>
                 </div>
                 <div v-if="detailBug.actual_behavior" class="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
                   <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Actual</p>
-                  <p class="text-xs leading-relaxed text-green-light">{{ detailBug.actual_behavior }}</p>
+                  <p class="text-xs leading-relaxed text-text-muted">{{ detailBug.actual_behavior }}</p>
                 </div>
               </div>
 
               <!-- Meta -->
               <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Entorno</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Entorno</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ envLabel(detailBug.environment) }}</p>
                 </div>
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Navegador</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Navegador</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ detailBug.device_browser || '—' }}</p>
                 </div>
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Reportado por</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Reportado por</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ detailBug.reported_by_name }}</p>
                 </div>
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Fecha</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Fecha</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ formatDate(detailBug.created_at) }}</p>
                 </div>
               </div>
@@ -458,7 +458,7 @@
               <!-- Admin response -->
               <div v-if="detailBug.admin_response" class="mb-5 rounded-xl border-l-2 border-l-esmerald/30 bg-surface-muted/20 p-4 dark:border-l-lemon/40">
                 <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-esmerald/60 dark:text-lemon/60">Respuesta del equipo</p>
-                <p class="text-sm leading-relaxed text-green-light">{{ detailBug.admin_response }}</p>
+                <p class="text-sm leading-relaxed text-text-muted">{{ detailBug.admin_response }}</p>
               </div>
 
               <p v-if="detailBug.status === 'resolved'" class="mb-3 text-xs text-text-muted">{{ t('platformIssues.resolvedHint') }}</p>
@@ -466,16 +466,16 @@
 
               <!-- Admin actions -->
               <div v-if="authStore.isAdmin" class="mb-5 space-y-3">
-                <div v-if="detailBug.is_archived" class="rounded-xl border border-border-default px-4 py-3 text-xs text-green-light/70">
+                <div v-if="detailBug.is_archived" class="rounded-xl border border-border-default px-4 py-3 text-xs text-text-muted">
                   Este reporte está archivado.
                 </div>
                 <template v-else>
                   <div v-if="showEvaluateForm" class="rounded-xl border border-border-default p-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-green-light/60">Evaluar bug</p>
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Evaluar bug</p>
                     <div class="space-y-3">
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Estado</label>
-                        <select v-model="evalForm.status" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40">
+                        <select v-model="evalForm.status" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
                           <option value="reported">Reportado</option>
                           <option value="confirmed">Confirmado</option>
                           <option value="fixing">En corrección</option>
@@ -488,7 +488,7 @@
                       </div>
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Respuesta</label>
-                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" admin id="bug-response-evidence" />
                       <IssueContractReply v-model="contractReply" :project-id="projectId" kind="bug" :ticket="detailBug" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
@@ -515,7 +515,7 @@
 
               <!-- Comments -->
               <div class="mb-4">
-                <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-green-light/60">
+                <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
                   Comentarios{{ detailBug.comments ? ` (${detailBug.comments.length})` : '' }}
                 </p>
 
@@ -528,23 +528,23 @@
                   >
                     <div class="mb-1 flex items-center justify-between">
                       <span class="text-xs font-medium text-text-default">{{ comment.user_name }}</span>
-                      <span class="text-[10px] text-green-light/40">{{ formatDate(comment.created_at) }}</span>
+                      <span class="text-[10px] text-text-muted">{{ formatDate(comment.created_at) }}</span>
                     </div>
-                    <p class="text-sm leading-relaxed text-green-light">{{ comment.content }}</p>
+                    <p class="text-sm leading-relaxed text-text-muted">{{ comment.content }}</p>
                     <IssueAttachments :attachments="comment.attachments" />
                     <span v-if="comment.is_internal" class="mt-1 inline-block text-[9px] font-semibold uppercase tracking-wider text-amber-500">Interno</span>
                   </div>
                 </div>
 
                 <form class="flex gap-2" @submit.prevent="handleAddComment">
-                  <input v-model="newComment" type="text" placeholder="Escribe un comentario..." class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="newComment" type="text" placeholder="Escribe un comentario..." class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!newComment.trim()">
                     Enviar
                   </BaseButton>
                 </form>
                 <IssueEvidenceFields v-if="!detailBug.is_archived" v-model="commentEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" id="bug-comment-evidence" />
                 <p v-if="bugStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-danger-strong">{{ bugStore.error }}</p>
-                <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-green-light/60">
+                <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-text-muted">
                   <input v-model="commentInternal" type="checkbox" class="rounded border-border-default" />
                   Comentario interno (solo admins)
                 </label>

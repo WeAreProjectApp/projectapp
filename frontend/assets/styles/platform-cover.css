@@ -22,12 +22,12 @@
   background: rgba(var(--theme-surface-rgb), 0.52);
   border-color: rgba(var(--theme-border-rgb), 0.18);
 }
-.platform-cover.dark main > div > div {
+.dark .platform-cover main > div > div {
   background: rgba(0, 20, 16, 0.55);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
 }
-:root[style*="--theme-color"] .platform-cover.dark main > div > div {
+:root[style*="--theme-color"].dark .platform-cover main > div > div {
   background: rgba(var(--theme-dark-rgb), 0.55);
   border-color: rgba(var(--theme-accent-rgb), 0.10);
 }
@@ -50,14 +50,14 @@
   background: rgba(var(--theme-surface-rgb), 0.52) !important;
   border-color: rgba(var(--theme-border-rgb), 0.22) !important;
 }
-.platform-cover.dark main .rounded-3xl,
-.platform-cover.dark main .rounded-2xl {
+.dark .platform-cover main .rounded-3xl,
+.dark .platform-cover main .rounded-2xl {
   background: rgba(0, 20, 16, 0.55) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.12) !important;
 }
-:root[style*="--theme-color"] .platform-cover.dark main .rounded-3xl,
-:root[style*="--theme-color"] .platform-cover.dark main .rounded-2xl {
+:root[style*="--theme-color"].dark .platform-cover main .rounded-3xl,
+:root[style*="--theme-color"].dark .platform-cover main .rounded-2xl {
   background: rgba(var(--theme-dark-rgb), 0.55) !important;
   border-color: rgba(var(--theme-accent-rgb), 0.10) !important;
 }
@@ -74,8 +74,8 @@
   box-shadow: none !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
-.platform-cover.dark main .rounded-3xl .rounded-xl,
-.platform-cover.dark main .rounded-2xl .rounded-xl {
+.dark .platform-cover main .rounded-3xl .rounded-xl,
+.dark .platform-cover main .rounded-2xl .rounded-xl {
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
@@ -90,10 +90,10 @@
 :root[style*="--theme-color"] .platform-cover aside {
   background: rgba(var(--theme-surface-rgb), 0.65) !important;
 }
-.platform-cover.dark aside {
+.dark .platform-cover aside {
   background: rgba(0, 20, 16, 0.65) !important;
 }
-:root[style*="--theme-color"] .platform-cover.dark aside {
+:root[style*="--theme-color"].dark .platform-cover aside {
   background: rgba(var(--theme-dark-rgb), 0.68) !important;
 }
 
@@ -108,10 +108,10 @@
 :root[style*="--theme-color"] .platform-cover .mobile-topbar {
   background: rgba(var(--theme-surface-rgb), 0.65) !important;
 }
-.platform-cover.dark .mobile-topbar {
+.dark .platform-cover .mobile-topbar {
   background: rgba(0, 20, 16, 0.65) !important;
 }
-:root[style*="--theme-color"] .platform-cover.dark .mobile-topbar {
+:root[style*="--theme-color"].dark .platform-cover .mobile-topbar {
   background: rgba(var(--theme-dark-rgb), 0.68) !important;
 }
 
@@ -121,7 +121,7 @@
 .platform-cover main .rounded-full.bg-white {
   background: rgba(255, 255, 255, 0.60) !important;
 }
-.platform-cover.dark main .rounded-full.dark\:bg-esmerald {
+.dark .platform-cover main .rounded-full.dark\:bg-esmerald {
   background: rgba(0, 20, 16, 0.55) !important;
 }
 
@@ -133,9 +133,9 @@
 .platform-cover main select {
   background-color: rgba(255, 255, 255, 0.80) !important;
 }
-.platform-cover.dark main input,
-.platform-cover.dark main textarea,
-.platform-cover.dark main select {
+.dark .platform-cover main input,
+.dark .platform-cover main textarea,
+.dark .platform-cover main select {
   background-color: rgba(0, 20, 16, 0.80) !important;
 }
 

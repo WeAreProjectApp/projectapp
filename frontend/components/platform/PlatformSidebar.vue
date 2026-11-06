@@ -2,7 +2,7 @@
   <aside
     :class="[
       'fixed inset-y-0 left-0 z-30 flex flex-col border-r transition-all duration-300 ease-in-out',
-      'border-input-border/[0.06] bg-surface dark:border-white/[0.06] dark:bg-primary-strong',
+      'border-input-border/[0.06] bg-surface dark:border-white/[0.06] dark:bg-surface-muted',
       isCollapsed ? 'w-[64px]' : 'w-[240px]',
     ]"
   >
@@ -17,13 +17,13 @@
         v-if="!isCollapsed"
         class="text-xl font-bold tracking-tight text-text-brand dark:text-white"
       >
-        Project<span class="text-text-brand dark:text-accent">App.</span>
+        Project<span class="text-text-brand dark:text-text-brand">App.</span>
       </span>
       <span
         v-else
         class="text-base font-bold tracking-tight text-text-brand dark:text-white"
       >
-        P<span class="text-text-brand dark:text-accent">A</span>
+        P<span class="text-text-brand dark:text-text-brand">A</span>
       </span>
     </div>
 
@@ -33,7 +33,7 @@
       <div class="mb-5">
         <p
           v-if="!isCollapsed"
-          class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-green-light/60"
+          class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted"
         >
           Navegación
         </p>
@@ -51,7 +51,7 @@
       <div class="mb-5">
         <p
           v-if="!isCollapsed"
-          class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-green-light/60"
+          class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted"
         >
           Cuenta
         </p>
@@ -73,7 +73,7 @@
           :class="[
             'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
             isCollapsed ? 'justify-center' : '',
-            'text-green-light hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white',
+            'text-text-muted hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white',
           ]"
           :title="isCollapsed ? 'Personaliza' : undefined"
           @click="showThemePicker = true"
@@ -90,7 +90,7 @@
       <div v-if="authStore.isAdmin" class="mb-5">
         <p
           v-if="!isCollapsed"
-          class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-green-light/60"
+          class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted"
         >
           Administración
         </p>
@@ -120,13 +120,13 @@
             alt="Avatar"
             class="h-full w-full object-cover"
           />
-          <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-white dark:bg-accent-soft dark:text-text-brand">
+          <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-white dark:bg-accent dark:text-on-accent">
             {{ authStore.userInitials }}
           </div>
         </div>
         <div v-if="!isCollapsed" class="min-w-0 flex-1">
           <p class="truncate text-sm font-medium text-text-brand dark:text-white">{{ authStore.displayName }}</p>
-          <p class="truncate text-xs text-green-light">{{ userSubtitle }}</p>
+          <p class="truncate text-xs text-text-muted">{{ userSubtitle }}</p>
         </div>
       </div>
 
@@ -224,7 +224,7 @@ const userSubtitle = computed(() =>
 )
 
 const sidebarActionClass = computed(() => [
-  'flex h-8 w-8 items-center justify-center rounded-lg text-green-light transition',
+  'flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition',
   'hover:bg-primary-soft hover:text-text-brand',
   'dark:hover:bg-surface/[0.06] dark:hover:text-white',
 ])

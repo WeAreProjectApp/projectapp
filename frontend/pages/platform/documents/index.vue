@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="mb-8" data-enter>
       <h1 class="text-2xl font-bold text-text-default sm:text-3xl">Mis documentos</h1>
-      <p class="mt-1 text-sm text-green-light">
+      <p class="mt-1 text-sm text-text-muted">
         Revisa, descarga y firma los documentos de tu proyecto.
       </p>
     </div>
@@ -11,7 +11,7 @@
     <!-- Loading -->
     <div v-if="store.isLoading" class="py-20 text-center" data-enter>
       <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border-default border-t-esmerald dark:border-t-lemon" />
-      <p class="mt-4 text-sm text-green-light">Cargando documentos...</p>
+      <p class="mt-4 text-sm text-text-muted">Cargando documentos...</p>
     </div>
 
     <template v-else>
@@ -27,7 +27,7 @@
           </span>
           <div class="flex-1">
             <h2 class="text-base font-semibold text-text-default">Valida tu correo electrónico</h2>
-            <p class="mt-1 text-sm text-green-light">
+            <p class="mt-1 text-sm text-text-muted">
               Para poder firmar necesitas confirmar tu correo
               <span class="font-medium text-text-default">{{ store.email }}</span>.
             </p>
@@ -56,7 +56,7 @@
               </BaseButton>
               <button
                 type="button"
-                class="text-sm font-medium text-green-light transition hover:text-text-default disabled:opacity-50"
+                class="text-sm font-medium text-text-muted transition hover:text-text-default disabled:opacity-50"
                 :disabled="store.isSending"
                 @click="sendCode"
               >
@@ -83,7 +83,7 @@
         data-enter
       >
         <p class="text-sm font-medium text-text-default">Todavía no tienes documentos disponibles.</p>
-        <p class="mt-1 text-xs text-green-light">Tu administrador publicará aquí tus documentos.</p>
+        <p class="mt-1 text-xs text-text-muted">Tu administrador publicará aquí tus documentos.</p>
       </div>
 
       <!-- Main signable document -->
@@ -94,7 +94,7 @@
       >
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <span class="text-xs font-semibold uppercase tracking-wider text-green-light">Documento principal</span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">Documento principal</span>
             <h2 class="mt-1 text-lg font-semibold text-text-default">{{ store.signableDocument.title }}</h2>
             <p v-if="store.signableDocument.signed" class="mt-1 flex items-center gap-1.5 text-sm text-text-brand">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -114,7 +114,7 @@
 
       <!-- Annexes -->
       <section v-if="store.annexes.length" data-enter>
-        <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-green-light">Anexos</h3>
+        <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-text-muted">Anexos</h3>
         <ul class="space-y-2">
           <li
             v-for="doc in store.annexes"
@@ -138,7 +138,7 @@
     >
       <div class="w-full max-w-md rounded-3xl border border-border-default bg-surface p-6 shadow-2xl">
         <h3 class="text-lg font-semibold text-text-default">Firmar documento</h3>
-        <p class="mt-2 text-sm text-green-light">
+        <p class="mt-2 text-sm text-text-muted">
           Vas a aceptar y firmar <span class="font-medium text-text-default">{{ store.signableDocument?.title }}</span>.
           Esta acción queda registrada con tu nombre, fecha y hora.
         </p>

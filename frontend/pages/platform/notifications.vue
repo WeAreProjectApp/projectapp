@@ -4,7 +4,7 @@
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" data-enter>
       <div>
         <h1 class="text-2xl font-bold text-text-default">Notificaciones</h1>
-        <p class="mt-1 text-sm text-green-light">
+        <p class="mt-1 text-sm text-text-muted">
           {{ notifStore.unreadCount > 0 ? `${notifStore.unreadCount} sin leer` : 'Todo al día' }}
         </p>
       </div>
@@ -19,8 +19,8 @@
             type="button"
             class="rounded-full px-3.5 py-1.5 text-xs font-medium transition"
             :class="activeFilter === tab.value
-              ? 'bg-primary text-white dark:bg-accent dark:text-text-default'
-              : 'text-green-light hover:bg-surface-muted/50 dark:hover:bg-white/10'"
+              ? 'bg-primary text-white dark:bg-accent dark:text-on-accent'
+              : 'text-text-muted hover:bg-surface-muted/50 dark:hover:bg-white/10'"
             @click="activeFilter = tab.value"
           >
             {{ tab.label }}
@@ -37,9 +37,9 @@
     <!-- Empty -->
     <div v-else-if="filteredNotifications.length === 0" class="py-16 text-center" data-enter>
       <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-muted/50 dark:bg-white/5">
-        <svg class="h-8 w-8 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+        <svg class="h-8 w-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
       </div>
-      <p class="text-sm text-green-light">
+      <p class="text-sm text-text-muted">
         {{ activeFilter === 'all' ? 'No tienes notificaciones.' : activeFilter === 'unread' ? 'No tienes notificaciones sin leer.' : 'No tienes notificaciones leídas.' }}
       </p>
     </div>
@@ -91,13 +91,13 @@
         <!-- Content -->
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-2">
-            <h4 class="text-sm font-medium" :class="notif.is_read ? 'text-green-light' : 'text-text-default'">
+            <h4 class="text-sm font-medium" :class="notif.is_read ? 'text-text-muted' : 'text-text-default'">
               {{ notif.title }}
             </h4>
             <span v-if="!notif.is_read" class="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
           </div>
-          <p v-if="notif.message" class="mt-0.5 text-xs text-green-light/70">{{ notif.message }}</p>
-          <div class="mt-2 flex items-center gap-3 text-[10px] text-green-light/50">
+          <p v-if="notif.message" class="mt-0.5 text-xs text-text-muted">{{ notif.message }}</p>
+          <div class="mt-2 flex items-center gap-3 text-[10px] text-text-muted">
             <span v-if="notif.project_name" class="font-medium">{{ notif.project_name }}</span>
             <span>{{ formatTimeAgo(notif.created_at) }}</span>
           </div>

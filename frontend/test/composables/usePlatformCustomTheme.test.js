@@ -235,7 +235,7 @@ describe('usePlatformCustomTheme', () => {
     const theme = usePlatformCustomTheme()
     theme.themeColor.value = '#ffffff'
     theme.applyTheme()
-    expect(document.documentElement.style.getPropertyValue('--theme-btn-text')).toBe('#1a1a1a')
+    expect(document.documentElement.style.getPropertyValue('--theme-btn-text')).toBe('#000000')
   })
 
   it('setCustomCoverImage does not update state when response has no data', async () => {

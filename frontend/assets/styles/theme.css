@@ -115,8 +115,10 @@
      block overrides on-danger to a deep red. Always pair bg-danger-strong
      with text-on-danger, never with text-white. */
   --color-on-primary: #FFFFFF;
+  --color-on-accent: #002921;
   --color-on-danger: #FFFFFF;
   --color-on-primary-rgb: 255 255 255;
+  --color-on-accent-rgb: 0 41 33;
   --color-on-danger-rgb: 255 255 255;
 
   /* Status (paired soft + strong) */

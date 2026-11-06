@@ -112,6 +112,7 @@ export default {
         // Useful for buttons / pills where the content needs guaranteed
         // contrast against the brand or status surface.
         'on-primary': 'rgb(var(--color-on-primary-rgb) / <alpha-value>)',
+        'on-accent': 'rgb(var(--color-on-accent-rgb) / <alpha-value>)',
         'on-danger': 'rgb(var(--color-on-danger-rgb) / <alpha-value>)',
         'success-soft': 'var(--color-success-soft)',
         'success-strong': 'rgb(var(--color-success-strong-rgb) / <alpha-value>)',

@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- Color palette -->
     <div>
-      <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-green-light/60">Color del tema</p>
+      <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-text-muted">Color del tema</p>
       <div class="grid grid-cols-9 gap-2">
         <button
           v-for="(shade, idx) in allShades"
@@ -18,7 +18,7 @@
       <button
         v-if="themeColor"
         type="button"
-        class="mt-2 text-[10px] text-green-light transition hover:text-text-brand dark:hover:text-white"
+        class="mt-2 text-[10px] text-text-muted transition hover:text-text-brand dark:hover:text-white"
         @click="handleClearColor"
       >
         Restablecer color
@@ -28,7 +28,7 @@
     <!-- Cover image -->
     <div>
       <div class="mb-3 flex items-center justify-between">
-        <p class="text-xs font-semibold uppercase tracking-widest text-green-light/60">Imagen de fondo</p>
+        <p class="text-xs font-semibold uppercase tracking-widest text-text-muted">Imagen de fondo</p>
         <div v-if="hasCover" class="flex items-center gap-3">
           <div class="h-8 w-14 overflow-hidden rounded-md border border-input-border dark:border-white/10">
             <img :src="currentCoverUrl" alt="Cover" class="h-full w-full object-cover" />
@@ -51,10 +51,10 @@
       <input ref="coverInputRef" type="file" accept="image/*" class="hidden" @change="handleCustomCoverUpload" />
 
       <!-- Gallery (auto-loads on mount, always visible) -->
-      <div v-if="isLoadingGallery" class="py-8 text-center text-xs text-green-light">Cargando galeria...</div>
+      <div v-if="isLoadingGallery" class="py-8 text-center text-xs text-text-muted">Cargando galeria...</div>
       <div v-else-if="gallery.length" class="max-h-[50vh] space-y-5 overflow-y-auto pr-1">
         <div v-for="category in gallery" :key="category.name">
-          <p class="sticky top-0 z-10 mb-2.5 bg-surface/90 py-1 text-[11px] font-semibold text-green-light/70 backdrop-blur dark:bg-primary/90">{{ category.name }}</p>
+          <p class="sticky top-0 z-10 mb-2.5 bg-surface/90 py-1 text-[11px] font-semibold text-text-muted backdrop-blur dark:bg-surface/90">{{ category.name }}</p>
           <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
             <button
               v-for="img in category.images"
@@ -72,7 +72,7 @@
           </div>
         </div>
       </div>
-      <p v-else-if="!isLoadingGallery" class="py-4 text-center text-xs text-green-light">No se encontraron imagenes en la galeria.</p>
+      <p v-else-if="!isLoadingGallery" class="py-4 text-center text-xs text-text-muted">No se encontraron imagenes en la galeria.</p>
     </div>
   </div>
 </template>
