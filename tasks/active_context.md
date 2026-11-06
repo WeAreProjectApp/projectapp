@@ -1,3 +1,13 @@
+# PA-215 — correos de liquidación y remanente (2026-11-06)
+
+Corrección en la rama de sesión: la copia del mensaje conserva por referencia su
+conexión SMTP y el timeout, evitando copiar el RLock. Participaciones muestra
+el remanente positivo de ProjectApp incluso contraída. Se preservan los pagos,
+los avisos únicos y los reintentos de Historial. Regresiones específicas y ficha
+en `docs/audits/2026-11-06-pa215-settlement-email.md`; automatizadas sólo en CI.
+PR, resultado de CI y aceptación DEV se verificarán por separado; esta entrada
+no acredita despliegue ni validación manual.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
