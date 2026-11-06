@@ -94,7 +94,7 @@ test('creates inside the matching subfolder identified by its branch', {
   await page.getByRole('button', { name: /Gestionar/i }).click();
   const parent = page.getByTestId('folder-manager-parent');
   await parent.fill('aprob');
-  await expect(page.getByTestId('folder-manager-parent-detail-202')).toHaveText(`${folderProject.name} / Entregables`);
+  await expect(page.getByTestId('folder-manager-parent-detail-202')).toHaveText(`${folderProject.name} / Entregables · ${folderProject.client_display_name}`);
   await page.getByTestId('folder-manager-parent-option-202').click();
   await expect(parent).toHaveValue(`${folderProject.name} / Entregables / Diseño aprobado`);
   await page.getByTestId('folder-manager-new-name').fill('Revisión elegida');
