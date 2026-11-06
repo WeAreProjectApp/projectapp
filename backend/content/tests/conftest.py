@@ -478,11 +478,19 @@ def company_settings(db):
 @pytest.fixture
 def superuser(db):
     """Superuser for accounting-gated endpoints."""
-    return User.objects.create_superuser(
+    user = User.objects.create_superuser(
         username='super_test',
         email='super@test.com',
         password='testpass123',
     )
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            'role': UserProfile.ROLE_ADMIN,
+            'is_onboarded': True,
+        },
+    )
+    return user
 
 
 @pytest.fixture
