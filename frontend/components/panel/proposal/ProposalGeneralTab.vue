@@ -136,7 +136,7 @@
                 aria-label="Activar propuesta"
                 @update:model-value="emit('toggle-active')"
               />
-              <span class="text-xs" :class="proposal.is_active ? 'text-primary' : 'text-text-subtle'">
+              <span class="text-xs" :class="proposal.is_active ? 'text-text-brand' : 'text-text-subtle'">
                 {{ proposal.is_active ? 'Activa' : 'Inactiva' }}
               </span>
             </div>
@@ -160,7 +160,7 @@
                 aria-label="Activar automatizaciones"
                 @update:model-value="emit('toggle-automations')"
               />
-              <span class="text-xs" :class="form.automations_paused ? 'text-warning-strong' : 'text-primary'">
+              <span class="text-xs" :class="form.automations_paused ? 'text-warning-strong' : 'text-text-brand'">
                 {{ form.automations_paused ? '⏸ Pausadas' : 'Activas' }}
               </span>
             </div>
@@ -188,7 +188,7 @@
               />
               <span
                 class="text-xs"
-                :class="form.show_contract_terms && form.language === 'es' ? 'text-primary' : 'text-text-subtle'"
+                :class="form.show_contract_terms && form.language === 'es' ? 'text-text-brand' : 'text-text-subtle'"
               >
                 {{ form.language !== 'es' ? 'No disponible en inglés' : (form.show_contract_terms ? 'Visible' : 'Oculto') }}
               </span>
@@ -280,7 +280,7 @@
         <span class="text-sm text-text-muted">%</span>
       </div>
       <div v-if="form.hosting_percent > 0 && form.total_investment > 0" class="mt-3 bg-info-soft border border-info-strong/30 rounded-xl overflow-hidden">
-        <div class="px-4 py-2 text-[11px] uppercase tracking-wider text-info-strong/70 border-b border-info-strong/20">
+        <div class="px-4 py-2 text-[11px] uppercase tracking-wider text-info-strong border-b border-info-strong/20">
           Precio que verá el cliente (por mes)
         </div>
         <div class="grid grid-cols-[1fr_auto_auto] gap-x-4 text-sm divide-y divide-info-strong/20">
@@ -288,7 +288,7 @@
           <div class="px-4 py-2 text-info-strong font-semibold text-right whitespace-nowrap">
             ${{ hostingMonthlyBase.toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">referencia</div>
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">referencia</div>
 
           <div class="px-4 py-2 text-info-strong font-medium">
             Cada 9 meses
@@ -298,7 +298,7 @@
                :class="form.hosting_discount_nine_month ? 'text-text-brand' : 'text-info-strong'">
             ${{ hostingMonthlyWithDiscount(form.hosting_discount_nine_month).toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">
             total ${{ hostingPeriodTotal(form.hosting_discount_nine_month, 9).toLocaleString() }} {{ form.currency }} / 9 meses
           </div>
 
@@ -310,7 +310,7 @@
                :class="form.hosting_discount_semiannual ? 'text-text-brand' : 'text-info-strong'">
             ${{ hostingMonthlyWithDiscount(form.hosting_discount_semiannual).toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">
             total ${{ hostingPeriodTotal(form.hosting_discount_semiannual, 6).toLocaleString() }} / 6 meses
           </div>
 
@@ -322,7 +322,7 @@
                :class="form.hosting_discount_quarterly ? 'text-text-brand' : 'text-info-strong'">
             ${{ hostingMonthlyWithDiscount(form.hosting_discount_quarterly).toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">
             total ${{ hostingPeriodTotal(form.hosting_discount_quarterly, 3).toLocaleString() }} / 3 meses
           </div>
         </div>

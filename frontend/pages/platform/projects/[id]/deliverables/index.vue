@@ -33,7 +33,7 @@
           type="button"
           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition"
           :class="activeCategory === tab.value
-            ? 'bg-primary text-white dark:bg-accent dark:text-on-accent'
+            ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent'
             : 'text-text-muted hover:bg-surface-muted/50 dark:hover:bg-white/10'"
           @click="activeCategory = tab.value"
         >

@@ -24,7 +24,7 @@
         type="button"
         class="rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition"
         :class="activeFilter === filter.value
-          ? 'bg-primary text-white dark:bg-accent dark:text-on-accent'
+          ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent'
           : 'border border-border-default text-text-muted hover:text-text-default dark:hover:text-white'"
         @click="handleFilterChange(filter.value)"
       >

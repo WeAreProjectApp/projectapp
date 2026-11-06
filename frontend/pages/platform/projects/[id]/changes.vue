@@ -58,12 +58,12 @@
           type="button"
           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition"
           :class="activeFilter === tab.value
-            ? 'bg-primary text-white dark:bg-accent dark:text-on-accent'
+            ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent'
             : 'text-text-muted hover:bg-surface-muted/50 dark:hover:bg-white/10'"
           @click="activeFilter = tab.value"
         >
           {{ tab.label }}
-          <span v-if="tab.count !== undefined" class="ml-1 opacity-60">{{ tab.count }}</span>
+          <span v-if="tab.count !== undefined" class="ml-1">{{ tab.count }}</span>
         </button>
       </div>
 

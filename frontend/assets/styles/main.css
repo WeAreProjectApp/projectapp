@@ -111,7 +111,7 @@
    1. PRIMARY BUTTONS
    ============================ */
 :root[style*="--theme-color"] .bg-lemon {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 :root[style*="--theme-color"] .bg-lemon:hover {
@@ -119,12 +119,12 @@
 }
 /* Light mode: bg-esmerald paired with text-white (primary buttons + active pills) */
 :root[style*="--theme-color"] .bg-esmerald.text-white {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 /* Dark mode: dark:bg-lemon buttons */
 :root[style*="--theme-color"].dark .dark\:bg-lemon {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 /* Dark mode button text override (dark:text-esmerald-dark on buttons) */
@@ -137,11 +137,11 @@
    ============================ */
 :root[style*="--theme-color"] .text-lemon,
 :root[style*="--theme-color"].dark .dark\:text-lemon {
-  color: var(--theme-color) !important;
+  color: var(--color-text-brand) !important;
 }
 /* Brand text in headings/labels (not inside sidebar or topbar) */
 :root[style*="--theme-color"] main .text-esmerald:not(h1):not(.text-3xl):not(.text-xl) {
-  color: var(--theme-dark) !important;
+  color: var(--color-text-brand) !important;
 }
 
 /* ============================
@@ -174,8 +174,8 @@
 :root[style*="--theme-color"] main input:focus,
 :root[style*="--theme-color"] main textarea:focus,
 :root[style*="--theme-color"] main select:focus {
-  border-color: rgba(var(--theme-rgb), 0.40) !important;
-  --tw-ring-color: rgba(var(--theme-rgb), 0.15) !important;
+  border-color: var(--color-focus-ring) !important;
+  --tw-ring-color: var(--color-focus-ring) !important;
 }
 
 /* ============================
@@ -186,7 +186,7 @@
   background-color: rgba(var(--theme-rgb), 0.10) !important;
 }
 :root[style*="--theme-color"] aside .hover\:text-esmerald:hover {
-  color: var(--theme-dark) !important;
+  color: var(--color-text-brand) !important;
 }
 /* Sidebar border */
 :root[style*="--theme-color"] aside {
@@ -205,10 +205,10 @@
    6. AVATAR FALLBACK BG
    ============================ */
 :root[style*="--theme-color"] .bg-esmerald.text-white:not(button):not(a):not([role="button"]) {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
 }
 :root[style*="--theme-color"].dark .dark\:bg-lemon.dark\:text-esmerald-dark:not(button):not(a):not([role="button"]) {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 

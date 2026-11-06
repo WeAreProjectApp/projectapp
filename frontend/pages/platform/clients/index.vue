@@ -20,7 +20,7 @@
           :key="filter.value"
           type="button"
           class="rounded-full px-4 py-2 text-sm font-medium transition"
-          :class="activeFilter === filter.value ? 'bg-primary text-white dark:bg-accent dark:text-on-accent' : 'text-text-muted hover:text-text-default dark:hover:text-white'"
+          :class="activeFilter === filter.value ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent' : 'text-text-muted hover:text-text-default dark:hover:text-white'"
           @click="activeFilter = filter.value"
         >
           {{ filter.label }}

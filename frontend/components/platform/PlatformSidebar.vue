@@ -120,7 +120,7 @@
             alt="Avatar"
             class="h-full w-full object-cover"
           />
-          <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-white dark:bg-accent dark:text-on-accent">
+          <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary dark:bg-accent dark:text-on-accent">
             {{ authStore.userInitials }}
           </div>
         </div>

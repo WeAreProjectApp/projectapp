@@ -84,28 +84,28 @@
 
   /* Text — light */
   --color-text: #111827;             /* gray-900 */
-  --color-text-muted: #6B7280;       /* gray-500 */
-  --color-text-subtle: #9CA3AF;      /* gray-400 */
+  --color-text-muted: #596273;
+  --color-text-subtle: #667085;
   --color-text-brand: #002921;       /* esmerald — brand */
 
   /* Text RGB triplets — light */
   --color-text-rgb: 17 24 39;        /* #111827 */
-  --color-text-muted-rgb: 107 114 128; /* #6B7280 */
-  --color-text-subtle-rgb: 156 163 175; /* #9CA3AF */
+  --color-text-muted-rgb: 89 98 115; /* #596273 */
+  --color-text-subtle-rgb: 102 112 133; /* #667085 */
   --color-text-brand-rgb: 0 41 33;   /* #002921 */
 
   /* Form controls — light */
   --color-input-bg: #FFFFFF;
   --color-input-border: #E5E7EB;
   --color-input-text: #111827;
-  --color-input-placeholder: #9CA3AF;
+  --color-input-placeholder: #667085;
   --color-focus-ring: #10B981;       /* emerald-500 */
 
   /* Form controls RGB triplets — light */
   --color-input-bg-rgb: 255 255 255;
   --color-input-border-rgb: 229 231 235;
   --color-input-text-rgb: 17 24 39;
-  --color-input-placeholder-rgb: 156 163 175; /* #9CA3AF */
+  --color-input-placeholder-rgb: 102 112 133; /* #667085 */
   --color-focus-ring-rgb: 16 185 129; /* #10B981 */
 
   /* Foreground "on" colors — text/icon color guaranteed to contrast
@@ -205,7 +205,7 @@
   --color-input-bg: #001713;
   --color-input-border: rgba(255, 255, 255, 0.08);
   --color-input-text: #F9FAFB;
-  --color-input-placeholder: rgba(255, 255, 255, 0.40);
+  --color-input-placeholder: #9CA3AF;
   --color-focus-ring: #34D399;       /* emerald-400 */
 
   /* Form controls RGB triplets — dark
@@ -214,7 +214,7 @@
   --color-input-bg-rgb: 0 23 19;
   --color-input-border-rgb: 255 255 255; /* alpha baked in non-rgb var */
   --color-input-text-rgb: 249 250 251;
-  --color-input-placeholder-rgb: 255 255 255; /* alpha baked in non-rgb var */
+  --color-input-placeholder-rgb: 156 163 175; /* #9CA3AF */
   --color-focus-ring-rgb: 52 211 153;    /* #34D399 */
 
   /* Foreground "on" colors — dark. danger-strong flips to a light red

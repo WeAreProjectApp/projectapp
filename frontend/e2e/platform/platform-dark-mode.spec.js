@@ -14,13 +14,18 @@ const project = {
 async function openSummary(page, user, theme) {
   await setPlatformAuth(page, { user });
   await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme);
-  await mockApi(page, async ({ apiPath }) => {
-    const body = apiPath === 'accounts/me/' ? user
+  let profile = { ...user };
+  await mockApi(page, async ({ apiPath, method, route }) => {
+    if (apiPath === 'accounts/me/' && method === 'PATCH') {
+      const multipart = route.request().headers()['content-type']?.includes('multipart/form-data');
+      profile = { ...profile, ...(multipart ? { custom_cover_image: '/qa-cover.svg', cover_image: '' } : route.request().postDataJSON()) };
+    }
+    const body = apiPath === 'accounts/me/' ? profile
       : apiPath === 'accounts/projects/1/' ? project
         : apiPath === 'accounts/projects/' ? [project] : [];
     return { status: 200, contentType: 'application/json', body: JSON.stringify(body) };
   });
-  await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' });
+  await page.goto('/platform', { waitUntil: 'domcontentloaded' });
   await page.getByTestId(/^project-(?:row|card)-1$/).click();
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name);
   await expect(page.getByText('Progreso', { exact: true })).toBeVisible();
@@ -90,6 +95,52 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
         expect(await textContrast(dialog.getByText('Escoge un color y una imagen para hacer tuyo este espacio.', { exact: true }))).toBeGreaterThanOrEqual(4.5);
         await attachEvidence(page, testInfo);
       });
+
+      for (const [family, shade] of [['Esmerald', 0], ['Esmerald', 8], ['Yellow', 4]]) {
+        test(`keeps personalized actions readable with ${family} ${shade} in ${theme}`, {
+          tag: ['@outcome:display', ...PLATFORM_SIDEBAR_NAVIGATION, '@role:platform-admin'],
+        }, async ({ page }, testInfo) => {
+          await openSummary(page, mockPlatformAdmin, theme);
+          await openCustomization(page, viewport);
+          const customization = page.getByRole('dialog', { name: 'Personalizar interfaz', exact: true });
+          await customization.getByTitle(family, { exact: true }).nth(shade).click();
+          await customization.getByRole('button', { name: 'Cerrar personalización', exact: true }).click();
+          await expect(customization).toBeHidden();
+
+          await page.getByRole('button', { name: 'Editar', exact: true }).click();
+
+          const save = page.getByRole('dialog', { name: 'Editar proyecto', exact: true }).getByRole('button', { name: 'Guardar cambios', exact: true });
+          expect(await textContrast(save)).toBeGreaterThanOrEqual(4.5);
+          await save.hover();
+          expect(await textContrast(save)).toBeGreaterThanOrEqual(4.5);
+          await attachEvidence(page, testInfo);
+        });
+      }
+
+      for (const [cover, color] of [['bright', '#fafafa'], ['dark', '#050c0a']]) {
+        test(`keeps status readable over a ${cover} cover in ${theme}`, {
+          tag: ['@outcome:display', ...PLATFORM_SIDEBAR_NAVIGATION, '@role:platform-admin'],
+        }, async ({ page }, testInfo) => {
+          await page.route('**/qa-cover.svg', (route) => route.fulfill({
+            contentType: 'image/svg+xml',
+            body: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${color}"/></svg>`,
+          }));
+          await openSummary(page, mockPlatformAdmin, theme);
+          await openCustomization(page, viewport);
+          const customization = page.getByRole('dialog', { name: 'Personalizar interfaz', exact: true });
+          await customization.locator('input[type="file"]').setInputFiles({
+            name: 'cover.svg', mimeType: 'image/svg+xml',
+            buffer: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${color}"/></svg>`),
+          });
+          await expect(page.locator('.platform-cover')).toBeVisible();
+          await customization.getByRole('button', { name: 'Cerrar personalización', exact: true }).click();
+          await expect(customization).toBeHidden();
+
+          expect(await textContrast(page.getByText('Sin clasificar', { exact: true }))).toBeGreaterThanOrEqual(4.5);
+          expect(await textContrast(page.getByText('Progreso', { exact: true }))).toBeGreaterThanOrEqual(4.5);
+          await attachEvidence(page, testInfo);
+        });
+      }
     }
   });
 }
