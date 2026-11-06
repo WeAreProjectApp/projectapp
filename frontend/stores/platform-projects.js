@@ -5,6 +5,8 @@ export const usePlatformProjectsStore = defineStore('platformProjects', {
   state: () => ({
     projects: [],
     currentProject: null,
+    detailRequestId: 0,
+    errorStatus: null,
     isLoading: false,
     isUpdating: false,
     error: '',
@@ -54,22 +56,27 @@ export const usePlatformProjectsStore = defineStore('platformProjects', {
     },
 
     async fetchProject(projectId) {
+      const requestId = ++this.detailRequestId
       this.isLoading = true
       this.error = ''
+      this.errorStatus = null
       this.currentProject = null
 
       try {
         const { get } = usePlatformApi()
         const response = await get(`projects/${projectId}/`)
+        if (requestId !== this.detailRequestId) return { success: false, stale: true }
         this.currentProject = response.data
         return { success: true, data: response.data }
       } catch (error) {
+        if (requestId !== this.detailRequestId) return { success: false, stale: true }
         const message = error.response?.data?.detail || 'No pudimos cargar el proyecto.'
         this.error = message
-        return { success: false, message }
+        this.errorStatus = error.response?.status ?? null
+        return { success: false, message, status: this.errorStatus }
       /* c8 ignore next 3 */
       } finally {
-        this.isLoading = false
+        if (requestId === this.detailRequestId) this.isLoading = false
       }
     },
 

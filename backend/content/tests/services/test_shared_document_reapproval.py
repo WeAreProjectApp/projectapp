@@ -55,9 +55,54 @@ def split_approved_proposal(reviewed_proposal, approval_client, admin_user):
     annex = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='legal_annex', title='Annex')
     annex.file.save('annex.pdf', ContentFile(b'%PDF-1.4 annex'))
     initial = payload(reviewed_proposal, approval_client)
-    initial.update(use_proposal_contracts=True, custom_documents=[])
+    initial.update(
+        use_proposal_contracts=True,
+        custom_documents=[],
+        selected_document_ids=[annex.pk],
+    )
     review_proposal(reviewed_proposal.pk, initial, actor=admin_user)
     return load_proposal(reviewed_proposal.pk), annex
+
+
+def test_reapproval_without_selection_keeps_the_confirmed_annex(
+    split_approved_proposal, admin_user,
+):
+    """Falla si omitir la selección en una revisión borra un anexo ya confirmado."""
+    proposal, annex = split_approved_proposal
+
+    package = reconfirm(
+        proposal.pk, revision_payload(proposal, use_proposal_contracts=True), actor=admin_user,
+    )
+
+    binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
+    binding.refresh_from_db()
+    assert package.manifest['selected_document_ids'] == [annex.pk]
+    assert package.files.get(source_key=f'original-{annex.pk}').binding_id == binding.pk
+    assert binding.current_file.package_id == package.pk
+
+
+def test_reapproval_with_empty_selection_retires_the_current_annex(
+    split_approved_proposal, admin_user,
+):
+    """Falla si una selección vacía conserva el anexo en la revisión vigente."""
+    proposal, annex = split_approved_proposal
+    binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
+    original = binding.current_file
+    original_package_id = original.package_id
+
+    package = reconfirm(
+        proposal.pk,
+        revision_payload(proposal, use_proposal_contracts=True, selected_document_ids=[]),
+        actor=admin_user,
+    )
+
+    binding.refresh_from_db()
+    original.refresh_from_db()
+    assert package.manifest['selected_document_ids'] == []
+    assert package.files.filter(source_key=f'original-{annex.pk}').count() == 0
+    assert (binding.is_current, original.package_id, original.file.read()) == (
+        False, original_package_id, b'%PDF-1.4 annex',
+    )
 
 
 def test_split_reapproval_retires_only_the_unapproved_service_identity(split_approved_proposal, admin_user):

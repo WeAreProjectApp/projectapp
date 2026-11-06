@@ -6309,7 +6309,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-project-client-access` | platform | P1 | success,error,failure,display | — |
 | `platform-project-collection-accounts` | platform | P1 | display,success,error | 1 |
 | `platform-project-data-model` | platform | P2 | success,error,display | 1 |
-| `platform-project-detail` | platform | P2 | success,display | 1 |
+| `platform-project-detail` | platform | P2 | success,display,error | 1 |
 | `platform-project-hosting-context` | platform | P1 | display,success,error | — |
 | `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
@@ -7235,6 +7235,8 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Coverage:** ✅ Covered, incluidas validación local/API junto al campo, footer limpio, ancho uniforme, estado inicial coherente, creación de cliente visible, orden del ciclo, aislamiento entre ayuda y filtro, contención geométrica de la ayuda, estados en cero dentro del detalle compacto, acciones de filtro/navegación y display responsivo en los cinco anchos reales.
 - **E2E Specs:** `e2e/admin/admin-panel-projects.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
 
+- **PA-225:** Listado y tarjetas indican la disponibilidad del espacio; acciones y detalle abren el mismo ID en una pestaña nueva.
+
 ### FLOW: `admin-project-delete`
 
 - **Módulo:** admin
@@ -7280,6 +7282,8 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Failure outcome:** A failed detail request renders a retry action in the modal; retry replaces the error with the project data.
 - **Success / error:** n/a — opening the modal is a read/display action with no user input.
 - **Coverage:** `e2e/admin/admin-project-access-detail.spec.js` plus the five responsive project profiles.
+
+- **PA-225:** El detalle ofrece Abrir espacio en la plataforma por ID en nueva pestaña.
 
 ### FLOW: `admin-project-access-field-edit`
 
@@ -8805,9 +8809,11 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 | display | Reabrir propuesta vinculada | Cliente/proyecto y archivos confirmados del mismo vínculo |
 | success | Cancelar o pulsar Escape | Se conserva el estado previo y vuelve el foco al disparador |
 
-La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora todos los anexos activos. Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
+La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora sólo los anexos activos seleccionados explícitamente (ninguno marcado en el primer cierre). Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
 
 Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresión desde Clientes.
+
+- **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
 
 ### FLOW: `admin-proposal-change-history`
 
@@ -9345,6 +9351,14 @@ consulta de la conversación pública que originó el prompt.
 - **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### platform-project-detail — Detalle de proyecto
+
+- **Rol:** administrador o cliente autorizado.
+- **Ruta:** `/platform/projects/:id`.
+- **Interacción:** abrir un espacio por ID. Un administrador puede volver a su ficha comercial del Panel en otra pestaña.
+- **Error:** 403 o 404 muestra una explicación sin datos ni navegación interna del proyecto; un error recuperable ofrece reintentar. Una sesión sin autenticación se dirige al inicio de sesión.
+- **Validación:** automatizada exclusivamente en CI; acceso real por roles en Chrome coordinado con dev-qa.
 
 ### FLOW: `platform-project-hosting-context`
 

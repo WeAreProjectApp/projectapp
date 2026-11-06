@@ -1,3 +1,5 @@
+> **PA-225/PA-216 — 2026-11-06:** aprobación interna diferida sin crear entidades y anexos opcionales por selección explícita (vacía inicialmente). Revisiones conservan la selección y la historia; los cierres antiguos no se modifican. Este acuerdo reemplaza la política de aprobación obligatoria con todos los anexos descrita en las entradas de octubre. Panel/Plataforma mantienen Project único por ID, con acceso desde el detalle y errores sin datos. Contratos y validación: `docs/PROPOSAL_SHARED_DOCUMENTS.md` y `docs/PA225_PA216_VALIDATION.md`; pruebas en CI y Chrome por dev-qa, pendientes de entrega de esta rama.
+
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 
 `CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.

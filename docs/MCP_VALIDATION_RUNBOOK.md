@@ -1,3 +1,7 @@
+## PA-216 — aprobación diferida y selección documental (2026-11-06)
+
+Comercial 6.4.0 y Propuestas 6.2.0 conservan el servicio compartido con Panel. `review_proposal_approval` con `action=defer` y `accept_proposal=true` acepta sin cliente/proyecto nuevo ni paquete; `false` conserva el estado. Repetir no duplica cambios. Confirmar el cierre inicial usa sólo `selected_document_ids`, por defecto `[]`. `confirm_proposal_document_revision` admite esa lista: omitir conserva la selección elegible del paquete previo, `[]` la retira del vigente. Las lecturas exponen selección e identidad; los históricos, firmas y originales se conservan. Validar en CI confirmación sensible, defer, selección parcial/vacía/ajena/archivada, conflictos y nueva revisión; manual en DEV coordinado con dev-qa. No se acredita validación por escribir estos escenarios.
+
 ## IA de Plataforma — projects 4.1.1 (2026-10-24)
 
 El conector projects incorpora `get/update_platform_ai_settings`,

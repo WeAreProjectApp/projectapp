@@ -254,6 +254,12 @@
         :sort-dir="sortDir"
         @sort="toggleSort"
       >
+        <template #cell-name="{ row }">
+          <div class="min-w-0">
+            <HighlightText :text="row.name" :query="searchInput" />
+            <p class="mt-1 text-xs text-text-muted">Espacio disponible en Plataforma</p>
+          </div>
+        </template>
         <template #cell-status_label="{ row }">
           <span class="inline-flex items-center gap-1.5">
             <BaseBadge :variant="stateBadgeVariant(row.current_state)">

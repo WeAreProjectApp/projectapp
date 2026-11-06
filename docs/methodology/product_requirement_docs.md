@@ -1,3 +1,5 @@
+> **PA-225/PA-216 — 2026-11-06:** aprobación interna diferida sin crear entidades y anexos opcionales por selección explícita (vacía inicialmente). Revisiones conservan la selección y la historia; los cierres antiguos no se modifican. Este acuerdo reemplaza la política de aprobación obligatoria con todos los anexos descrita en las entradas de octubre. Panel/Plataforma mantienen Project único por ID, con acceso desde el detalle y errores sin datos. Contratos y validación: `docs/PROPOSAL_SHARED_DOCUMENTS.md` y `docs/PA225_PA216_VALIDATION.md`; pruebas en CI y Chrome por dev-qa, pendientes de entrega de esta rama.
+
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
 
 ## Radar de atención — 2026-10-26

@@ -2,8 +2,9 @@
 
 Aceptar una propuesta cierra la decisión comercial. El equipo revisa después
 el cliente, el proyecto y los documentos que deben incorporarse al proyecto.
-La aceptación pública y el cambio de estado del Panel no crean proyectos ni
-clientes automáticamente.
+La aprobación interna diferida no crea proyectos ni clientes automáticamente.
+La aceptación pública sigue deshabilitada y el cambio genérico de estado exige
+abrir la revisión interna.
 
 ## Recorrido del equipo
 
@@ -41,8 +42,8 @@ firma electrónica ni crea un contrato de seguimiento de entregas.
 ## Contrato técnico
 
 `GET /api/proposals/:id/approval/` devuelve cliente, proyecto vinculado,
-resumen comercial, modalidad y documentos disponibles, archivos confirmados
-y `source_hash`. La respuesta incluye la fecha de sincronización y las
+resumen comercial, modalidad y documentos disponibles, archivos confirmados,
+`selected_document_ids` y `source_hash`. La respuesta incluye la fecha de sincronización y las
 transiciones vigentes para actualizar el siguiente paso del editor sin recargar.
 `POST` usa las acciones `confirm`, `defer` y `retry`.
 
@@ -58,7 +59,8 @@ catálogo de horas. Los clientes comerciales no archivados pueden vincularse
 sin activar sus cuentas de acceso. La confirmación atómica conserva un manifiesto y copias
 privadas duraderas, junto con el cliente y las condiciones comerciales
 confirmadas. Editar la propuesta después no modifica ese paquete. Un reintento reutiliza el mismo vínculo y paquete, sin
-duplicar proyectos, clientes, archivos ni correos de aceptación. Los recursos
+duplicar proyectos, clientes, archivos ni correos de aceptación. En revisiones se recupera
+la selección confirmada; ningún anexo nuevo queda marcado automáticamente. Los recursos
 técnicos existentes se conservan durante la sincronización de aprobación.
 
 El Panel usa `SessionAuthentication`, permisos administrativos y CSRF.
