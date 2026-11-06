@@ -308,7 +308,8 @@ test('a revision restores only its previously selected annexes', {
     selectedDocumentIds: [701],
   });
   await mockApproval(page, state);
-  await openList(page);
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('link', { name: 'Propuestas', exact: true }).click();
   await openInlineApproval(page);
 
   const modal = page.getByTestId('proposal-approval-modal');
