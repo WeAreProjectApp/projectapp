@@ -80,7 +80,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       await page.getByTestId('incomes-view-mode').getByRole('tab', { name: 'Clásico', exact: true }).click();
       await page.getByTestId('incomes-search-input').fill('QA RESPONSIVE');
       const row = page.getByTestId('accounting-row-979');
-      const amount = row.getByText(longAmount, { exact: true });
+      const amount = row.getByText(longAmount, { exact: true }).filter({ visible: true });
       await expect(page.getByTestId('income-open-979')).toHaveText(longConcept);
       await expect(amount).toHaveCount(1);
       await expectReadable(amount);
@@ -91,7 +91,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       await resizeFromDesktop(page, profile);
       await expectReadable(amount);
       await expectReadable(row.getByRole('link', { name: longConcept, exact: true }));
-      await expect(page.getByTestId('accounting-row-980').getByText('$1.250.000 COP', { exact: true })).toHaveCount(1);
+      await expect(page.getByTestId('accounting-row-980').getByText('$1.250.000 COP', { exact: true }).filter({ visible: true })).toHaveCount(1);
       await expect(row).toHaveJSProperty('scrollLeft', 0);
       await page.getByTestId('income-actions-979').click();
       await expect(page.getByRole('dialog').getByText(longConcept, { exact: true })).toBeVisible();
