@@ -96,12 +96,54 @@ async function turnSourceIntoFormattedDocument(page) {
 }
 
 test.describe('Editorial rich text in documents', () => {
+  test.setTimeout(60_000);
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, {
       token: 'editorial-document-token',
       userAuth: { id: 761, role: 'admin', is_staff: true },
     });
   });
+
+  for (const context of [
+    { label: 'create', path: '/es-co/panel/documents/create', tags: ADMIN_DOCUMENT_CREATE },
+    { label: 'edit', path: '/es-co/panel/documents/91/edit', tags: ADMIN_DOCUMENT_EDIT },
+  ]) {
+    for (const theme of ['light', 'dark']) {
+      test(`distinguishes inline code in ${context.label} with the ${theme} theme`, {
+        tag: [...context.tags, '@role:admin', '@outcome:success'],
+      }, async ({ page }) => {
+        const state = { document: { ...documentBase } };
+        await mockDocumentEditorApi(page, state);
+        await page.goto(context.path, { waitUntil: 'domcontentloaded' });
+        await page.evaluate((dark) => document.documentElement.classList.toggle('dark', dark), theme === 'dark');
+        const editor = documentEditor(page);
+        await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+        await editor.getByTestId('rich-text-source-input').fill('Normal codigo');
+        await editor.getByRole('tab', { name: /^Visual$/ }).click();
+        const visual = editor.getByTestId('rich-text-visual-input');
+        await visual.click();
+        await visual.press('End');
+        await visual.press('Control+Shift+ArrowLeft');
+
+        await editor.getByRole('button', { name: /^(Código|Code)$/ }).click();
+
+        const inline = visual.locator('code');
+        await expect(inline).toHaveText('codigo');
+        const style = await inline.evaluate((node) => {
+          const code = getComputedStyle(node);
+          return { font: code.fontFamily, background: code.backgroundColor, padding: parseFloat(code.paddingLeft) };
+        });
+        expect(style.font).toContain('monospace');
+        expect(style.background).not.toBe('rgba(0, 0, 0, 0)');
+        expect(style.padding).toBeGreaterThan(0);
+        await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+        await expect(editor.getByTestId('rich-text-source-input')).toHaveValue(/Normal [`]codigo[`]/);
+        await editor.getByRole('tab', { name: /^Visual$/ }).click();
+        await expect(visual.locator('code')).toHaveText('codigo');
+        await expect(visual).toHaveText('Normal codigo');
+      });
+    }
+  }
 
   test('saves visual formatting through a document source round trip', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
@@ -131,6 +173,20 @@ test.describe('Editorial rich text in documents', () => {
     await expect(reloaded.getByTestId('rich-text-source-input')).toHaveValue(payload.content_markdown);
     await reloaded.getByRole('tab', { name: /^Visual$/ }).click();
     await expect(reloaded.getByTestId('rich-text-visual-input')).toContainText('Texto para formato');
+  });
+
+  test('keeps block code separate from inline decoration', {
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const state = { document: { ...documentBase, content_markdown: '```\nbloque\n```' } };
+    await mockDocumentEditorApi(page, state);
+    await page.goto('/es-co/panel/documents/91/edit', { waitUntil: 'domcontentloaded' });
+
+    const block = documentEditor(page).getByTestId('rich-text-visual-input').locator('pre code');
+
+    await expect(block).toHaveText('bloque');
+    await expect(block).toHaveCSS('padding-left', '0px');
+    await expect(block).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   });
 
   test('keeps a long visual document inside its scrollable editor pane', {

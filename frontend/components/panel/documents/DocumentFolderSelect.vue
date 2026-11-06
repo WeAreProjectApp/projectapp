@@ -36,7 +36,7 @@
         <BaseButton
           unstyled
           icon-only
-          v-if="!disabled && (committedId != null || inputText)"
+          v-if="!disabled && (committedId != null || filtering && inputText)"
           type="button"
           class="absolute inset-y-0 right-0 flex items-center pr-3 text-text-subtle hover:text-text-default transition-colors"
           aria-label="Quitar carpeta"
@@ -105,7 +105,7 @@
           </li>
         </ul>
 
-        <p v-else class="px-4 py-3 text-sm text-text-muted" :data-testid="`${testid}-empty`">
+        <p v-if="!isLoading && !loadFailed && (!visibleOptions.length || rootOptionLabel && term && visibleOptions.length === 1)" class="px-4 py-3 text-sm text-text-muted" :data-testid="`${testid}-empty`">
           {{ term ? `Sin carpetas que coincidan con "${term}".` : 'No hay carpetas todavía.' }}
         </p>
       </BaseFloatingListbox>
@@ -145,6 +145,8 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   disabledReason: { type: String, default: '' },
   showHint: { type: Boolean, default: true },
+  /** A translated label enables an explicit null destination for new folders. */
+  rootOptionLabel: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:modelValue', 'select']);
@@ -168,7 +170,12 @@ const highlightIndex = ref(-1);
 const list = computed(() => (Array.isArray(store.folders) ? store.folders : []));
 const options = computed(() => buildFolderPickerOptions(list.value));
 const term = computed(() => (filtering.value ? inputText.value.trim() : ''));
-const visibleOptions = computed(() => filterFolderPickerOptions(options.value, term.value));
+const visibleOptions = computed(() => {
+  const folders = filterFolderPickerOptions(options.value, term.value);
+  return props.rootOptionLabel
+    ? [{ id: null, name: props.rootOptionLabel, pathLabel: props.rootOptionLabel, detail: '' }, ...folders]
+    : folders;
+});
 const isLoading = computed(() => Boolean(store.isLoading) && list.value.length === 0);
 // Una lectura fallida se dice y se puede reintentar, como en ClientAutocomplete:
 // «no hay carpetas» sería falso.
@@ -199,7 +206,7 @@ function optionDomId(id) {
 }
 
 function resolveCommittedLabel() {
-  if (committedId.value == null) return '';
+  if (committedId.value == null) return props.rootOptionLabel;
   const label = folderPathLabel(list.value, committedId.value);
   if (label) return label;
   // Mientras llega la lista no se inventa nada: queda el rótulo que había.
@@ -212,7 +219,7 @@ function syncLabel() {
   if (!isOpen.value) inputText.value = committedLabel.value;
 }
 
-watch([committedId, options, () => store.isLoading], syncLabel, { immediate: true });
+watch([committedId, options, () => props.rootOptionLabel, () => store.isLoading], syncLabel, { immediate: true });
 
 watch(() => props.disabled, (disabled) => {
   if (disabled && isOpen.value) closeDropdown();
@@ -251,7 +258,9 @@ function onInput() {
   // Escribir filtra, no desvincula: para quitar la carpeta está la X.
   isOpen.value = true;
   filtering.value = true;
-  highlightIndex.value = visibleOptions.value.length > 0 ? 0 : -1;
+  highlightIndex.value = props.rootOptionLabel && term.value
+    ? visibleOptions.value.findIndex((option) => option.id != null)
+    : (visibleOptions.value.length > 0 ? 0 : -1);
 }
 
 function selectOption(option) {
@@ -266,8 +275,8 @@ function selectOption(option) {
 
 function clearSelection() {
   const hadFolder = committedId.value != null;
-  committedLabel.value = '';
-  inputText.value = '';
+  committedLabel.value = props.rootOptionLabel;
+  inputText.value = committedLabel.value;
   filtering.value = false;
   if (hadFolder) {
     emit('update:modelValue', null);

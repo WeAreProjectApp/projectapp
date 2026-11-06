@@ -6,10 +6,16 @@
         <h1 class="text-2xl font-light text-text-default">Gestor Documental</h1>
         <p class="text-sm text-text-subtle mt-1">Crea, organiza y comparte documentos con tu marca.</p>
       </div>
-      <BaseButton as="NuxtLink" :to="createLink" variant="primary" class="shadow-sm">
-        <BaseActionIcon action="create" />
-        Nuevo Documento
-      </BaseButton>
+      <div class="flex flex-wrap gap-2">
+        <BaseButton variant="secondary" data-testid="documents-new-folder" @click="openNewFolder">
+          <BaseActionIcon action="create" />
+          {{ t('documentFolders.newFolder') }}
+        </BaseButton>
+        <BaseButton as="NuxtLink" :to="createLink" variant="primary" class="shadow-sm">
+          <BaseActionIcon action="create" />
+          Nuevo Documento
+        </BaseButton>
+      </div>
     </div>
 
     <!-- Toolbar: search + list/gallery toggle -->
@@ -484,7 +490,7 @@
 
     <FolderManagerModal
       v-model="showFolderManager"
-      :initial-parent="typeof documentStore.activeFolderId === 'number' ? documentStore.activeFolderId : null"
+      :initial-parent="newFolderParentId"
       @changed="handleFoldersChanged"
       @archived="handleFolderArchived"
       @change-client="openFolderCascade"
@@ -492,6 +498,8 @@
     <FolderFormModal
       v-model="showFolderForm"
       :folder="editingFolder"
+      :initial-parent="newFolderParentId"
+      :inherit-from="newFolderOwner"
       @saved="handleFoldersChanged"
       @change-client="openFolderCascade"
     />
@@ -605,6 +613,7 @@ import {
 const localePath = useLocalePath();
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const { openRow } = useRowNavigation();
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
@@ -784,6 +793,22 @@ const suppressedManagedRootId = computed(() => (
     ? selectedNavigationEntry.value?.managed_root_id ?? null
     : null
 ));
+const newFolderParentId = computed(() => {
+  if (typeof documentStore.activeFolderId === 'number') return documentStore.activeFolderId;
+  return documentStore.activeFolderId === 'root' ? suppressedManagedRootId.value : null;
+});
+const newFolderOwner = computed(() => {
+  const parent = folderStore.folderById(newFolderParentId.value);
+  if (parent) return parent;
+  const entry = selectedNavigationEntry.value;
+  if (!entry) return null;
+  return {
+    name: entry.name,
+    client: navigationMode.value === 'client' ? entry.id : entry.client,
+    client_display_name: entry.client_display_name || entry.name,
+    project: navigationMode.value === 'project' ? entry.id : null,
+  };
+});
 const navigationRootFolders = computed(() => navigationFolders.value.filter((folder) => {
   if (folder.id === suppressedManagedRootId.value) return false;
   if (folder.parent === suppressedManagedRootId.value) return true;
@@ -1506,6 +1531,11 @@ const associationClientLabel = computed(() => {
 /** Editar la carpeta desde donde se la está usando: su fila o su cabecera. */
 function openFolderForm(folder) {
   editingFolder.value = folder;
+  showFolderForm.value = true;
+}
+
+function openNewFolder() {
+  editingFolder.value = null;
   showFolderForm.value = true;
 }
 
