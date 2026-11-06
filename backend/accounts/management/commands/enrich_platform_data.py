@@ -46,6 +46,7 @@ HISTORY_PATHS = {
     Payment.STATUS_FAILED: [('pending', 'processing', 'wompi_link'), ('processing', 'failed', 'webhook')],
     Payment.STATUS_OVERDUE: [('pending', 'overdue', 'system')],
     Payment.STATUS_PENDING: [('pending', 'pending', 'system')],
+    Payment.STATUS_VOIDED: [('pending', 'voided', 'manual')],
 }
 
 NOTIFICATION_SPECS = [

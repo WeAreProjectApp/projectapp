@@ -7,8 +7,9 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import (
-    Deliverable, HostingSubscription, Payment, Project, UserProfile,
+    Deliverable, HostingSubscription, Payment, PaymentHistory, Project, UserProfile,
 )
+from accounts.management.commands.enrich_platform_data import HISTORY_PATHS
 from accounts.services import platform_resources
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 from content.fake_data_files import fake_data_transaction, sample_pdf
@@ -99,10 +100,16 @@ class Command(BaseCommand):
             if index == 0:
                 for payment_status, _ in Payment.STATUS_CHOICES:
                     due = context.anchor_date + timedelta(days=-30 if payment_status in {'paid', 'overdue'} else 15)
-                    Payment.objects.get_or_create(subscription=subscription, description=f'[QA] Pago {payment_status}', defaults={
+                    payment, created = Payment.objects.get_or_create(subscription=subscription, description=f'[QA] Pago {payment_status}', defaults={
                         'amount': subscription.billing_amount, 'status': payment_status,
                         'billing_period_start': due - timedelta(days=90), 'billing_period_end': due,
                         'due_date': due, 'paid_at': context.anchor_now if payment_status == 'paid' else None,
                     })
+                    if created:
+                        PaymentHistory.objects.bulk_create([
+                            PaymentHistory(payment=payment, from_status=previous, to_status=current,
+                                           source=source, metadata={'seed': True})
+                            for previous, current, source in HISTORY_PATHS[payment_status]
+                        ])
         self.stdout.write('QA cases ready: qa-<role>@example.test; [QA] Proyecto vacío; '
                           '[QA] Recurso PDF con tres versiones; [QA] Ingreso grande pendiente.')

@@ -109,6 +109,12 @@ def test_hosting_cases_cover_payment_states(cases):
     }
 
 
+def test_qa_payment_history_matches_current_state(cases):
+    payments = Payment.objects.filter(description__startswith='[QA] Pago ')
+    mismatches = [payment.description for payment in payments if payment.history.first().to_status != payment.status]
+    assert mismatches == []
+
+
 def test_platform_cases_do_not_accumulate(cases):
     before = (Project.objects.count(), Deliverable.objects.count(), Payment.objects.count(), IncomeRecord.objects.count())
     run('create_fake_platform_cases')
