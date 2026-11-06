@@ -19,7 +19,7 @@ def stamp_link(link, context, state):
     values = {
         'created_at': now - timedelta(days=2), 'updated_at': now,
         'expires_at': now + timedelta(days=link.validity_days),
-        'sent_at': now - timedelta(days=1) if state == 'sent' else None,
+        'sent_at': now - timedelta(days=1) if state == 'sent' and not link.team_only else None,
         'consumed_at': now if state in {'opened', 'consumed'} else None,
         'revoked_at': now if state == 'revoked' else None,
     }
