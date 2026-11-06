@@ -52,6 +52,7 @@
       "flows": [
         "admin-login",
         "admin-panel-session-expired",
+        "admin-panel-sidebar-resize",
         "admin-impersonate-user",
         "admin-dashboard",
         "admin-dashboard-finance-gate",
@@ -90,6 +91,7 @@
         "admin-client-email-copy-settings",
         "admin-client-email-copy-history",
         "admin-client-communications",
+        "admin-communication-panel-resize",
         "admin-mini-crm-clients",
         "admin-client-create-standalone",
         "admin-client-delete-orphan",
@@ -176,7 +178,10 @@
         "diagnostic-public-view",
         "admin-proposal-explainer-visibility",
         "admin-proposal-explainer-preference",
-        "admin-proposal-module-interests"
+        "admin-proposal-module-interests",
+        "admin-secure-link-folder-panel-resize",
+        "admin-outbound-email-history-retry",
+        "admin-email-deliverability"
       ]
     },
     {

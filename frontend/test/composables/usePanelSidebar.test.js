@@ -2,6 +2,7 @@
  * Tests for usePanelSidebar composable.
  */
 const STORAGE_KEY = 'panel_sidebar_collapsed'
+const WIDTH_STORAGE_KEY = 'projectapp-panel-sidebar-width'
 
 let usePanelSidebar
 
@@ -10,6 +11,7 @@ const ORIGINAL_INNER_WIDTH = window.innerWidth
 describe('usePanelSidebar', () => {
   beforeEach(() => {
     localStorage.clear()
+    window.innerWidth = 1440
     jest.resetModules()
     const mod = require('../../composables/usePanelSidebar')
     usePanelSidebar = mod.usePanelSidebar
@@ -140,5 +142,80 @@ describe('usePanelSidebar', () => {
     window.innerWidth = 400
     window.dispatchEvent(new Event('resize'))
     expect(isMobileOpen.value).toBe(true)
+  })
+
+  it('uses the 240px default width when no saved preference exists', () => {
+    // Fails if a clean profile opens the menu at an unplanned width.
+    const { hydrate, expandedWidth, layoutStyle } = usePanelSidebar()
+
+    hydrate()
+
+    expect(expandedWidth.value).toBe(240)
+    expect(layoutStyle.value).toEqual({ '--panel-sidebar-width': '240px' })
+  })
+
+  it.each([
+    ['199', 200],
+    ['480', 400],
+  ])('clamps the hydrated sidebar width %s to %ipx', (storedWidth, expectedWidth) => {
+    // Fails if a manipulated preference can make the navigation unusable.
+    window.localStorage.setItem(WIDTH_STORAGE_KEY, storedWidth)
+    const { hydrate, expandedWidth, layoutStyle } = usePanelSidebar()
+
+    hydrate()
+
+    expect(expandedWidth.value).toBe(expectedWidth)
+    expect(layoutStyle.value).toEqual({ '--panel-sidebar-width': `${expectedWidth}px` })
+  })
+
+  it('falls back to the default width for a corrupted saved preference', () => {
+    // Fails if corrupted browser storage breaks the desktop navigation layout.
+    window.localStorage.setItem(WIDTH_STORAGE_KEY, 'not-a-width')
+    const { hydrate, expandedWidth, layoutStyle } = usePanelSidebar()
+
+    hydrate()
+
+    expect(expandedWidth.value).toBe(240)
+    expect(layoutStyle.value).toEqual({ '--panel-sidebar-width': '240px' })
+  })
+
+  it('persists the final sidebar drag width on release', () => {
+    // Fails if a drag does not resize the content layout or writes storage on every pointer move.
+    const { expandedWidth, layoutStyle, startResize, moveResize, endResize } = usePanelSidebar()
+    startResize()
+    moveResize({ clientX: 316 })
+
+    expect(expandedWidth.value).toBe(316)
+    expect(layoutStyle.value).toEqual({ '--panel-sidebar-width': '316px' })
+    expect(window.localStorage.getItem(WIDTH_STORAGE_KEY)).toBeNull()
+
+    endResize()
+
+    expect(window.localStorage.getItem(WIDTH_STORAGE_KEY)).toBe('316')
+  })
+
+  it('restores the chosen width after expansion', () => {
+    // Fails if collapsing overwrites the preferred open-menu width.
+    const { resizeWidth, collapse, expand, layoutStyle } = usePanelSidebar()
+    resizeWidth(352)
+    collapse()
+
+    expect(layoutStyle.value).toEqual({ '--panel-sidebar-width': '64px' })
+
+    expand()
+
+    expect(layoutStyle.value).toEqual({ '--panel-sidebar-width': '352px' })
+  })
+
+  it('finishes an active drag during cleanup', () => {
+    // Fails if navigating away leaves a resize gesture active or loses the chosen width.
+    const { startResize, moveResize, cleanupResizeListener, isResizing } = usePanelSidebar()
+    startResize()
+    moveResize({ clientX: 288 })
+
+    cleanupResizeListener()
+
+    expect(isResizing.value).toBe(false)
+    expect(window.localStorage.getItem(WIDTH_STORAGE_KEY)).toBe('288')
   })
 })

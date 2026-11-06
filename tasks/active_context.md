@@ -1,3 +1,5 @@
+> **PA-201 / PA-202–205 / PA-208 / PA-214 — 2026-11-06:** implementación en `fix/06112026-panel-usability-email-retry`. Radar compacto, anchos ajustables del menú y de Enlaces seguros, Consultoría en Programas y centro de Emails con Estado. El gateway conserva la conexión SMTP al clonar el mensaje; el reintento individual usa el destinatario fallido y evidencia exacta o el origen contable validado. Validación exclusivamente en CI, por instrucción del operador; entrega mediante PR abierto, sin merge ni despliegue desde esta sesión.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

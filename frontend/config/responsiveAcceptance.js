@@ -41,6 +41,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/panel/documents/',
     'frontend/pages/panel/documents/index.vue',
     'frontend/pages/panel/documents/statuses.vue',
+    'frontend/composables/useFolderPanelWidth.js',
   ], [
     'Abrir y cerrar el selector de carpetas.',
     'Cambiar entre activos y archivados y operar una fila.',
@@ -106,6 +107,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
   ]),
   emails: module('emails', [
     'frontend/components/email/',
+    'frontend/components/emails/',
     'frontend/pages/panel/emails/',
     'frontend/pages/panel/proposals/email-deliverability.vue',
     'frontend/pages/panel/proposals/email-templates.vue',
@@ -113,6 +115,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Completar destinatario, asunto, contenido y adjuntos.',
     'Abrir la vista previa y volver al formulario.',
     'Consultar el historial y sus estados.',
+    'Consultar Estado de los emails y reintentar un destinatario fallido desde su detalle.',
   ]),
   communications: module('communications', [
     'frontend/pages/platform/projects/[id]/secure-links.vue',
@@ -122,6 +125,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/pages/panel/communications/',
     'frontend/pages/panel/secure-links/',
     'frontend/components/secureLinks/',
+    'frontend/composables/useFolderPanelWidth.js',
   ], [
     'Identificar varios hilos compactos sin desplazamiento horizontal.',
     'Crear y gestionar enlaces seguros propios del proyecto, confirmando revocación y reactivación, sin revelar el secreto histórico ni desbordar sus modales.',

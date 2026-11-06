@@ -1,3 +1,5 @@
+> **PA-201, PA-202/205, PA-208 y PA-214 — 2026-11-06:** compactar Radar y detalle, redimensionar menú y navegación de Enlaces seguros, reubicar Consultoría e integrar Estado de los emails con Historial y reintentos individuales. Criterio de entrega: cobertura del envío para dos cuentas distintas, reintento histórico y por destinatario, arrastres en las tres vistas y matriz responsiva validados en CI; PR abierto y verde. No se ejecutan tests locales.
+
 > **Enlaces seguros — 2026-10-26:** jerarquía propia, navegación compartida,
 > clasificación inicial por proyecto y MCP de administración completo.
 > Migraciones mediante deploy; entrega y validación se verifican en el PR.

@@ -8,7 +8,7 @@
     :title="isCollapsed ? item.label : undefined"
   >
     <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" />
-    <span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
+    <span v-if="!isCollapsed" :class="labelClass">{{ item.label }}</span>
   </a>
   <NuxtLink
     v-else-if="!disabled"
@@ -19,7 +19,7 @@
     :aria-current="isActive ? 'page' : undefined"
   >
     <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" />
-    <span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
+    <span v-if="!isCollapsed" :class="labelClass">{{ item.label }}</span>
     <span
       v-if="!isCollapsed && item.badge"
       class="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500/15 px-1.5 text-[10px] font-semibold text-red-400"
@@ -33,7 +33,7 @@
     :title="isCollapsed ? `${item.label} (próximamente)` : undefined"
   >
     <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" />
-    <span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
+    <span v-if="!isCollapsed" :class="labelClass">{{ item.label }}</span>
     <span
       v-if="!isCollapsed"
       class="ml-auto text-[9px] font-medium uppercase tracking-wider text-green-light/40 dark:text-text-subtle/70"
@@ -52,7 +52,12 @@ const props = defineProps({
   isCollapsed: { type: Boolean, default: false },
   isActive: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
+  wrapLabel: { type: Boolean, default: false },
 })
+
+const labelClass = computed(() => props.wrapLabel
+  ? 'min-w-0 whitespace-normal break-words leading-snug'
+  : 'truncate')
 
 const itemClasses = computed(() => [
   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
