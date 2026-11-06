@@ -46,7 +46,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       await expectFitsHorizontally(insert);
       await expectPageFits(page);
       await insert.click();
-      await expect(page.getByPlaceholder('Título del módulo', { exact: true })).toHaveValue(moduleTitle);
+      await expect(page.getByPlaceholder('Título del módulo', { exact: true })).toHaveValue(`Alcance ampliado: ${moduleTitle}`);
     });
 
     test('email preview keeps its close action reachable', {

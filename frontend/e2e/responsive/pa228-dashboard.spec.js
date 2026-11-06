@@ -38,8 +38,9 @@ for (const profile of RESPONSIVE_PROFILES) {
       await expectTrendFits(page);
       await page.setViewportSize(PANEL_VIEWPORTS[profile]);
       await expectTrendFits(page);
-      await expect(page.getByTestId('dashboard-trend-chart').locator('tspan').filter({ hasText: /^may$/ })).toBeVisible();
-      await expect(page.getByTestId('dashboard-trend-chart').locator('tspan').filter({ hasText: /^oct$/ })).toBeVisible();
+      await expect(page.getByTestId('dashboard-trend-chart').locator('text > tspan').filter({
+        hasText: /^(may|jun|jul|ago|sept|oct)\.$/,
+      })).toHaveText(['may.', 'jun.', 'jul.', 'ago.', 'sept.', 'oct.']);
     });
   });
 }

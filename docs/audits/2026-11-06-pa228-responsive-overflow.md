@@ -69,6 +69,19 @@ sin hacer clic ni recargar. Se conservan las aserciones de ancho, chips y meses.
 No se modifica código de aplicación por este fallo del gate. Reprueba en CI
 pendiente de la siguiente corrida; no acredita todavía ejecución E2E ni Chrome.
 
+El SHA `72968198356e4189d7345d8c2a69fde57bd9bdfd` aprobó el
+[Quality Gate](https://github.com/WeAreProjectApp/projectapp/actions/runs/42272273503).
+La [corrida responsive](https://github.com/WeAreProjectApp/projectapp/actions/runs/42272273277)
+aprobó los 15 casos propios de Contabilidad, los cinco de Blog y los diez de
+preview/embudo de Propuestas. Fallaron cinco de Dashboard y cinco de inserción
+técnica por expectativas incorrectas: el locale del navegador representa los
+meses con punto (`may.`, `oct.`) y el generador existente añade `Alcance ampliado:`
+al título. Las trazas acreditan esos textos reales; se corrigen las expectativas
+sin cambiar la aplicación ni quitar comprobaciones de geometría. Dashboard pasa
+a comprobar los seis meses completos. La espera del título erróneo alcanzó un
+refresco posterior en el caso compacto; el título correcto se observa antes.
+La nueva ejecución queda pendiente de su propio corte CI.
+
 ## Guion y cierre visible
 
 Encargo inicial enviado directamente a dev-qa y preservado en
