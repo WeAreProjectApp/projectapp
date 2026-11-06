@@ -1,8 +1,6 @@
 from datetime import timedelta
 
-from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
+from django.core.management.base import BaseCommand
 from django.db import transaction
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 from secure_links.fake_data import PANEL_PREFIX, stamp_link
@@ -31,6 +29,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         add_seed_arguments(parser)
+        parser.add_argument('--skip-platform', action='store_true')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -38,7 +37,8 @@ class Command(BaseCommand):
         context = seed_context(options, 'secure-links')
         now = context.anchor_now
         states = ['ready', 'sent', 'opened', 'expired', 'revoked']
-        create_platform_samples(context)
+        if not options['skip_platform']:
+            create_platform_samples(context)
         contexts, archive = create_folder_samples()
         for index, (secret_type, title, fields) in enumerate(SAMPLES * 3):
             fixture_title = f'{PANEL_PREFIX}{index + 1:02d} — {title}'

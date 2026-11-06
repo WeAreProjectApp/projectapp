@@ -1,9 +1,9 @@
 """Build the complete, deterministic development dataset."""
 
 from django.apps import apps
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
 
 from content.fake_data import (
     DEFAULT_COUNT,
@@ -182,7 +182,8 @@ class Command(BaseCommand):
             if not options['skip_monitoring']:
                 self._run_seeded('monitoring', 'create_fake_monitoring', '--count', str(count))
             if not options['skip_secure_links']:
-                self._run_seeded('secure links', 'create_fake_secure_links')
+                secure_args = ('--skip-platform',) if options['skip_platform'] else ()
+                self._run_seeded('secure links', 'create_fake_secure_links', *secure_args)
             if not options['skip_platform']:
                 self._run_seeded('platform QA cases', 'create_fake_platform_cases')
 
@@ -195,6 +196,7 @@ class Command(BaseCommand):
             f' --{name.replace("_", "-")}'
             for name, enabled in options.items() if name.startswith('skip_') and enabled
         )
+        command += f' --settings={settings.SETTINGS_MODULE}'
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS(
             f'Complete dataset created atomically ({len(self._completed)} stages).',

@@ -59,7 +59,9 @@ def fake_data_transaction():
     try:
         with deferred_project_cleanup(), transaction.atomic():
             yield
-            schedule_project_files(removed_files)
+            # Uploading several resource versions can supersede a current-file
+            # path without deleting its row. Retain the final references only.
+            schedule_project_files([*removed_files, *created_files])
     except BaseException:
         # The failed savepoint is already gone. The shared cleanup protects
         # every path still referenced by restored rows, including reused files.

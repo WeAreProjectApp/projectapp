@@ -1,6 +1,5 @@
 """Fictitious owned-link states for development; no outgoing notifications."""
 
-import uuid
 from datetime import timedelta
 
 from accounts.models import Project, UserProfile
