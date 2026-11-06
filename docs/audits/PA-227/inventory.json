@@ -4,741 +4,1674 @@
     "file": "frontend/pages/panel/accounting/ads.vue",
     "route": "/panel/accounting/ads",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Ads",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista del registro de gastos en ads del modulo contable"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/cards.vue",
     "route": "/panel/accounting/cards",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Tarjetas",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista de cortes semanales de tarjetas de credito del modulo contable"
+    },
+    "panelMenu": [
+      "Tarjetas"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/collection-context/[id].vue",
     "route": "/panel/accounting/collection-context/:id",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Asociación de cuenta",
+      "section": "Contabilidad (panel)",
+      "type": "edit",
+      "reference": "asociación explícita de cuenta al contrato, otrosí o hosting del mismo proyecto"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/collections.vue",
     "route": "/panel/accounting/collections",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Cuentas de cobro",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento"
+    },
+    "panelMenu": [
+      "Cuentas de cobro"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/expenses.vue",
     "route": "/panel/accounting/expenses",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Gastos",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista de gastos del modulo contable"
+    },
+    "panelMenu": [
+      "Gastos"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/history.vue",
     "route": "/panel/accounting/history",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Historial",
+      "section": "Contabilidad (panel)",
+      "type": "readonly",
+      "reference": "vista del log historico de cambios del modulo contable"
+    },
+    "panelMenu": [
+      "Historial"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/hostings.vue",
     "route": "/panel/accounting/hostings",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Hostings",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista de hostings activos por cliente del modulo contable"
+    },
+    "panelMenu": [
+      "Hostings",
+      "Hostings"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/incomes.vue",
     "route": "/panel/accounting/incomes",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Ingresos",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista de ingresos esperados y liquidos del modulo contable con estado de cobro por ingreso"
+    },
+    "panelMenu": [
+      "Ingresos"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/index.vue",
     "route": "/panel/accounting",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Resumen",
+      "section": "Contabilidad (panel)",
+      "type": "dashboard",
+      "reference": "vista dashboard del modulo contable: utilidad, estadisticas y cartera pendiente por cobrar"
+    },
+    "panelMenu": [
+      "Resumen"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/pocket.vue",
     "route": "/panel/accounting/pocket",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Bolsillo",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista del bolsillo ProjectApp con movimientos y saldo"
+    },
+    "panelMenu": [
+      "Bolsillo"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/project-hosting/[id].vue",
     "route": "/panel/accounting/project-hosting/:id",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Conciliación de hosting",
+      "section": "Contabilidad (panel)",
+      "type": "edit",
+      "reference": "inventario, previsualización y asociación del único hosting del proyecto y sus evidencias"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/recurring.vue",
     "route": "/panel/accounting/recurring",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Recurrentes",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista de pagos frecuentes mensuales del modulo contable"
+    },
+    "panelMenu": [
+      "Recurrentes"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/settings.vue",
     "route": "/panel/accounting/settings",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Configuración",
+      "section": "Contabilidad (panel)",
+      "type": "config",
+      "reference": "vista de configuracion de notificaciones del modulo contable"
+    },
+    "panelMenu": [
+      "Configuración"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/accounting/statements.vue",
     "route": "/panel/accounting/statements",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Contabilidad — Extractos",
+      "section": "Contabilidad (panel)",
+      "type": "list",
+      "reference": "vista de extractos mensuales de tarjeta de credito del modulo contable"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/additional-modules/index.vue",
     "route": "/panel/additional-modules",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Catálogo de módulos adicionales",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "administración, orden, selección, enlaces, PDF y recursos de video del catálogo comercial"
+    },
+    "panelMenu": [
+      "Módulos adicionales"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/admins/index.vue",
     "route": "/panel/admins",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Admins del panel",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "vista de administradores del panel"
+    },
+    "panelMenu": [
+      "Admins del panel"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/blog/[id]/edit.vue",
     "route": "/panel/blog/:id/edit",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Editar post de blog",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "vista de edicion de post de blog"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/blog/calendar.vue",
     "route": "/panel/blog/calendar",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Calendario de blog",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "vista de calendario de blog"
+    },
+    "panelMenu": [
+      "Calendario del blog"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/blog/create.vue",
     "route": "/panel/blog/create",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Crear post de blog",
+      "section": "Panel administrativo",
+      "type": "create",
+      "reference": "vista de creacion de post de blog"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/blog/index.vue",
     "route": "/panel/blog",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Blog del panel",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "vista listado de blog del panel"
+    },
+    "panelMenu": [
+      "Blog"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/building-with-us/index.vue",
     "route": "/panel/building-with-us",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Building with Us",
+      "section": "Panel administrativo",
+      "type": "readonly",
+      "reference": "consulta y distribución del programa y del contrato de alianza versionados"
+    },
+    "panelMenu": [
+      "Building with Us"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/cells/index.vue",
     "route": "/panel/cells",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Células",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "consulta y distribución del programa, economía interna, contrato y gestión del video de Building on Demand"
+    },
+    "panelMenu": [
+      "Células"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/clients/index.vue",
     "route": "/panel/clients",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Clientes",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "vista de clientes del panel"
+    },
+    "panelMenu": [
+      "Clientes"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/communications/index.vue",
     "route": "/panel/communications",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Comunicaciones con clientes",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "registro cronológico de conversaciones con clientes"
+    },
+    "panelMenu": [
+      "Hilos con clientes"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/consulting/index.vue",
     "route": "/panel/consulting",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Consultoría y asesoría",
+      "section": "Panel administrativo",
+      "type": "readonly",
+      "reference": "distribución y vista previa de la presentación de consultoría empresarial versionada"
+    },
+    "panelMenu": [
+      "Consultoría y asesoría"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/defaults.vue",
     "route": "/panel/defaults",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Valores por defecto (propuestas y diagnósticos)",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "vista unificada de valores por defecto con switch propuesta/diagnóstico"
+    },
+    "panelMenu": [
+      "Defaults"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/diagnostics/[id]/edit.vue",
     "route": "/panel/diagnostics/:id/edit",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Editar / detalle de diagnostico",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "vista de edicion/detalle de diagnostico del panel"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/diagnostics/create.vue",
     "route": "/panel/diagnostics/create",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Crear diagnostico",
+      "section": "Panel administrativo",
+      "type": "create",
+      "reference": "vista de creacion de diagnostico de aplicacion"
+    },
+    "panelMenu": [
+      "Nuevo diagnóstico"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/diagnostics/defaults.vue",
     "route": "/panel/diagnostics/defaults",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Defaults de diagnostico",
+      "section": "Panel administrativo",
+      "type": "redirect",
+      "reference": "stub de redirección hacia los defaults unificados"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/diagnostics/index.vue",
     "route": "/panel/diagnostics",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Diagnosticos de aplicaciones",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "vista listado de diagnosticos de aplicaciones del panel"
+    },
+    "panelMenu": [
+      "Diagnósticos"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/documents/[id]/edit.vue",
     "route": "/panel/documents/:id/edit",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Editar documento",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "vista de edición de documento"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/documents/create.vue",
     "route": "/panel/documents/create",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Crear documento",
+      "section": "Panel administrativo",
+      "type": "create",
+      "reference": "vista de creación de documento"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/documents/index.vue",
     "route": "/panel/documents",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Gestor Documental",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "vista principal del gestor documental"
+    },
+    "panelMenu": [
+      "Gestor Documental"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/documents/statuses.vue",
     "route": "/panel/documents/statuses",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Estados de documentos",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "catalogo administrable de estados y reglas del ciclo documental"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/emails/index.vue",
     "route": "/panel/emails",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Emails",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "vista de envío de emails con branding del panel, varios destinatarios y copias"
+    },
+    "panelMenu": [
+      "Enviar emails"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/financing/[id].vue",
     "route": "/panel/financing/:id",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Detalle del otrosí (enlace anterior)",
+      "section": "Panel administrativo",
+      "type": "redirect",
+      "reference": "compatibilidad: redirige a /panel/partnership-program/:id"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/financing/index.vue",
     "route": "/panel/financing",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Programa de Alianza (enlace anterior)",
+      "section": "Panel administrativo",
+      "type": "redirect",
+      "reference": "compatibilidad: redirige a /panel/partnership-program"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/financing/new.vue",
     "route": "/panel/financing/new",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Crear otrosí (enlace anterior)",
+      "section": "Panel administrativo",
+      "type": "redirect",
+      "reference": "compatibilidad: redirige a /panel/partnership-program/new"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/hour-packages/[id]/edit.vue",
     "route": "/panel/hour-packages/:id/edit",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Editar paquete de requerimientos",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "editar nombre bilingue, cupos XS/S/M, vigencia, descuento y activacion"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/hour-packages/create.vue",
     "route": "/panel/hour-packages/create",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Crear paquete de requerimientos",
+      "section": "Panel administrativo",
+      "type": "create",
+      "reference": "crear cupos XS/S/M, descuento y vigencia por mercado con vista previa de precio"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/hour-packages/index.vue",
     "route": "/panel/hour-packages",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Paquetes de requerimientos",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "catalogo de paquetes XS/S/M por mercado, con vigencia, descuentos, valores internos, factores USD y cupos mensuales de Alianza"
+    },
+    "panelMenu": [
+      "Paquetes de requerimientos"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/index.vue",
     "route": "/panel",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Dashboard del panel",
+      "section": "Panel administrativo",
+      "type": "dashboard",
+      "reference": "vista dashboard del panel"
+    },
+    "panelMenu": [
+      "Dashboard"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/linkedin/index.vue",
     "route": "/panel/linkedin",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "LinkedIn del panel",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "modulo de posts de LinkedIn (crear, programar, publicar)"
+    },
+    "panelMenu": [
+      "LinkedIn"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/linktrees/[id]/edit.vue",
     "route": "/panel/linktrees/:id/edit",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Editar linktree",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "editor de identidad, colores, logo, Google Fonts y plantillas HTML: carga ZIP o archivos, validacion, capturas, imagenes editables, biblioteca por cliente e historial de publicaciones"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/linktrees/index.vue",
     "route": "/panel/linktrees",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Linktrees del panel",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "listado de linktrees personalizables con handle publico /lk/@handle"
+    },
+    "panelMenu": [
+      "Linktrees"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/login.vue",
     "route": "/panel/login",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Login del panel",
+      "section": "Panel administrativo",
+      "type": "auth",
+      "reference": "acceso al panel mediante Django Admin con CAPTCHA obligatorio"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/mcps/index.vue",
     "route": "/panel/mcps",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "MCPs — Conectores",
+      "section": "MCPs (panel)",
+      "type": "config",
+      "reference": "vista de gestion de conectores MCP del panel"
+    },
+    "panelMenu": [
+      "MCPs"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/monitoring/index.vue",
     "route": "/panel/monitoring",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Monitoreo de proyectos y servidores",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "bandeja de eventos técnicos y reportes del VPS de producción"
+    },
+    "panelMenu": [
+      "Monitoreo"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/partnership-program/[id].vue",
     "route": "/panel/partnership-program/:id",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Detalle del otrosí de financiación",
+      "section": "Panel administrativo",
+      "type": "detail",
+      "reference": "edición, PDF, firma privada, ciclo de vida, segundo ciclo, versión de política aplicada e historial auditable"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/partnership-program/index.vue",
     "route": "/panel/partnership-program",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Programa de Alianza",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "Programa de Alianza, exclusividad conceptual sólo a cinco años, visibilidad del video, gestión de otrosíes y políticas versionadas de financiación"
+    },
+    "panelMenu": [
+      "Programa de Alianza"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/partnership-program/new.vue",
     "route": "/panel/partnership-program/new",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Crear otrosí de financiación",
+      "section": "Panel administrativo",
+      "type": "create",
+      "reference": "formulario para seleccionar cliente y preparar un borrador contractual"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/platform/ai.vue",
     "route": "/panel/platform/ai",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Configuración de IA de Plataforma",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "configuración compartida del chatbot y reportes por voz"
+    },
+    "panelMenu": [
+      "Configuración de IA"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/platform/help.vue",
     "route": "/panel/platform/help",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Ayuda de la plataforma",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "recorridos bilingües, novedades, tutorial general y clips de Appi/voz, con recursos sustituibles y controles globales/por cliente"
+    },
+    "panelMenu": [
+      "Ayuda de la plataforma"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/portfolio/[id]/edit.vue",
     "route": "/panel/portfolio/:id/edit",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Editar item de portafolio",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "vista de edicion de item de portafolio"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/portfolio/create.vue",
     "route": "/panel/portfolio/create",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Crear item de portafolio",
+      "section": "Panel administrativo",
+      "type": "create",
+      "reference": "vista de creacion de item de portafolio"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/portfolio/index.vue",
     "route": "/panel/portfolio",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Portafolio del panel",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "vista listado de portafolio del panel"
+    },
+    "panelMenu": [
+      "Portafolio"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/projects/[id]/ideas.vue",
     "route": "/panel/projects/:id/ideas",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Ideas del proyecto",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "ideas por proyecto: autoría, versiones, archivo y recopilaciones internas para contratos futuros"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/projects/index.vue",
     "route": "/panel/projects",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Proyectos (Plataforma)",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "modulo de proyectos: acciones por tres puntos al inicio, ciclo real, filtros, creacion, edicion, historico, accesos, marca, eliminacion de proyectos vacios y eliminacion selectiva exclusiva de superusuarios con DELETE, interruptores apagados y dependencias explícitas"
+    },
+    "panelMenu": [
+      "Proyectos"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/projects/statuses.vue",
     "route": "/panel/projects/statuses",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Estados de proyectos",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "catalogo administrable de estados y efectos operativos de proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/proposals/[id]/edit.vue",
     "route": "/panel/proposals/:id/edit",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Editar / detalle de propuesta",
+      "section": "Panel administrativo",
+      "type": "edit",
+      "reference": "vista de edicion/detalle de propuesta del panel"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/proposals/create.vue",
     "route": "/panel/proposals/create",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Crear propuesta",
+      "section": "Panel administrativo",
+      "type": "create",
+      "reference": "vista de creacion de propuesta del panel"
+    },
+    "panelMenu": [
+      "Nueva propuesta"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/proposals/defaults.vue",
     "route": "/panel/proposals/defaults",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Defaults de propuestas",
+      "section": "Panel administrativo",
+      "type": "redirect",
+      "reference": "stub de redirección hacia los defaults unificados"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/proposals/email-deliverability.vue",
     "route": "/panel/proposals/email-deliverability",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Entregabilidad de email",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "vista de entregabilidad de email de propuestas"
+    },
+    "panelMenu": [
+      "Entregabilidad email"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/proposals/email-templates.vue",
     "route": "/panel/proposals/email-templates",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Plantillas de email de propuestas",
+      "section": "Panel administrativo",
+      "type": "redirect",
+      "reference": "stub de redirección hacia los defaults unificados"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/proposals/index.vue",
     "route": "/panel/proposals",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Listado de propuestas",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "vista listado de propuestas del panel"
+    },
+    "panelMenu": [
+      "Propuestas"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/qr-cards/index.vue",
     "route": "/panel/qr-cards",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Tarjetas QR del panel",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "listado de tarjetas QR con generador de link corto y descarga de QR personalizable"
+    },
+    "panelMenu": [
+      "Tarjetas QR"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/secure-links/index.vue",
     "route": "/panel/secure-links",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Enlaces seguros",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "enlaces de un solo uso para compartir información sensible"
+    },
+    "panelMenu": [
+      "Enlaces seguros"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/styleguide.vue",
     "route": "/panel/styleguide",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Design System Styleguide",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "catálogo visual de tokens semánticos y componentes base (BaseInput, BaseButton, BaseModal, etc.) en light y dark"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/tasks/index.vue",
     "route": "/panel/tasks",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Tasks",
+      "section": "Panel administrativo",
+      "type": "list",
+      "reference": "vista de tablero kanban de tareas internas del panel"
+    },
+    "panelMenu": [
+      "Kanban"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "panel",
     "file": "frontend/pages/panel/views.vue",
     "route": "/panel/views",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Mapa de vistas",
+      "section": "Panel administrativo",
+      "type": "config",
+      "reference": "vista de mapa de vistas del panel"
+    },
+    "panelMenu": [
+      "Mapa de vistas"
+    ],
+    "navigationSource": "frontend/config/panelNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/access.vue",
     "route": "/platform/access",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Accesos globales (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect de compatibilidad hacia proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/admin-login.vue",
     "route": "/platform/admin-login",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Login de administrador (redirect de impersonación)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "callback de impersonacion hacia login de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/board.vue",
     "route": "/platform/board",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Tablero global (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect de compatibilidad hacia proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/bugs.vue",
     "route": "/platform/bugs",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Bugs globales (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect de compatibilidad hacia proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/changes.vue",
     "route": "/platform/changes",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Cambios globales (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect de compatibilidad hacia proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/clients/[id].vue",
     "route": "/platform/clients/:id",
     "platformRole": "admin",
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Detalle de cliente de plataforma",
+      "section": "Plataforma de clientes",
+      "type": "detail",
+      "reference": "vista de detalle de cliente de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/clients/index.vue",
     "route": "/platform/clients",
     "platformRole": "admin",
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Clientes de plataforma",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "vista listado de clientes de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/collection-accounts/[id].vue",
     "route": "/platform/collection-accounts/:id",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Detalle de cuenta de cobro",
+      "section": "Plataforma de clientes",
+      "type": "detail",
+      "reference": "detalle financiero, contexto explícito e instrucciones de pago con descarga del PDF emitido"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/collection-accounts/index.vue",
     "route": "/platform/collection-accounts",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Cuentas de cobro del cliente",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "consulta de cuentas emitidas con grupos y filtros por proyecto, contrato, otrosí, hosting y estado"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/complete-profile.vue",
     "route": "/platform/complete-profile",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Completar perfil",
+      "section": "Plataforma de clientes",
+      "type": "auth",
+      "reference": "vista de completar perfil de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/dashboard.vue",
     "route": "/platform/dashboard",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Dashboard de plataforma (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect de compatibilidad hacia proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/deliverables.vue",
     "route": "/platform/deliverables",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Entregables globales (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect de compatibilidad hacia proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/documents/index.vue",
     "route": "/platform/documents",
     "platformRole": "client",
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Documentos del cliente",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "portal de documentos, descargas y firma del cliente"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/forgot-password.vue",
     "route": "/platform/forgot-password",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Olvide mi contraseña",
+      "section": "Plataforma de clientes",
+      "type": "auth",
+      "reference": "vista de recuperacion de contrasena de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/index.vue",
     "route": "/platform",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Entrada de plataforma (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect de entrada hacia proyectos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/login.vue",
     "route": "/platform/login",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Login de plataforma",
+      "section": "Plataforma de clientes",
+      "type": "auth",
+      "reference": "login de plataforma con CAPTCHA obligatorio y reintento ante fallas"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/notifications.vue",
     "route": "/platform/notifications",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Notificaciones",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "vista de notificaciones de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/payments.vue",
     "route": "/platform/payments",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Hosting por proyecto",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "lista de proyectos con hosting y navegación al único hosting de cada proyecto"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/profile.vue",
     "route": "/platform/profile",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Perfil",
+      "section": "Plataforma de clientes",
+      "type": "config",
+      "reference": "perfil de plataforma y Ayuda compartida con videos y recorridos"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/access.vue",
     "route": "/platform/projects/:id/access",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Accesos del proyecto",
+      "section": "Plataforma de clientes",
+      "type": "edit",
+      "reference": "cliente: URLs y acciones habilitadas por campo; equipo: editor y política de exposición por ambiente"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/board.vue",
     "route": "/platform/projects/:id/board",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Tablero de proyecto (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "ruta anterior que redirige al seguimiento contractual"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/bugs.vue",
     "route": "/platform/projects/:id/bugs",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Bugs de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "reportes generales o de una entrega, con origen histórico, respuestas y reapertura"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/changes.vue",
     "route": "/platform/projects/:id/changes",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Cambios de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "solicitudes contextualizadas, respuestas y conversión a una guía pendiente"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/collection-accounts.vue",
     "route": "/platform/projects/:id/collection-accounts",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Cuentas de cobro de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "cuentas del proyecto con agrupación y filtros por contrato, otrosí, hosting y estado"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/data-model.vue",
     "route": "/platform/projects/:id/data-model",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Modelo de datos de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "detail",
+      "reference": "vista de modelo de datos de proyecto"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/deliverables/[deliverableId]/index.vue",
     "route": "/platform/projects/:id/deliverables/:deliverableId",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Detalle de entregable (redirect)",
+      "section": "Plataforma de clientes",
+      "type": "redirect",
+      "reference": "redirect hacia el listado de entregables del proyecto"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/deliverables/index.vue",
     "route": "/platform/projects/:id/deliverables",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Entregables de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "vista de entregables de proyecto"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/delivery.vue",
     "route": "/platform/projects/:id/delivery",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Seguimiento contractual de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "detail",
+      "reference": "contratos y otrosíes con fuentes del paquete confirmado, alcances, fases, etapas y guías de validación del proyecto"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/ideas.vue",
     "route": "/platform/projects/:id/ideas",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Ideas para el futuro",
+      "section": "Plataforma de clientes",
+      "type": "edit",
+      "reference": "sugerencias simples del cliente por proyecto con autor, fecha y versiones conservadas"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/index.vue",
     "route": "/platform/projects/:id",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Detalle de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "detail",
+      "reference": "vista de detalle de proyecto de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/payments.vue",
     "route": "/platform/projects/:id/payments",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Hosting y pagos de proyecto",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "único hosting del proyecto con suscripción, pagos, fuentes contables, ciclos y evidencia reconciliada"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/[id]/secure-links.vue",
     "route": "/platform/projects/:id/secure-links",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Enlaces seguros propios del proyecto",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "enlaces de texto o credenciales que el cliente comparte sólo con el equipo"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/projects/index.vue",
     "route": "/platform/projects",
     "platformRole": null,
-    "redirect": false
+    "redirect": false,
+    "catalog": {
+      "label": "Proyectos",
+      "section": "Plataforma de clientes",
+      "type": "list",
+      "reference": "vista listado de proyectos de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/reset-password.vue",
     "route": "/platform/reset-password",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Restablecer contraseña",
+      "section": "Plataforma de clientes",
+      "type": "auth",
+      "reference": "vista para definir nueva contrasena de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/verify-code.vue",
     "route": "/platform/verify-code",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Verificar código",
+      "section": "Plataforma de clientes",
+      "type": "auth",
+      "reference": "vista de verificacion de codigo de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   },
   {
     "surface": "platform",
     "file": "frontend/pages/platform/verify.vue",
     "route": "/platform/verify",
     "platformRole": null,
-    "redirect": true
+    "redirect": true,
+    "catalog": {
+      "label": "Verificacion de plataforma",
+      "section": "Plataforma de clientes",
+      "type": "auth",
+      "reference": "vista de verificacion de plataforma"
+    },
+    "panelMenu": [],
+    "navigationSource": "frontend/composables/usePlatformNav.js"
   }
 ]
