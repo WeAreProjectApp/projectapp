@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import IssueSourcePicker from '../../components/platform/issues/IssueSourcePicker.vue'
 
 const requirements = [
-  { id: 41, title: `Requerimiento${'ExtremoSinEspacios'.repeat(10)}Uno`, contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente' },
+  { id: 41, title: 'RequerimientoExtremoSinEspacios'.padEnd(300, 'X'), contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente' },
   { id: 42, title: 'Segundo requerimiento de la misma etapa', contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente' },
 ]
 const wrappers = []

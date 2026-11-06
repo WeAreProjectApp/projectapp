@@ -8,6 +8,11 @@ resultado esperado/real, entorno, pantallazo y comentarios permanecen en el tick
 Entrada después de iniciar sesión: `/es-co/platform/projects`; abrir el proyecto,
 la pestaña Bugs y el ticket mediante la interfaz.
 
+Para PA-229, DevQA identificó el requerimiento publicado 80 del proyecto 1:
+título sin espacios de 300 caracteres. Los requerimientos 1 y 2 comparten
+su contrato y etapa. La reprueba debe identificar el título completo con el
+selector cerrado en móvil y escritorio; ver sólo su inicio no acredita el caso.
+
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |

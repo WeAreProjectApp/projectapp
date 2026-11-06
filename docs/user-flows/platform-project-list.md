@@ -14,3 +14,8 @@ PA-229 se prueba en los cinco perfiles canónicos del proyecto. Las tarjetas de
 1440 × 900 y 2560 × 1440 no crecen por el nombre. Las pruebas automatizadas se
 ejecutan exclusivamente en CI; la reprueba en Chrome corresponde al turno de
 dev-qa sobre un SHA declarado.
+
+DevQA confirmó en el dataset del corte `b01448a2` un nombre sin espacios de
+177 caracteres (proyecto 77) y otro con espacios de 165 (proyecto 1). Se
+conservan para la reprueba; CI añade esas longitudes a las dos variantes de
+175 caracteres. No se requiere renombrar los proyectos del DEV activo.

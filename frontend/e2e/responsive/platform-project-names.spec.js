@@ -12,6 +12,11 @@ const names = {
   unbroken: 'Proyecto'.repeat(25),
   spaced: 'Proyecto con un nombre largo '.repeat(7).slice(0, 175),
 }
+// DevQA confirmed these lengths without changing the active DEVQA-000 dataset.
+const reportedNames = {
+  unbroken: 'QA_RESPONSIVE_SIN_ESPACIOS_'.padEnd(177, 'X'),
+  spaced: 'QA RESPONSIVE — Proyecto ficticio con nombre largo '.repeat(4).slice(0, 165),
+}
 const project = {
   id: 77, name: 'Proyecto de validación', status: 'active', status_label: 'Activo',
   current_state: { color: 'emerald', operational_effect: 'operating' },
@@ -21,7 +26,7 @@ const project = {
   changes_pending_count: 2,
 }
 const requirements = [
-  { id: 41, title: `${names.unbroken}OrigenUno`, contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente', source_publication_id: 11, source_requirement_version: 1 },
+  { id: 41, title: 'RequerimientoExtremoSinEspacios'.padEnd(300, 'X'), contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente', source_publication_id: 11, source_requirement_version: 1 },
   { id: 42, title: `${names.spaced}OrigenDos`, contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente', source_publication_id: 11, source_requirement_version: 1 },
 ]
 const recordKinds = { compact: 'card', portrait: 'card', landscape: 'row', desktop: 'row', wide: 'row' }
@@ -33,7 +38,12 @@ const responsiveTags = (profile) => [
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
 
 async function setup(page, { name = project.name, user = mockPlatformClient } = {}) {
-  const projects = [{ ...project, name }, { ...project, id: 78, name: 'Proyecto corto' }]
+  const projects = [
+    { ...project, name },
+    { ...project, id: 78, name: 'Proyecto corto' },
+    { ...project, id: 79, name: reportedNames.unbroken },
+    { ...project, id: 80, name: reportedNames.spaced },
+  ]
   await setPlatformAuth(page, { user })
   await page.addInitScript(() => localStorage.setItem('platform_theme', 'light'))
   await mockApi(page, async ({ apiPath, method }) => {
@@ -113,15 +123,19 @@ for (const profile of RESPONSIVE_PROFILES) {
       }, async ({ page }, testInfo) => {
         await setup(page, { name })
         await openProjects(page)
-        await expect(page.getByTestId(new RegExp(`^project-${recordKinds[profile]}-`))).toHaveCount(2)
+        await expect(page.getByTestId(new RegExp(`^project-${recordKinds[profile]}-`))).toHaveCount(4)
         await assertCompleteText(page.getByTestId(`project-name-${project.id}`), name)
         await assertCompleteText(page.getByTestId('project-name-78'), 'Proyecto corto')
+        await assertCompleteText(page.getByTestId('project-name-79'), reportedNames.unbroken)
+        await assertCompleteText(page.getByTestId('project-name-80'), reportedNames.spaced)
         const record = entry(page, profile, project.id)
         await expect(record).toContainText('65%')
         await expect(record).toContainText('1.200.000')
         await expect(record).toContainText('3')
         await assertRecordFits(record, page)
         await assertRecordFits(entry(page, profile, 78), page)
+        await assertRecordFits(entry(page, profile, 79), page)
+        await assertRecordFits(entry(page, profile, 80), page)
         await verifyTableByProfile[profile](page)
         await assertResponsiveScenario(page, testInfo, null, { profile })
 

@@ -9093,6 +9093,11 @@ resultado esperado/real, entorno, pantallazo y comentarios permanecen en el tick
 Entrada después de iniciar sesión: `/es-co/platform/projects`; abrir el proyecto,
 la pestaña Bugs y el ticket mediante la interfaz.
 
+Para PA-229, DevQA identificó el requerimiento publicado 80 del proyecto 1:
+título sin espacios de 300 caracteres. Los requerimientos 1 y 2 comparten
+su contrato y etapa. La reprueba debe identificar el título completo con el
+selector cerrado en móvil y escritorio; ver sólo su inicio no acredita el caso.
+
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |
@@ -9386,6 +9391,11 @@ PA-229 se prueba en los cinco perfiles canónicos del proyecto. Las tarjetas de
 1440 × 900 y 2560 × 1440 no crecen por el nombre. Las pruebas automatizadas se
 ejecutan exclusivamente en CI; la reprueba en Chrome corresponde al turno de
 dev-qa sobre un SHA declarado.
+
+DevQA confirmó en el dataset del corte `b01448a2` un nombre sin espacios de
+177 caracteres (proyecto 77) y otro con espacios de 165 (proyecto 1). Se
+conservan para la reprueba; CI añade esas longitudes a las dos variantes de
+175 caracteres. No se requiere renombrar los proyectos del DEV activo.
 
 ### FLOW: `platform-secure-link-create`
 
