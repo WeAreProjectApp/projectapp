@@ -18,6 +18,8 @@ from content.fake_data import (
 # first seed and are preserved by delete_fake_data. Any business root below
 # means an additive run would no longer be reproducible.
 BUSINESS_ROOT_MODELS = (
+    'procurement.Opportunity',
+    'procurement.Alert',
     'accounts.Project',
     'accounts.UserProfile',
     'content.BlogPost',
@@ -165,6 +167,7 @@ class Command(BaseCommand):
                     '--count', str(count),
                 )
             if not options['skip_auxiliary']:
+                self._run_seeded('procurement', 'create_fake_procurement', '--count', str(count))
                 self._run_seeded(
                     'auxiliary modules', 'create_fake_auxiliary',
                     '--count', str(count),

@@ -199,3 +199,7 @@ Todos aceptan `--seed` y `--anchor-date` y aplican el mismo guard de entorno.
 Las preparaciones de formalización y sus archivos privados son efímeros y se
 clasifican como EXEMPT: los recorridos de prueba los generan desde propuestas
 representativas mediante la API, sin sembrar envíos reutilizables.
+
+## Contratación estatal
+
+`create_fake_procurement` integra oportunidades ficticias, cuatro estados de seguimiento, una búsqueda y una alerta inactiva en la actualización general. Sin red ni envíos. Comparte `FAKE_DATA_ALLOWED` y reloj reproducible; `delete_fake_data --confirm` limpia su grafo antes de retirar dueños, preservando configuración y conector.

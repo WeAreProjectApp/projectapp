@@ -1,0 +1,16 @@
+{
+  "id": "admin-procurement-alerts",
+  "name": "Admin Procurement Email Alerts",
+  "module": "procurement",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Staff administers independent filters, one to ten recipients, immediate/daily/weekly frequency, activation and matching-process preview. Recipient validation and failed saves remain visible.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

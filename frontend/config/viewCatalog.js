@@ -14,6 +14,20 @@ export const VIEW_TYPES = Object.freeze([
 
 export const viewCatalogSections = [
   {
+    id: 'panel-procurement', label: 'Contratación estatal',
+    description: 'Consulta SECOP II y administra alertas y seguimiento interno con análisis externo.',
+    views: [
+      { label: 'Oportunidades SECOP', url: '/panel/procurement', group: 'Contratación estatal',
+        file: 'frontend/pages/panel/procurement/index.vue', reference: 'listado de contratación estatal',
+        notes: 'Procesos y Mis clasificados, búsquedas guardadas con favorito, alertas con destinatarios y frecuencias, entregas con reintento y configuración de horarios Bogotá. Modales de búsqueda, alerta, confirmación y contenido enviado. Exportación Excel, filtros únicos y sincronización manual. MCP propio; el correo y análisis externo no se ejecutan dentro del módulo.',
+        audience: 'admin', viewType: 'list' },
+      { label: 'Detalle de oportunidad SECOP', url: '/panel/procurement/:id', group: 'Contratación estatal',
+        file: 'frontend/pages/panel/procurement/[id].vue', reference: 'seguimiento de una oportunidad de contratación',
+        notes: 'Datos oficiales, fecha de cierre, días restantes y vínculo SECOP. Clasificación personal con notas, descarte con motivo y restauración. Notas del equipo e historial inmutable de decisiones; sin IA interna.',
+        audience: 'admin', viewType: 'detail' },
+    ],
+  },
+  {
     id: 'public-site',
     label: 'Sitio publico',
     description: 'Vistas publicas de marketing, contenido y paginas legales.',
