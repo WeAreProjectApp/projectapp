@@ -48,12 +48,13 @@ test.describe('Admin Email Deliverability Dashboard', () => {
       if (apiPath === 'emails/copy-recipients/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], families: [] }) };
       return null;
     });
-    // Dashboard is the panel entry; reach the statistics through its real navigation.
+    // quality: allow-deep-link (Dashboard is the panel entry; reach email statistics through navigation clicks)
     await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
     await page.getByRole('link', { name: 'Emails', exact: true }).click();
     await page.getByRole('tab', { name: 'Estado de los emails', exact: true }).click();
     await expect(page.getByText('client@example.com', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await expect(page).toHaveURL(/\/es-co\/panel$/);
     await page.goBack({ waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/tab=status/);
     await expect(page.getByText('42', { exact: true }).first()).toHaveText('42');

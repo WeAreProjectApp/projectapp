@@ -85,8 +85,9 @@ async function mockEmails(page, { retryStatus = 201 } = {}) {
     }
     if (apiPath === `emails/history/${failedRecipient.id}/retry/` && method === 'POST') {
       expect(route.request().postDataJSON()).toEqual({});
-      retried = true;
-      if (retryStatus !== 201) return json({ id: 99, detail: 'SMTP temporalmente no disponible.' }, retryStatus);
+      retried = retryStatus === 201 || retryStatus === 502;
+      const detail = retryStatus === 409 ? 'El pago que confirmaba este correo ya no existe.' : 'SMTP temporalmente no disponible.';
+      if (retryStatus !== 201) return json({ id: retried ? 99 : null, detail }, retryStatus);
       return json({ id: 99, retry_of: failedRecipient.id, status: 'sent' }, 201);
     }
     return null;
@@ -94,6 +95,7 @@ async function mockEmails(page, { retryStatus = 201 } = {}) {
 }
 
 async function openPanelArea(page, label) {
+  // quality: allow-deep-link (Dashboard is the panel entry; the target view is reached through navigation clicks)
   await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
   await page.getByRole('link', { name: label, exact: true }).click();
@@ -117,8 +119,9 @@ test.describe('panel usability and outbound email retry', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await setAdmin(page);
     await mockApi(page, async ({ apiPath }) => apiPath === 'auth/check/' ? json({ user: { username: 'admin', is_staff: true } }) : null);
+    // quality: allow-deep-link (Dashboard is the panel entry; the target view is reached through navigation clicks)
     await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
-  await waitForNuxtApp(page);
+    await waitForNuxtApp(page);
     const sidebar = page.getByTestId('panel-sidebar');
     const handle = page.getByTestId('panel-sidebar-resize-handle');
     const main = page.getByRole('main');
@@ -146,8 +149,9 @@ test.describe('panel usability and outbound email retry', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await setAdmin(page);
     await mockApi(page, async ({ apiPath }) => apiPath === 'auth/check/' ? json({ user: { username: 'admin', is_staff: true } }) : null);
+    // quality: allow-deep-link (Dashboard is the panel entry; the target view is reached through navigation clicks)
     await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
-  await waitForNuxtApp(page);
+    await waitForNuxtApp(page);
     const handle = page.getByTestId('panel-sidebar-resize-handle');
     await handle.focus();
     await page.keyboard.press('Home');
@@ -169,6 +173,7 @@ test.describe('panel usability and outbound email retry', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await setAdmin(page);
     await mockSecureLinks(page);
+    // quality: allow-deep-link (Dashboard is the entry; openPanelArea clicks the Secure Links navigation)
     await openPanelArea(page, 'Enlaces seguros');
     const sidebar = page.getByTestId('secure-folders-sidebar');
     const content = page.getByRole('region', { name: 'Contenido de enlaces seguros' });
@@ -194,8 +199,9 @@ test.describe('panel usability and outbound email retry', () => {
     await page.setViewportSize({ width: 835, height: 900 });
     await setAdmin(page);
     await mockSecureLinks(page);
+    // quality: allow-deep-link (Dashboard is the panel entry; the target view is reached through navigation clicks)
     await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
-  await waitForNuxtApp(page);
+    await waitForNuxtApp(page);
     await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
     await page.getByRole('link', { name: 'Enlaces seguros', exact: true }).click();
     await page.getByTestId('secure-folders-open').click();
@@ -209,11 +215,23 @@ test.describe('panel usability and outbound email retry', () => {
   }, async ({ page }) => {
     await setAdmin(page);
     await mockEmails(page);
+    // quality: allow-deep-link (Dashboard is the entry; openPanelArea navigates to Emails through its sidebar link)
     await openPanelArea(page, 'Emails');
     await page.getByRole('tab', { name: 'Estado de los emails', exact: true }).click();
     await expect(page).toHaveURL(/tab=status/);
     await expect(page.getByText('42', { exact: true }).first()).toHaveText('42');
     await expect(page.getByText(failedRecipient.email, { exact: true })).toHaveText(failedRecipient.email);
+  });
+
+  test('loads History after opening the status deep link', {
+    tag: [...ADMIN_OUTBOUND_EMAIL_HISTORY_FILTER, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    await setAdmin(page);
+    await mockEmails(page);
+    // quality: allow-deep-link (the status tab is a supported bookmark; the user reaches History by clicking its tab)
+    await page.goto('/es-co/panel/emails?tab=status', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Historial', exact: true }).click();
+    await expect(page.getByTestId('email-history-record-10')).toContainText(failedRecipient.email);
   });
 
   // Bug caught: the confirmation prompt could retry a different address or
@@ -223,6 +241,7 @@ test.describe('panel usability and outbound email retry', () => {
   }, async ({ page }) => {
     await setAdmin(page);
     await mockEmails(page);
+    // quality: allow-deep-link (Dashboard is the entry; openPanelArea navigates to Emails through its sidebar link)
     await openPanelArea(page, 'Emails');
     await page.getByRole('tab', { name: 'Historial', exact: true }).click();
     await page.getByTestId('email-history-record-10').getByRole('button').click();
@@ -239,6 +258,7 @@ test.describe('panel usability and outbound email retry', () => {
   }, async ({ page }) => {
     await setAdmin(page);
     await mockEmails(page);
+    // quality: allow-deep-link (Dashboard is the entry; openPanelArea navigates to Emails through its sidebar link)
     await openPanelArea(page, 'Emails');
     await page.getByRole('tab', { name: 'Historial', exact: true }).click();
     await page.getByTestId('email-history-record-11').getByRole('button').click();
@@ -250,7 +270,8 @@ test.describe('panel usability and outbound email retry', () => {
     tag: [...ADMIN_OUTBOUND_EMAIL_HISTORY_RETRY, '@role:admin', '@outcome:failure'],
   }, async ({ page }) => {
     await setAdmin(page);
-    await mockEmails(page, { retryStatus: 503 });
+    await mockEmails(page, { retryStatus: 502 });
+    // quality: allow-deep-link (Dashboard is the entry; openPanelArea navigates to Emails through its sidebar link)
     await openPanelArea(page, 'Emails');
     await page.getByRole('tab', { name: 'Historial', exact: true }).click();
     await page.getByTestId('email-history-record-10').getByRole('button').click();
@@ -265,12 +286,14 @@ test.describe('panel usability and outbound email retry', () => {
   }, async ({ page }) => {
     await setAdmin(page);
     await mockEmails(page, { retryStatus: 409 });
+    // quality: allow-deep-link (Dashboard is the entry; openPanelArea navigates to Emails through its sidebar link)
     await openPanelArea(page, 'Emails');
     await page.getByRole('tab', { name: 'Historial', exact: true }).click();
     await page.getByTestId('email-history-record-10').getByRole('button').click();
     await page.getByTestId(`email-history-retry-${failedRecipient.id}`).click();
     await page.getByTestId('confirm-modal-confirm').click();
-    await expect(page.getByRole('alert').filter({ hasText: 'El reintento no salió' })).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: 'El reintento no salió' })).toContainText('El pago que confirmaba este correo ya no existe.');
+    await expect(page.getByTestId('email-history-record-99')).toHaveCount(0);
   });
 
   // Bug caught: applying filters left cramped inputs unreadable or could not clear dates.
@@ -280,6 +303,7 @@ test.describe('panel usability and outbound email retry', () => {
     await page.setViewportSize({ width: 1195, height: 900 });
     await setAdmin(page);
     await mockEmails(page);
+    // quality: allow-deep-link (Dashboard is the entry; openPanelArea navigates to Emails through its sidebar link)
     await openPanelArea(page, 'Emails');
     await page.getByRole('tab', { name: 'Historial', exact: true }).click();
     const filters = page.getByTestId('email-history-filters');

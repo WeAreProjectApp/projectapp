@@ -182,8 +182,8 @@ describe('usePanelSidebar', () => {
   it('persists the final sidebar drag width on release', () => {
     // Fails if a drag does not resize the content layout or writes storage on every pointer move.
     const { expandedWidth, layoutStyle, startResize, moveResize, endResize } = usePanelSidebar()
-    startResize()
-    moveResize({ clientX: 316 })
+    startResize({ clientX: 239 })
+    moveResize({ clientX: 315 })
 
     expect(expandedWidth.value).toBe(316)
     expect(layoutStyle.value).toEqual({ '--panel-sidebar-width': '316px' })

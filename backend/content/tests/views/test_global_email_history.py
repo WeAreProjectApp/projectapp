@@ -21,7 +21,7 @@ from content.models import (
     IncomeRecord,
 )
 from content.services.email_snapshot_service import EmailSnapshotCaptureError
-from content.services.email_retry_service import prepare_retry_sources
+from content.services.email_retry_service import prepare_retry_sources, retry_payload
 
 
 pytestmark = pytest.mark.django_db
@@ -605,6 +605,9 @@ def test_retry_sends_only_the_failed_cc_recipient_from_its_snapshot(admin_client
         'retry_of': failed_cc.pk,
     }
     assert mail.outbox[0].to == ['failed-copy@example.com']
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].cc == []
+    assert mail.outbox[0].bcc == []
     assert retry.retry_of_id == failed_cc.pk
 
 
@@ -688,6 +691,7 @@ def test_superuser_rebuilds_payment_confirmation_from_saved_facts(super_client):
     original = make_failed_payment_confirmation_logs(1)[0]
     original.recipient = 'original-address@example.com'
     original.save(update_fields=['recipient'])
+    IncomeRecord.objects.filter(pk=original.metadata['income_id']).update(total_amount=Decimal('900.00'))
 
     response = super_client.post(reverse(
         'retry-standalone-email', kwargs={'log_id': original.pk},
@@ -735,16 +739,17 @@ def test_retry_blocks_payment_confirmation_with_incomplete_saved_facts(super_cli
 
 @pytest.mark.parametrize('log_count', (2, 10))
 def test_prepare_retry_sources_batches_payment_confirmation_pairs(
-    django_assert_num_queries, log_count,
+    django_assert_num_queries, log_count, superuser,
 ):
     """Falla si Historial vuelve a consultar un pago por cada confirmación fallida."""
     logs = make_failed_payment_confirmation_logs(log_count)
 
     with django_assert_num_queries(1):
         prepare_retry_sources(logs)
+        payloads = [retry_payload(log, superuser) for log in logs]
 
-    assert logs[0]._retry_payment_exists is True
-    assert logs[-1]._retry_payment_exists is True
+    assert payloads[0] == {'is_retryable': True, 'retry_blocked_reason': '', 'retry_of': None}
+    assert payloads[-1] == {'is_retryable': True, 'retry_blocked_reason': '', 'retry_of': None}
 
 
 def _document_with_email_usage():

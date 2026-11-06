@@ -29,6 +29,9 @@ function isClient() {
  * Collapsible sidebar + mobile drawer state for the internal admin panel (mirrors usePlatformSidebar API).
  */
 export function usePanelSidebar() {
+  let resizeStartX = PANEL_SIDEBAR_DEFAULT
+  let resizeStartWidth = PANEL_SIDEBAR_DEFAULT
+
   function hydrate() {
     if (!isClient()) return
     let stored = null
@@ -60,12 +63,15 @@ export function usePanelSidebar() {
     } catch (_error) { /* The current layout remains usable without storage. */ }
   }
 
-  function startResize() {
-    if (!isCollapsed.value) isResizing.value = true
+  function startResize(event) {
+    if (isCollapsed.value) return
+    resizeStartWidth = expandedWidth.value
+    resizeStartX = Number.isFinite(event?.clientX) ? event.clientX : expandedWidth.value
+    isResizing.value = true
   }
 
   function moveResize(event) {
-    if (isResizing.value) expandedWidth.value = clampWidth(event.clientX)
+    if (isResizing.value) expandedWidth.value = clampWidth(resizeStartWidth + event.clientX - resizeStartX)
   }
 
   function endResize() {

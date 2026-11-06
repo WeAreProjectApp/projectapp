@@ -174,6 +174,7 @@ function formatDate(isoStr) {
 }
 
 async function loadStats() {
+  if (isLoading.value) return;
   isLoading.value = true;
   try {
     const result = await proposalStore.fetchEmailDeliverability();

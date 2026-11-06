@@ -223,10 +223,14 @@ def test_client_copy_preserves_rendered_content():
     assert copy_message.attachments == primary.attachments
 
 
-def test_gateway_sends_bcc_copy_with_uncopyable_smtp_connection():
+def test_gateway_sends_bcc_copy_with_uncopyable_smtp_connection(settings):
     """Falla si archivar o copiar un correo SMTP vuelve a copiar su RLock."""
     ClientEmailCopyRecipient.objects.create(email='audit@example.com')
-    connection = SmtpBackend(host='smtp.example.test', port=2525)
+    settings.MAILERS = {'default': {
+        'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+        'OPTIONS': {'host': 'smtp.example.test', 'port': 2525},
+    }}
+    connection = EmailDeliveryGateway.bounded_connection()
     connection._lock = threading.RLock()
     message = build_message()
     message.connection = connection

@@ -84,6 +84,7 @@ for (const profile of RESPONSIVE_PROFILES) {
     // a responsive Emails screen without the delivery metrics administrators need.
     test('shows the failed recipient in Email status through panel navigation', { tag: ['@flow:admin-email-deliverability', '@outcome:display', '@responsive:emails', `@responsive-scenario:${composerScenario.catalogKey}`, `@responsive-batch:${batchForScenario(composerScenario.catalogKey)}`, `@viewport:${profile}`] }, async ({ page }, testInfo) => {
       await setupEmails(page);
+      // quality: allow-deep-link (Dashboard is the panel entry; openEmailStatusThroughPanel clicks Emails and its status tab)
       await openEmailStatusThroughPanel(page, profile);
       const priorityLocator = page.getByText(responsiveRecipient, { exact: true });
       await expect(priorityLocator).toHaveCount(1);

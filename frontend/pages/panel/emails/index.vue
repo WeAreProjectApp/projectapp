@@ -916,14 +916,11 @@ function formatDate(isoString) {
 }
 
 async function refreshEmails() {
-  if (activeTab.value === 'status') {
-    await statusPanel.value?.refresh();
-    return;
-  }
   await Promise.all([
     loadDefaults(),
     emailStore.fetchCopyRecipients(),
     emailStore.fetchHistory(1, historyFilters.value),
+    activeTab.value === 'status' ? statusPanel.value?.refresh() : Promise.resolve(),
   ]);
   const emailId = Number(route.query.email);
   if (emailId) {

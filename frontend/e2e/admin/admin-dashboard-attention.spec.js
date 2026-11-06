@@ -80,8 +80,9 @@ test('opens each compact detail from the desktop recurring grid', {
   tag: [...ADMIN_DASHBOARD_ATTENTION_RADAR, '@role:admin', '@outcome:success'],
 }, async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await setup(page);
+  await setup(page, { recurringCount: 2 });
 
+  await expect(page.getByTestId('attention-item-recurring_due')).toContainText('2 pagos recurrentes');
   await page.getByTestId('attention-item-recurring_due').click();
   const first = page.getByTestId('radar-record-recurring_due-42');
   const second = page.getByTestId('radar-record-recurring_due-43');
@@ -101,6 +102,7 @@ test('opens each compact detail from the desktop recurring grid', {
 
   await second.click();
   await expect(page.getByTestId('radar-detail-modal')).toContainText('Pendiente recurring_due 43');
+  await expect(page.getByTestId('radar-detail-destination')).toHaveAttribute('href', /recurring=43/);
 });
 
 test('restores the exact recurrent through browser history', { tag: [...ADMIN_DASHBOARD_ATTENTION_RADAR, '@role:admin', '@outcome:success'] }, async ({ page }) => {
