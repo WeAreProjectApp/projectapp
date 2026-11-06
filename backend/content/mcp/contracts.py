@@ -296,7 +296,7 @@ MCP_MODEL_CONTRACTS = {
                     'custom_cover_image profile_completed document_navigation_mode',
                 )
                 | _excluded('Controles IA administrados mediante el conector projects y sus servicios.', 'chatbot_enabled voice_reporting_enabled ai_request_limit ai_window_minutes')
-                | _excluded(_AUDIT_INTERNAL, 'created_by archived_by')
+                | _excluded(_AUDIT_INTERNAL, 'created_by archived_by access_version')
             ),
         ),
     ),
@@ -1652,3 +1652,12 @@ for canonical, (_, sources) in MODULE_CONNECTORS.items():
 
 # Platform tutorial resource administration shares the validated video lifecycle.
 MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)
+
+
+# Authentication secrets are never part of the administrative MCP surface.
+MCP_MODEL_CONTRACTS['projects'] += (
+    _contract('accounts.LoginChallenge', excluded=_excluded('Estado efímero de autenticación; nunca se expone por MCP.', 'id user surface browser_digest identity_digest code_digest access_version expires_at attempts closed device created_at')),
+    _contract('accounts.AccessRateBucket', excluded=_excluded('Contadores internos contra abuso; nunca se exponen por MCP.', 'key requests updated_at')),
+    _contract('accounts.GoogleIdentity', read_only='user created_at', excluded=_excluded('Identidad del proveedor privada; sólo se expone si está vinculado.', 'id subject')),
+    _contract('accounts.AccessEvent', read_only='id user actor action method surface ip device created_at'),
+)

@@ -1,3 +1,7 @@
+## Accesos autorizados — 2026-11-05
+
+Panel y plataforma admiten contraseña, código de un uso y Google (Gmail/Workspace) exclusivamente para cuentas habilitadas. Accesos centraliza altas de clientes, habilitación explícita y auditoría; todo staff gestiona clientes y sólo superusuarios gestionan equipo.
+
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
 
 ## Radar de atención — 2026-10-26

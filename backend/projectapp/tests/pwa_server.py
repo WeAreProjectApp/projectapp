@@ -31,7 +31,6 @@ def main():
     from django.http import HttpResponse
     from django.test import override_settings
 
-    application = get_wsgi_application()
     if any(conn.settings_dict['ENGINE'] != 'django.db.backends.sqlite3' for conn in connections.all()):
         raise SystemExit('PWA build tests require SQLite')
 
@@ -55,7 +54,11 @@ def main():
         DEBUG=True,
         STATIC_URL='/static/',
         STATICFILES_DIRS=[settings.BASE_DIR / 'static'],
+        # Public login bootstrap writes an anonymous browser binding. Keep this
+        # build-only server database-free without replacing the real auth view.
+        SESSION_ENGINE='django.contrib.sessions.backends.signed_cookies',
     ):
+        application = get_wsgi_application()
         with make_server(
             '127.0.0.1', args.port, StaticFilesHandler(test_application),
             server_class=ThreadedServer, handler_class=QuietHandler,

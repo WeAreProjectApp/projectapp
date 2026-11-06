@@ -1,3 +1,4 @@
+from content.services.email_privacy_policy import credential_email
 """One eligibility source for radar totals, pages and current record details."""
 from datetime import timedelta
 from zoneinfo import ZoneInfo
@@ -122,7 +123,7 @@ def record_payload(kind, obj, today):
             title=obj.subject or 'Sin asunto', sent_at=obj.sent_at.isoformat(),
             error_message=safe_email_diagnostic(obj.error_message),
             recipient=obj.recipient if obj.recipient_kind != EmailLog.RecipientKind.BCC else '',
-            **recipients, can_resend=bool(obj.snapshot_id),
+            **recipients, can_resend=bool(obj.snapshot_id) and not credential_email(obj.template_key),
             destination=f'/panel/emails?tab=history&email={obj.pk}&radar=1',
         )
     elif kind == 'recurring_due':

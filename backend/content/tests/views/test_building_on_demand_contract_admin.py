@@ -120,8 +120,16 @@ def test_contract_endpoint_accepts_a_staff_session(admin_user, building_on_deman
 @pytest.mark.parametrize('route', CONTRACT_ROUTES)
 def test_contract_endpoint_denies_non_staff_readers(django_user_model, route):
     """Fails if a regular authenticated user gains access to private cell contract data."""
+    from accounts.models import UserProfile
+
+    user = django_user_model.objects.create_user(username='cell-contract-reader')
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_CLIENT,
+        is_onboarded=True,
+    )
     client = APIClient()
-    client.force_authenticate(user=django_user_model.objects.create_user(username='cell-contract-reader'))
+    client.force_login(user)
 
     response = client.get(reverse(route))
 

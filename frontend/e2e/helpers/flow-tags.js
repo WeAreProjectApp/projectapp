@@ -15,6 +15,7 @@
 // Registry version: 2.105.0
 
 // ── admin ──
+export const ADMIN_ACCESS_MANAGEMENT = ['@flow:admin-access-management', '@module:admin', '@priority:P1'];
 export const ADMIN_ACCOUNTING_ADS = ['@flow:admin-accounting-ads', '@module:admin', '@priority:P3'];
 export const ADMIN_ACCOUNTING_CARD_CATALOG = ['@flow:admin-accounting-card-catalog', '@module:admin', '@priority:P2'];
 export const ADMIN_ACCOUNTING_CARDS = ['@flow:admin-accounting-cards', '@module:admin', '@priority:P2'];
@@ -323,6 +324,7 @@ export const PROPOSAL_PRE_EXPIRATION_DISCOUNT_SUGGESTION = ['@flow:proposal-pre-
 // ── auth ──
 export const ADMIN_LOGIN = ['@flow:admin-login', '@module:auth', '@priority:P1'];
 export const ADMIN_PANEL_SESSION_EXPIRED = ['@flow:admin-panel-session-expired', '@module:auth', '@priority:P1'];
+export const AUTHORIZED_LOGIN = ['@flow:authorized-login', '@module:auth', '@priority:P1'];
 
 // ── blog ──
 export const BLOG_DETAIL = ['@flow:blog-detail', '@module:blog', '@priority:P2'];

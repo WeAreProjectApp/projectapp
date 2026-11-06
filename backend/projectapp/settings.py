@@ -72,6 +72,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.access_middleware.AccessVersionMiddleware',
     'content.services.entity_history.EntityHistoryMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -558,3 +559,7 @@ REQUIREMENT_ESTIMATES_FOLDER_ID = config('REQUIREMENT_ESTIMATES_FOLDER_ID', defa
 VIDEO_USE_X_ACCEL_REDIRECT = config('VIDEO_USE_X_ACCEL_REDIRECT', default=False, cast=bool)
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
+
+# Google identity is scoped to this application; never reuse another project's client.
+GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default='')
+ACCESS_TRUSTED_PROXY_IPS = config('ACCESS_TRUSTED_PROXY_IPS', default='', cast=lambda value: tuple(item.strip() for item in value.split(',') if item.strip()))

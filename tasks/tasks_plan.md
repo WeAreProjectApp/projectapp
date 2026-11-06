@@ -1,3 +1,7 @@
+## Accesos autorizados — 2026-11-05
+
+Implementado Accesos autorizados: código, Google, cuentas administradas por panel/MCP, revocación y excepción de correos con credenciales. Validación focal de backend, frontend y navegador en verde, incluidos los cinco tamaños de pantalla. Rama feat/05112026-authorized-access; [PR #554](https://github.com/WeAreProjectApp/projectapp/pull/554) conserva el estado de CI e integración. Despliegue pendiente del operador.
+
 > **Enlaces seguros — 2026-10-26:** jerarquía propia, navegación compartida,
 > clasificación inicial por proyecto y MCP de administración completo.
 > Migraciones mediante deploy; entrega y validación se verifican en el PR.

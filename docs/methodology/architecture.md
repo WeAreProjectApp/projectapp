@@ -1,3 +1,7 @@
+## Accesos autorizados — 2026-11-05
+
+Autenticación comparte `accounts.services.access` entre sesión Django, JWT y MCP projects. Desafíos de código separados de recuperación; identidad Google por sub; revocación por versión. El gateway conserva sólo recibos neutros de canales con credenciales.
+
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 
 `CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.

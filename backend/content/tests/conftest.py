@@ -9,6 +9,7 @@ from types import ModuleType
 from unittest.mock import patch
 
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.utils import timezone
@@ -91,12 +92,17 @@ def api_client():
 @pytest.fixture
 def admin_user(db):
     """Staff user for admin-gated endpoints."""
-    return User.objects.create_user(
+    user = User.objects.create_user(
         username='admin_test',
         email='admin@test.com',
         password='testpass123',
         is_staff=True,
     )
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': UserProfile.ROLE_ADMIN},
+    )
+    return user
 
 
 @pytest.fixture
@@ -472,11 +478,19 @@ def company_settings(db):
 @pytest.fixture
 def superuser(db):
     """Superuser for accounting-gated endpoints."""
-    return User.objects.create_superuser(
+    user = User.objects.create_superuser(
         username='super_test',
         email='super@test.com',
         password='testpass123',
     )
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            'role': UserProfile.ROLE_ADMIN,
+            'is_onboarded': True,
+        },
+    )
+    return user
 
 
 @pytest.fixture

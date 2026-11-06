@@ -1,3 +1,7 @@
+## Accesos autorizados — 2026-11-05
+
+Accesos requiere google-auth y GOOGLE_OAUTH_CLIENT_ID propio. Desafíos y cuotas compartidas en DB con bloqueos por usuario/bucket. ACCESS_TRUSTED_PROXY_IPS se configura sólo con proxies conocidos. Ver docs/AUTHORIZED_ACCESS.md; migración accounts.0091 mediante deploy.
+
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
 
 ## Contrato del radar — 2026-10-26
