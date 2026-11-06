@@ -102,6 +102,19 @@ la ayuda ni la acción. Su tipografía móvil es de 20 px; en tableta conserva
 siguen comprobando todos los dígitos y la moneda con los valores del ticket.
 Ambos ajustes requieren una nueva corrida CI sobre su propio SHA.
 
+El SHA `13173bd014f988142d714bfa99d23033fec95362` aprobó el
+[Quality Gate](https://github.com/WeAreProjectApp/projectapp/actions/runs/42302393670)
+y 61 de los 62 jobs
+[responsive](https://github.com/WeAreProjectApp/projectapp/actions/runs/42302393743).
+Pasaron los 25 escenarios propios de Dashboard, Blog y Contabilidad; los 15
+comerciales no se ejecutaron porque su preparación esperaba un selector cuyo
+fixture carecía de módulos comerciales. Se añade un módulo ficticio de Inversión
+al detalle de preparación, conforme al condicional real del editor; se conserva
+la espera del selector y todas las aserciones del lote. La
+[suite general](https://github.com/WeAreProjectApp/projectapp/actions/runs/42302393560)
+ya aprobó el shard que contiene el criterio de altura del encabezado de Ingresos.
+La aceptación de los 40 requiere la siguiente corrida completa sobre el nuevo SHA.
+
 ## Guion y cierre visible
 
 Encargo inicial enviado directamente a dev-qa y preservado en

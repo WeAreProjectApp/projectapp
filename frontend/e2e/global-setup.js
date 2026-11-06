@@ -232,8 +232,12 @@ async function warmupApiFixture({ apiPath, method, route }) {
       ...warmupProposal,
       id: Number(proposalDetail[1]),
       sections: [{
+        id: 11, section_type: 'investment', title: 'Inversión',
+        is_enabled: true, order: 1,
+        content_json: { modules: [{ id: 'warmup-module', title: 'Warmup commercial module', price: 0 }] },
+      }, {
         id: 12, section_type: 'technical_document', title: 'Detalle técnico',
-        is_enabled: true, order: 1, content_json: { epics: [] },
+        is_enabled: true, order: 2, content_json: { epics: [] },
       }],
     });
   }
