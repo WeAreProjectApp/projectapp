@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-06 — app not running)
 /**
  * PA-211 visual document-toolbar coverage.
  *
