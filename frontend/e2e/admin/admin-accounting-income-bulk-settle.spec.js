@@ -9,6 +9,7 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction } from '../helpers/bulk-actions.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import { ADMIN_ACCOUNTING_INCOME_BULK_SETTLE } from '../helpers/flow-tags.js';
 import { vatBreakdown } from '../../utils/accountingVat.js';
 
@@ -76,6 +77,16 @@ async function gotoIncomes(page) {
   await expect(page.getByRole('heading', { name: 'Ingresos', exact: true })).toHaveText('Ingresos');
 }
 
+async function navigateToIncomesFromPanel(page) {
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  }
+  await page.getByRole('link', { name: 'Ingresos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ingresos', exact: true })).toBeVisible();
+}
+
 async function openBulkSettlement(page, ids) {
   for (const id of ids) await page.getByTestId(`accounting-select-${id}`).check();
   await bulkAction(page, 'incomes', 'Liquidar');
@@ -102,7 +113,7 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     }, async ({ page }) => {
       const calls = [];
       await mockApi(page, buildHandler({ rows: selection.rows, calls }));
-      await gotoIncomes(page);
+      await navigateToIncomesFromPanel(page);
       await openBulkSettlement(page, selection.ids);
 
       const participants = page.getByTestId('income-liquidate-participations-toggle');
