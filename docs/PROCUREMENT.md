@@ -46,7 +46,7 @@ Validación local del 5 de noviembre de 2026, en el worktree de la sesión:
 
 | Comprobación | Resultado |
 | --- | --- |
-| Backend | 43 casos aprobados por el autor y por un verificador independiente, en lotes de hasta 20. |
+| Backend | Casos de filtros, permisos, panel, MCP, sincronización, programación y correo aprobados en lotes de hasta 20, con revisión independiente. Incluye regresiones de validación, confirmaciones, cursores y recuperación de entregas. |
 | Store y editor de filtros | 12 casos unitarios aprobados. |
 | Navegador | 20 casos funcionales distintos aprobados por lotes; siete flujos con éxito, visualización y errores aplicables. |
 | Pantallas | 10 casos aprobados: listado y detalle a 412, 835, 1195, 1440 y 2560 px. |
