@@ -805,7 +805,7 @@ const newFolderOwner = computed(() => {
   return {
     name: entry.name,
     client: navigationMode.value === 'client' ? entry.id : entry.client,
-    client_display_name: entry.client_display_name || entry.name,
+    client_display_name: navigationMode.value === 'client' ? entry.name : entry.client_display_name || '',
     project: navigationMode.value === 'project' ? entry.id : null,
   };
 });

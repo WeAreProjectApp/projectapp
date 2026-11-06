@@ -38,10 +38,11 @@
         <BaseFormField label="Dentro de" for="folder-form-parent">
           <BaseSelect
             id="folder-form-parent"
-            v-model="form.parent"
+            :model-value="form.parent ?? ''"
             data-testid="folder-form-parent"
+            @update:model-value="form.parent = $event === '' ? null : Number($event)"
           >
-            <option :value="null">Ninguna (carpeta raíz)</option>
+            <option value="">Ninguna (carpeta raíz)</option>
             <option v-for="opt in parentOptions" :key="opt.id" :value="opt.id">
               {{ opt.label }}
             </option>

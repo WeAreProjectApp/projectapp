@@ -82,6 +82,7 @@ test('cancels creation without adding a folder', {
 
   await expect(page.getByTestId('folder-form-name')).toHaveCount(0);
   expect(state.created).toBeNull();
+  await expect(page.getByRole('row', { name: /Entregables/ })).toBeVisible();
   await expect(page.getByRole('row', { name: /Carpeta cancelada/ })).toHaveCount(0);
 });
 

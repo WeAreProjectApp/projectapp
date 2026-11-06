@@ -178,11 +178,14 @@ test.describe('Editorial rich text in documents', () => {
   test('keeps block code separate from inline decoration', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    const state = { document: { ...documentBase, content_markdown: '```\nbloque\n```' } };
+    const state = { document: { ...documentBase } };
     await mockDocumentEditorApi(page, state);
     await page.goto('/es-co/panel/documents/91/edit', { waitUntil: 'domcontentloaded' });
-
-    const block = documentEditor(page).getByTestId('rich-text-visual-input').locator('pre code');
+    const editor = documentEditor(page);
+    await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await editor.getByTestId('rich-text-source-input').fill('```\nbloque\n```');
+    await editor.getByRole('tab', { name: /^Visual$/ }).click();
+    const block = editor.getByTestId('rich-text-visual-input').locator('pre code');
 
     await expect(block).toHaveText('bloque');
     await expect(block).toHaveCSS('padding-left', '0px');
