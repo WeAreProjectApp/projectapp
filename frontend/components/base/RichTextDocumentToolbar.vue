@@ -116,8 +116,10 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value;
         {{ t('richText.highlight') }}<input type="color" class="h-8 w-8 cursor-pointer bg-transparent" :value="colorInput('highlight', 'color', [255, 245, 157])" :aria-label="t('richText.highlight')" :disabled="blocked" :title="disabled ? t('richText.readOnly') : t('richText.highlight')" @input="emit('run', 'setHighlight', { color: inputValue($event) })" />
       </label>
       <BaseButton variant="ghost" size="sm" :disabled="blocked || !active('highlight')" :disabled-reason="disabled ? t('richText.readOnly') : t('richText.noHighlight')" @click="emit('run', 'unsetHighlight')">{{ t('richText.removeHighlight') }}</BaseButton>
-      <BaseActionMenu :label="t('richText.insert')" :items="insertItems" :disabled="blocked" :disabled-reason="t('richText.readOnly')" align="left" testid="document-insert-menu" />
       <BaseButton variant="ghost" size="sm" :disabled="blocked" :disabled-reason="t('richText.readOnly')" @click="emit('clear')">{{ t('richText.clear') }}</BaseButton>
+      <div class="ml-auto shrink-0">
+        <BaseActionMenu :label="t('richText.insert')" :items="insertItems" :disabled="blocked" :disabled-reason="t('richText.readOnly')" align="right" testid="document-insert-menu" />
+      </div>
     </div>
     <div v-if="active('table')" class="mt-2 flex flex-wrap items-center gap-1 rounded-lg bg-surface-raised p-2" role="group" :aria-label="t('richText.tableGroup')">
       <span class="flex items-center gap-1 px-1 text-xs font-medium"><TableCellsIcon class="h-4 w-4" aria-hidden="true" />{{ t('richText.tableGroup') }}</span>
