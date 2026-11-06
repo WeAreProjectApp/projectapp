@@ -1,6 +1,7 @@
 """MCP access tools must retain the panel's authority and secrecy boundaries."""
 
 import pytest
+from accounts.access_models import AccessEvent
 from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 
@@ -82,6 +83,33 @@ def test_mcp_access_change_requires_confirmation(staff_projects_credential):
     assert preview["confirmation_required"] is True
     assert isinstance(preview["confirmation_id"], str)
     assert client.is_active is True
+
+
+def test_mcp_confirmed_access_change_records_credential_actor(
+    staff_projects_credential,
+):
+    """Fails if confirming an MCP disable leaves the client active or omits its credential actor."""
+    client = make_user(email="mcp-confirmed-client@example.com")
+    preview = call_tool_inprocess(
+        "projects",
+        "change_access",
+        {"user_id": client.pk, "enabled": False},
+        credential=staff_projects_credential,
+    )
+
+    confirmed = call_tool_inprocess(
+        "projects",
+        "confirm_action",
+        {"confirmation_id": preview["confirmation_id"]},
+        credential=staff_projects_credential,
+    )
+
+    client.refresh_from_db()
+    event = AccessEvent.objects.get(user=client, action="disabled")
+    assert confirmed["confirmed"] is True
+    assert confirmed["result"]["enabled"] is False
+    assert client.is_active is False
+    assert event.actor_id == staff_projects_credential.actor_id
 
 
 def test_mcp_access_contract_excludes_login_challenge_fields():

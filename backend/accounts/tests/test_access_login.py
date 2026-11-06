@@ -94,6 +94,11 @@ def issued_code(challenge):
     return captured["body"].split()[5].rstrip(".")
 
 
+def delivery_gateway_returns_false(**_kwargs):
+    """Represent the email boundary declining an otherwise valid delivery."""
+    return False
+
+
 def reject_code_five_times(challenge, code):
     """Consume every permitted failed attempt against one challenge."""
     for _ in range(5):
@@ -326,6 +331,70 @@ def test_code_is_consumed_after_successful_verification():
     assert challenge.code_digest != code
 
 
+def test_panel_code_login_uses_internal_redirect(captcha_passes):
+    """Fails if a panel OTP login accepts an external redirect or skips the revocable session."""
+    user = make_account(email="panel-code@example.com", staff=True)
+    client = Client(enforce_csrf_checks=True)
+
+    config = client.get("/api/auth/config/")
+    request_response = client.post(
+        "/api/auth/panel/email-request/",
+        {"email": user.email, "recaptcha_token": "valid"},
+        HTTP_X_CSRFTOKEN=config.json()["csrf_token"],
+    )
+    challenge = LoginChallenge.objects.get(pk=request_response.json()["challenge_id"])
+    code = issued_code(challenge)
+    verification = client.post(
+        "/api/auth/panel/email-verify/",
+        {
+            "challenge_id": str(challenge.pk),
+            "code": code,
+            "next": "https://attacker.example/",
+        },
+        HTTP_X_CSRFTOKEN=config.json()["csrf_token"],
+    )
+
+    event = AccessEvent.objects.get(
+        user=user, action="login", method="code", surface="panel"
+    )
+    assert (config.status_code, request_response.status_code, verification.status_code) == (
+        200,
+        200,
+        200,
+    )
+    assert verification.json()["redirect"] == "/panel/"
+    assert client.session["_auth_user_id"] == str(user.pk)
+    assert client.session["access_version"] == user.profile.access_version
+    assert event.user_id == user.pk
+
+
+@pytest.mark.parametrize(
+    "delivery_outcome",
+    [delivery_gateway_returns_false, RuntimeError("smtp unavailable")],
+    ids=["gateway_returns_false", "gateway_raises"],
+)
+def test_failed_code_delivery_closes_challenge(delivery_outcome):
+    """Fails if an OTP remains usable after the email gateway cannot deliver it."""
+    user = make_account(email="failed-delivery@example.com")
+    response = access.request_code(
+        email=user.email,
+        surface="platform",
+        browser="browser",
+        request=access_request(),
+    )
+    challenge = LoginChallenge.objects.get(pk=response["challenge_id"])
+
+    with patch(
+        "accounts.tasks_access.EmailDeliveryGateway.send_plain",
+        side_effect=delivery_outcome,
+    ):
+        deliver_login_code.call_local(str(challenge.pk))
+
+    challenge.refresh_from_db()
+    assert challenge.closed is True
+    assert challenge.code_digest == ""
+
+
 def test_google_login_requires_a_matching_authorized_email(settings):
     """Fails if Google creates or links an identity for an unknown local account."""
     settings.GOOGLE_OAUTH_CLIENT_ID = "client-id"
@@ -389,6 +458,31 @@ def test_google_login_links_matching_gmail_identity(settings):
 
     assert authenticated.pk == user.pk
     assert GoogleIdentity.objects.get(user=user).subject == "matching-subject"
+
+
+def test_google_subject_cannot_move_to_another_account(settings):
+    """Fails if a Google subject already bound to one account can be linked to another."""
+    settings.GOOGLE_OAUTH_CLIENT_ID = "client-id"
+    owner = make_account(email="identity-owner@gmail.com")
+    target = make_account(email="identity-target@gmail.com")
+    GoogleIdentity.objects.create(user=owner, subject="claimed-subject")
+    payload = {
+        "iss": "https://accounts.google.com",
+        "email_verified": True,
+        "email": target.email,
+        "sub": "claimed-subject",
+        "nonce": "browser-nonce",
+    }
+
+    with (
+        patch("google.oauth2.id_token.verify_oauth2_token", return_value=payload),
+        pytest.raises(PermissionDenied),
+    ):
+        verify_google("credential", access.digest("browser-nonce"), "platform")
+
+    identity = GoogleIdentity.objects.get(subject="claimed-subject")
+    assert identity.user_id == owner.pk
+    assert GoogleIdentity.objects.filter(user=target).exists() is False
 
 
 def test_first_code_login_runs_client_onboarding_once(
