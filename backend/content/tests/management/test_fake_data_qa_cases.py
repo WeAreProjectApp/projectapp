@@ -126,3 +126,20 @@ def test_generated_client_project_ownership_is_coherent(cases):
     assert not IncomeRecord.objects.filter(source_ref='fake:accounting', project__isnull=False).exclude(
         client__user=F('project__client'),
     ).exists()
+
+
+def test_seed_phase_never_reuses_another_clients_proposal():
+    from accounts.management.commands._seed_helpers import ensure_phase
+    from accounts.models import UserProfile
+    from content.models import BusinessProposal
+
+    foreign = get_user_model().objects.create_user(username='foreign')
+    foreign_profile, _ = UserProfile.objects.get_or_create(user=foreign)
+    BusinessProposal.objects.create(title='Propuesta ajena', client=foreign_profile)
+    owner = get_user_model().objects.create_user(username='phase-owner', email='owner@example.test')
+    profile, _ = UserProfile.objects.get_or_create(user=owner)
+    project = Project.objects.create(name='Proyecto propio', client=owner)
+
+    phase = ensure_phase(project)
+
+    assert phase.business_proposal.client_id == profile.pk

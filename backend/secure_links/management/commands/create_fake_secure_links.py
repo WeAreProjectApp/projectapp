@@ -12,7 +12,7 @@ from secure_links.folder_services import archive_folder
 from secure_links.platform_seed import create_platform_samples
 
 SAMPLES = [
-    ('credentials', 'Admin Django producción — demo', {'service': 'Django admin', 'url': 'https://demo.projectapp.co/admin/', 'username': 'admin', 'password': 'demo-Pa55-no-real'}),
+    ('credentials', 'Admin Django producción — demo', {'service': 'Django admin', 'url': 'https://demo.example.test/admin/', 'username': 'admin', 'password': 'demo-Pa55-no-real'}),
     ('api_key', 'Llaves Wompi sandbox — demo', {'service': 'Wompi', 'environment': 'sandbox', 'public_key': 'pub_test_demo', 'secret_key': 'prv_test_demo'}),
     ('server_access', 'SSH staging — demo', {'host': '203.0.113.10', 'port': '22', 'username': 'deploy', 'credential': 'demo-no-real'}),
     ('database', 'MySQL staging — demo', {'engine': 'MySQL', 'host': 'localhost', 'port': '3306', 'name': 'demo', 'username': 'demo', 'password': 'demo-no-real'}),
@@ -55,11 +55,12 @@ class Command(BaseCommand):
             if state == 'sent' and not link.team_only:
                 link = services.mark_sent(link, actor=None)
             elif state == 'opened':
-                link.consumed_at = now - timedelta(hours=index)
+                services.reveal(_url.split('#', 1)[1], staff=True)
+                link.refresh_from_db()
             elif state == 'expired':
                 link.expires_at = now - timedelta(days=1)
             elif state == 'revoked':
-                link.revoked_at = now - timedelta(hours=index)
+                link = services.revoke(link, actor=None)
             link.save()
             stamp_link(link, context, state)
         archive_folder(archive)
