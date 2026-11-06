@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import BaseRichTextEditor from '~/components/base/BaseRichTextEditor.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
@@ -9,7 +9,13 @@ function mountDocumentEditor(modelValue = 'Agenda') {
   const wrapper = mount(BaseRichTextEditor, {
     props: { modelValue, toolbarVariant: 'document' },
     attachTo: document.body,
-    global: { components: { BaseSegmented } },
+    global: {
+      components: { BaseSegmented },
+      stubs: {
+        // BaseButton declares NuxtLink as a routing variant; routing is outside this editor unit.
+        NuxtLink: { template: '<a :href="to" v-bind="$attrs"><slot /></a>', props: ['to'] },
+      },
+    },
   });
   wrappers.push(wrapper);
   return wrapper;
@@ -32,10 +38,10 @@ const openLink = async (wrapper) => {
   await nextTick();
 };
 async function selectExistingLink(wrapper) {
+  await flushPromises();
   const visual = wrapper.get('[data-testid="rich-text-visual-input"]').element;
-  const link = visual.querySelector('a');
   const range = document.createRange();
-  range.selectNodeContents(link);
+  range.selectNodeContents(visual.querySelector('a'));
   visual.focus();
   window.getSelection().removeAllRanges();
   window.getSelection().addRange(range);
@@ -170,15 +176,15 @@ describe('Document rich text toolbar', () => {
     expect(wrapper.get('[data-testid="rich-text-source-input"]').element.value).toBe('> [!NOTE]\n> Agenda');
   });
 
-  // Catches the document code-block menu losing the fenced Markdown representation on save.
-  it('serializes an inserted code block as fenced Markdown', async () => {
+  // Catches the document code-block menu dropping its lossless HTML source fallback on save.
+  it('serializes an inserted code block as a preserved HTML block', async () => {
     const wrapper = mountDocumentEditor();
     await nextTick();
 
     await chooseInsertItem(wrapper, 'richText.codeBlock');
     await sourceTab(wrapper).trigger('click');
 
-    expect(wrapper.get('[data-testid="rich-text-source-input"]').element.value).toBe('```\nAgenda\n```');
+    expect(wrapper.get('[data-testid="rich-text-source-input"]').element.value).toBe('<pre><code>Agenda</code></pre>');
   });
 
   // Catches the separator menu action failing to persist an explicit Markdown rule.
