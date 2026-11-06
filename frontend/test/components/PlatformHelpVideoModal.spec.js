@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { reactive, ref } from 'vue'
 import PlatformHelpVideoModal from '../../components/platform/PlatformHelpVideoModal.vue'
 import { usePlatformHelpVideosStore } from '../../stores/platform-help-videos'
+import { usePlatformAuthStore } from '../../stores/platform-auth'
 import { usePlatformApi } from '../../composables/usePlatformApi'
 
 const mockRoute = reactive({ fullPath: '/es-co/platform/projects' })
@@ -40,6 +41,7 @@ describe('platform video modal', () => {
   let play
   let registerVideo
   let closeChat
+  let auth
   beforeEach(async () => {
     setActivePinia(createPinia())
     Object.keys(mockStates).forEach((key) => delete mockStates[key])
@@ -48,6 +50,9 @@ describe('platform video modal', () => {
     pause = jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
     play = jest.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue()
     usePlatformApi.mockReturnValue({ get: jest.fn().mockResolvedValue(catalog) })
+    auth = usePlatformAuthStore()
+    auth.user = { user_id: 41 }
+    auth.role = 'client'
     store = usePlatformHelpVideosStore()
     registerVideo = jest.fn()
     wrapper = mount(PlatformHelpVideoModal, { global: { stubs, provide: { platformHelp: { registerVideo } } } })
@@ -124,5 +129,31 @@ describe('platform video modal', () => {
     expect(closeChat).toHaveBeenCalledTimes(1)
     expect(mockStates['platform-help-surface'].value).toBe('video')
     expect(registerVideo).toHaveBeenCalledWith(expect.any(Function), true)
+  })
+
+  it('clears video access when another client has videos disabled', async () => {
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockResolvedValue({ data: { enabled: false, videos: [] } }) })
+
+    auth.user = { user_id: 42 }
+    await flushPromises()
+
+    expect(wrapper.find('video').exists()).toBe(false)
+    expect(store.resources).toEqual([])
+    expect(registerVideo).toHaveBeenLastCalledWith(expect.any(Function), false)
+  })
+
+  it('ignores the previous client catalog after changing accounts', async () => {
+    let resolvePrevious
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockImplementation(() => new Promise((resolve) => { resolvePrevious = resolve })) })
+    const previousRequest = store.fetchVideos()
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockResolvedValue({ data: { enabled: false, videos: [] } }) })
+
+    auth.user = { user_id: 42 }
+    await flushPromises()
+    resolvePrevious(catalog)
+    await previousRequest
+
+    expect(store.videoAvailable).toBe(false)
+    expect(store.isOpen).toBe(false)
   })
 })

@@ -7,13 +7,17 @@ import { PANEL_VIEWPORTS } from '../helpers/viewports.js'
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) })
 const general = { topic: 'general', module: 'platform-overview', language: 'es', resource: { mode: 'default', video: null } }
 const chatbot = { topic: 'chatbot', module: 'platform-chatbot', language: 'es', resource: { mode: 'default', video: null } }
+const voice = { topic: 'voice-reporting', module: 'platform-voice-reporting', language: 'es', resource: { mode: 'default', video: null } }
 
 async function setup(page, scenario = {}) {
-  await setPlatformAuth(page, { user: mockPlatformClient })
+  // /accounts/me/ exposes user_id, not an additional id alias (PA-219/PA-220).
+  const client = { ...mockPlatformClient }
+  delete client.id
+  await setPlatformAuth(page, { user: client })
   await mockApi(page, ({ apiPath, method, route }) => {
-    if (apiPath === 'accounts/me/') return json(mockPlatformClient)
+    if (apiPath === 'accounts/me/') return json(client)
     if (apiPath === 'accounts/projects/') return json([])
-    if (apiPath === 'platform/help/') return json({ tour_enabled: Boolean(scenario.tours?.length), video_enabled: true, tours: scenario.tours || [] })
+    if (apiPath === 'platform/help/') return json({ tour_enabled: Boolean(scenario.tours?.length), video_enabled: scenario.videoEnabled ?? true, tours: scenario.tours || [] })
     const progress = apiPath.match(/^platform\/help\/tours\/(\d+)\/progress\/$/)
     if (progress && method === 'POST') {
       const body = route.request().postDataJSON()
@@ -21,7 +25,7 @@ async function setup(page, scenario = {}) {
       if (tour && !['completed', 'skipped'].includes(tour.status)) tour.status = body.status
       return json({ status: tour?.status || body.status })
     }
-    if (apiPath === 'platform/help/videos/') return json({ enabled: true, videos: scenario.videos || [general, chatbot] })
+    if (apiPath === 'platform/help/videos/') return json({ enabled: scenario.videoEnabled ?? true, videos: scenario.videos ?? [general, chatbot] })
     return null
   })
 }
@@ -59,7 +63,80 @@ test.describe('Platform help videos', () => {
     await page.getByTestId('platform-video-close').click()
     await expect(player).toHaveCount(0)
     await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toBeFocused()
+    await openHelpVideo(page)
+    await expect.poll(() => player.evaluate((element) => element.paused)).toBe(true)
   })
+
+  test('removes video access after its effective setting is disabled', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
+    const scenario = { videos: [general], videoEnabled: true }
+    await setup(page, scenario)
+    await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
+    await openHelpVideo(page)
+
+    scenario.videoEnabled = false
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+
+    await expect(page.getByTestId('platform-help-video-player')).toHaveCount(0)
+    await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toHaveCount(0)
+  })
+
+  test('restores video access after its effective setting is enabled again', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
+    const scenario = { videos: [general], videoEnabled: true }
+    await setup(page, scenario)
+    await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
+    await openHelpVideo(page)
+    await page.getByTestId('platform-video-close').click()
+    scenario.videoEnabled = false
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toHaveCount(0)
+
+    scenario.videoEnabled = true
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await openHelpVideo(page)
+
+    await expect.poll(() => page.getByTestId('platform-help-video-player').evaluate((element) => element.paused)).toBe(true)
+  })
+
+  test('removes video access when the last published resource is retired', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
+    const scenario = { videos: [general] }
+    await setup(page, scenario)
+    await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
+    await openHelpVideo(page)
+
+    scenario.videos = []
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+
+    await expect(page.getByTestId('platform-help-video-player')).toHaveCount(0)
+    await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toHaveCount(0)
+  })
+
+  test('preserves guided Help when videos are disabled', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
+    await setup(page, { videoEnabled: false, videos: [], tours: [{
+      id: 992, slug: 'general', context: 'general', revision: 1, status: 'completed',
+      content: { title_es: 'Conoce tu plataforma', title_en: 'Meet your platform', steps: [] },
+    }] })
+    await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
+    await page.getByTestId('platform-help-trigger').filter({ visible: true }).click()
+
+    const menu = page.getByTestId('platform-help-menu')
+    await expect(menu.getByRole('button', { name: 'Conoce tu plataforma', exact: true })).toBeVisible()
+    await expect(menu.getByRole('button', { name: 'Ver video', exact: true })).toHaveCount(0)
+  })
+
+  for (const [label, videos, missingTopic] of [
+    ['only general help is enabled', [general], 'chatbot'],
+    ['only Appi is enabled', [general, chatbot], 'voice-reporting'],
+    ['only voice reporting is enabled', [general, voice], 'chatbot'],
+  ]) {
+    test(`offers only the authorized clips when ${label}`, { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
+      await setup(page, { videos })
+      await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
+      await openHelpVideo(page)
+
+      await expect(page.getByRole('group', { name: 'Cómo funciona tu plataforma' }).getByRole('button')).toHaveCount(videos.length)
+      await expect(page.getByTestId(`platform-video-topic-${missingTopic}`)).toHaveCount(0)
+    })
+  }
 
   test('offers the video after the user completes a guided tour', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
     const tour = {

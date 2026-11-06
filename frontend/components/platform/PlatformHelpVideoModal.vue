@@ -5,12 +5,14 @@ import { storeToRefs } from 'pinia'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseModal from '~/components/base/BaseModal.vue'
+import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformHelpVideosStore } from '~/stores/platform-help-videos'
 import { usePlatformHelpSurface } from '~/composables/usePlatformHelpSurface'
 import { usePlatformVideoCopy } from '~/composables/usePlatformVideoCopy'
 import { formatExplainerDuration } from '~/composables/useExplainerVideos'
 
 const emit = defineEmits(['open', 'close'])
+const auth = usePlatformAuthStore()
 const store = usePlatformHelpVideosStore()
 const { videos, selectedVideo } = storeToRefs(store)
 const { t } = usePlatformVideoCopy()
@@ -54,6 +56,13 @@ watch(visible, (open) => {
   emit(open ? 'open' : 'close')
 }, { flush: 'sync' })
 watch(() => route.fullPath, close)
+// A different client can reuse this layout without unmounting the video host.
+// Reset also invalidates in-flight catalog requests from the previous account.
+watch(() => auth.user?.user_id, () => {
+  close()
+  store.reset()
+  if (auth.isClient && auth.user?.user_id) void store.fetchVideos()
+}, { flush: 'sync' })
 watch(canOpen, (available) => help?.registerVideo(open, available))
 onMounted(() => {
   help?.registerVideo(open, canOpen.value)
