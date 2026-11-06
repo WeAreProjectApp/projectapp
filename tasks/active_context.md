@@ -1,3 +1,5 @@
+> **PA-211 — editor documental, 2026-11-06, en implementación:** se conserva Tiptap 3.32.0 y Markdown extendido. El cuerpo de Nuevo Documento y edición recibe una barra agrupada y contextual, con enlaces, tablas, avisos e índice. Comparación y alcance en `docs/document-editor-evaluation.md`. Pruebas automatizadas exclusivamente en CI y recorrido manual coordinado con dev-qa; el cierre queda pendiente de sus evidencias. No acredita despliegue.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

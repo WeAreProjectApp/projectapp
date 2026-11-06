@@ -29,10 +29,10 @@
       ref="textareaRef"
       :model-value="modelValue"
       :format="format"
+      toolbar-variant="document"
       :label="label"
       :placeholder="placeholder"
-      class="w-full px-4 py-3 border border-border-default rounded-xl text-sm font-mono leading-relaxed bg-surface text-text-default placeholder:text-text-subtle
-             focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-none"
+      class="w-full bg-surface text-text-default"
       :class="paneClass"
       @update:model-value="emit('update:modelValue', $event)"
       @update:format="emit('update:format', $event)"
