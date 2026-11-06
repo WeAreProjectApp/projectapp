@@ -8,6 +8,7 @@ const wrappers = [];
 function mountDocumentEditor(modelValue = 'Agenda') {
   const wrapper = mount(BaseRichTextEditor, {
     props: { modelValue, toolbarVariant: 'document' },
+    attachTo: document.body,
     global: { components: { BaseSegmented } },
   });
   wrappers.push(wrapper);
@@ -30,6 +31,17 @@ const openLink = async (wrapper) => {
   await wrapper.get('[aria-label="richText.link"]').trigger('click');
   await nextTick();
 };
+async function selectExistingLink(wrapper) {
+  const visual = wrapper.get('[data-testid="rich-text-visual-input"]').element;
+  const link = visual.querySelector('a');
+  const range = document.createRange();
+  range.selectNodeContents(link);
+  visual.focus();
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  document.dispatchEvent(new Event('selectionchange'));
+  await nextTick();
+}
 
 beforeEach(() => {
   global.useI18n = () => ({ t: (key) => key });
@@ -37,6 +49,7 @@ beforeEach(() => {
 
 afterEach(() => {
   wrappers.splice(0).forEach((wrapper) => wrapper.unmount());
+  window.getSelection().removeAllRanges();
   delete global.useI18n;
 });
 
@@ -83,6 +96,7 @@ describe('Document rich text toolbar', () => {
     const wrapper = mountDocumentEditor('[ProjectApp](https://old.example)');
     await nextTick();
 
+    await selectExistingLink(wrapper);
     await openLink(wrapper);
     await wrapper.get('[aria-label="richText.linkUrl"]').setValue('javascript:alert(1)');
     await wrapper.findAll('button').find((button) => button.text() === 'richText.apply').trigger('click');
@@ -98,6 +112,7 @@ describe('Document rich text toolbar', () => {
     const wrapper = mountDocumentEditor('[ProjectApp](https://old.example)');
     await nextTick();
 
+    await selectExistingLink(wrapper);
     await openLink(wrapper);
 
     expect(wrapper.get('[aria-label="richText.linkUrl"]').element.value).toBe('https://old.example');
@@ -108,6 +123,7 @@ describe('Document rich text toolbar', () => {
     const wrapper = mountDocumentEditor('[ProjectApp](https://old.example)');
     await nextTick();
 
+    await selectExistingLink(wrapper);
     await openLink(wrapper);
     await wrapper.findAll('button').find((button) => button.text() === 'richText.removeLink').trigger('click');
     await sourceTab(wrapper).trigger('click');
@@ -120,6 +136,7 @@ describe('Document rich text toolbar', () => {
     const wrapper = mountDocumentEditor('[ProjectApp](https://old.example)');
     await nextTick();
 
+    await selectExistingLink(wrapper);
     await openLink(wrapper);
     await wrapper.get('[aria-label="richText.linkUrl"]').setValue('https://new.example');
     await wrapper.findAll('button').find((button) => button.text() === 'richText.cancel').trigger('click');
@@ -133,6 +150,7 @@ describe('Document rich text toolbar', () => {
     const wrapper = mountDocumentEditor('[ProjectApp](https://old.example)');
     await nextTick();
 
+    await selectExistingLink(wrapper);
     await openLink(wrapper);
     await wrapper.get('[aria-label="richText.linkUrl"]').setValue('https://new.example');
     await wrapper.findAll('button').find((button) => button.text() === 'richText.apply').trigger('click');
