@@ -1,3 +1,10 @@
+> **PA-230 — en implementación, 2026-11-06:** selección y alta de hosting desde
+> la cuenta de cobro, inventario con elegibilidad y bloqueos, conciliación con
+> resumen legible y borrador por pestaña para regresar. Rama de sesión
+> `feat/06112026-pa230-hosting-link`. Sin migraciones; no altera evidencias ni
+> finanzas. Pruebas automatizadas exclusivamente en CI y validación Chrome
+> coordinada por DevQA; pendiente de evidencia y entrega del PR.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

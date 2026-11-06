@@ -42,6 +42,7 @@ function change(key, value) {
       </div>
     </template>
     <template v-if="!modelValue.document_pending && modelValue.billing_nature === 'hosting'">
+      <slot name="hosting">
       <!-- Hosting holds one short option: half the width. The period options
            are sentences, so that select keeps the full row. -->
       <div class="grid grid-cols-1 gap-3 panel-portrait:grid-cols-2">
@@ -53,6 +54,7 @@ function change(key, value) {
       <label v-if="payments.length" class="block text-sm text-text-default">Período de hosting que estás cobrando
         <select data-testid="billing-payment" :value="modelValue.hosting_payment_id || ''" :class="fieldClass" @change="change('hosting_payment_id', $event.target.value)"><option value="">Selecciona el período…</option><option v-for="payment in payments" :key="payment.id" :value="payment.id">#{{ payment.id }} · {{ payment.billing_period_start }} — {{ payment.billing_period_end }} · {{ payment.amount }} · {{ payment.status }}</option></select>
       </label>
+      </slot>
     </template>
   </fieldset>
 </template>

@@ -33,9 +33,11 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   /** Preselected income row (entry point from the Ingresos tab). */
   income: { type: Object, default: null },
+  resumeDraft: { type: Object, default: null },
 });
 
-const emit = defineEmits(['close', 'created']);
+const emit = defineEmits(['close', 'created', 'reconcile']);
+const hostingModalOpen = ref(false);
 
 const store = useAccountingStore();
 const clientsStore = useProposalClientsStore();
@@ -194,6 +196,21 @@ watch(
     incomeScope.value = 'all';
     incomeKind.value = DEFAULT_INCOME_KIND;
     incomeFetched = false;
+    if (props.resumeDraft) {
+      const draft = props.resumeDraft;
+      // Restore values directly: applying income/client defaults would overwrite
+      // the operator's edits and start competing asynchronous requests.
+      selectedIncome.value = draft.selectedIncome;
+      form.value = JSON.parse(JSON.stringify(draft.form));
+      clientId.value = draft.clientId;
+      selectedClient.value = draft.selectedClient;
+      clientFromIncome.value = draft.clientFromIncome;
+      billingContext.value = { ...draft.billingContext };
+      numberDirty.value = draft.numberDirty;
+      suggestedNumber.value = draft.suggestedNumber;
+      incomeQuery.value = draft.incomeQuery;
+      return;
+    }
     if (props.income) {
       applyIncome(props.income);
     } else {
@@ -1049,6 +1066,17 @@ function clearPdf() {
   pdfState.value = 'idle';
 }
 
+function reconcileHosting() {
+  clientRequestId += 1;
+  incomeRequestId += 1;
+  emit('reconcile', JSON.parse(JSON.stringify({
+    selectedIncome: selectedIncome.value, form: form.value, clientId: clientId.value,
+    selectedClient: selectedClient.value, clientFromIncome: clientFromIncome.value,
+    billingContext: billingContext.value, numberDirty: numberDirty.value,
+    suggestedNumber: suggestedNumber.value, incomeQuery: incomeQuery.value,
+  })));
+}
+
 function close() {
   clearPdf();
   emit('close');
@@ -1076,8 +1104,8 @@ const modalFormId = useId();
     :kind="step === 'preview' ? 'workspace' : 'form'"
     :full-height="step === 'preview'"
     title-id="collection-form-title"
-    :close-on-esc="!sendConfirmOpen && !saving && !showIncomeForm"
-    :close-on-backdrop="!sendConfirmOpen && !saving && !showIncomeForm"
+    :close-on-esc="!sendConfirmOpen && !saving && !showIncomeForm && !hostingModalOpen"
+    :close-on-backdrop="!sendConfirmOpen && !saving && !showIncomeForm && !hostingModalOpen"
     @close="close"
   >
     <div class="shrink-0 px-6 pt-6 pb-2 flex items-center justify-between gap-3">
@@ -1409,7 +1437,10 @@ const modalFormId = useId();
         v-if="open"
         v-model="billingContext"
         :project-id="selectedIncome?.project || selectedIncome?.project_id || null"
+        :client="selectedClient || (clientId ? { id: clientId, name: form.customer.name, email: form.customer.email, company: form.customer.name } : null)"
         :validation-error="billingContextValidationError"
+        @reconcile="reconcileHosting"
+        @nested-open="hostingModalOpen = $event"
         @valid="billingContextValid = $event"
         @validation-message="billingContextMessage = $event"
       />
