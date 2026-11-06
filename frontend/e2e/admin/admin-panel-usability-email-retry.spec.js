@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-06 — app not running)
 /**
  * PA-201/202/208/214 regression coverage.
  * Each assertion is tied to the observable layout or email outcome an admin sees.
@@ -223,7 +222,7 @@ test.describe('panel usability and outbound email retry', () => {
     await expect(page.getByText(failedRecipient.email, { exact: true })).toHaveText(failedRecipient.email);
   });
 
-  test('loads History after opening the status deep link', {
+  test('loads History after opening the status bookmark', {
     tag: [...ADMIN_OUTBOUND_EMAIL_HISTORY_FILTER, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
     await setAdmin(page);
