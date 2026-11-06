@@ -348,12 +348,14 @@ test.describe('Platform guided tour', () => {
     await expect(page.getByTestId('platform-tour-popover')).toContainText('Ayuda sin IA')
     await page.getByTestId('platform-tour-next').click()
     await openBugFormFromProject(page)
+    await expect(page.getByRole('heading', { name: 'Reportar bug', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Describir con una nota de voz', exact: true })).toHaveCount(0)
+    await expect(page.getByTestId('platform-tour-popover')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
     await page.getByTestId('platform-help-trigger').click()
 
     await expect(page.getByTestId('platform-help-tour-voice-report')).toHaveCount(0)
     await expect(page.getByTestId('appi-launcher')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Describir con una nota de voz', exact: true })).toHaveCount(0)
-    await expect(page.getByTestId('platform-tour-popover')).toHaveCount(0)
   })
 })
 
@@ -404,7 +406,7 @@ test.describe('Platform guided tour on compact screens', () => {
 
     await openProjects(page)
     await page.getByRole('button', { name: 'Abrir navegación', exact: true }).click()
-    await page.getByTestId('platform-help-trigger').click()
+    await page.getByTestId('platform-help-trigger').filter({ visible: true }).click()
     await page.getByTestId('platform-help-tour-general').click()
     await expect(page.getByTestId('platform-tour-popover')).toContainText('Repetir guía móvil')
     await page.getByTestId('platform-tour-skip').click()

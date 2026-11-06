@@ -53,11 +53,15 @@ su vigencia y los IDs del segundo cliente. Preparar datos con el generador
 canónico; documentar cualquier preparación manual o brecha y vincularla a PA-231.
 No compartir contraseñas ni tokens en mensajes o evidencias.
 
-1. Cliente A: iniciar sesión y comprobar la guía general; saltarla, recargar y
-   volver a entrar. No debe reiniciarse. Repetirla desde Ayuda.
-2. Cliente B: completar la general y entrar a su primer proyecto. Completar o
-   saltar la contextual; comprobar el acuse guardado y repetir desde Ayuda.
-3. Pausar por navegación y retomar desde Ayuda en el último paso guardado.
+1. Cliente A: iniciar sesión y comprobar la guía general; pausarla por navegación
+   y retomar el último paso desde Ayuda antes de saltarla. Recargar y volver a
+   entrar: no debe reiniciarse. Repetirla manualmente desde Ayuda.
+2. Cliente B: pausar y retomar la general antes de completarla; comprobar el
+   acuse guardado, la ausencia de reinicio y la repetición manual desde Ayuda.
+3. Entrar al primer proyecto propio de cada cliente: pausar y retomar su guía
+   contextual antes de saltarla en A o completarla en B. Comprobar persistencia
+   y repetición manual. No borrar ni resetear acuses terminales para forzar casos;
+   conservar copias y líneas base por ticket para las pruebas de video de PA-220.
 4. Desactivar Appi y voz; comprobar que no se ofrecen sus pasos. Con voz
    disponible, abrir voluntariamente un formulario compatible: sólo entonces
    debe ofrecerse su guía, sin grabar, transcribir ni enviar datos.
