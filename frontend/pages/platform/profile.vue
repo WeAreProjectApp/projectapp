@@ -23,7 +23,7 @@
       <!-- Avatar card -->
       <div class="rounded-3xl border border-border-default bg-surface p-6 shadow-sm">
         <div class="flex flex-col items-center gap-4">
-          <button
+          <BaseButton unstyled
             type="button"
             class="touch-target group relative h-24 w-24 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
             aria-label="Cambiar foto de perfil"
@@ -52,7 +52,7 @@
             <div v-if="isUploadingAvatar" class="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
               <div class="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             </div>
-          </button>
+          </BaseButton>
           <input
             ref="fileInput"
             type="file"

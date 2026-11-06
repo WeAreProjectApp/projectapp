@@ -85,14 +85,14 @@
           </BaseButton>
         </form>
 
-        <button
+        <BaseButton unstyled
           type="button"
           class="mt-5 text-sm font-medium text-text-muted transition hover:text-text-default disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="authStore.isVerifying"
           @click="handleResendCode"
         >
           Reenviar código
-        </button>
+        </BaseButton>
       </div>
     </div>
   </div>

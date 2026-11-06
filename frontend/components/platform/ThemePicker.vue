@@ -4,7 +4,7 @@
     <div>
       <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-text-muted">Color del tema</p>
       <div class="grid grid-cols-9 gap-2">
-        <button
+        <BaseButton unstyled
           v-for="(shade, idx) in allShades"
           :key="idx"
           type="button"
@@ -15,14 +15,14 @@
           @click="handleColorSelect(shade)"
         />
       </div>
-      <button
+      <BaseButton unstyled
         v-if="themeColor"
         type="button"
         class="mt-2 text-[10px] text-text-muted transition hover:text-text-brand dark:hover:text-white"
         @click="handleClearColor"
       >
         Restablecer color
-      </button>
+      </BaseButton>
     </div>
 
     <!-- Cover image -->
@@ -56,7 +56,7 @@
         <div v-for="category in gallery" :key="category.name">
           <p class="sticky top-0 z-10 mb-2.5 bg-surface/90 py-1 text-[11px] font-semibold text-text-muted backdrop-blur dark:bg-surface/90">{{ category.name }}</p>
           <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            <button
+            <BaseButton unstyled
               v-for="img in category.images"
               :key="img.path"
               type="button"
@@ -68,7 +68,7 @@
               <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5">
                 <p class="truncate text-[10px] leading-tight text-white">{{ img.name }}</p>
               </div>
-            </button>
+            </BaseButton>
           </div>
         </div>
       </div>

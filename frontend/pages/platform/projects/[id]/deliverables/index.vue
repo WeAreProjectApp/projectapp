@@ -27,7 +27,7 @@
 
       <!-- Category filter -->
       <div class="mb-5 flex gap-1.5 overflow-x-auto pb-1" data-enter>
-        <button
+        <BaseButton unstyled
           v-for="tab in categoryTabs"
           :key="tab.value"
           type="button"
@@ -38,7 +38,7 @@
           @click="activeCategory = tab.value"
         >
           {{ tab.label }}
-        </button>
+        </BaseButton>
       </div>
 
       <!-- Table -->
@@ -95,7 +95,7 @@
 
       <!-- Cards (mobile) -->
       <div v-else class="space-y-3" data-enter>
-        <button
+        <BaseButton unstyled
           v-for="d in filteredItems"
           :key="d.id"
           type="button"
@@ -122,7 +122,7 @@
             <span class="truncate">{{ d.uploaded_by_name }}</span>
             <span class="shrink-0">{{ formatDate(d.updated_at) }}</span>
           </div>
-        </button>
+        </BaseButton>
       </div>
       </template>
 

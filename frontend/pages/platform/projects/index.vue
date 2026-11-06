@@ -18,7 +18,7 @@
 
     <!-- Status filters (admin) -->
     <div v-if="authStore.isAdmin" class="mb-6 flex flex-wrap gap-2" data-enter>
-      <button
+      <BaseButton unstyled
         v-for="filter in statusFilters"
         :key="filter.value"
         type="button"
@@ -29,7 +29,7 @@
         @click="handleFilterChange(filter.value)"
       >
         {{ filter.label }}
-      </button>
+      </BaseButton>
     </div>
 
     <!-- Loading state -->
@@ -140,7 +140,7 @@
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Propuesta de negocio</label>
                   <div ref="proposalSelectRef" class="relative">
-                    <button
+                    <BaseButton unstyled
                       type="button"
                       class="flex w-full items-center justify-between gap-2 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-left text-sm outline-none transition focus:border-border-default dark:bg-surface-muted dark:focus:border-lemon/40"
                       @click="toggleProposalDropdown"
@@ -149,7 +149,7 @@
                         {{ selectedProposalLabel || 'Sin propuesta vinculada' }}
                       </span>
                       <svg class="h-4 w-4 shrink-0 text-text-muted transition-transform" :class="proposalDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                    </button>
+                    </BaseButton>
                     <div
                       v-if="proposalDropdownOpen"
                       class="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-border-default bg-surface shadow-lg"
@@ -166,17 +166,17 @@
                       </div>
                       <ul class="max-h-56 overflow-y-auto py-1">
                         <li>
-                          <button
+                          <BaseButton unstyled
                             type="button"
                             class="w-full px-3 py-2 text-left text-sm transition hover:bg-primary-soft dark:hover:bg-white/5"
                             :class="!createForm.proposal_id ? 'text-text-brand dark:text-text-brand' : 'text-text-muted'"
                             @click="selectProposal(null)"
                           >
                             Sin propuesta vinculada
-                          </button>
+                          </BaseButton>
                         </li>
                         <li v-for="p in filteredProposals" :key="p.id">
-                          <button
+                          <BaseButton unstyled
                             type="button"
                             class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition hover:bg-primary-soft dark:hover:bg-white/5"
                             :class="createForm.proposal_id === p.id ? 'bg-primary-soft dark:bg-white/5' : ''"
@@ -184,7 +184,7 @@
                           >
                             <span class="truncate text-text-default">{{ p.title }}</span>
                             <span class="shrink-0 text-xs text-text-muted">{{ formatCurrency(p.total_investment, p.currency) }}</span>
-                          </button>
+                          </BaseButton>
                         </li>
                         <li v-if="!filteredProposals.length" class="px-3 py-4 text-center text-xs text-text-muted">
                           No hay propuestas que coincidan.

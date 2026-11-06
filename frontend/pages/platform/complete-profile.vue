@@ -51,13 +51,13 @@
             class="hidden"
             @change="handleFileChange"
           />
-          <button
+          <BaseButton unstyled
             type="button"
             class="text-xs text-text-muted transition hover:text-text-default"
             @click="triggerFileInput"
           >
             {{ avatarPreview ? 'Cambiar foto' : 'Subir foto (opcional)' }}
-          </button>
+          </BaseButton>
         </div>
 
         <!-- Name row -->

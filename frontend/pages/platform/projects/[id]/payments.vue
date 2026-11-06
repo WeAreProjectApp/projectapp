@@ -85,7 +85,7 @@
 
           <!-- Frequency pills -->
           <div class="mb-5 flex flex-wrap gap-2">
-            <button
+            <BaseButton unstyled
               v-for="opt in frequencyOptions"
               :key="opt.value"
               type="button"
@@ -94,7 +94,7 @@
                 ? 'border-accent bg-accent text-on-accent'
                 : 'border-border-default bg-surface text-text-muted hover:text-text-default'"
               @click="selectPlan(opt.value)"
-            >{{ opt.label }}</button>
+            >{{ opt.label }}</BaseButton>
           </div>
 
           <!-- Per-phase breakdown table -->
@@ -213,7 +213,7 @@
           <!-- Frequency still changeable while the subscription is pending -->
           <div v-if="frequencyEditable" class="mb-3">
             <div class="flex flex-wrap gap-2">
-              <button
+              <BaseButton unstyled
                 v-for="opt in frequencyOptions"
                 :key="opt.value"
                 type="button"
@@ -222,7 +222,7 @@
                   ? 'border-accent bg-accent text-on-accent'
                   : 'border-border-default bg-surface text-text-muted hover:text-text-default'"
                 @click="selectPlan(opt.value)"
-              >{{ opt.label }}</button>
+              >{{ opt.label }}</BaseButton>
             </div>
             <p class="mt-2 text-[11px] text-text-muted">
               Aún puedes cambiar la frecuencia. Quedará fija cuando registres tu tarjeta y se concrete el primer pago.
@@ -372,14 +372,14 @@
 
         <!-- Payment history (collapsible) -->
         <div v-if="payStore.otherPayments.length > 0" data-enter>
-          <button
+          <BaseButton unstyled
             type="button"
             class="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted transition hover:text-text-muted"
             @click="showHistory = !showHistory"
           >
             <svg class="h-3.5 w-3.5 transition-transform" :class="showHistory ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
             Historial y pagos programados ({{ payStore.otherPayments.length }})
-          </button>
+          </BaseButton>
 
           <transition name="slide">
             <div v-show="showHistory" class="space-y-2">
@@ -422,14 +422,14 @@
 
       <!-- Admin: registrar pago manual -->
       <div v-if="authStore.isAdmin" class="mt-6" data-enter>
-        <button
+        <BaseButton unstyled
           type="button"
           class="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted transition hover:text-text-muted"
           @click="showManualForm = !showManualForm"
         >
           <svg class="h-3.5 w-3.5 transition-transform" :class="showManualForm ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
           Registrar pago manual
-        </button>
+        </BaseButton>
 
         <transition name="slide">
           <div v-show="showManualForm" class="rounded-2xl border border-border-default bg-surface p-5">
@@ -439,7 +439,7 @@
             <div class="mb-4">
               <p class="mb-2 text-xs font-medium text-text-muted">Frecuencia del intervalo pagado</p>
               <div class="grid grid-cols-3 gap-2">
-                <button
+                <BaseButton unstyled
                   v-for="opt in manualFreqOptions"
                   :key="opt.value"
                   type="button"
@@ -449,7 +449,7 @@
                   @click="manualForm.frequency = opt.value"
                 >
                   {{ opt.label }}
-                </button>
+                </BaseButton>
               </div>
             </div>
 
@@ -494,13 +494,13 @@
             </div>
 
             <div class="flex items-center justify-end gap-3">
-              <button
+              <BaseButton unstyled
                 type="button"
                 class="text-xs text-text-muted transition hover:text-text-default"
                 @click="resetManualForm"
               >
                 Limpiar
-              </button>
+              </BaseButton>
               <BaseButton variant="accent" size="sm" :disabled="payStore.isUpdating || !manualFormValid" @click="handleRegisterManualPayment">
                 <svg v-if="payStore.isUpdating" class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                 {{ payStore.isUpdating ? 'Registrando…' : 'Registrar pago' }}

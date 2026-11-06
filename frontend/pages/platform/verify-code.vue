@@ -53,14 +53,14 @@
             {{ authStore.isVerifying ? 'Verificando...' : 'Verificar' }}
           </BaseButton>
 
-          <button
+          <BaseButton unstyled
             type="button"
             class="w-full text-sm text-esmerald/70 underline transition disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="authStore.isLoading"
             @click="handleResend"
           >
             Reenviar código
-          </button>
+          </BaseButton>
         </form>
 
         <p class="mt-6 text-center text-sm text-text-muted">

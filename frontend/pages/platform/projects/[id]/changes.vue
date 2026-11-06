@@ -52,7 +52,7 @@
       <!-- Status filter tabs -->
       <div class="mb-5 flex gap-1.5 overflow-x-auto pb-1" data-enter>
         <!-- design-tokens: allow-raw-button (native status filter tabs select the current list) -->
-        <button
+        <BaseButton unstyled
           v-for="tab in statusTabs"
           :key="tab.value"
           type="button"
@@ -64,7 +64,7 @@
         >
           {{ tab.label }}
           <span v-if="tab.count !== undefined" class="ml-1">{{ tab.count }}</span>
-        </button>
+        </BaseButton>
       </div>
 
       <!-- Table (md+) / Cards (mobile) -->
@@ -143,7 +143,7 @@
       <!-- Cards (mobile) -->
       <div v-else class="space-y-3" data-enter>
         <!-- design-tokens: allow-raw-button (selectable ticket card opens the detail dialog in place) -->
-        <button
+        <BaseButton unstyled
           v-for="cr in filteredRequests"
           :key="cr.id"
           type="button"
@@ -172,7 +172,7 @@
             <span class="truncate">{{ cr.created_by_name }}</span>
             <span class="shrink-0">{{ formatDate(cr.created_at) }}</span>
           </div>
-        </button>
+        </BaseButton>
       </div>
       </template>
 

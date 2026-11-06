@@ -68,7 +68,7 @@
 
     <!-- Móvil (<md): cada proyecto como tarjeta apilada -->
     <div v-else class="space-y-3">
-      <button
+      <BaseButton unstyled
         v-for="p in projects"
         :key="p.id"
         type="button"
@@ -118,7 +118,7 @@
             <dd class="text-text-muted">{{ relativeTime(p.last_activity_at) }}</dd>
           </div>
         </dl>
-      </button>
+      </BaseButton>
 
       <div v-if="!projects.length" class="rounded-2xl border border-border-default bg-surface px-4 py-12 text-center text-text-muted">
         No hay proyectos para mostrar.

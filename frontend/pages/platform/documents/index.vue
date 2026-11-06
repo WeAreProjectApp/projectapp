@@ -54,14 +54,14 @@
               <BaseButton variant="primary" size="md" type="submit" :disabled="store.isSending || code.length !== 6">
                 {{ store.isSending ? 'Validando...' : 'Validar correo' }}
               </BaseButton>
-              <button
+              <BaseButton unstyled
                 type="button"
                 class="text-sm font-medium text-text-muted transition hover:text-text-default disabled:opacity-50"
                 :disabled="store.isSending"
                 @click="sendCode"
               >
                 Reenviar
-              </button>
+              </BaseButton>
             </form>
           </div>
         </div>

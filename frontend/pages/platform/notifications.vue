@@ -13,7 +13,7 @@
           Marcar todas como leídas
         </BaseButton>
         <div class="flex gap-1.5">
-          <button
+          <BaseButton unstyled
             v-for="tab in filterTabs"
             :key="tab.value"
             type="button"
@@ -24,7 +24,7 @@
             @click="activeFilter = tab.value"
           >
             {{ tab.label }}
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@
 
     <section class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between" data-enter>
       <div class="flex flex-wrap gap-2">
-        <button
+        <BaseButton unstyled
           v-for="filter in filters"
           :key="filter.value"
           type="button"
@@ -24,7 +24,7 @@
           @click="activeFilter = filter.value"
         >
           {{ filter.label }}
-        </button>
+        </BaseButton>
       </div>
 
       <div class="w-full lg:max-w-sm">
@@ -52,7 +52,7 @@
 
       <!-- Móvil: lista de filas-tarjeta -->
       <div v-else-if="isMobile" class="divide-y divide-border-muted">
-        <button
+        <BaseButton unstyled
           v-for="client in filteredClients"
           :key="client.user_id"
           type="button"
@@ -102,7 +102,7 @@
             </dl>
           </div>
           <span class="shrink-0 self-center text-text-muted">›</span>
-        </button>
+        </BaseButton>
       </div>
 
       <div v-else class="overflow-x-auto">
