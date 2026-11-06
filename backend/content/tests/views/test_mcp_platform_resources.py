@@ -193,7 +193,6 @@ def test_resource_confirmation_rejects_a_changed_owner(call_projects, project, a
 
 
 def test_resource_write_revalidates_owner_inside_the_lock(project, superuser):
-    UserProfile.objects.create(user=superuser, role=UserProfile.ROLE_ADMIN)
     resource = Deliverable.objects.create(project=project, title='Original', uploaded_by=superuser)
     with pytest.raises(DeliveryConflict):
         platform_resources.update_resource(project.pk, superuser, resource.pk, {'title': 'Changed'},
