@@ -185,7 +185,8 @@ class Command(BaseCommand):
                 secure_args = ('--skip-platform',) if options['skip_platform'] else ()
                 self._run_seeded('secure links', 'create_fake_secure_links', *secure_args)
             if not options['skip_platform']:
-                self._run_seeded('platform QA cases', 'create_fake_platform_cases')
+                case_args = ('--skip-accounting',) if options['skip_accounting'] else ()
+                self._run_seeded('platform QA cases', 'create_fake_platform_cases', *case_args)
 
         command = (
             f'python manage.py create_fake_data --replace --count {count} '

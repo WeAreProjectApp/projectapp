@@ -27,6 +27,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         add_seed_arguments(parser)
+        parser.add_argument('--skip-accounting', action='store_true')
 
     @fake_data_transaction()
     def handle(self, *args, **options):
@@ -77,12 +78,13 @@ class Command(BaseCommand):
         for version in range(resource.current_version + 1, 4):
             platform_resources.upload_version(project.pk, roles['superuser'], resource.pk, {'file': _pdf_upload(version)})
 
-        IncomeRecord.objects.get_or_create(source_ref='fake:accounting', concept='[QA] Ingreso grande pendiente', defaults={
-            'created_by': roles['superuser'], 'client': project.client.profile, 'project': project,
-            'kind': 'expected', 'ledger': 'company', 'origin': 'other', 'destination': 'partners',
-            'period_date': context.anchor_date.replace(day=1), 'total_amount': Decimal('987654321012.00'),
-            'gustavo_amount': Decimal('493827160506.00'), 'carlos_amount': Decimal('493827160506.00'),
-        })
+        if not options['skip_accounting']:
+            IncomeRecord.objects.get_or_create(source_ref='fake:accounting', concept='[QA] Ingreso grande pendiente', defaults={
+                'created_by': roles['superuser'], 'client': project.client.profile, 'project': project,
+                'kind': 'expected', 'ledger': 'company', 'origin': 'other', 'destination': 'partners',
+                'period_date': context.anchor_date.replace(day=1), 'total_amount': Decimal('987654321012.00'),
+                'gustavo_amount': Decimal('493827160506.00'), 'carlos_amount': Decimal('493827160506.00'),
+            })
 
         # Distinct projects keep mutually exclusive subscription states honest.
         for index, status in enumerate(('active', 'pending', 'suspended', 'cancelled')):
