@@ -29,7 +29,9 @@ test('another owner receives an error without the project suggestion', { tag: ['
   await authenticate(page, request, data, 'other')
   // quality: allow-deep-link (direct unauthorized project URL proves the object permission boundary)
   await page.goto(`${frontendUrl}/es-co/platform/projects/${data.project.id}/ideas`, { waitUntil: 'domcontentloaded' })
-  await expect(page.getByTestId('project-ideas-workspace').getByRole('alert')).toContainText('Proyecto no encontrado')
+  await expect(page.getByTestId('project-access-error')).toContainText('No tienes acceso a este proyecto')
+  await expect(page.getByTestId('project-ideas-workspace')).toHaveCount(0)
+  await expect(page.getByText(data.project.name, { exact: true })).toHaveCount(0)
   await expect(page.getByTestId('idea-text')).toHaveCount(0)
 })
 
