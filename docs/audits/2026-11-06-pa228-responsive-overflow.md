@@ -23,7 +23,7 @@ manteniendo el SHA durante cada caso. Ninguna credencial forma parte del brief.
 | RESP-R061, Comunicación | Cabecera apilada, selector completo y acciones en fila propia compacta. | Ver master, cambiar plantilla, recargar iframe y cerrar con botón visible. |
 | RESP-R061, Analítica | Títulos completos y metadatos distribuibles en ambos modos. | Doce recuentos y etiquetas «solo detallado»; Técnico conserva cero y «no visto». |
 | RESP-R010, Ingresos Clásico | Total agrupado bajo Concepto en compacto; ajuste de importes y texto sin elipsis. | `$987.654.321.012 COP`, importe habitual y acción visibles sin scroll lateral; menú del registro correcto. |
-| RESP-R010, indicadores | Una tarjeta por fila móvil y banda del importe expandible. | `$522.238.000 COP` y `$97.542.000 COP` completos al filtrar Perdido; cotejo con detalle. |
+| RESP-R010, indicadores | Dos tarjetas por fila móvil, importe completo con ancho propio, tipografía móvil legible y banda expandible. | `$522.238.000 COP` y `$97.542.000 COP` completos al filtrar Perdido; cotejo con detalle y listado dentro del primer encuadre con importes habituales. |
 
 Interfaz aditiva: `valueWrap`, booleano default `false`, en `BaseIndicatorCard` y
 `AccountingStatCard`. Ingresos lo activa en sus indicadores apilados; no cambia
@@ -81,6 +81,26 @@ sin cambiar la aplicación ni quitar comprobaciones de geometría. Dashboard pas
 a comprobar los seis meses completos. La espera del título erróneo alcanzó un
 refresco posterior en el caso compacto; el título correcto se observa antes.
 La nueva ejecución queda pendiente de su propio corte CI.
+
+El SHA `b28286c2375982efd057c2cfcca73d8aeaef4330` aprobó el
+[Quality Gate](https://github.com/WeAreProjectApp/projectapp/actions/runs/42288950647)
+y 61 de los 62 jobs de
+[aceptación responsive](https://github.com/WeAreProjectApp/projectapp/actions/runs/42288950496):
+39 de los 40 escenarios propios. La traza del único fallo, embudo compacto,
+muestra una recarga de Vite con cambio de dependencias antes de cargar Analítica;
+la preparación del lote no devolvía el detalle de propuesta ni montaba esas
+pestañas. Se completa el fixture de preparación y se esperan controles reales
+de Detalle técnico y Analítica antes de ejecutar los escenarios, sin reintentos
+adicionales ni relajación de aserciones.
+
+La [suite general](https://github.com/WeAreProjectApp/projectapp/actions/runs/42288950486)
+detectó además una regresión del encabezado de Ingresos compacto: dos tarjetas
+apiladas dejaban el inicio del listado en `y=1024`, fuera de los 915 px de alto.
+Se conserva la fila de dos tarjetas y se libera el ancho del importe sin invadir
+la ayuda ni la acción. Su tipografía móvil es de 20 px; en tableta conserva
+24 px. La prueba existente del primer encuadre se mantiene íntegra; las nuevas
+siguen comprobando todos los dígitos y la moneda con los valores del ticket.
+Ambos ajustes requieren una nueva corrida CI sobre su propio SHA.
 
 ## Guion y cierre visible
 

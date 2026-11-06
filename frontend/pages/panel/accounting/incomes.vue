@@ -40,7 +40,7 @@
     <section class="mb-2 sm:mb-6" aria-label="Indicadores de ingresos">
       <div
         v-if="isCompact"
-        class="grid grid-cols-1 gap-3 panel-portrait:grid-cols-2"
+        class="grid grid-cols-2 gap-3"
         data-testid="income-indicators-compact"
       >
         <AccountingStatCard
