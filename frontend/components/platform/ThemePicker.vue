@@ -4,11 +4,12 @@
     <div>
       <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-text-muted">Color del tema</p>
       <div class="grid grid-cols-9 gap-2">
-        <BaseButton unstyled
+        <!-- design-tokens: allow-raw-button — palette swatches retain their square grid sizing. -->
+        <button
           v-for="(shade, idx) in allShades"
           :key="idx"
           type="button"
-          class="h-8 w-8 rounded-lg border-2 transition hover:scale-110"
+          class="h-8 w-8 rounded-lg border-2 transition hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           :class="themeColor === shade ? 'border-input-border ring-2 ring-esmerald/30 dark:border-white dark:ring-white/30' : 'border-transparent'"
           :style="{ backgroundColor: shade }"
           :title="THEME_COLORS[Math.floor(idx / 9)]?.name"
