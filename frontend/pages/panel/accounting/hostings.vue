@@ -399,12 +399,11 @@
     <HostingAccountEmissionModal
       :resume-draft="billingReturn.resumeDraft.value"
       @reconcile="billingReturn.reconcile"
-      @cancel="billingReturn.clear()"
       v-model="billingConfirmOpen"
       :record="billingRow"
       :message="billingConfirmMessage"
       @confirm="sendBilling"
-      @cancel="billingRow = null"
+      @cancel="billingReturn.clear(); billingRow = null"
     />
   </BasePageShell>
 </template>
