@@ -156,4 +156,20 @@ describe('platform video modal', () => {
     expect(store.videoAvailable).toBe(false)
     expect(store.isOpen).toBe(false)
   })
+
+  it('does not open an earlier client request after the new catalog fails', async () => {
+    await wrapper.get('[data-testid="platform-video-close"]').trigger('click')
+    let resolvePrevious
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockImplementation(() => new Promise((resolve) => { resolvePrevious = resolve })) })
+    const previousOpen = registerVideo.mock.calls.at(-1)[0]()
+    usePlatformApi.mockReturnValue({ get: jest.fn().mockRejectedValue(new Error('New client catalog unavailable')) })
+
+    auth.user = { user_id: 42 }
+    await flushPromises()
+    resolvePrevious(catalog)
+    await previousOpen
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
 })

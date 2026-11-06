@@ -30,12 +30,14 @@ const playbackRevision = ref(0)
 function pause() { player.value?.pause() }
 function close() { pause(); catalogFailed.value = false; store.closeVideo() }
 async function open() {
+  const userId = auth.user?.user_id
   // The menu item disappears before the response arrives. Give BaseModal a
   // stable focus origin for keyboard users and for the tour's final CTA.
   const entry = [...document.querySelectorAll('[data-testid="platform-help-trigger"]')]
     .find((element) => element.getClientRects().length)
   entry?.focus({ preventScroll: true })
   await store.openVideo()
+  if (userId !== auth.user?.user_id) return
   catalogFailed.value = store.error
 }
 function onVisibility() { if (document.visibilityState === 'hidden') pause() }
