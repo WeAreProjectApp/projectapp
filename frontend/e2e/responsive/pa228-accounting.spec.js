@@ -12,8 +12,8 @@ test.setTimeout(60_000);
 
 async function expectDaysDistinct(page) {
   const chart = page.getByTestId('recurring-calendar');
-  // SVG text is the renderer boundary: inspect the real day labels, never a stubbed chart.
-  const labels = chart.locator('text').filter({ hasText: /^(?:[1-9]|[12]\d|3[01])$/ });
+  // Apex appends an SVG <title> to each text; measure the visible tspan only.
+  const labels = chart.locator('text > tspan').filter({ hasText: /^(?:[1-9]|[12]\d|3[01])$/ });
   await expect(labels).toHaveCount(31);
   await expect(labels).toHaveText(Array.from({ length: 31 }, (_, index) => String(index + 1)));
   await expect.poll(() => labels.evaluateAll((elements) => {
