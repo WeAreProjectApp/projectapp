@@ -1,3 +1,12 @@
+## PA-219 — Ayuda y recorridos con la identidad real de sesión — 2026-11-06
+
+Corrección en la rama de sesión `fix/06112026-pa219-platform-help`: Ayuda usa
+`user_id`, el identificador publicado por el perfil, para cargar recorridos,
+observar cambios de cuenta y sincronizar el progreso pendiente sin cruzar usuarios.
+Las pruebas del módulo reproducen el perfil sin el alias `id` que ocultaba el fallo.
+Pruebas automatizadas exclusivamente en CI; validación manual coordinada con
+dev-qa sobre el SHA servido. La entrada no acredita CI aprobado ni despliegue.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
@@ -3102,3 +3111,11 @@ filtra las mismas fuentes y conserva el enlace confirmado por el servicio actual
 Sin cambios de modelos, migraciones, reglas de pendiente ni emisión; esos cruces
 pertenecen a las otras sesiones. Validación focalizada y PR verde en curso; el
 merge pertenece a «Coordina las sesiones activas».
+# 2026-11-06 — PA-220: acceso al video de Ayuda
+
+La sesión `pa220-help-video` incorpora por merge la corrección común de identidad
+de PA-219 y conserva su autoría. Los casos de video usan el contrato real
+`user_id` sin `id`, verifican reapertura y disponibilidad efectiva por recurso.
+El modal invalida el catálogo anterior al cambiar de cliente. Pruebas sólo en CI;
+DevQA administra el turno manual de clientes 19/20 y la revisión editorial.
+Evidencia y pendientes: `docs/audits/2026-11-06-pa220-help-video.md`.

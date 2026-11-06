@@ -46,6 +46,11 @@ selectores ni URLs libres. Las tarjetas presentan texto escapado.
 
 ## Interfaces
 
+El perfil autenticado identifica al usuario mediante `user_id`, sin un alias
+`id`. Ayuda usa ese mismo identificador para cargar el catálogo, detectar cambios
+de sesión y separar los acuses pendientes en el navegador. Las fixtures del
+módulo conservan ese contrato para no ocultar fallos de integración.
+
 | Interfaz | Acceso y propósito |
 |---|---|
 | `GET /api/platform/help/` | JWT completo de cliente activo; configuración efectiva, catálogo publicado y progreso propio. `project_id` exige un proyecto propio. |
