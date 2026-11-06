@@ -78,6 +78,7 @@ test.describe('Platform help videos', () => {
 
     await expect(page.getByTestId('platform-help-video-player')).toHaveCount(0)
     await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Mis proyectos', exact: true })).toBeVisible()
   })
 
   test('restores video access after its effective setting is enabled again', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
@@ -108,6 +109,7 @@ test.describe('Platform help videos', () => {
 
     await expect(page.getByTestId('platform-help-video-player')).toHaveCount(0)
     await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Mis proyectos', exact: true })).toBeVisible()
   })
 
   test('preserves guided Help when videos are disabled', { tag: [...PLATFORM_HELP_VIDEOS, '@outcome:success'] }, async ({ page }) => {
