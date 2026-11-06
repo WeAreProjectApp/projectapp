@@ -58,7 +58,6 @@ async function setup(page, { name = project.name, user = mockPlatformClient } = 
 }
 
 async function openProjects(page) {
-  // quality: allow-deep-link (the authenticated project list is the shell entry; each test follows a project or its tabs through the UI)
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
   await waitForNuxtApp(page)
 }
@@ -121,6 +120,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       test(`client opens a project with a ${variant} name from the complete list`, {
         tag: ['@flow:platform-project-list', '@outcome:display', ...responsiveTags(profile)],
       }, async ({ page }, testInfo) => {
+        // quality: allow-deep-link (the authenticated project list is the shell entry; the project detail is reached by clicking its visible record)
         await setup(page, { name })
         await openProjects(page)
         await expect(page.getByTestId(new RegExp(`^project-${recordKinds[profile]}-`))).toHaveCount(4)
@@ -148,6 +148,7 @@ for (const profile of RESPONSIVE_PROFILES) {
     test('client identifies the selected bug requirement before submitting', {
       tag: ['@flow:platform-bug-reports', '@outcome:display', ...responsiveTags(profile)],
     }, async ({ page }, testInfo) => {
+      // quality: allow-deep-link (openSource starts at the authenticated project list, then opens the project, Bugs tab and report form through UI controls)
       await setup(page)
       await openSource(page, profile, 'Bugs', 'Reportar bug')
       const picker = page.getByTestId('issue-source')
@@ -173,6 +174,7 @@ for (const profile of ['compact', 'desktop']) {
     test('client identifies the required source of a change request', {
       tag: ['@flow:platform-change-requests', '@outcome:display', ...responsiveTags(profile)],
     }, async ({ page }, testInfo) => {
+      // quality: allow-deep-link (openSource starts at the authenticated project list, then opens the project, Solicitudes tab and request form through UI controls)
       await setup(page)
       await openSource(page, profile, 'Solicitudes', 'Nueva solicitud')
       const picker = page.getByTestId('issue-source')
@@ -186,6 +188,7 @@ for (const profile of ['compact', 'desktop']) {
     test('admin opens the long project without losing client data', {
       tag: ['@flow:platform-project-list', '@outcome:display', ...responsiveTags(profile)],
     }, async ({ page }, testInfo) => {
+      // quality: allow-deep-link (the authenticated project list is the shell entry; the administrator reaches the detail by clicking its visible record)
       await setup(page, { name: names.unbroken, user: mockPlatformAdmin })
       await openProjects(page)
       const record = entry(page, profile, project.id)
