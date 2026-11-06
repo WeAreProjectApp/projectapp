@@ -45,11 +45,11 @@ class Command(BaseCommand):
             if SecureLink.objects.filter(title=fixture_title).exists():
                 continue
             origin = [SecureLink.Origin.PANEL, SecureLink.Origin.MCP, SecureLink.Origin.PUBLIC][index % 3]
-            context = {} if origin == SecureLink.Origin.PUBLIC else contexts[(index // 3) % len(contexts)]
+            location = {} if origin == SecureLink.Origin.PUBLIC else contexts[(index // 3) % len(contexts)]
             link, _url = services.create_link(
                 secret_type=secret_type, title=fixture_title, fields=fields, origin=origin,
                 validity_days=7, creator_name='Cliente demo' if origin == SecureLink.Origin.PUBLIC else '',
-                **context,
+                **location,
             )
             state = states[index % len(states)]
             if state == 'sent' and not link.team_only:
