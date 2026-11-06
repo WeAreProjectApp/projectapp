@@ -23,7 +23,7 @@ function mountSummary(props) {
 
 describe('HostingDecisionSummary', () => {
   // Falla si la revisión de identidad vuelve a mostrar la estructura técnica en vez de sus referencias reconocibles.
-  it('renders the proposed identity with readable subscription and record labels', () => {
+  it('renders a readable identity decision', () => {
     const wrapper = mountSummary({
       type: 'identity',
       decision: {

@@ -259,7 +259,7 @@ describe('HostingBillingPicker', () => {
   })
 
   // Falla si un caso contradictorio permite crear un hosting o esconde el camino de conciliación.
-  it('shows blockers and sends conflicting records to reconciliation', async () => {
+  it('routes conflicting records to reconciliation', async () => {
     const wrapper = mountPicker({
       data: pickerData({
         selection: {
