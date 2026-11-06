@@ -122,7 +122,6 @@ export default defineNuxtConfig({
     prerender: {
       fallback: true,
       crawlLinks: true,
-      failOnError: false,
       routes: [
         '/',
         '/en-us',
