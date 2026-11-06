@@ -41,6 +41,10 @@ def fake_data_transaction():
     removed before returning; normal application writes keep their behavior.
     New files are collected after save, including PDFs written by real services.
     """
+    from content.fake_data import ensure_fake_data_allowed
+    # Guard before even opening a transaction: a refused command must not
+    # connect to the database selected by production settings.
+    ensure_fake_data_allowed('fake-data transaction')
     if project_cleanup_active():
         with transaction.atomic():
             yield

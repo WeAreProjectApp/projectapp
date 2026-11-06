@@ -4,6 +4,7 @@ from io import StringIO
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 from django.db.models import F, Q
 from freezegun import freeze_time
 
@@ -21,15 +22,19 @@ def run(name, *args):
     call_command(name, *args, *SEED_ARGS, stdout=StringIO(), verbosity=0)
 
 
+def refuse_database_connection():
+    raise AssertionError('A refused fake-data command must not open a database connection.')
+
+
 @pytest.mark.parametrize('command', [
     'create_fake_monitoring', 'create_fake_secure_links', 'create_fake_platform_cases',
 ])
-def test_module_command_rejects_production_even_with_capability(settings, command):
+def test_module_command_rejects_production_even_with_capability(settings, monkeypatch, command):
     settings.FAKE_DATA_ALLOWED = True
     settings.IS_PRODUCTION = True
+    monkeypatch.setattr(connection, 'ensure_connection', refuse_database_connection)
     with pytest.raises(CommandError, match='disabled'):
         run(command)
-    assert (Case.objects.count(), SecureLink.objects.count(), Project.objects.count()) == (0, 0, 0)
 
 
 def test_monitoring_replays_business_values():

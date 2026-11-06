@@ -2,10 +2,10 @@
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
 
 from accounts.models import Project
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
+from content.fake_data_files import fake_data_transaction
 from monitoring.models import Case, CaseActivity, Report, Resource, Source
 
 
@@ -15,7 +15,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         add_seed_arguments(parser, count_default=30)
 
-    @transaction.atomic
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('create_fake_monitoring')
         if options['count'] < 1:

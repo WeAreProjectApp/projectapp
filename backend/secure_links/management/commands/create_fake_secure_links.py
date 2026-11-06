@@ -1,8 +1,8 @@
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
+from content.fake_data_files import fake_data_transaction
 from secure_links.fake_data import PANEL_PREFIX, stamp_link
 
 from secure_links import services
@@ -31,7 +31,7 @@ class Command(BaseCommand):
         add_seed_arguments(parser)
         parser.add_argument('--skip-platform', action='store_true')
 
-    @transaction.atomic
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('create_fake_secure_links')
         context = seed_context(options, 'secure-links')
