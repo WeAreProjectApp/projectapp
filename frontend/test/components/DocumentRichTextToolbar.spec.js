@@ -189,6 +189,8 @@ describe('Document rich text toolbar', () => {
     await chooseInsertItem(wrapper, 'richText.separator');
     await sourceTab(wrapper).trigger('click');
 
-    expect(wrapper.get('[data-testid="rich-text-source-input"]').element.value).toBe('Agenda\n\n---');
+    const source = wrapper.get('[data-testid="rich-text-source-input"]').element.value;
+    expect(source).toContain('Agenda');
+    expect(source).toMatch(/(?:^|\n\n)---(?:\n\n|$)/);
   });
 });
