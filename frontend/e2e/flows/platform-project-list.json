@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Admin sees all projects with catalog-derived state filters (Todos plus the states present, including Suspendido) and a create button. Client sees only their assigned projects. Card grid with progress bars and estimated dates.",
+  "description": "Admin sees all projects with catalog-derived state filters and a create button. Client sees only assigned projects. Below 1024px cards retain complete names; larger screens keep project columns and detail access visible even with 175-character names, with or without spaces.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

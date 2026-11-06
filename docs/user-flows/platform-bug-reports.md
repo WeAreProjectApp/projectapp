@@ -11,6 +11,7 @@ la pestaña Bugs y el ticket mediante la interfaz.
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |
+| display | Elegir una entrega y cerrar el selector, incluso entre opciones de la misma etapa. | Nombre completo del requerimiento visible debajo del selector, seguido del contrato y la etapa. Cambiar o limpiar la selección actualiza el resumen. |
 | success | Reportar con título, sin guía seleccionada. | Bug general reportado; no se exige contrato ni etapa. |
 | success | Reportar desde una entrega publicada. | La guía autocompleta los datos vacíos; queda congelada la publicación seleccionada. |
 | success | El equipo responde y marca «Resuelto por equipo». | Respuesta y documentos opcionales quedan en la historia; no cambia ninguna aprobación. |

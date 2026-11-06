@@ -9096,6 +9096,7 @@ la pestaña Bugs y el ticket mediante la interfaz.
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |
+| display | Elegir una entrega y cerrar el selector, incluso entre opciones de la misma etapa. | Nombre completo del requerimiento visible debajo del selector, seguido del contrato y la etapa. Cambiar o limpiar la selección actualiza el resumen. |
 | success | Reportar con título, sin guía seleccionada. | Bug general reportado; no se exige contrato ni etapa. |
 | success | Reportar desde una entrega publicada. | La guía autocompleta los datos vacíos; queda congelada la publicación seleccionada. |
 | success | El equipo responde y marca «Resuelto por equipo». | Respuesta y documentos opcionales quedan en la historia; no cambia ninguna aprobación. |
@@ -9368,6 +9369,23 @@ consulta de la conversación pública que originó el prompt.
 - **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
 - **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
 - **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
+### Platform: consultar los proyectos asignados
+
+Entrada autenticada: `/es-co/platform/projects`. El cliente ve sus proyectos;
+el administrador conserva las columnas de cliente y solicitudes.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| display | Consultar nombres de 175 caracteres, con y sin espacios, junto a otro corto. | Nombre completo en varias líneas; progreso, bugs, importe, actividad y acceso al detalle alcanzables. A 1440 × 900 todas las columnas caben desde la posición inicial. |
+| success | Abrir un proyecto desde su tarjeta o fila. | El detalle corresponde al proyecto seleccionado. |
+| display | Consultar el listado sin registros. | Se muestra el estado vacío correspondiente al rol. |
+
+PA-229 se prueba en los cinco perfiles canónicos del proyecto. Las tarjetas de
+412 × 915 y 835 × 1195 conservan los mismos datos; las tablas de 1195 × 835,
+1440 × 900 y 2560 × 1440 no crecen por el nombre. Las pruebas automatizadas se
+ejecutan exclusivamente en CI; la reprueba en Chrome corresponde al turno de
+dev-qa sobre un SHA declarado.
 
 ### FLOW: `platform-secure-link-create`
 
