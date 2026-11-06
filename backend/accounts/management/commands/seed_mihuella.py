@@ -134,7 +134,6 @@ class Command(BaseCommand):
         )
         add_seed_arguments(parser)
 
-    @transaction.atomic
     @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('seed_mihuella')

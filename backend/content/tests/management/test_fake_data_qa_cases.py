@@ -149,3 +149,9 @@ def test_seed_phase_never_reuses_another_clients_proposal():
     phase = ensure_phase(project)
 
     assert phase.business_proposal.client_id == profile.pk
+
+
+def test_platform_cases_honor_accounting_skip():
+    run('seed_platform_data', '--skip-collection-accounts')
+    run('create_fake_platform_cases', '--skip-accounting')
+    assert not IncomeRecord.objects.exists()

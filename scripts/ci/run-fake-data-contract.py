@@ -23,7 +23,7 @@ def main():
     if not 1 <= args.shard <= args.shards:
         parser.error('Invalid shard.')
     collected = subprocess.run(
-        [sys.executable, '-m', 'pytest', '--collect-only', '-q', '--no-cov', *FILES],
+        [sys.executable, '-m', 'pytest', '-o', 'addopts=', '--collect-only', '-q', '--no-cov', *FILES],
         capture_output=True, text=True,
     )
     if collected.returncode:
