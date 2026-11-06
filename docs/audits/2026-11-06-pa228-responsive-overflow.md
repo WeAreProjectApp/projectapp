@@ -55,9 +55,19 @@ ajustes de distribución. Sin nuevo camino de datos, no corresponde perf-pass.
 
 ## CI y entrega
 
-Pendiente el primer SHA publicado y sus corridas. Registrar aquí o en el PR cada
-SHA probado, enlaces y resultados, incluidos fallos y repruebas. Contrato verde
-o job omitido no sustituye la ejecución de los cuatro lotes propios.
+PR [#566](https://github.com/WeAreProjectApp/projectapp/pull/566). Las corridas y
+sus SHA se registran en el [comentario de validación](https://github.com/WeAreProjectApp/projectapp/pull/566#issuecomment-6692099659).
+Contrato verde o job omitido no sustituye la ejecución de los cuatro lotes propios.
+
+El Quality Gate del SHA `8cd97f7ec74bbb0742da65817d748bef4d989928`
+[falló](https://github.com/WeAreProjectApp/projectapp/actions/runs/42269944845)
+por un único error: `no_user_interaction` en la prueba de redimensionado del
+Dashboard. El detector no clasifica `setViewportSize` como interacción. Se
+documenta la excepción dentro del caso, conforme a las excepciones del estándar:
+la acción reproducida es cambiar el tamaño de una ventana con el gráfico montado,
+sin hacer clic ni recargar. Se conservan las aserciones de ancho, chips y meses.
+No se modifica código de aplicación por este fallo del gate. Reprueba en CI
+pendiente de la siguiente corrida; no acredita todavía ejecución E2E ni Chrome.
 
 ## Guion y cierre visible
 

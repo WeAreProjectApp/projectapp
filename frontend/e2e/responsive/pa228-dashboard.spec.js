@@ -29,6 +29,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       tag: ['@flow:admin-dashboard', '@outcome:display'],
     }, async ({ page }) => {
       // quality: allow-deep-link (the ticket requires comparing a direct load with resizing the same mounted dashboard)
+      // quality: allow-no-interaction (PA-228 reproduces a viewport resize of a populated live chart without a reload; clicking a control would change the reported sequence)
       await openPa228(page, '/panel');
       await expect(page.getByTestId('dashboard-status-pills')).toContainText('4');
       await expectTrendFits(page);
