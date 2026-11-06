@@ -8,7 +8,10 @@ export function documentEditorialPreview(html, prefix, labels) {
     element.classList.add(({ pre: 'md-code-block', a: 'md-link' })[tag] || `md-${tag}`);
   });
   for (const quote of host.querySelectorAll('blockquote[data-callout]')) {
-    const kind = quote.dataset.callout || 'NOTE';
+    const kind = quote.dataset.callout;
+    // Historical reads are permissive. Unknown attributes remain ordinary
+    // quotes instead of throwing when a value is not a valid CSS token.
+    if (!['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].includes(kind)) continue;
     const label = document.createElement('span');
     label.className = 'callout-label';
     label.textContent = labels[kind] || kind;

@@ -9,6 +9,14 @@ function preview(html, labels = {}) {
 }
 
 describe('documentEditorialPreview', () => {
+  // Catches malformed legacy callout attributes crashing the document preview.
+  it('keeps an unknown callout as an ordinary quote', () => {
+    const host = preview('<blockquote data-callout="NOTE unknown"><p>Texto conservado</p></blockquote>');
+
+    expect(host.querySelector('blockquote').textContent).toBe('Texto conservado');
+    expect(host.querySelector('.callout-label')).toBeNull();
+  });
+
   // Catches duplicate heading labels making every table-of-contents entry jump to one destination.
   it('creates distinct table-of-contents anchors for duplicate headings', () => {
     // quality: allow-fragile-selector (Heading IDs and links are the preview utility's public HTML contract.)
