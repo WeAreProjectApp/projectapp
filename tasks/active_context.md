@@ -1,3 +1,12 @@
+## 2026-11-06 — PA-228, desbordes responsive del Panel
+
+Implementación en rama `fix/06112026-pa228-responsive-overflow`: ocho casos de
+Dashboard, Recurrentes, Blog, Propuestas e Ingresos. Calendario horizontal móvil
+elegido por el operador; importes completos mediante ajuste optativo de las
+tarjetas. Sin cambios de datos o cálculos. Automatizadas sólo en CI y recorrido
+Chrome coordinado por DevQA; esta nota no acredita validación ni despliegue.
+Alcance y guion: `docs/audits/2026-11-06-pa228-responsive-overflow.md`.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

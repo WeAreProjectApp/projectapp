@@ -7,6 +7,8 @@ import BaseTooltip from '~/components/base/BaseTooltip.vue'
 const props = defineProps({
   label: { type: String, required: true },
   value: { type: [String, Number], default: '' },
+  /** Opt in when the complete amount must remain readable in a narrow card. */
+  valueWrap: { type: Boolean, default: false },
   support: { type: String, default: '' },
   layout: {
     type: String,
@@ -66,7 +68,10 @@ const resolvedHelpLabel = computed(() => props.helpLabel || `Ayuda sobre ${props
       :class="[
         isCompactHorizontal
           ? 'grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3'
-          : 'grid h-full min-h-[8.25rem] w-full grid-rows-[2.25rem_2.25rem_1.25rem] gap-1 rounded-xl p-4 pr-12 sm:min-h-[9.5rem] sm:p-5 sm:pr-14',
+          : 'grid h-full min-h-[8.25rem] w-full gap-1 rounded-xl p-4 pr-12 sm:min-h-[9.5rem] sm:p-5 sm:pr-14',
+        !isCompactHorizontal && (valueWrap
+          ? 'grid-rows-[2.25rem_minmax(2.25rem,auto)_1.25rem]'
+          : 'grid-rows-[2.25rem_2.25rem_1.25rem]'),
         isCompactHorizontal && $slots.help ? 'rounded-l-xl' : 'rounded-xl',
         isActionable && isCompactHorizontal
           ? 'cursor-pointer transition duration-base motion-reduce:transition-none hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
@@ -121,8 +126,8 @@ const resolvedHelpLabel = computed(() => props.helpLabel || `Ayuda sobre ${props
           {{ label }}
         </p>
         <p
-          class="min-w-0 self-center truncate text-2xl font-semibold tabular-nums"
-          :class="toneClass"
+          class="min-w-0 self-center text-2xl font-semibold tabular-nums"
+          :class="[toneClass, valueWrap ? 'whitespace-normal [overflow-wrap:anywhere]' : 'truncate']"
           data-testid="accounting-stat-value"
         >
           {{ value }}
