@@ -35,6 +35,7 @@ export const ADMIN_ACCOUNTING_HOSTING_BILLING = ['@flow:admin-accounting-hosting
 export const ADMIN_ACCOUNTING_HOSTING_CLIENT = ['@flow:admin-accounting-hosting-client', '@module:admin', '@priority:P1'];
 export const ADMIN_ACCOUNTING_HOSTING_CYCLES = ['@flow:admin-accounting-hosting-cycles', '@module:admin', '@priority:P2'];
 export const ADMIN_ACCOUNTING_HOSTING_INLINE_EDIT = ['@flow:admin-accounting-hosting-inline-edit', '@module:admin', '@priority:P3'];
+export const ADMIN_ACCOUNTING_HOSTING_LINK = ['@flow:admin-accounting-hosting-link', '@module:admin', '@priority:P1'];
 export const ADMIN_ACCOUNTING_HOSTINGS = ['@flow:admin-accounting-hostings', '@module:admin', '@priority:P2'];
 export const ADMIN_ACCOUNTING_INCOME_BULK_SETTLE = ['@flow:admin-accounting-income-bulk-settle', '@module:admin', '@priority:P1'];
 export const ADMIN_ACCOUNTING_INCOME_CLIENT = ['@flow:admin-accounting-income-client', '@module:admin', '@priority:P1'];

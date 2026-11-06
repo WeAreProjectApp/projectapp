@@ -615,8 +615,10 @@
     <!-- Generar cuenta de cobro desde el ingreso (preseleccionado) -->
     <CollectionAccountFormModal
       :open="collectionModalOpen"
+      :resume-draft="billingReturn.resumeDraft.value"
+      @reconcile="billingReturn.reconcile"
       :income="collectionIncome"
-      @close="collectionModalOpen = false"
+      @close="collectionModalOpen = false; billingReturn.clear()"
       @created="onCollectionCreated"
     />
 
@@ -637,6 +639,7 @@
 </template>
 
 <script setup>
+import { useBillingDraftReturn } from '~/composables/useBillingDraftReturn';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import IncomeActionsModal from '~/components/accounting/IncomeActionsModal.vue';
 import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
@@ -1603,8 +1606,10 @@ async function handleBulkSettleSubmit(payload) {
 
 const collectionModalOpen = ref(false);
 const collectionIncome = ref(null);
+const billingReturn = useBillingDraftReturn({ kind: 'income-account', open: collectionModalOpen, record: collectionIncome });
 
 function openCollectionModal(row) {
+  billingReturn.clear();
   collectionIncome.value = row;
   collectionModalOpen.value = true;
 }
@@ -1617,6 +1622,7 @@ async function openTotalsModal() {
 }
 
 function onCollectionCreated() {
+  billingReturn.clear();
   collectionModalOpen.value = false;
   collectionIncome.value = null;
   // Reload so the row swaps to the "Ver cuenta de cobro" action.

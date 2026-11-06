@@ -5957,6 +5957,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-hosting-client` | admin | P1 | display,success,failure | 4 |
 | `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
+| `admin-accounting-hosting-link` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 18 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
@@ -8220,6 +8221,16 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 
 Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, motivo y versión. Retira el ícono del listado/detalle, filtro y radar sin borrar autor/fecha originales, ni modificar PDF, importes o pagos. Los conflictos conservan la marca. La protección de respuestas tardías del enlace se compone con la sesión de búsqueda de contratos.
 
+### FLOW: `admin-accounting-hosting-link`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+- **Descripción:** Desde Ingresos o Cuentas de cobro, elegir y confirmar hosting reconocible por dominio y periodicidad, vincular un registro elegible o crear uno del mismo cliente y proyecto sin perder el formulario. Si faltan decisiones, explicar las referencias pendientes y volver de conciliación recuperando el borrador.
+- **Resultados:** display, success, error, failure.
+- **Permisos:** superusuario con sesión y CSRF. La lectura de opciones no escribe asociaciones ni concede acceso adicional.
+- **Invariantes:** el vínculo es explícito, conserva pagos, cobros, ciclos y PDF históricos; la obligación de suscripción sigue seleccionándose explícitamente. Los cambios concurrentes exigen volver a revisar.
+- **Validación:** automatizadas exclusivamente en CI, con URL y SHA; Chrome y cotejo técnico en el turno acordado con DevQA.
+
 ### FLOW: `admin-accounting-income-reminder-mute`
 
 - **Module:** admin
@@ -8237,7 +8248,7 @@ Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, mot
 
 - **Módulo:** admin
 - **Prioridad:** P1
-- **Descripción:** Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con preview, motivo y versión. No registra dinero ni elige por texto o importe.
+- **Descripción:** Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con resumen legible, motivo y versión. Explica las referencias pendientes y ofrece volver a la cuenta recuperando el formulario; separa asociación, conciliación histórica y trazabilidad. No registra dinero ni elige por texto o importe.
 - **Resultados:** display, success, error, failure.
 - **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.

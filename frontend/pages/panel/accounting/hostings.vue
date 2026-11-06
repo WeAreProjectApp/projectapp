@@ -397,6 +397,9 @@
     />
 
     <HostingAccountEmissionModal
+      :resume-draft="billingReturn.resumeDraft.value"
+      @reconcile="billingReturn.reconcile"
+      @cancel="billingReturn.clear()"
       v-model="billingConfirmOpen"
       :record="billingRow"
       :message="billingConfirmMessage"
@@ -407,6 +410,7 @@
 </template>
 
 <script setup>
+import { useBillingDraftReturn } from '~/composables/useBillingDraftReturn';
 import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
@@ -953,6 +957,7 @@ async function onCyclesChanged() {
 
 const billingConfirmOpen = ref(false);
 const billingRow = ref(null);
+const billingReturn = useBillingDraftReturn({ kind: 'hosting-emission', open: billingConfirmOpen, record: billingRow });
 const billingId = ref(null);
 
 const billingConfirmMessage = computed(() => {
@@ -966,11 +971,13 @@ const billingConfirmMessage = computed(() => {
 });
 
 function askSendBilling(row) {
+  billingReturn.clear();
   billingRow.value = row;
   billingConfirmOpen.value = true;
 }
 
 async function sendBilling(context = {}) {
+  billingReturn.clear();
   const row = billingRow.value;
   billingRow.value = null;
   if (!row) return;
