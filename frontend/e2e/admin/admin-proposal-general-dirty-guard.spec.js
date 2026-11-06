@@ -74,6 +74,7 @@ for (const fixture of [
     test('opens saved general data without protecting a clean exit', {
       tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin', '@outcome:display'],
     }, async ({ page }) => {
+      // quality: allow-deep-link (PA-226 requires a clean direct opening of the editor).
       const proposal = createProposal(fixture);
       const updates = await openGeneral(page, proposal);
 
