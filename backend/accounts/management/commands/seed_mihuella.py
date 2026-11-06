@@ -1111,7 +1111,8 @@ class Command(BaseCommand):
         ]
 
         for d_data in deliverables:
-            placeholder = ContentFile(b'placeholder content', name=d_data['filename'])
+            from content.fake_data_files import sample_file
+            placeholder = sample_file(d_data['filename'])
             epic_key = d_data.get('epic_key', '')
             d = Deliverable.objects.create(
                 project=project,
@@ -1126,7 +1127,7 @@ class Command(BaseCommand):
             )
             DeliverableVersion.objects.create(
                 deliverable=d,
-                file=placeholder,
+                file=sample_file(d_data['filename']),
                 version_number=1,
                 uploaded_by=admin,
             )

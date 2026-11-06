@@ -12,6 +12,7 @@ from content.fake_data import (
     ensure_fake_data_allowed,
     seed_context,
 )
+from content.fake_data_files import fake_data_transaction
 
 
 # Catalog/config rows are intentionally excluded: they may exist before the
@@ -38,6 +39,9 @@ BUSINESS_ROOT_MODELS = (
     'content.QRCard',
     'content.Task',
     'content.WebAppDiagnostic',
+    'monitoring.Case',
+    'monitoring.Report',
+    'secure_links.SecureLink',
 )
 
 
@@ -70,6 +74,8 @@ class Command(BaseCommand):
         parser.add_argument('--skip-communications', action='store_true')
         parser.add_argument('--skip-accounting', action='store_true')
         parser.add_argument('--skip-auxiliary', action='store_true')
+        parser.add_argument('--skip-monitoring', action='store_true')
+        parser.add_argument('--skip-secure-links', action='store_true')
 
     def handle(self, *args, **options):
         ensure_fake_data_allowed('create_fake_data')
@@ -89,7 +95,7 @@ class Command(BaseCommand):
         )
         self._completed = []
 
-        with transaction.atomic():
+        with fake_data_transaction():
             if options['replace']:
                 self._run('development reset', 'delete_fake_data', '--confirm')
             else:
@@ -173,11 +179,21 @@ class Command(BaseCommand):
                 from accounts.management.commands._billing_seed_helpers import seed_fake_hosting_billing
                 seed_fake_hosting_billing(context=context)
                 self._completed.append('project billing contexts')
+            if not options['skip_monitoring']:
+                self._run_seeded('monitoring', 'create_fake_monitoring', '--count', str(count))
+            if not options['skip_secure_links']:
+                self._run_seeded('secure links', 'create_fake_secure_links')
+            if not options['skip_platform']:
+                self._run_seeded('platform QA cases', 'create_fake_platform_cases')
 
         command = (
             f'python manage.py create_fake_data --replace --count {count} '
             f'--seed {options.get("seed", DEFAULT_SEED)} '
             f'--anchor-date {context.anchor_date.isoformat()}'
+        )
+        command += ''.join(
+            f' --{name.replace("_", "-")}'
+            for name, enabled in options.items() if name.startswith('skip_') and enabled
         )
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS(

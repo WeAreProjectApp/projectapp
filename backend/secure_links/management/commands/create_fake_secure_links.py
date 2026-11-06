@@ -3,6 +3,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
+from django.db import transaction
+from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
+from secure_links.fake_data import PANEL_PREFIX, stamp_link
 
 from secure_links import services
 from secure_links.models import SecureLink
@@ -26,18 +29,25 @@ SAMPLES = [
 class Command(BaseCommand):
     help = 'Crear enlaces seguros de ejemplo exclusivamente en desarrollo.'
 
+    def add_arguments(self, parser):
+        add_seed_arguments(parser)
+
+    @transaction.atomic
     def handle(self, *args, **options):
-        if not getattr(settings, 'FAKE_DATA_ALLOWED', False) or getattr(settings, 'IS_PRODUCTION', False):
-            raise CommandError('Los datos ficticios no están permitidos en este entorno.')
-        now = timezone.now()
+        ensure_fake_data_allowed('create_fake_secure_links')
+        context = seed_context(options, 'secure-links')
+        now = context.anchor_now
         states = ['ready', 'sent', 'opened', 'expired', 'revoked']
-        create_platform_samples()
+        create_platform_samples(context)
         contexts, archive = create_folder_samples()
         for index, (secret_type, title, fields) in enumerate(SAMPLES * 3):
+            fixture_title = f'{PANEL_PREFIX}{index + 1:02d} — {title}'
+            if SecureLink.objects.filter(title=fixture_title).exists():
+                continue
             origin = [SecureLink.Origin.PANEL, SecureLink.Origin.MCP, SecureLink.Origin.PUBLIC][index % 3]
             context = {} if origin == SecureLink.Origin.PUBLIC else contexts[(index // 3) % len(contexts)]
             link, _url = services.create_link(
-                secret_type=secret_type, title=f'{title} #{index + 1}', fields=fields, origin=origin,
+                secret_type=secret_type, title=fixture_title, fields=fields, origin=origin,
                 validity_days=7, creator_name='Cliente demo' if origin == SecureLink.Origin.PUBLIC else '',
                 **context,
             )
@@ -51,5 +61,10 @@ class Command(BaseCommand):
             elif state == 'revoked':
                 link.revoked_at = now - timedelta(hours=index)
             link.save()
+            stamp_link(link, context, state)
         archive_folder(archive)
+        from secure_links.models import SecureLinkFolder
+        SecureLinkFolder.objects.filter(name__startswith='[Demo]').update(created_at=now, updated_at=now)
+        SecureLinkFolder.objects.filter(name__startswith='[Demo]', is_archived=True).update(archived_at=now)
+        SecureLink.objects.filter(title__startswith=PANEL_PREFIX, is_archived=True).update(archived_at=now)
         self.stdout.write('Enlaces seguros de ejemplo disponibles.')

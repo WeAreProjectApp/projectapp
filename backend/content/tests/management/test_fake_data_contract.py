@@ -195,7 +195,7 @@ def complete_dataset_snapshot():
 def test_model_contract_classifies_every_concrete_business_model():
     actual = {
         model._meta.label
-        for app_name in ('accounts', 'content')
+        for app_name in ('accounts', 'content', 'monitoring', 'secure_links')
         for model in apps.get_app_config(app_name).get_models()
         if not model._meta.proxy
     }
@@ -930,12 +930,13 @@ def test_orchestrator_keeps_cross_module_relationships_coherent():
         'collection_account_missing_origin': tuple(
             DocumentCollectionAccount.objects.filter(
                 document__income_record__isnull=True,
+                document__hosting_record__isnull=True,
             ).values_list('document__title', flat=True)
         ),
         'collection_account_total_mismatch': tuple(
             DocumentCollectionAccount.objects.exclude(
                 document__total=F('document__income_record__total_amount'),
-            ).values_list('document__title', flat=True)
+            ).filter(document__income_record__isnull=False).values_list('document__title', flat=True)
         ),
         'thread_project_owner_mismatch': tuple(
             CommunicationThread.objects.filter(
