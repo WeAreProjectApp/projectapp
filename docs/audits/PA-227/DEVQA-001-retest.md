@@ -10,6 +10,27 @@ El recorrido real de qa2 en Chrome rechazó el SHA `2b0de3a93e36cd71a52114104a57
 | Persistencia de personalización | Administrador17, proyecto31, claro, 1440×900: Quitar oculta la portada; tras recargar reaparece el archivo personalizado del perfil. | La retirada envía ambas portadas vacías, con `custom_cover_image: null`; la API guarda la retirada explícita. Elegir una imagen de galería también sustituye el archivo personalizado. Un guardado fallido mantiene la portada visible. | Subir una imagen ficticia, quitarla, cerrar y recargar. Repetir en oscuro. DevQA coteja perfil y GET de recarga; no basta con ocultar la vista. Comprobar también sustitución por galería y conservar el color independiente. |
 | Contraste | Superadministrador15, Gestor Documental, documento56, Vista previa Profesional, claro, 1440×900: «enlace al Gestor Documental» da 3,77:1. En oscuro da 10,29:1. | El enlace claro usa `#047857` y al pasar el puntero `#065f46`; Profesional hereda los mismos colores. El modo oscuro conserva sus colores propios. | Documento56, Amigable y Profesional, claro/oscuro; medir el enlace normal y al pasar el puntero contra su fondo real. Referencia ≥4,5:1. |
 
+## Ampliación autorizada · RESP-R068
+
+El antecedente de QA responsive en main `b01448a2d01a50dfb712f18c14cbc348b875621a`,
+STAFF64, muestra que el botón de tema de `/es-co/panel/styleguide` cambia la
+etiqueta y conserva claros el fondo, el encabezado y Tokens. La lectura del
+candidato confirma que ese botón usaba la preferencia de diagnósticos, sin
+hidratarla ni aplicar su estado a la vista. No es un nuevo dictamen Chrome
+del candidato.
+
+La guía pasa a compartir `useDarkMode` con el Panel: cualquiera de los dos
+controles actualiza las superficies, los textos y la etiqueta del otro;
+la elección se conserva al recargar. Las vistas de diagnóstico conservan su
+preferencia independiente.
+
+Reprueba prevista con **STAFF16**, sin elevarlo a superusuario, a 412×915 y
+1440×900 CSS. Desde claro, usar el botón de la guía para ir a oscuro y recargar;
+volver a claro y recargar. Cotejar fondo, título, textos, componentes, Tokens y
+la acción disponible. Repetir desde el control general del Panel; comprobar
+Tab, foco visible y Enter/Espacio. DevQA confirmará acceso, rol efectivo y SHA
+servido antes del caso. El dictamen llevará una fila propia de RESP-R068.
+
 ## Regresiones para CI
 
 - `backend/accounts/tests/test_profile_cover.py`: retirada persistente después de un nuevo GET, sustitución por galería y conservación de portada ante cambios ajenos; administrador y cliente con base de test aislada.
@@ -17,20 +38,22 @@ El recorrido real de qa2 en Chrome rechazó el SHA `2b0de3a93e36cd71a52114104a57
 - `frontend/test/composables/usePlatformCustomTheme.test.js`: retirada de las dos fuentes de portada y conservación de la imagen cuando la actualización falla o devuelve rechazo.
 - `frontend/e2e/platform/platform-dark-mode.spec.js`: cambiar tema usando el control visible y recargar, ambos roles y sentidos en los cinco tamaños; retirar una portada guardada y recargar sin que reaparezca. Se conserva la matriz de contraste anterior.
 - `frontend/e2e/admin/admin-document-edit.spec.js`: abrir Vista previa y elegir Amigable/Profesional, con enlace normal y hover medidos en claro y oscuro; captura por variante.
+- `frontend/e2e/visual/styleguide.spec.js`: cuatro casos de selección de tema con STAFF sin superusuario, ambos sentidos y dos tamaños. Se usa teclado, se comparan colores renderizados, se recarga y se coteja el control general; captura por variante.
 
 Los nuevos tests no se ejecutan en local. El SHA exacto, las corridas y su resultado se comunicarán en la ficha de reprueba de DevQA y en el PR cuando existan. El verde anterior acredita únicamente el corte rechazado.
 
 ## Mapa y flujos revisados
 
-`/panel/views`: se amplían las notas de Perfil y el resumen de su capacidad para incluir elección de tema y retirada de portada. No cambian rutas, tipos, nodos ni conteos. El control es transversal a las páginas autenticadas de Plataforma; no se añade una URL ficticia al catálogo.
+`/panel/views`: se amplían las notas de Perfil y el resumen de su capacidad para incluir elección de tema y retirada de portada. La guía de diseño también documenta el tema compartido con el Panel. No cambian rutas, tipos, nodos ni conteos. El control de Plataforma es transversal a sus páginas autenticadas; no se añade una URL ficticia al catálogo.
 
 | Interacción | Éxito | Error de entrada | Fallo operativo | Visualización |
 |---|---|---|---|---|
 | Elegir claro/oscuro | Elección persistente tras recarga; E2E por rol/ancho. | No aplica: dos opciones válidas, sin entrada libre. | No aplica: preferencia local, sin petición de servidor. | Texto de la acción y superficies del tema; matriz existente. |
 | Quitar portada | Retirada persistente; API real y E2E de recarga. | No aplica: acción sin entrada editable. | El rechazo conserva la imagen; cubierto en el composable. Falta cobertura E2E del aviso de error, que este flujo actualmente no presenta. | Desaparecen portada y acción Quitar; se mantiene el color. |
 | Enlace en Vista previa | No cambia el destino del enlace. | No aplica: la fuente pasa por el renderer/sanitizador existente. | No cambia el tratamiento de carga del documento. | E2E de ambas plantillas/temas y estado hover. |
+| Tema de la guía de diseño | Elección compartida con el Panel y persistida tras recarga; cuatro regresiones E2E. | No aplica: dos opciones válidas. | Preferencia local, sin petición de mutación; no hay un resultado de fallo visible del almacenamiento que se pueda declarar cubierto. | Cambian superficies, título y tokens; contraste y etiqueta comprobados tras la acción. |
 
-Se extienden los flujos existentes `platform-sidebar-navigation` y `admin-document-edit`; no se inventa un flujo nuevo para elevar cobertura. Los resultados del gate, catálogo y contrato responsive se verifican en CI.
+Se extienden los flujos existentes `platform-sidebar-navigation`, `admin-document-edit` y `admin-styleguide`; este último declara también el resultado de éxito de elegir tema. Los resultados del gate, catálogo y contrato responsive se verifican en CI.
 
 ## Coordinación y límites
 
@@ -41,6 +64,6 @@ del renderer para medir esos títulos con la misma referencia de 4,5:1. Es
 una observación de código; no se presenta como una medición nueva en Chrome.
 La reprueba de R3 debe medir también esos encabezados en ambas apariencias.
 
-Sólo DevQA opera el entorno. No iniciar otro servidor, cambiar el corte servido, escribir datos de su turno o aplicar parches durante el recorrido. DEVQA-001 está cerrado; la reprueba requiere nuevo SHA, CI verde, ficha y nueva concesión de la dupla qa2/dev-qa2 sin interrumpir DEVQA-002.
+Sólo DevQA opera el entorno. No iniciar otro servidor, cambiar el corte servido, escribir datos de su turno o aplicar parches durante el recorrido. DEVQA-001 y DEVQA-002 están cerrados con evidencia preservada; la reprueba requiere nuevo SHA, CI verde, ficha y nueva concesión de la dupla qa2/dev-qa2.
 
-Los hallazgos de foco detrás de modales, validación en inglés y desbordamientos responsive conservan su seguimiento separado. No se incluyen en estos tres fixes ni se declara aprobado el barrido completo por los resultados anteriores. La aceptación de Chrome del nuevo corte sigue pendiente.
+Los hallazgos de foco detrás de modales, validación en inglés y desbordamientos responsive conservan su seguimiento separado. RESP-R068 se incorpora expresamente al guion junto a R1/R2/R3; los resultados anteriores no aprueban el barrido completo. La aceptación de Chrome del nuevo corte sigue pendiente.

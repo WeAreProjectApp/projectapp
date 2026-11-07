@@ -278,7 +278,7 @@ const panelCapabilities = [
     'Mantiene coherencia entre quienes operan, las vistas disponibles y el sistema de diseño.',
     [
       feature('panel-product-reference', 'Consultar mapa y sistema de diseño',
-        'Expone la taxonomía de vistas y los componentes visuales compartidos.',
+        'Expone la taxonomía de vistas y los componentes visuales compartidos; la guía permite comprobarlos con el tema claro/oscuro del Panel.',
         'Facilita explicar el producto y mantener una interfaz consistente.',
         ['/panel/views', '/panel/styleguide'],
         { icon: 'sitemap', stage: 'Referencia' }),

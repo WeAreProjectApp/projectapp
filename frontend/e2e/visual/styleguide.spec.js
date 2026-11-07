@@ -4,6 +4,8 @@
  * Captures full-page screenshots of `/panel/styleguide` in both light and
  * dark mode so accidental token / base-component changes are caught as
  * pixel diffs.
+ * PA-227 / RESP-R068 also catches a guide toggle that changes its label without
+ * applying or persisting the rendered theme shared with the Panel control.
  *
  * Baseline snapshots live in
  *   `e2e/visual/styleguide.spec.js-snapshots/`
@@ -16,12 +18,9 @@
  *
  * Implementation notes:
  *  - The admin layout drives the `dark` class on `<html>` via the
- *    `useDarkMode` composable (storage key `projectapp-dark-mode`). That is
- *    the toggle that actually changes which token values resolve. The
- *    button rendered inside `pages/panel/styleguide.vue` itself is wired to
- *    a *separate* `useDiagnosticDarkMode` composable (storage key
- *    `diagnostic_theme`) used only for in-page demos, so we do not click
- *    that button for the snapshot.
+ *    `useDarkMode` composable (storage key `projectapp-dark-mode`). The
+ *    same preference is used by the guide button, so either control changes
+ *    the rendered tokens and the action label of the other control.
  *  - Auth: the admin-auth middleware calls `auth/check/`. We stub it via
  *    `mockApi` and seed `localStorage` with a fake JWT through
  *    `setAuthLocalStorage`, matching the pattern used by every other admin
@@ -32,6 +31,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { PANEL_VIEWPORTS } from '../../config/responsive.js';
+import { textContrast } from '../helpers/text-contrast.js';
 
 const STYLEGUIDE_URL = '/panel/styleguide';
 const HEADING = 'Design System — Styleguide';
@@ -52,9 +52,9 @@ const authCheck = {
  * itself is purely presentational — only the admin layout / `admin-auth`
  * middleware hit the API.
  */
-async function stubPanelApi(page) {
+async function stubPanelApi(page, authResponse = authCheck) {
   await mockApi(page, async ({ apiPath }) => {
-    if (apiPath === 'auth/check/') return authCheck;
+    if (apiPath === 'auth/check/') return authResponse;
     if (apiPath === 'proposals/') {
       return { status: 200, contentType: 'application/json', body: '[]' };
     }
@@ -74,22 +74,97 @@ async function stubPanelApi(page) {
 
 /**
  * Force a deterministic theme before the app boots, regardless of the
- * runner's `prefers-color-scheme`. We seed both:
- *   - `projectapp-dark-mode` — the layout-level toggle that adds/removes
- *     the `dark` class on `<html>` (`composables/useDarkMode.js`).
- *   - `diagnostic_theme`     — the page-level toggle used by the
- *     styleguide demo button (`composables/useDiagnosticDarkMode.js`).
+ * runner's `prefers-color-scheme`. Keep a stored choice on reload so a
+ * persistence regression cannot be hidden by the test setup.
  */
 async function seedTheme(page, theme /* 'light' | 'dark' */) {
   await page.addInitScript((value) => {
     const dark = value === 'dark';
     try {
-      localStorage.setItem('projectapp-dark-mode', JSON.stringify(dark));
-      localStorage.setItem('diagnostic_theme', dark ? 'dark' : 'light');
+      localStorage.setItem('projectapp-dark-mode', localStorage.getItem('projectapp-dark-mode') ?? JSON.stringify(dark));
     } catch (_e) {
       /* ignore */
     }
   }, theme);
+}
+
+async function guideAppearance(page) {
+  const guide = page.getByTestId('styleguide-page');
+  return {
+    surface: await guide.getByTestId('styleguide-token-bg-surface').evaluate((element) => getComputedStyle(element).backgroundColor),
+    heading: await guide.getByRole('heading', { name: HEADING, exact: true }).evaluate((element) => getComputedStyle(element).color),
+    muted: await guide.getByTestId('styleguide-token-text-text-muted').evaluate((element) => getComputedStyle(element).color),
+    input: await guide.getByTestId('styleguide-token-bg-input-bg').evaluate((element) => getComputedStyle(element).backgroundColor),
+  };
+}
+
+for (const profile of ['compact', 'desktop']) {
+  test.describe(`styleguide theme preference ${profile}`, () => {
+    test.use({ viewport: PANEL_VIEWPORTS[profile] });
+    test.setTimeout(60_000);
+
+    test.beforeEach(async ({ page }) => {
+      const staff = { id: 8402, username: 'styleguide-staff', role: 'admin', is_staff: true, is_superuser: false };
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: staff });
+      await stubPanelApi(page, { ...authCheck, body: JSON.stringify({ user: staff }) });
+    });
+
+    for (const [mode, action, nextAction, generalAction, activation] of [
+      ['light', 'Modo oscuro', 'Modo claro', 'Cambiar a modo claro', 'Enter'],
+      ['dark', 'Modo claro', 'Modo oscuro', 'Cambiar a modo oscuro', 'Space'],
+    ]) {
+      test(`persists the guide selection from ${mode} at ${profile}`, {
+        tag: ['@flow:admin-styleguide', '@module:admin', '@priority:P3', '@role:admin', '@outcome:success'],
+      }, async ({ page }, testInfo) => {
+        await seedTheme(page, mode);
+        await page.goto(STYLEGUIDE_URL, { waitUntil: 'domcontentloaded' });
+        const guide = page.getByTestId('styleguide-page');
+        await expect(guide.getByRole('heading', { name: HEADING, exact: true })).toHaveText(HEADING);
+        const initialAppearance = await guideAppearance(page);
+        const toggle = guide.getByRole('button', { name: action, exact: true });
+        await toggle.focus();
+        await page.keyboard.press('Shift+Tab');
+        await page.keyboard.press('Tab');
+        await expect(toggle).toBeFocused();
+
+        await toggle.press(activation);
+
+        await expect(guide.getByRole('button', { name: nextAction, exact: true })).toBeFocused();
+        await expect.poll(async () => (await guideAppearance(page)).surface).not.toBe(initialAppearance.surface);
+        await expect.poll(async () => (await guideAppearance(page)).heading).not.toBe(initialAppearance.heading);
+        await expect.poll(async () => (await guideAppearance(page)).muted).not.toBe(initialAppearance.muted);
+        await expect.poll(async () => (await guideAppearance(page)).input).not.toBe(initialAppearance.input);
+        const contrast = {
+          heading: await textContrast(guide.getByRole('heading', { name: HEADING, exact: true })),
+          muted: await textContrast(guide.getByTestId('styleguide-token-text-text-muted')),
+        };
+        expect(contrast.heading).toBeGreaterThanOrEqual(4.5);
+        expect(contrast.muted).toBeGreaterThanOrEqual(4.5);
+        const selectedAppearance = await guideAppearance(page);
+        await testInfo.attach('styleguide-theme-selection', {
+          body: await page.screenshot({ animations: 'disabled' }),
+          contentType: 'image/png',
+        });
+        await testInfo.attach('styleguide-theme-colors', {
+          body: JSON.stringify({ profile, mode, initialAppearance, selectedAppearance, contrast }, null, 2),
+          contentType: 'application/json',
+        });
+
+        await page.reload({ waitUntil: 'domcontentloaded' });
+
+        await expect(guide.getByRole('button', { name: nextAction, exact: true })).toHaveText(nextAction);
+        await expect.poll(() => guideAppearance(page)).toEqual(selectedAppearance);
+        await page.getByRole('button', { name: generalAction, exact: true }).filter({ visible: true }).click();
+        await expect(guide.getByRole('button', { name: action, exact: true })).toHaveText(action);
+        await expect.poll(() => guideAppearance(page)).toEqual(initialAppearance);
+
+        await page.reload({ waitUntil: 'domcontentloaded' });
+
+        await expect(guide.getByRole('button', { name: action, exact: true })).toHaveText(action);
+        await expect.poll(() => guideAppearance(page)).toEqual(initialAppearance);
+      });
+    }
+  });
 }
 
 test.describe('design system styleguide visual regression', () => {

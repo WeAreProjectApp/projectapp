@@ -6,9 +6,10 @@
     "admin"
   ],
   "priority": "P3",
-  "description": "Executable design-system contract: light/dark snapshots plus responsive behavior at 412, 835, 1195, 1440 and 2560 px.",
+  "description": "Executable design-system contract: persistent theme selection shared with Panel controls, light/dark snapshots and responsive behavior at 412, 835, 1195, 1440 and 2560 px.",
   "expectedSpecs": 1,
   "outcomes": [
+    "success",
     "display"
   ]
 }

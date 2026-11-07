@@ -533,6 +533,7 @@ export const viewCatalogSections = [
         reference: 'catálogo visual de tokens semánticos y componentes base (BaseInput, BaseButton, BaseModal, etc.) en light y dark',
         audience: 'admin',
         viewType: 'config',
+        notes: 'El selector de la guía y el control general aplican el mismo tema claro/oscuro; la elección se conserva al recargar.',
       },
       {
         label: 'Plantillas de email de propuestas',
