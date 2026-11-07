@@ -61,6 +61,13 @@ nuevas por frame ni temporizador permanente; sólo medición mientras la guía e
 
 La comprobación SVG usa geometría renderizada (`isPointInFill`), no sólo la clase
 que Driver asigna al destino. Las APIs son fixtures de frontera, sin DB desplegada.
+Antes de medir se esperan los frames del render y las animaciones finitas activas
+del contenido/navegación mediante `Animation.finished`. Se excluyen animaciones
+pausadas e infinitas y se dejan procesar los frames de refresco posteriores, sin
+esperas fijas. Así una coincidencia transitoria antes de terminar el layout no
+acredita el anclaje final. Esta precisión responde al cotejo técnico de DevQA
+SHA256daabd3e499c32fba8085f23b613e84f8a025a7a537a47377d7fb4110b383c224;
+no modifica el código de producto ni cambia la hipótesis temporal del fallo B.
 Las pruebas visuales parten de Documentos, entrada autenticada real según login
 y middleware, y llegan a Proyectos y Ayuda mediante clics. La excepción de setup
 del gate se limita a esa entrada; no elimina navegación ni aserciones. Nuevas

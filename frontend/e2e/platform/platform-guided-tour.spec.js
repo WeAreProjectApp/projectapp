@@ -162,7 +162,27 @@ async function openOwnedProjectFromDocuments(page) {
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name)
 }
 
+async function waitForTourLayout(page) {
+  await page.evaluate(async () => {
+    const nextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve))
+    // Let responsive styles, Vue and the tour's resize handler reach the browser.
+    await nextFrame()
+    await nextFrame()
+    const animations = document.getAnimations().filter((animation) => {
+      const target = animation.effect?.target
+      return target instanceof Element && target.closest('main, aside')
+        && animation.playState === 'running'
+        && Number.isFinite(animation.effect.getComputedTiming().endTime)
+    })
+    // Await actual finite layout transitions; ignore paused animations and spinners.
+    await Promise.allSettled(animations.map((animation) => animation.finished))
+    await nextFrame()
+    await nextFrame()
+  })
+}
+
 async function expectHighlightedTarget(page, key) {
+  await waitForTourLayout(page)
   const target = page.locator(`[data-tour="${key}"]`).filter({ visible: true })
   await expect(target).toBeInViewport()
   // Check the rendered cutout, not Driver's cached element or its CSS marker.
