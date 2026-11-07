@@ -4,6 +4,8 @@ import { Editor, EditorContent } from '@tiptap/vue-3';
 import { DOMParser as SchemaParser } from '@tiptap/pm/model';
 import { editorialExtensions } from '~/utils/editorialExtensions';
 import { escapeHtml, htmlToSource, sourceToHtml } from '~/utils/editorialFormat';
+import RichTextDocumentToolbar from './RichTextDocumentToolbar.vue';
+import BaseButton from './BaseButton.vue';
 
 defineOptions({ inheritAttrs: false });
 const props = defineProps({
@@ -16,6 +18,7 @@ const props = defineProps({
   label: { type: String, default: '' },
   initialMode: { type: String, default: 'visual' },
   format: { type: String, default: 'markdown_html_v1' },
+  toolbarVariant: { type: String, default: 'default', validator: (value) => ['default', 'document'].includes(value) },
 });
 const emit = defineEmits(['update:modelValue', 'update:format', 'validity-change']);
 const attrs = useAttrs();
@@ -40,6 +43,9 @@ const visualAttributes = computed(() => ({
 const sourceInput = ref(null);
 const linkOpen = ref(false);
 const linkValue = ref('');
+const linkInput = ref(null);
+const linkProblem = ref('');
+let linkSelection = null;
 const revision = ref(0);
 let syncing = false;
 let history = [{ source: props.modelValue, format: props.format }];
@@ -95,6 +101,7 @@ function changeMode(value) {
     try { importSource(draft.value); report(null); } catch (error) { report(error); return; }
   }
   mode.value = value;
+  linkOpen.value = false;
 }
 
 function sourceChanged(event) {
@@ -119,21 +126,58 @@ function restoreHistory(direction) {
 }
 
 function historyKey(event) {
+  if (event.target === linkInput.value) return;
   if (!(event.ctrlKey || event.metaKey) || !['z', 'y'].includes(event.key.toLowerCase())) return;
   event.preventDefault();
   restoreHistory(event.key.toLowerCase() === 'y' || event.shiftKey ? 1 : -1);
 }
 
-function saveLink() {
+function openLink() {
+  if (props.disabled || !editor.value) return;
+  linkSelection = { from: editor.value.state.selection.from, to: editor.value.state.selection.to };
+  linkValue.value = editor.value.getAttributes('link').href || '';
+  linkProblem.value = '';
+  linkOpen.value = true;
+  nextTick(() => linkInput.value?.focus());
+}
+
+function closeLink() {
+  linkOpen.value = false;
+  editor.value?.commands.focus();
+}
+
+function saveLink(remove = false) {
   if (props.disabled) return;
   try {
-    sourceToHtml(`<p><a href="${linkValue.value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">link</a></p>`);
-    run('setLink', { href: linkValue.value });
-    linkOpen.value = false;
-  } catch (error) { report(error); }
+    const href = linkValue.value.trim();
+    if (!remove) sourceToHtml(`<p><a href="${escapeHtml(href)}">link</a></p>`);
+    const chain = editor.value.chain().focus();
+    if (linkSelection) chain.setTextSelection(linkSelection);
+    chain.extendMarkRange('link');
+    if (remove) chain.unsetLink(); else chain.setLink({ href });
+    chain.run();
+    closeLink();
+  } catch {
+    linkProblem.value = t('richText.invalidLink');
+  }
+}
+
+function setCallout(kind) {
+  if (props.disabled || !editor.value) return;
+  const chain = editor.value.chain().focus();
+  if (!kind) chain.lift('editorialCallout');
+  else if (editor.value.isActive('editorialCallout')) chain.updateAttributes('editorialCallout', { kind });
+  else chain.wrapIn('editorialCallout', { kind });
+  chain.run();
+}
+
+function clearFormatting() {
+  if (props.disabled) return;
+  editor.value?.chain().focus().unsetAllMarks().clearNodes().resetAttributes(['paragraph', 'heading'], 'textAlign').run();
 }
 
 function insertAtCursor(value) {
+  if (props.disabled) return;
   if (mode.value === 'visual' && editor.value) {
     try { editor.value.chain().focus().insertContent(sourceToHtml(value, props.profile)).run(); } catch (error) { report(error); }
   } else {
@@ -199,7 +243,7 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
 </script>
 
 <template>
-  <div v-bind="containerAttrs" class="editorial-editor min-w-0 rounded-xl border border-border-default bg-input-bg text-input-text" :class="{ 'border-danger-strong': invalid }" @keydown="historyKey">
+  <div v-bind="containerAttrs" class="editorial-editor min-w-0 rounded-xl border border-border-default bg-input-bg text-input-text" :class="{ 'border-danger-strong': invalid, 'editorial-editor--document': toolbarVariant === 'document' }" @keydown="historyKey">
     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border-default p-2">
       <BaseSegmented :model-value="mode" :options="modeOptions" size="sm" :aria-label="t('richText.mode')" @update:model-value="changeMode" />
       <div class="flex gap-1">
@@ -207,7 +251,8 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
         <button type="button" class="editor-tool" :aria-label="t('richText.redo')" :title="disabled ? t('richText.readOnly') : t('richText.noRedo')" :disabled="disabled || historyIndex >= history.length - 1" @click="restoreHistory(1)">↷</button>
       </div>
     </div>
-    <div v-show="mode === 'visual'" class="flex flex-wrap items-center gap-1 border-b border-border-default p-2" role="toolbar" :aria-label="t('richText.formatting')">
+    <RichTextDocumentToolbar v-if="toolbarVariant === 'document'" v-show="mode === 'visual'" :editor="editor" :revision="revision" :disabled="disabled" @run="run" @link="openLink" @insert="insertAtCursor" @callout="setCallout" @clear="clearFormatting" />
+    <div v-else v-show="mode === 'visual'" class="flex flex-wrap items-center gap-1 border-b border-border-default p-2" role="toolbar" :aria-label="t('richText.formatting')">
       <button v-for="[name, icon, command] in basicTools" :key="name" type="button" class="editor-tool" :aria-label="t(`richText.${name}`)" :title="t(`richText.${name}`)" :aria-pressed="isActive(name)" :disabled="disabled || !editor" @click="run(command)">{{ icon }}</button>
       <button v-for="[name, command] in [['indent','sinkListItem'],['outdent','liftListItem']]" :key="name" type="button" class="editor-tool" :aria-label="t(`richText.${name}`)" :title="disabled ? t('richText.readOnly') : t('richText.listSelection')" :disabled="disabled || !editor?.can()[command]('listItem')" @click="run(command, 'listItem')">{{ name === 'indent' ? '⇥' : '⇤' }}</button>
       <template v-if="profile !== 'whatsapp'">
@@ -217,7 +262,7 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
         <label class="editor-tool cursor-pointer" :title="t('richText.color')"><span aria-hidden="true">A</span><input type="color" class="h-5 w-5" :aria-label="t('richText.color')" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @input="run('setColor', $event.target.value)" /></label>
         <label class="editor-tool cursor-pointer" :title="t('richText.highlight')"><span aria-hidden="true">▰</span><input type="color" value="#fff59d" class="h-5 w-5" :aria-label="t('richText.highlight')" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @input="run('setHighlight', { color: $event.target.value })" /></label>
         <button v-for="alignment in ['left','center','right','justify']" :key="alignment" type="button" class="editor-tool" :aria-label="t(`richText.${alignment}`)" :aria-pressed="isActive({ textAlign: alignment })" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="run('setTextAlign', alignment)">{{ { left: '≡←', center: '≡', right: '→≡', justify: '☰' }[alignment] }}</button>
-        <button type="button" class="editor-tool" :aria-label="t('richText.link')" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="linkOpen = !linkOpen">↗</button>
+        <button type="button" class="editor-tool" :aria-label="t('richText.link')" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="openLink">↗</button>
         <button type="button" class="editor-tool" :aria-label="t('richText.table')" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="run('insertTable', { rows: 3, cols: 3, withHeaderRow: true })">▦</button>
         <template v-if="isActive('table')">
           <button v-for="command in ['addRowAfter','deleteRow','addColumnAfter','deleteColumn','toggleHeaderRow','deleteTable']" :key="command" type="button" class="editor-tool text-xs" :aria-label="t(`richText.${command}`)" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="run(command)">{{ t(`richText.${command}`) }}</button>
@@ -225,12 +270,14 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
         <button type="button" class="editor-tool text-xs" :aria-label="t('richText.clear')" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="editor?.chain().focus().unsetAllMarks().clearNodes().resetAttributes(['paragraph','heading'], 'textAlign').run()">{{ t('richText.clear') }}</button>
       </template>
     </div>
-    <div v-if="linkOpen" class="flex flex-wrap gap-2 border-b border-border-default p-2">
-      <input v-model="linkValue" :disabled="disabled" :title="disabled ? t('richText.readOnly') : undefined" type="url" class="min-w-0 flex-1 rounded-lg border border-border-default bg-surface p-2 text-sm" :aria-label="t('richText.linkUrl')" placeholder="https://" @keydown.enter.prevent="saveLink" />
-      <button type="button" class="editor-tool text-xs" :disabled="disabled" :title="disabled ? t('richText.readOnly') : undefined" @click="saveLink">{{ t('richText.apply') }}</button>
-      <button type="button" class="editor-tool text-xs" :disabled="disabled" :title="disabled ? t('richText.readOnly') : undefined" @click="run('unsetLink'); linkOpen = false">{{ t('richText.removeLink') }}</button>
+    <div v-if="linkOpen" class="flex flex-wrap gap-2 border-b border-border-default p-2" @keydown.esc.prevent="closeLink">
+      <input ref="linkInput" v-model="linkValue" :disabled="disabled" :title="disabled ? t('richText.readOnly') : undefined" type="url" class="min-h-11 min-w-0 flex-1 rounded-lg border border-border-default bg-surface p-2 text-sm" :aria-label="t('richText.linkUrl')" :aria-invalid="Boolean(linkProblem)" placeholder="https://" @keydown.enter.prevent="saveLink()" />
+      <BaseButton variant="secondary" size="sm" :disabled="disabled" :disabled-reason="t('richText.readOnly')" @click="saveLink()">{{ t('richText.apply') }}</BaseButton>
+      <BaseButton variant="ghost" size="sm" :disabled="disabled" :disabled-reason="t('richText.readOnly')" @click="saveLink(true)">{{ t('richText.removeLink') }}</BaseButton>
+      <BaseButton variant="ghost" size="sm" @click="closeLink">{{ t('richText.cancel') }}</BaseButton>
+      <p v-if="linkProblem" role="alert" class="w-full text-sm text-danger-strong">{{ linkProblem }}</p>
     </div>
-    <EditorContent v-show="mode === 'visual'" :editor="editor" data-testid="rich-text-scroll-area" class="editorial-body" :class="{ 'opacity-60': disabled }" />
+    <EditorContent v-show="mode === 'visual'" :editor="editor" data-testid="rich-text-scroll-area" class="editorial-body" :class="{ 'opacity-60': disabled, 'font-regular': toolbarVariant === 'document' }" />
     <textarea v-show="mode === 'source'" ref="sourceInput" :id="attrs.id ? `${attrs.id}-source` : undefined" data-testid="rich-text-source-input" :value="draft" :rows="rows" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" :placeholder="placeholder" :aria-label="contentLabel" :aria-invalid="invalid ? 'true' : undefined" :aria-describedby="describedBy" :data-editorial-active="mode === 'source' ? 'true' : undefined" class="block min-h-32 w-full resize-y rounded-b-xl bg-transparent p-3 font-mono text-sm outline-none focus:ring-2 focus:ring-focus-ring/30" @input="sourceChanged" />
     <p v-if="problem" role="alert" class="p-3 text-sm text-danger-strong">{{ problem }}</p>
     <p v-if="mode === 'source' && profile !== 'whatsapp'" class="px-3 pb-2 text-xs text-text-subtle">{{ t('richText.sourceHelp') }}</p>
@@ -247,6 +294,9 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
 .editor-tool:focus-visible { outline: 2px solid var(--color-focus-ring, #059669); outline-offset: 2px; }
 .editor-tool:disabled { opacity: .4; cursor: not-allowed; }
 .editorial-body :deep(.tiptap) { min-height: 8rem; padding: .75rem; outline: none; overflow-wrap: anywhere; }
+.editorial-editor--document .editorial-body :deep(.tiptap) { min-height: 16rem; padding: 1.25rem; font-size: 1rem; line-height: 1.75; }
+.editorial-editor--document .editorial-body :deep(table) { display: block; max-width: 100%; overflow-x: auto; table-layout: auto; }
+.editorial-editor--document .editorial-body :deep(td), .editorial-editor--document .editorial-body :deep(th) { min-width: 6rem; }
 .editorial-body :deep([style*="text-align: justify"]) { white-space: normal; }
 .editorial-body :deep(p) { margin: .4em 0; }
 .editorial-body :deep(ul) { list-style: disc; padding-left: 1.5rem; }

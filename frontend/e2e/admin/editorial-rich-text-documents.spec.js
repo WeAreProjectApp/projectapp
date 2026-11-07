@@ -89,7 +89,8 @@ async function turnSourceIntoFormattedDocument(page) {
   // replaces an active selection with a table, which would test replacement
   // rather than source/visual round-trip preservation.
   await visual.press('End');
-  await editor.getByRole('button', { name: /^(Insertar tabla|Insert table)$/ }).click();
+  await editor.getByTestId('document-insert-menu').click();
+  await page.getByRole('menuitem', { name: /^(Insertar tabla|Insert table)$/ }).click();
 
   await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
   return source;
