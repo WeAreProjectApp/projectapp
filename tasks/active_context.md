@@ -1,3 +1,19 @@
+## 2026-11-07 — PA-216, retención del PDF al revisar un conflicto
+
+QA confirmó PA216-G-RET como FAIL parcial del criterio 3 original sobre 4d960880: después de un 409 que protegió la fuente concurrente, Revisar versión actual perdió el archivo local y deshabilitó Guardar. La inferencia de código vincula el refresco completo del padre con el desmontaje del editor. La corrección aplica el resumen de fuente devuelto por el endpoint al documento actual, sin activar la carga de página; conserva el PDF para el reintento explícito y actualiza el estado del paquete. Cobertura de componente y recorrido de navegador preparada para CI, incluido fallo al consultar la fuente. C-DIR y PA225-03 se mantienen en el mismo PR; el runtime y la recuperación manual acordada quedan intactos. Nuevo SHA/CI y reprueba futura pendientes; firmas relacionadas aún bloqueadas.
+
+## 2026-11-07 — PA-216, dirección del cliente creado al aprobar
+
+El caso C de DEVQA-006 confirmó que el formulario enviaba la dirección, pero el serializer de aprobación no la admitía y el cliente nuevo la perdía. El contrato compartido Panel/MCP ahora acepta `address` opcional hasta 512 caracteres; el servicio existente la conserva. Comercial 6.5.0 y Propuestas 6.3.0 publican el campo. Regresiones de persistencia, vacío y rechazo sin efectos preparadas para CI. No cambia la activación ni se repara el cliente 27. El runtime 4d960880 y los casos de QA en curso quedan a cargo de DevQA; la entrega futura exige CI del nuevo SHA y reprueba coordinada, con firmas relacionadas aún bloqueadas.
+
+## 2026-11-07 — PA-225, referencia sin proyecto en Contabilidad
+
+QA devolvió PA225-03 del PR #569 sobre 4d960880: Ingresos mostraba «—» sin explicar la referencia nula. La corrección muestra «Sin proyecto» en clásico, agrupado y detalle, y aplica la misma etiqueta visible en Hosting y Cuentas de cobro; conserva la ausencia de enlace. Regresiones de navegador preparadas para CI. El runtime de DEVQA-006 conserva su corte durante el recorrido; la asociación ya realizada del ingreso 57 y su aviso interno registrado no se revierten. El nuevo corte exige CI propio y reprueba coordinada.
+
+## 2026-11-06 — PA-225 y PA-216, correcciones de QA
+
+Acceso al espacio por ID desde el detalle y disponibilidad visible en Proyectos; errores de acceso sin datos anteriores. Aprobación diferida sin aprovisionamiento y anexos opcionales con selección explícita, inicialmente vacía; revisiones conservan la selección previa y su historia. Estos criterios actualizan la política de cierre obligatorio y anexos automáticos registrada en octubre. No se rehabilita la aceptación pública. Sin migraciones ni cambios automáticos de históricos. Validación automatizada exclusivamente en CI y Chrome coordinado con dev-qa; resultados pendientes de la entrega de esta rama.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

@@ -6309,7 +6309,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-project-client-access` | platform | P1 | success,error,failure,display | — |
 | `platform-project-collection-accounts` | platform | P1 | display,success,error | 1 |
 | `platform-project-data-model` | platform | P2 | success,error,display | 1 |
-| `platform-project-detail` | platform | P2 | success,display | 1 |
+| `platform-project-detail` | platform | P2 | success,display,error | 1 |
 | `platform-project-hosting-context` | platform | P1 | display,success,error | — |
 | `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
@@ -7235,6 +7235,8 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Coverage:** ✅ Covered, incluidas validación local/API junto al campo, footer limpio, ancho uniforme, estado inicial coherente, creación de cliente visible, orden del ciclo, aislamiento entre ayuda y filtro, contención geométrica de la ayuda, estados en cero dentro del detalle compacto, acciones de filtro/navegación y display responsivo en los cinco anchos reales.
 - **E2E Specs:** `e2e/admin/admin-panel-projects.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
 
+- **PA-225:** Listado y tarjetas indican la disponibilidad del espacio; acciones y detalle abren el mismo ID en una pestaña nueva.
+
 ### FLOW: `admin-project-delete`
 
 - **Módulo:** admin
@@ -7280,6 +7282,8 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Failure outcome:** A failed detail request renders a retry action in the modal; retry replaces the error with the project data.
 - **Success / error:** n/a — opening the modal is a read/display action with no user input.
 - **Coverage:** `e2e/admin/admin-project-access-detail.spec.js` plus the five responsive project profiles.
+
+- **PA-225:** El detalle ofrece Abrir espacio en la plataforma por ID en nueva pestaña.
 
 ### FLOW: `admin-project-access-field-edit`
 
@@ -8805,9 +8809,11 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 | display | Reabrir propuesta vinculada | Cliente/proyecto y archivos confirmados del mismo vínculo |
 | success | Cancelar o pulsar Escape | Se conserva el estado previo y vuelve el foco al disparador |
 
-La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora todos los anexos activos. Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
+La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora sólo los anexos activos seleccionados explícitamente (ninguno marcado en el primer cierre). Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
 
 Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresión desde Clientes.
+
+- **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
 
 ### FLOW: `admin-proposal-change-history`
 
@@ -8997,15 +9003,16 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 
 | Clase | Interacción | Resultado |
 |---|---|---|
-| success | Confirmar otra revisión con servicio apagado o aprobado | El paquete incluye sólo producto o producto y servicio respectivamente, junto a los anexos activos |
+| success | Confirmar otra revisión con servicio apagado o aprobado | El paquete incluye sólo producto o producto y servicio respectivamente, junto a los anexos elegidos explícitamente |
 | success | Revisar y confirmar un nuevo paquete | Ambos módulos muestran la nueva versión y conservan el historial |
 | success | Guardar un adjunto habilitado en borrador | Misma identidad; archivo aprobado conservado hasta reconfirmar |
 | error | Confirmar con una versión desactualizada | Conflicto visible; formulario y archivo conservados |
-| error | Guardar un adjunto con una huella antigua y consultar la versión actual | El archivo elegido se conserva; la versión solo cambia tras una revisión explícita |
+| error | Guardar un adjunto con una huella antigua y consultar la versión actual | El archivo elegido se conserva al actualizar los datos de la fuente; el reintento explícito envía el mismo archivo con la huella revisada |
+| failure | Falla la consulta de la versión actual | El archivo y la huella previa se conservan, con un mensaje que permite volver a consultar |
 | failure | El servidor falla al confirmar o guardar un adjunto | Mensaje visible; archivo y formulario conservados para reintentar |
 | display | Abrir el historial | Títulos, versión vigente y revisiones descargables del recurso |
 
-Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
+Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública. Aprobar y revisar después conserva la decisión comercial sin crear cliente, proyecto ni paquete automáticamente.
 
 Las garantías de bytes e identidad se verifican además con pruebas de servicios reales y operaciones MCP autenticadas: consulta del recurso, sustitución de borrador, validación del archivo subido y confirmación de otra revisión. Los mocks del navegador cubren interacción y presentación.
 
@@ -9015,6 +9022,13 @@ La vista previa exige sólo los contratos aprobados; un conflicto o fallo conser
 el switch, formulario, adjuntos y evidencia vigente. Las operaciones MCP/CLI de
 recuperación no son flujos de navegador: sus pruebas de integración verifican los
 archivos y vínculos reales sin regeneración.
+
+La recuperación del adjunto se recorre además por Panel → Propuestas →
+Documentos → recurso compartido en `admin-proposal-shared-binary.spec.js`.
+El navegador usa la página y el store reales, con HTTP simulado: reproduce 409,
+consulta de la versión actual y guardado del mismo PDF sin reseleccionarlo.
+Otro caso cubre el fallo de esa consulta. No son ejecuciones sobre DEV ni
+acreditan persistencia real por sí solos; su resultado se registra en CI.
 
 # admin-pwa-install — Instalación del panel interno
 
@@ -9345,6 +9359,14 @@ consulta de la conversación pública que originó el prompt.
 - **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### platform-project-detail — Detalle de proyecto
+
+- **Rol:** administrador o cliente autorizado.
+- **Ruta:** `/platform/projects/:id`.
+- **Interacción:** abrir un espacio por ID. Un administrador puede volver a su ficha comercial del Panel en otra pestaña.
+- **Error:** 403 o 404 muestra una explicación sin datos ni navegación interna del proyecto; un error recuperable ofrece reintentar. Una sesión sin autenticación se dirige al inicio de sesión.
+- **Validación:** automatizada exclusivamente en CI; acceso real por roles en Chrome coordinado con dev-qa.
 
 ### FLOW: `platform-project-hosting-context`
 

@@ -63,6 +63,7 @@ describe('usePlatformProjectsStore', () => {
       expect(store.currentProject).toBeNull()
       expect(store.isLoading).toBe(false)
       expect(store.error).toBe('')
+      expect(store.errorStatus).toBeNull()
     })
   })
 
@@ -157,6 +158,50 @@ describe('usePlatformProjectsStore', () => {
 
       expect(result.success).toBe(false)
       expect(store.error).toBe('No encontrado.')
+    })
+
+    // Falla si una respuesta lenta de otro espacio reemplaza el proyecto de la ruta actual.
+    it('keeps the newer project when an older successful request finishes last', async () => {
+      let resolveFirst
+      let resolveSecond
+      mockGet
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve }))
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve }))
+
+      const firstRequest = store.fetchProject(1)
+      const secondRequest = store.fetchProject(2)
+      expect(store.isLoading).toBe(true)
+
+      resolveSecond({ data: { ...SAMPLE_PROJECT, id: 2, name: 'Proyecto actual' } })
+      const secondResult = await secondRequest
+      resolveFirst({ data: { ...SAMPLE_PROJECT, id: 1, name: 'Proyecto anterior' } })
+      const firstResult = await firstRequest
+
+      expect(secondResult).toEqual({success:true,data:{...SAMPLE_PROJECT,id:2,name:'Proyecto actual'}})
+      expect(firstResult).toEqual({success:false,stale:true})
+      expect(store.currentProject).toEqual({...SAMPLE_PROJECT,id:2,name:'Proyecto actual'})
+      expect(store.isLoading).toBe(false)
+    })
+
+    // Falla si un 403 tardío expone el error de un proyecto anterior sobre el espacio actual.
+    it('discards an older access error after the newer project loads', async () => {
+      let rejectFirst
+      let resolveSecond
+      mockGet
+        .mockImplementationOnce(() => new Promise((resolve, reject) => { rejectFirst = reject }))
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve }))
+
+      const firstRequest = store.fetchProject(1)
+      const secondRequest = store.fetchProject(2)
+      resolveSecond({ data: { ...SAMPLE_PROJECT, id: 2, name: 'Proyecto autorizado' } })
+      await secondRequest
+      rejectFirst({response:{status:403,data:{detail:'Sin acceso al proyecto anterior.'}}})
+      const firstResult = await firstRequest
+
+      expect(firstResult).toEqual({success:false,stale:true})
+      expect(store.currentProject).toEqual({...SAMPLE_PROJECT,id:2,name:'Proyecto autorizado'})
+      expect(store.error).toBe('')
+      expect(store.errorStatus).toBeNull()
     })
   })
 

@@ -1,3 +1,21 @@
+## PA-216 — dirección del cliente creado durante el cierre (2026-11-07)
+
+Comercial 6.5.0 y Propuestas 6.3.0 incluyen `new_client.address` en el contrato
+compartido con Panel: opcional, vacío permitido y máximo 512 caracteres. La
+confirmación debe conservar la dirección en el perfil vinculado a la propuesta;
+una dirección demasiado larga o nula se rechaza antes de crear cliente, proyecto
+o intención MCP. Los contratos por modelo de `clients` no cambian: este dato se
+recibe mediante la creación explícita del servicio de aprobación. No hay migración,
+activación, invitación ni reparación automática de clientes anteriores. Las huellas
+se regeneran sólo para ambos catálogos. Regresiones de Panel/MCP para CI; este texto
+no acredita ejecución. En DEVQA-006, el caso C y el cliente 27 se conservan como
+evidencia del corte anterior; la reprueba requiere un corte y datos futuros acordados.
+Cambio compatible documentado en el [changelog](changelog/2026-11-07-proposal-approval-client-address.md).
+
+## PA-216 — aprobación diferida y selección documental (2026-11-06)
+
+Comercial 6.4.0 y Propuestas 6.2.0 conservan el servicio compartido con Panel. `review_proposal_approval` con `action=defer` y `accept_proposal=true` acepta sin cliente/proyecto nuevo ni paquete; `false` conserva el estado. Repetir no duplica cambios. Confirmar el cierre inicial usa sólo `selected_document_ids`, por defecto `[]`. `confirm_proposal_document_revision` admite esa lista: omitir conserva la selección elegible del paquete previo, `[]` la retira del vigente. Las lecturas exponen selección e identidad; los históricos, firmas y originales se conservan. Validar en CI confirmación sensible, defer, selección parcial/vacía/ajena/archivada, conflictos y nueva revisión; manual en DEV coordinado con dev-qa. No se acredita validación por escribir estos escenarios.
+
 ## IA de Plataforma — projects 4.1.1 (2026-10-24)
 
 El conector projects incorpora `get/update_platform_ai_settings`,

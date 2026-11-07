@@ -7,10 +7,11 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal.",
+  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal. Acceso denegado y proyecto no disponible muestran una explicación sin contenido ni navegación interna. Administradores pueden volver a la ficha comercial por ID.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",
-    "display"
+    "display",
+    "error"
   ]
 }

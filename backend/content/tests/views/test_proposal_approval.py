@@ -53,17 +53,61 @@ def confirm(proposal, profile, actor, **changes):
     return review_proposal(proposal.pk, values, actor=actor, files=[pdf()])
 
 
-def test_defer_rejects_acceptance_without_review(reviewed_proposal, admin_user):
-    """Falla si posponer vuelve a aprobar sin confirmar proyecto y contrato."""
-    from rest_framework.exceptions import ValidationError
+def test_defer_accepts_without_provisioning(reviewed_proposal, admin_user):
+    """Falla si posponer crea proyecto, paquete o archivos mientras acepta la propuesta."""
+    result = review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)
 
-    with pytest.raises(ValidationError) as caught:
-        review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)
     reviewed_proposal.refresh_from_db()
-    assert str(caught.value.detail['action']) == 'Aprobar exige confirmar el contrato y el proyecto.'
-    assert reviewed_proposal.status == 'negotiating'
+    assert (result['action'], result['idempotent'], reviewed_proposal.status) == ('defer', False, 'accepted')
+    assert reviewed_proposal.deliverable_id is None
     assert Project.objects.count() == 0
     assert ProposalApprovalFile.objects.count() == 0
+    assert ProposalApprovalPackage.objects.count() == 0
+
+
+def test_defer_with_false_acceptance_preserves_status(reviewed_proposal, admin_user):
+    """Falla si revisar después con aceptación desactivada cambia el estado comercial."""
+    result = review_proposal(
+        reviewed_proposal.pk, {'action': 'defer', 'accept_proposal': False}, actor=admin_user,
+    )
+
+    reviewed_proposal.refresh_from_db()
+    assert (result['action'], result['idempotent'], reviewed_proposal.status) == ('defer', False, 'negotiating')
+    assert (reviewed_proposal.deliverable_id, Project.objects.count(), ProposalApprovalFile.objects.count()) == (
+        None, 0, 0,
+    )
+
+
+def test_defer_replay_is_idempotent(reviewed_proposal, admin_user):
+    """Falla si volver a posponer una propuesta aceptada crea otro cambio comercial."""
+    from content.models import ProposalChangeLog
+
+    review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)
+    changes_after_first_review = ProposalChangeLog.objects.filter(proposal=reviewed_proposal).count()
+
+    result = review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)
+
+    reviewed_proposal.refresh_from_db()
+    assert (result['idempotent'], reviewed_proposal.status) == (True, 'accepted')
+    assert ProposalChangeLog.objects.filter(proposal=reviewed_proposal).count() == changes_after_first_review
+    assert (reviewed_proposal.deliverable_id, Project.objects.count(), ProposalApprovalFile.objects.count()) == (
+        None, 0, 0,
+    )
+
+
+def test_defer_allows_later_packet_confirmation(reviewed_proposal, approval_client, admin_user):
+    """Falla si una propuesta diferida ya aceptada no puede cerrar su paquete después."""
+    review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)
+    reviewed_proposal.refresh_from_db()
+
+    result = confirm(reviewed_proposal, approval_client, admin_user)
+
+    reviewed_proposal.refresh_from_db()
+    assert result['confirmed'] is True
+    assert reviewed_proposal.status == 'accepted'
+    assert (Project.objects.count(), ProposalApprovalPackage.objects.count(), ProposalApprovalFile.objects.count()) == (
+        1, 1, 3,
+    )
 
 
 def test_custom_packet_preserves_original_contract(reviewed_proposal, approval_client, admin_user):
@@ -194,9 +238,42 @@ def test_inline_client_and_project_are_created_on_confirmation(reviewed_proposal
     values['new_client'] = {'name': 'Inline', 'email': 'inline@example.com'}
     result = review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
     profile = UserProfile.objects.get(user__email='inline@example.com')
+    assert profile.address == ''
     assert Project.objects.get(pk=result['linked_project']['id']).client_id == profile.user_id
     reviewed_proposal.refresh_from_db()
     assert reviewed_proposal.client_id == profile.pk
+
+
+@pytest.mark.parametrize('address', ['Dirección ficticia QA006 C', 'A' * 512, ''], ids=['entered', 'max-length', 'blank'])
+def test_panel_confirmation_persists_new_client_address(admin_client, reviewed_proposal, address):
+    """Falla si confirmar desde Panel descarta la dirección introducida al crear el cliente."""
+    values = payload(reviewed_proposal, reviewed_proposal.client)
+    values.pop('client_profile_id')
+    values['new_client'] = {'name': 'Inline', 'email': 'inline@example.com', 'address': address}
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 200
+    reviewed_proposal.refresh_from_db()
+    assert reviewed_proposal.client.address == address
+
+
+@pytest.mark.parametrize('address', ['A' * 513, None], ids=['overlong', 'null'])
+def test_panel_confirmation_rejects_invalid_client_address(admin_client, reviewed_proposal, address):
+    """Falla si una dirección inválida crea un cliente o inicia el cierre de la propuesta."""
+    values = payload(reviewed_proposal, reviewed_proposal.client)
+    values.pop('client_profile_id')
+    values['new_client'] = {'name': 'Inline', 'email': 'inline@example.com', 'address': address}
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert set(response.json()['new_client']) == {'address'}
+    assert not UserProfile.objects.filter(user__email='inline@example.com').exists()
+    assert Project.objects.count() == 0
+    assert ProposalApprovalFile.objects.count() == 0
+    reviewed_proposal.refresh_from_db()
+    assert reviewed_proposal.status == 'negotiating'
 
 
 def test_legacy_link_keeps_deliverable_for_first_packet(reviewed_proposal, approval_client, admin_user):
@@ -334,13 +411,31 @@ def test_split_product_only_custom_packet_rejects_a_service_contract(reviewed_pr
     assert ProposalApprovalFile.objects.count() == 0
 
 
-def test_active_annex_is_included_without_explicit_selection(reviewed_proposal, approval_client, admin_user):
-    """Falla si un anexo activo queda fuera del cierre por no marcarlo a mano."""
+def test_selected_active_annex_enters_the_packet(reviewed_proposal, approval_client, admin_user):
+    """Falla si un anexo activo seleccionado no entra en el paquete confirmado."""
     doc = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='other', title='Private negotiation')
     doc.file.save('negotiation.pdf', ContentFile(b'%PDF-1.4 negotiation'))
-    result = confirm(reviewed_proposal, approval_client, admin_user)
+    result = confirm(reviewed_proposal, approval_client, admin_user, selected_document_ids=[doc.pk])
+
     assert [row['title'] for row in result['confirmed_files'] if row['source_key'] == f'original-{doc.pk}'] == ['Private negotiation']
+    assert result['selected_document_ids'] == [doc.pk]
     assert doc.file.storage.exists(doc.file.name)
+
+
+def test_unselected_missing_annex_does_not_block_confirmation(
+    reviewed_proposal, approval_client, admin_user,
+):
+    """Falla si el cierre intenta leer un anexo excluido y ya no disponible."""
+    doc = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='legal_annex', title='Excluded annex')
+    doc.file.save('excluded-annex.pdf', ContentFile(b'%PDF-1.4 excluded annex'))
+    filename = doc.file.name
+    doc.file.storage.delete(filename)
+
+    result = confirm(reviewed_proposal, approval_client, admin_user)
+
+    assert result['selected_document_ids'] == []
+    assert f'original-{doc.pk}' not in [row['source_key'] for row in result['confirmed_files']]
+    assert doc.file.storage.exists(filename) is False
 
 
 def test_private_file_corruption_is_not_served(reviewed_proposal, approval_client, admin_user):
@@ -653,6 +748,25 @@ def test_optional_selection_rejects_invalid_original(admin_client, reviewed_prop
     assert Project.objects.count() == 0
 
 
+def test_optional_selection_rejects_archived_annex(
+    admin_client, reviewed_proposal, approval_client, private_blob_baseline,
+):
+    """Falla si un anexo archivado se incorpora al paquete mediante su identificador."""
+    original = ProposalDocument.objects.create(
+        proposal=reviewed_proposal, document_type='legal_annex', title='Archived annex', is_archived=True,
+    )
+    original.file.save('archived-annex.pdf', ContentFile(b'%PDF-1.4 archived evidence'))
+    values = payload(reviewed_proposal, approval_client)
+    values['selected_document_ids'] = [original.pk]
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert response.json() == {'selected_document_ids': 'Selecciona únicamente anexos activos de esta propuesta.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert original.file.read() == b'%PDF-1.4 archived evidence'
+
+
 def test_missing_optional_blob_rejects_confirmation(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
     """Fails if an already missing optional blob is treated as a valid reviewable attachment."""
     original = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='legal_annex', title='Missing legal annex')
@@ -846,6 +960,25 @@ def test_defer_rejects_uploaded_document(admin_client, reviewed_proposal, approv
     _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
     assert reviewed_proposal.client_id == approval_client.pk
     assert Project.objects.count() == 0
+
+
+def test_defer_rejects_custom_document_metadata(
+    admin_client, reviewed_proposal, approval_client, private_blob_baseline,
+):
+    """Falla si posponer acepta metadatos de documentos que no puede guardar."""
+    response = admin_client.post(
+        reverse('proposal-approval', kwargs={'proposal_id': reviewed_proposal.pk}),
+        {
+            'action': 'defer',
+            'custom_documents': [{'title': 'Contract later', 'document_type': 'contract'}],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {'custom_files': 'Posponer no guarda adjuntos.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert reviewed_proposal.client_id == approval_client.pk
 
 
 def test_original_contract_switch_rejects_custom_upload(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
