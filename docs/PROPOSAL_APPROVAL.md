@@ -75,6 +75,12 @@ Las descargas de las copias privadas requieren autorización; no se publican
 rutas de almacenamiento. MCP comparte el servicio, el paquete explícito,
 la validación de assets y la confirmación sensible.
 
+En el Gestor, un conflicto al sustituir un adjunto conserva el archivo elegido.
+Revisar versión actual aplica los datos de la fuente devueltos por el servidor
+sin desmontar el editor. El reintento explícito usa el mismo archivo y la huella
+revisada; una consulta fallida conserva el archivo y la huella anterior. El
+archivo aprobado sólo cambia mediante la confirmación de otra revisión.
+
 La migración nueva `content/0278` depende de
 `0277_merge_vat_and_economic_conditions` y de la migración existente
 `accounts/0075_p4_platform_domains_merge`; se aplica durante el despliegue,

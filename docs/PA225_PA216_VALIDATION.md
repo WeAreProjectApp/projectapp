@@ -24,6 +24,7 @@ Datos ficticios: administrador de Panel y perfil admin de Plataforma, propietari
 4. Repetir con contrato único, separados producto sólo/producto y servicio y personalizados. El proyecto operativo conserva dueño, progreso, recursos y datos financieros.
 5. Revisar el paquete previo: recupera sólo los anexos confirmados, no el anexo nuevo. Confirmar otra revisión con selección vacía retira anexos del vigente, conservando sus documentos y descargas históricas; reintentar la misma solicitud no duplica entidades ni reemplaza contrato vigente.
 6. Cotejar el mismo documento por ID desde propuesta, gestor y MCP: cambios permitidos preparan borrador, guardado antiguo devuelve conflicto y no sobreescribe. Sólo reconfirmar publica una revisión; originales, firmas y referencias históricas conservan sus bytes e identidad. Reconciliar un cierre antiguo usa los archivos confirmados, sin regenerar contratos ni incorporar anexos nuevos.
+   Tras el conflicto del adjunto, Revisar versión actual conserva el archivo local y permite el reintento explícito con la huella revisada, sin reselección. Si falla la consulta, conserva archivo y huella anterior y permite volver a consultar. La evidencia del caso G-RET previo no se repara ni se repite sobre el runtime activo; la reprueba se acuerda para una ventana futura.
 
 ## Comprobaciones transversales y resultado
 

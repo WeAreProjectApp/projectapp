@@ -1,3 +1,7 @@
+## 2026-11-07 — PA-216, retención del PDF al revisar un conflicto
+
+QA confirmó PA216-G-RET como FAIL parcial del criterio 3 original sobre 4d960880: después de un 409 que protegió la fuente concurrente, Revisar versión actual perdió el archivo local y deshabilitó Guardar. La inferencia de código vincula el refresco completo del padre con el desmontaje del editor. La corrección aplica el resumen de fuente devuelto por el endpoint al documento actual, sin activar la carga de página; conserva el PDF para el reintento explícito y actualiza el estado del paquete. Cobertura de componente y recorrido de navegador preparada para CI, incluido fallo al consultar la fuente. C-DIR y PA225-03 se mantienen en el mismo PR; el runtime y la recuperación manual acordada quedan intactos. Nuevo SHA/CI y reprueba futura pendientes; firmas relacionadas aún bloqueadas.
+
 ## 2026-11-07 — PA-216, dirección del cliente creado al aprobar
 
 El caso C de DEVQA-006 confirmó que el formulario enviaba la dirección, pero el serializer de aprobación no la admitía y el cliente nuevo la perdía. El contrato compartido Panel/MCP ahora acepta `address` opcional hasta 512 caracteres; el servicio existente la conserva. Comercial 6.5.0 y Propuestas 6.3.0 publican el campo. Regresiones de persistencia, vacío y rechazo sin efectos preparadas para CI. No cambia la activación ni se repara el cliente 27. El runtime 4d960880 y los casos de QA en curso quedan a cargo de DevQA; la entrega futura exige CI del nuevo SHA y reprueba coordinada, con firmas relacionadas aún bloqueadas.
