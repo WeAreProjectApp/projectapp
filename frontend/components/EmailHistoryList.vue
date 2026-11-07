@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { formatDateTime } from '~/utils/formatDate';
 import BaseCollapse from '~/components/base/BaseCollapse.vue';
 import { recipientSummary } from '~/utils/emailRecipients';
+import { emailStatusLabel as statusLabel } from '~/utils/emailStatus';
 
 /**
  * Sent-email history panel — shared by the Proposals and Diagnostics email
@@ -20,15 +21,6 @@ defineProps({
 })
 
 defineEmits(['load-more'])
-
-const STATUS_LABELS = {
-  sent: 'Enviado',
-  delivered: 'Entregado',
-  bounced: 'Rebotado',
-  failed: 'Fallido',
-  skipped: 'Omitida',
-}
-function statusLabel(s) { return STATUS_LABELS[s] || s }
 
 function copyStatusClass(status) {
   if (status === 'failed' || status === 'bounced') return 'text-danger-strong'
