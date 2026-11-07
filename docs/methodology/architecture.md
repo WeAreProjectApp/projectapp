@@ -1,3 +1,8 @@
+> **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
+> pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
+> lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant
+> explícito y confirmación. Contrato: `docs/project-lifecycle-deletion.md`.
+
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 
 `CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.

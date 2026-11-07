@@ -48,6 +48,7 @@ accounts.deliverynotificationattempt|Intentos de avisos de entregas|Delivery not
 accounts.hostingsubscription|Suscripciones de hosting|Hosting subscriptions
 accounts.payment|Pagos de hosting|Hosting payments
 accounts.paymenthistory|Historial de pagos|Payment history
+accounts.billingcontextevent|Historial de decisiones de facturación|Billing decision history
 accounts.projecthosting|Servicio de hosting del proyecto|Project hosting service
 accounts.projecthostingaccountingsource|Vínculos de facturación del hosting|Hosting billing links
 accounts.hostingevidencegroup|Grupos de comprobantes de hosting|Hosting evidence groups
@@ -155,3 +156,9 @@ for _line in _LABELS.strip().splitlines():
         'key': _KEYS.get(_model, _model), 'label': _es, 'label_en': _en,
         'description': _description, 'description_en': _description_en,
     }
+
+CATEGORIES['accounts.billingcontextevent'].update(
+    key='billing_context_events', selectable=False,
+    description='Se conserva siempre, con el cliente y el proyecto de origen. No se puede eliminar.',
+    description_en='Always retained with its client and original project. It cannot be deleted.',
+)
