@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useFolderPanelWidth } from '../../composables/useFolderPanelWidth'
 
 const STORAGE_KEY = 'projectapp-documents-folder-width'
+const SECURE_LINKS_STORAGE_KEY = 'projectapp-secure-links-folder-width'
 
 // El contenedor es el div del grid: su borde izquierdo coincide con el del
 // panel, así que un clientX de 500 con left=100 pide un ancho de 400px.
@@ -122,5 +123,33 @@ describe('useFolderPanelWidth', () => {
     resetWidth()
     expect(width.value).toBe(384)
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull()
+  })
+
+  it('uses the secure-links default independently from the documents panel', () => {
+    // Fails if secure links inherits Documents' 384px preference instead of its compact 256px default.
+    const { width, gridStyle } = useFolderPanelWidth(makeContainer(), {
+      storageKey: SECURE_LINKS_STORAGE_KEY,
+      defaultWidth: 256,
+    })
+
+    expect(width.value).toBe(256)
+    expect(gridStyle.value).toEqual({ '--folders-panel-w': '256px' })
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull()
+  })
+
+  it('resets only the secure-links preference without removing the documents width', () => {
+    // Fails if resetting secure links clears the persisted documents navigation width.
+    window.localStorage.setItem(STORAGE_KEY, '400')
+    window.localStorage.setItem(SECURE_LINKS_STORAGE_KEY, '336')
+    const secureLinks = useFolderPanelWidth(makeContainer(), {
+      storageKey: SECURE_LINKS_STORAGE_KEY,
+      defaultWidth: 256,
+    })
+
+    secureLinks.resetWidth()
+
+    expect(secureLinks.width.value).toBe(256)
+    expect(window.localStorage.getItem(SECURE_LINKS_STORAGE_KEY)).toBeNull()
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('400')
   })
 })

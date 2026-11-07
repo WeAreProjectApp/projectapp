@@ -42,11 +42,24 @@
       </div>
     </div>
 
-    <div class="flex min-w-0 flex-col gap-4 panel-landscape:flex-row">
+    <div ref="foldersGridRef" class="grid min-w-0 grid-cols-1 gap-4 panel-landscape:grid-cols-[var(--folders-panel-w,16rem)_1.5rem_minmax(0,1fr)] panel-landscape:gap-0" :class="panelDragging ? 'select-none' : ''" :style="folderPanelStyle">
       <BaseButton class="panel-landscape:hidden" variant="secondary" data-testid="secure-folders-open" @click="folderDrawerOpen = true"><BaseActionIcon action="folders" />Carpetas</BaseButton>
-      <div class="hidden w-64 shrink-0 panel-landscape:block" data-testid="secure-folders-sidebar">
+      <div class="hidden min-w-0 panel-landscape:block" data-testid="secure-folders-sidebar">
         <FolderSidebar v-bind="sidebarProps" v-on="sidebarEvents" />
       </div>
+      <BaseResizeHandle
+        class="hidden panel-landscape:flex"
+        :value="panelWidth"
+        :min="FOLDER_PANEL_MIN"
+        :max="FOLDER_PANEL_MAX"
+        :label="t('panelUsability.resizeSecureLinks')"
+        test-id="secure-folders-resize-handle"
+        @pointer-start="onHandleDown"
+        @pointer-move="onHandleMove"
+        @pointer-end="onHandleUp"
+        @resize="resizePanelWidth"
+        @reset="resetWidth"
+      />
       <BaseDrawer v-model="folderDrawerOpen" title="Carpetas de enlaces seguros">
         <FolderSidebar v-bind="sidebarProps" touch-mode v-on="sidebarEvents" />
       </BaseDrawer>
@@ -221,6 +234,7 @@ import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
+import BaseResizeHandle from '~/components/base/BaseResizeHandle.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import BaseTooltip from '~/components/base/BaseTooltip.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
@@ -232,6 +246,7 @@ import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useRowNavigation } from '~/composables/useRowNavigation';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
+import { FOLDER_PANEL_MIN, FOLDER_PANEL_MAX, useFolderPanelWidth } from '~/composables/useFolderPanelWidth';
 import { contentFieldValues } from '~/composables/useSecureLinkForm';
 import { useSecureLinksStore } from '~/stores/secure_links';
 import { formatDateTime } from '~/utils/formatDate';
@@ -241,6 +256,13 @@ definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 const store = useSecureLinksStore();
 const folders = useSecureLinkFoldersStore();
 const folderDrawerOpen = ref(false);
+const foldersGridRef = ref(null);
+const {
+  width: panelWidth, dragging: panelDragging, gridStyle: folderPanelStyle,
+  onHandleDown, onHandleMove, onHandleUp, resizeWidth: resizePanelWidth, resetWidth,
+} = useFolderPanelWidth(foldersGridRef, {
+  storageKey: 'projectapp-secure-links-folder-width', defaultWidth: 256,
+});
 const showInactive = ref(false);
 const folderForm = reactive({ open: false, folder: null, link: null, moving: false });
 const route = useRoute();

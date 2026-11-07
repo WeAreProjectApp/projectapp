@@ -11,6 +11,8 @@ is the fix.
 """
 
 import logging
+from datetime import date
+from decimal import Decimal, InvalidOperation
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ def _retry_collection_account(log):
     if document is None:
         raise RetryError('La cuenta de cobro de este envío ya no existe.')
     return send_collection_account_email(
-        document, resend=True, retry_of=log,
+        document, resend=True, retry_of=log, recipient=log.recipient,
     )
 
 
@@ -72,8 +74,8 @@ def _retry_payment_status(log):
     )
 
 
-def _retry_payment_confirmation(log):
-    """Re-send the same confirmation from the facts stored on the row.
+def payment_confirmation_values(log, *, payment_exists=None):
+    """Validate the retained facts and the payment they confirm.
 
     Re-reading the income would state today's balance, not the one the
     client was told about. The payment must still exist, though: confirming
@@ -81,7 +83,6 @@ def _retry_payment_confirmation(log):
     """
     from content.models import IncomeRecord
     from content.services.income_payment_confirmation_service import (
-        send_payment_confirmation_email,
         values_from_metadata,
     )
 
@@ -91,12 +92,37 @@ def _retry_payment_confirmation(log):
             'Este envío no guardó qué pago confirmaba, así que no se puede '
             'reconstruir.',
         )
-    if not IncomeRecord.objects.filter(
-        id=values['liquid_id'],
-        kind=IncomeRecord.Kind.LIQUID,
-        expected_income_id=values.get('income_id'),
-    ).exists():
+    try:
+        date.fromisoformat(values['payment_date'])
+        amount = Decimal(values['amount'])
+        pending = Decimal(values['pending_after'])
+        valid = (
+            amount.is_finite() and amount > 0
+            and pending.is_finite() and pending >= 0
+            and bool(values['concept'])
+            and int(values['income_id']) > 0 and int(values['liquid_id']) > 0
+        )
+    except (TypeError, ValueError, InvalidOperation):
+        valid = False
+    if not valid:
+        raise RetryError('Este envío no conservó todos los datos del pago para reconstruir la confirmación.')
+    if payment_exists is None:
+        payment_exists = IncomeRecord.objects.filter(
+            id=values['liquid_id'],
+            kind=IncomeRecord.Kind.LIQUID,
+            expected_income_id=values.get('income_id'),
+        ).exists()
+    if not payment_exists:
         raise RetryError('El pago que confirmaba este correo ya no existe.')
+    return values
+
+
+def _retry_payment_confirmation(log):
+    from content.services.income_payment_confirmation_service import (
+        send_payment_confirmation_email,
+    )
+
+    values = payment_confirmation_values(log)
     return send_payment_confirmation_email(
         values, recipient=log.recipient, client=log.client_id, retry_of=log,
     )

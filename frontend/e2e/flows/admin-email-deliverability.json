@@ -6,9 +6,10 @@
     "admin"
   ],
   "priority": "P3",
-  "description": "Dashboard tracking email send/delivery/bounce rates for all proposal-related automated emails. Accessible from /panel/proposals/email-deliverability.",
+  "description": "Admin navigates to Estado de los emails at /panel/emails?tab=status to consult 30-day totals, success rate, per-template breakdown, daily trend and recent failures. The former /panel/proposals/email-deliverability route redirects to this tab.",
   "expectedSpecs": 1,
   "outcomes": [
-    "display"
+    "display",
+    "success"
   ]
 }

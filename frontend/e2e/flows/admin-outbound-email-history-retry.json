@@ -1,0 +1,16 @@
+{
+  "id": "admin-outbound-email-history-retry",
+  "name": "Admin Retries a Failed Outbound Email Recipient",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Admin expands a failed recipient in universal Email History and confirms a retry naming its original address and subject. The retry accepts no replacement destination; exact snapshots or valid accounting origin facts create a linked attempt in History. Missing facts, reversed payments, invalid addresses and insufficient permissions explain why no retry is available. Failed retried sends remain recorded and show failure feedback.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

@@ -392,6 +392,13 @@ def resend_email_log(log, recipients, cc_recipients=()):
         cc_recipients,
         contextual_client=log.client,
     )
+    original_recipient = (log.recipient or '').strip().lower()
+    for context in recipient_contexts:
+        if context['email'].strip().lower() == original_recipient:
+            # An archived client address may be an alias or no longer registered.
+            # Retrying that address must retain its original client association.
+            context['client_id'] = log.client_id
+            context['audience'] = log.audience
     common_log_fields = {
         'retry_of': log,
         'template_key': snapshot.template_key,
