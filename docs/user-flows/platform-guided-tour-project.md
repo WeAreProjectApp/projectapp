@@ -5,7 +5,7 @@
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas. Los controles explicados quedan visibles al cerrar el cajón global y el recorte sigue su geometría al cambiar entre móvil, tableta y escritorio. La entrada usa fila o tarjeta según el tamaño y conserva el destino tras posteriores mediciones de layout.
+Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas. Los controles explicados quedan visibles al cerrar el cajón global y el recorte sigue su geometría al cambiar entre móvil, tableta y escritorio. La entrada usa fila o tarjeta según el tamaño y conserva el destino tras posteriores mediciones de layout. La tarjeta queda junto al control al concluir la transición del resaltado.
 
 | Resultado | Interacción y evidencia |
 |---|---|

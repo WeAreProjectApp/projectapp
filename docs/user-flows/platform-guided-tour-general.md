@@ -5,7 +5,7 @@
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible. Al cambiar de tamaño conserva el paso y selecciona el enlace visible de escritorio o del cajón móvil. El anclaje se conserva en mediciones posteriores sobre el destino visible, tras asentarse la distribución y la tarjeta.
+Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible. Al cambiar de tamaño conserva el paso y selecciona el enlace visible de escritorio o del cajón móvil. El anclaje se conserva en mediciones posteriores sobre el destino visible, tras asentarse la distribución y la tarjeta. La tarjeta queda junto al control al concluir la transición del resaltado.
 
 | Resultado | Interacción y evidencia |
 |---|---|

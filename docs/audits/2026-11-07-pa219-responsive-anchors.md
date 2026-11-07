@@ -131,3 +131,27 @@ conjunto98ddae5e cotejados. Runtime/servednull, tested d012 conservado. No se re
 el entorno ni se repara el archivo; el nuevo SHA necesita CI propio y acuerdo de
 ventana futura/DEVLISTO. Pausa, claro no acreditado y positivosAppi/voz bloqueados
 se mantienen separados del anclaje. No pruebas/builds locales por esta corrección.
+
+
+## Refresco final tras CI81999208
+
+Tests42405885770/job128504170049 dejó un único fallo, en el último tramo de la
+guía general: 412×915→835×1195, destino Documentos. La traza conserva el recorte
+final alrededor del enlace de escritorio, pero la tarjeta sigue arriba a la
+izquierda (inset inferior1008.02px en viewport1195). No es ya el selector móvil ni
+la persistencia del nodo configurado. Se conserva la traza original y su imagen;
+no se relaja la proximidad de32px de la tarjeta.
+
+Driver1.10.2 confirma internamente el elemento estable después de ejecutar
+`onHighlighted`. Un refresco durante la transición puede posicionar la tarjeta
+con el elemento anterior ya oculto; el cierre de la animación corrige el recorte
+sin garantizar otro posicionamiento de la tarjeta. La integración solicita ahora
+un refresco desde ese hook, agrupado en el siguiente frame, cuando Driver ya ha
+confirmado el nuevo destino. No añade temporizador permanente, consultas o acuses;
+`refresh()` no vuelve a ejecutar el hook. El frame sigue sujeto a cancelación y
+al token de la guía al terminar/pausar.
+
+El E2E existente que falló es la regresión de este ajuste. Su diagnóstico separa
+ahora área del destino, hueco SVG y proximidad de tarjeta, con las mismas
+condiciones. Objetivos30unitarios/19E2E sin ampliación ni PASS anticipado.
+CI del nuevo SHA pendiente; sin pruebas/builds locales y sin reabrir DEVQA008.

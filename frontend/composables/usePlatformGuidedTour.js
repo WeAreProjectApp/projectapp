@@ -198,6 +198,8 @@ export function usePlatformGuidedTour() {
       onDestroyStarted: () => { if (!ending) void finish('skipped') },
       onHighlighted: (_element, step) => {
         if (token !== runToken || !activeTour.value) return
+        // Refresh next frame, after Driver commits its settled element internally.
+        refreshLayout()
         void store.acknowledge(tour, 'in_progress', step.targetKey, projectId, manual)
       },
       onPopoverRender: ({ wrapper, closeButton, nextButton, previousButton }) => {

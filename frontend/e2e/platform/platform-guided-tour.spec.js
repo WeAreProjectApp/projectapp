@@ -192,15 +192,18 @@ async function expectHighlightedTarget(page, key) {
     const svg = document.querySelector('svg.driver-overlay')
     const path = svg?.querySelector('path')
     const popover = document.querySelector('[data-testid="platform-tour-popover"]')
-    if (!path || !popover || !svg.getScreenCTM()) return false
+    if (!path || !popover || !svg.getScreenCTM()) return null
     const center = new DOMPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
     const point = center.matrixTransform(svg.getScreenCTM().inverse())
     const card = popover.getBoundingClientRect()
     const horizontalGap = Math.max(0, rect.left - card.right, card.left - rect.right)
     const verticalGap = Math.max(0, rect.top - card.bottom, card.top - rect.bottom)
-    return rect.width > 0 && rect.height > 0 && !path.isPointInFill(point)
-      && horizontalGap <= 32 && verticalGap <= 32
-  })).toBe(true)
+    return {
+      targetHasArea: rect.width > 0 && rect.height > 0,
+      cutoutContainsTargetCenter: !path.isPointInFill(point),
+      cardIsAdjacentToTarget: horizontalGap <= 32 && verticalGap <= 32,
+    }
+  })).toEqual({ targetHasArea: true, cutoutContainsTargetCenter: true, cardIsAdjacentToTarget: true })
 }
 
 function completedProjectGuide() {
