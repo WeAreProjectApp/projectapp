@@ -127,7 +127,10 @@ test.describe('Admin secure links', () => {
     await page.getByTestId('secure-links-new').click();
     await page.getByTestId('secure-link-title').fill('Llaves Wompi');
     await page.getByTestId('secure-link-field-message').fill('La clave se comparte por el canal acordado.');
-    await page.getByTestId('secure-link-configuration').click();
+    await expect(page.getByTestId('secure-link-client')).toBeVisible();
+    await expect(page.getByTestId('secure-link-project')).toBeVisible();
+    await expect(page.getByTestId('secure-link-field-subject')).toHaveCount(0);
+    await expect(page.getByTestId('secure-link-more-details')).toHaveCount(0);
     await page.getByTestId('secure-link-validity').getByRole('tab', { name: '3 días' }).click();
     await page.getByTestId('secure-link-save').click();
 

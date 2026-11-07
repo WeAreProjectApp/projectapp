@@ -43,13 +43,10 @@
           :type="selectedType"
           :errors="errors"
           :exclude-keys="['custom_name']"
+          :collapsible="false"
           id-prefix="secure-link-panel"
         />
 
-        <BaseButton type="button" variant="ghost" size="sm" :aria-expanded="showConfiguration" :aria-controls="configurationId" data-testid="secure-link-configuration" @click="showConfiguration = !showConfiguration">
-          {{ t('secureLinks.configuration') }}
-        </BaseButton>
-        <BaseCollapse :id="configurationId" :open="showConfiguration">
         <div class="space-y-4">
         <BaseFormField :label="t('secureLinks.panel.client')" :hint="t('secureLinks.panel.associationHint')" :error="errors.client">
           <ClientAutocomplete
@@ -89,7 +86,6 @@
           </BaseFormField>
         </BaseFormRow>
         </div>
-        </BaseCollapse>
 
         <BaseAlert v-if="generalError" variant="danger" tabindex="-1" data-testid="secure-link-general-error">{{ generalError }}</BaseAlert>
       </fieldset>
@@ -116,13 +112,12 @@ import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseModalActions from '~/components/base/BaseModalActions.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
-import BaseCollapse from '~/components/base/BaseCollapse.vue';
 import ProjectSelect from '~/components/accounting/ProjectSelect.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import SecureLinkFields from '~/components/secureLinks/SecureLinkFields.vue';
 import SecureLinkTypeField from '~/components/secureLinks/SecureLinkTypeField.vue';
 import { useSecureLinksStore } from '~/stores/secure_links';
-import { useSecureLinkForm } from '~/composables/useSecureLinkForm';
+import { catalogFieldValues, useSecureLinkForm } from '~/composables/useSecureLinkForm';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -142,8 +137,6 @@ const { t, locale } = useI18n();
 const uiLanguage = computed(() => locale.value.startsWith('en') ? 'en' : 'es');
 const formElement = ref(null);
 const fieldsVersion = ref(0);
-const showConfiguration = ref(false);
-const configurationId = useId();
 
 const form = reactive({
   secretType: 'confidential_message', title: '', fields: {}, client: null, clientLabel: '',
@@ -153,9 +146,6 @@ const form = reactive({
 const selectedType = computed(() => store.typeByKey(form.secretType));
 const validityOptions = computed(() => [1, 3, 7, 30].map((days) => ({ value: days, label: t('secureLinks.days', days) })));
 const { errors, generalError, loadingTypes, typesError, catalogReady, loadTypes, resetErrors, validateFields, mapErrors, focusError } = useSecureLinkForm(formElement, selectedType, t);
-watch(errors, value => {
-  if (['client', 'project', 'language', 'validity_days'].some(key => value[key])) showConfiguration.value = true;
-}, { deep: true });
 
 watch(() => props.modelValue, (open) => {
   if (!open) {
@@ -163,7 +153,6 @@ watch(() => props.modelValue, (open) => {
     return;
   }
   fieldsVersion.value += 1;
-  showConfiguration.value = false;
   resetErrors();
   typesError.value = false;
   loadTypes();
@@ -213,7 +202,7 @@ async function submit() {
   const payload = {
     secret_type: form.secretType,
     title: form.title,
-    fields: form.fields,
+    fields: catalogFieldValues(form.fields, selectedType.value),
     client: form.client || null,
     project: form.project || null,
     ...(!props.link && props.folder !== undefined ? { folder: props.folder?.id ?? null } : {}),

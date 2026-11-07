@@ -104,4 +104,14 @@ describe('SecureLinkFields', () => {
     expect(wrapper.get('[data-testid="secure-link-fields"]').element.tagName).toBe('DIV');
     expect(wrapper.findAll('input, textarea')).toHaveLength(0);
   });
+  it('shows optional inputs immediately in an expanded form', async () => {
+    const wrapper = mountFields({ collapsible: false });
+
+    await wrapper.get('[data-testid="secure-link-field-note"]').setValue('Additional information');
+
+    expect(wrapper.find('[data-testid="secure-link-more-details"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="secure-link-field-note"]').isVisible()).toBe(true);
+    expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([{ host: 'srv', note: 'Additional information' }]);
+  });
+
 });
