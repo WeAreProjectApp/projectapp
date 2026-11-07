@@ -266,7 +266,8 @@ test.describe('Editorial rich text in documents', () => {
   }, async ({ page }) => {
     const state = { document: { ...documentBase, template_style: style, content_markdown: '<table><thead><tr><th><p>Elemento</p></th><th colspan="2"><p>Cabecera combinada</p></th></tr></thead></table>' } };
     await mockDocumentEditorApi(page, state);
-    await page.goto('/es-co/panel/documents/91/edit', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/documents', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('document-open-91').click();
 
     await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
     const header = page.getByRole('columnheader', { name: 'Cabecera combinada' });
