@@ -193,6 +193,8 @@ const safeHtml = computed(() => {
 .markdown-preview :deep(strong) { font-weight: 600; }
 .markdown-preview :deep(em) { font-style: italic; }
 .markdown-preview :deep(del) { text-decoration: line-through; color: #6b7280; }
+/* An explicit text color takes precedence over the muted strike style. */
+.markdown-preview :deep(span[style] del) { color: inherit; }
 .markdown-preview :deep(code) {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.85em;
