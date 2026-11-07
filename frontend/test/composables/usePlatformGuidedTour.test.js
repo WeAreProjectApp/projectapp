@@ -165,6 +165,20 @@ describe('usePlatformGuidedTour', () => {
     expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'skipped', 'projects', null, true)
   })
 
+  it('exposes a project destination behind the mobile Help drawer', async () => {
+    // Fails if opening a project guide leaves the global drawer covering Summary.
+    addTarget('project-summary')
+    window.matchMedia = jest.fn().mockImplementation((query) => ({ matches: query === '(max-width: 767px)' }))
+    sidebar.isMobileOpen.value = true
+    store.tours = [{ ...tourFixture([step('project-summary')]), context: 'project' }]
+    mountHarness()
+
+    await tour.start(17, { projectId: 71 })
+
+    expect(sidebar.isMobileOpen.value).toBe(false)
+    expect(tour.activeTour.value.id).toBe(17)
+  })
+
   it('cancels a run paused while a navigation target is being prepared', async () => {
     // Fails if a route change during target preparation opens Driver after the user has already left the tour.
     let releaseTargetPreparation

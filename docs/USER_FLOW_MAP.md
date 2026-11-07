@@ -7998,11 +7998,11 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible.
+Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible. Al cambiar de tamaño conserva el paso y selecciona el enlace visible de escritorio o del cajón móvil.
 
 | Resultado | Interacción y evidencia |
 |---|---|
-| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| display | Entrar a Proyectos, abrir la guía desde Ayuda y avanzar hasta Proyectos/Documentos. Redimensionar escritorio→móvil→tableta; comprobar texto, control visible, hueco SVG y tarjeta junto al destino. |
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
@@ -8014,11 +8014,11 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas.
+Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas. Los controles explicados quedan visibles al cerrar el cajón global y el recorte sigue su geometría al cambiar entre móvil, tableta y escritorio.
 
 | Resultado | Interacción y evidencia |
 |---|---|
-| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| display | Entrar al proyecto propio y a Bugs; repetir desde Ayuda. En móvil el cajón global se cierra antes de explicar Resumen. Conservar el mismo paso al redimensionar entre las cinco medidas; comprobar hueco SVG y tarjeta junto al control, sin borrar el acuse terminal al recargar. |
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
