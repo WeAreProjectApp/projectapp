@@ -63,6 +63,7 @@ const RESPONSIVE_SPECIAL_WARMUP_ROUTES = Object.freeze({
     '/en-us/panel/accounting/statements',
   ],
   'accounting-special-4': ['/en-us/panel/accounting'],
+  'accounting-special-5': ['/es-co/panel/accounting/incomes', '/es-co/panel/accounting/recurring'],
   'canvas-special': ['/en-us/panel/documents/1/edit'],
   'clients-special': ['/en-us/panel/clients'],
   'clients-special-2': [
@@ -71,8 +72,15 @@ const RESPONSIVE_SPECIAL_WARMUP_ROUTES = Object.freeze({
     '/es-co/platform/projects/1/access',
   ],
   'commercial-special': ['/en-us/panel/proposals'],
+  'commercial-special-2': [
+    '/es-co/panel/proposals/1/edit?tab=proposal&section=sections',
+    '/es-co/panel/proposals/1/edit?tab=proposal&section=technical',
+    '/es-co/panel/proposals/1/edit?tab=tracking&section=analytics',
+  ],
+  'content-special': ['/es-co/panel/blog/1/edit'],
   'communications-special': ['/en-us/panel/communications'],
   'documents-special': ['/en-us/panel/documents'],
+  'dashboard-special': ['/es-co/panel'],
   'emails-special': ['/en-us/panel/emails'],
   'mcp-special': ['/en-us/panel/mcps'],
   'projects-special': ['/en-us/panel/projects'],
@@ -218,6 +226,24 @@ async function warmupApiFixture({ apiPath, method, route }) {
   }
   if (apiPath === 'proposals/defaults/' && method === 'GET') {
     return json(warmupProposalDefaults);
+  }
+  const proposalDetail = apiPath.match(/^proposals\/(\d+)\/detail\/$/);
+  if (proposalDetail && method === 'GET') {
+    return json({
+      ...warmupProposal,
+      id: Number(proposalDetail[1]),
+      sections: [{
+        id: 11, section_type: 'investment', title: 'Inversión',
+        is_enabled: true, order: 1,
+        content_json: { modules: [{ id: 'warmup-module', title: 'Warmup commercial module', price: 0 }] },
+      }, {
+        id: 12, section_type: 'technical_document', title: 'Detalle técnico',
+        is_enabled: true, order: 2, content_json: { epics: [] },
+      }],
+    });
+  }
+  if (/^proposals\/\d+\/analytics\/$/.test(apiPath) && method === 'GET') {
+    return json({ total_views: 0, unique_sessions: 0, sections: [], funnel: [], sessions: [] });
   }
   if (apiPath === 'email-templates/' && method === 'GET') {
     return json([]);
@@ -417,6 +443,15 @@ export default async function globalSetup() {
             });
             if (isRequired) {
               await waitForNuxtApp(page, { timeout: attempt === 0 ? 15_000 : 45_000 });
+            }
+            if (responsiveSpecialBatchId === 'commercial-special-2') {
+              const section = new URL(route, baseURL).searchParams.get('section');
+              const ready = {
+                sections: page.getByTestId('section-header-investment'),
+                technical: page.getByTestId('technical-stub-module'),
+                analytics: page.getByRole('button', { name: 'Exportar CSV', exact: true }),
+              }[section];
+              await ready.waitFor({ state: 'visible', timeout: 45_000 });
             }
             lastError = null;
             break;
