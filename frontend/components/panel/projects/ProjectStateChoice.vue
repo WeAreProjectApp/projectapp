@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import BaseDropdown from '~/components/base/BaseDropdown.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
+import BaseActionIcon from '~/components/base/BaseActionIcon.vue';
 
 const props = defineProps({
   modelValue: { type: [Number, String], default: '' },
@@ -28,7 +29,7 @@ const items = computed(() => props.options.map(option => ({
         :aria-label="label" :aria-invalid="invalid || undefined" :aria-describedby="describedby"
         :disabled="disabled" disabled-reason="El cambio está en curso." :data-testid="testid">
         {{ selectedLabel }}
-        <span aria-hidden="true">▾</span>
+        <BaseActionIcon action="expand" class="h-4 w-4 shrink-0" />
       </BaseButton>
     </template>
   </BaseDropdown>

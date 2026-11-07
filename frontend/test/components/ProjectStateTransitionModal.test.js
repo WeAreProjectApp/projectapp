@@ -272,6 +272,7 @@ describe('ProjectStateTransitionModal', () => {
     await wrapper.get('[data-testid="project-state-preview"]').trigger('click');
     await flushPromises();
 
+    expect(wrapper.get('[data-testid="project-state-impact"]').text()).toContain('Consecuencias antes de confirmar');
     expect(wrapper.get('[data-testid="project-state-impact"]').text()).not.toContain('Cancelado');
     expect(wrapper.get('[data-testid="project-state-impact"]').text()).not.toContain('se archivarán');
   });
