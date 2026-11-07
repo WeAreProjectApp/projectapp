@@ -43,6 +43,10 @@ def test_historical_annex_keeps_its_descriptive_title(admin_client, reviewed_pro
     binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
     file_id = binding.current_file_id
     document_id = binding.document_id
+    # The base branch retires annexes by archiving their source. The PA-216
+    # checkbox flow is verified separately on its integrated delivery cut.
+    annex.is_archived = True
+    annex.save(update_fields=['is_archived'])
 
     package = reconfirm(proposal.pk, revision_payload(proposal, selected_document_ids=[]), actor=admin_user)
     approval = admin_client.get(reverse('proposal-approval', args=[proposal.pk])).json()
