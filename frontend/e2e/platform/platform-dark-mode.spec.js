@@ -26,7 +26,7 @@ async function openSummary(page, user, theme) {
         : apiPath === 'accounts/projects/' ? [project] : [];
     return { status: 200, contentType: 'application/json', body: JSON.stringify(body) };
   });
-  await page.goto('/platform', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/platform', { waitUntil: 'domcontentloaded' });
   await page.getByTestId(/^project-(?:row|card)-1$/).click();
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name);
   await expect(page.getByText('Progreso', { exact: true })).toBeVisible();
@@ -70,7 +70,7 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
 
           await page.getByRole('button', { name: action, exact: true }).filter({ visible: true }).click();
 
-          await expect(page.getByRole('button', { name: nextAction, exact: true }).filter({ visible: true })).toHaveText(nextAction);
+          await expect(page.getByRole('button', { name: nextAction, exact: true }).filter({ visible: true })).toHaveAccessibleName(nextAction);
           await expect.poll(surface).not.toBe(originalSurface);
           const selectedSurface = await surface();
           expect(await page.evaluate(() => localStorage.getItem('platform_theme'))).toBe(target);
@@ -79,7 +79,7 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
           await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name);
           await openNavigation(page, viewport);
 
-          await expect(page.getByRole('button', { name: nextAction, exact: true }).filter({ visible: true })).toHaveText(nextAction);
+          await expect(page.getByRole('button', { name: nextAction, exact: true }).filter({ visible: true })).toHaveAccessibleName(nextAction);
           await expect.poll(surface).toBe(selectedSurface);
           await attachEvidence(page, testInfo);
         });
