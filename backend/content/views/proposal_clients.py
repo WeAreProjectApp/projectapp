@@ -426,13 +426,16 @@ _ORPHAN_PREDICATE = {
 
 
 def _apply_search(qs, search):
-    """Case-insensitive match on email, first/last name and company."""
+    """Match the displayed full name as well as each existing search field."""
     if not search:
         return qs
-    return qs.filter(
+    return qs.alias(
+        _client_full_name=Trim(Concat('user__first_name', Value(' '), 'user__last_name')),
+    ).filter(
         Q(user__email__icontains=search)
         | Q(user__first_name__icontains=search)
         | Q(user__last_name__icontains=search)
+        | Q(_client_full_name__icontains=search)
         | Q(company_name__icontains=search)
     )
 
@@ -574,13 +577,7 @@ def search_proposal_clients(request):
     # client that was already put away.
     if _parse_bool(request.query_params.get('include_archived')) is not True:
         qs = qs.filter(archived_at__isnull=True)
-    if query:
-        qs = qs.filter(
-            Q(user__email__icontains=query)
-            | Q(user__first_name__icontains=query)
-            | Q(user__last_name__icontains=query)
-            | Q(company_name__icontains=query)
-        )
+    qs = _apply_search(qs, query)
     qs = qs.annotate(
         _display_name_sort=Lower(Coalesce(
             NullIf(

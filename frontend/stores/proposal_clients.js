@@ -7,6 +7,22 @@ import {
 } from './services/request_http';
 import { normalizeApiError } from './services/normalize_api_error';
 
+function clientListUrl({ search = '', orphans = null, archived = false, limit = 100 } = {}) {
+  const query = new URLSearchParams();
+  if (search) query.set('search', search);
+  if (orphans === true) query.set('orphans', 'true');
+  if (orphans === false) query.set('orphans', 'false');
+  if (archived === true) query.set('archived', 'true');
+  if (limit) query.set('limit', String(limit));
+  return `proposals/client-profiles/${query.size ? `?${query}` : ''}`;
+}
+
+function clientCountsUrl(search = '') {
+  const query = new URLSearchParams();
+  if (search) query.set('search', search);
+  return `proposals/client-profiles/status-counts/${query.size ? `?${query}` : ''}`;
+}
+
 /**
  * Store for the proposal admin panel's client management surface.
  *
@@ -27,6 +43,8 @@ export const useProposalClientsStore = defineStore('proposalClients', {
     isUpdating: false,
     error: null,
     _searchAbortController: null,
+    _registerGeneration: 0,
+    _registerAbortController: null,
   }),
 
   getters: {
@@ -42,6 +60,47 @@ export const useProposalClientsStore = defineStore('proposalClients', {
   },
 
   actions: {
+    /** Invalidate immediately, including the interval before a debounced load. */
+    invalidateClientRegister({ pending = true } = {}) {
+      this._registerGeneration += 1;
+      this._registerAbortController?.abort();
+      this._registerAbortController = null;
+      this.$patch({ clients: [], statusCounts: {}, error: null, isLoading: pending });
+    },
+
+    /** Publish rows and counts from one query together; obsolete loads never commit. */
+    async fetchClientRegister({ silent = false, ...params } = {}) {
+      const generation = ++this._registerGeneration;
+      this._registerAbortController?.abort();
+      const controller = new AbortController();
+      this._registerAbortController = controller;
+      if (!silent) this.isLoading = true;
+      this.error = null;
+      try {
+        const [rows, counts] = await Promise.all([
+          get_request(clientListUrl(params), { signal: controller.signal }),
+          get_request(clientCountsUrl(params.search), { signal: controller.signal }),
+        ]);
+        if (generation !== this._registerGeneration) return { success: false, cancelled: true };
+        this.$patch({
+          clients: Array.isArray(rows.data) ? rows.data : [],
+          statusCounts: counts.data && typeof counts.data === 'object' && !Array.isArray(counts.data)
+            ? counts.data : {},
+        });
+        return { success: true, data: this.clients };
+      } catch (error) {
+        if (generation !== this._registerGeneration) return { success: false, cancelled: true };
+        controller.abort();
+        this.$patch({ clients: [], statusCounts: {}, error: error?.response?.data?.error || 'fetch_failed' });
+        return { success: false, errors: error?.response?.data };
+      } finally {
+        if (generation === this._registerGeneration) {
+          this._registerAbortController = null;
+          this.isLoading = false;
+        }
+      }
+    },
+
     // -----------------------------------------------------------------
     // List + filters
     // -----------------------------------------------------------------
@@ -63,15 +122,7 @@ export const useProposalClientsStore = defineStore('proposalClients', {
       if (!silent) this.isLoading = true;
       this.error = null;
       try {
-        const query = new URLSearchParams();
-        if (search) query.set('search', search);
-        if (orphans === true) query.set('orphans', 'true');
-        if (orphans === false) query.set('orphans', 'false');
-        if (archived === true) query.set('archived', 'true');
-        if (limit) query.set('limit', String(limit));
-        const url = `proposals/client-profiles/${
-          query.toString() ? `?${query.toString()}` : ''
-        }`;
+        const url = clientListUrl({ search, orphans, archived, limit });
         const response = await get_request(url);
         this.clients = Array.isArray(response.data) ? response.data : [];
         if (!silent) this.isLoading = false;
@@ -96,11 +147,7 @@ export const useProposalClientsStore = defineStore('proposalClients', {
      */
     async fetchStatusCounts({ search = '' } = {}) {
       try {
-        const query = new URLSearchParams();
-        if (search) query.set('search', search);
-        const url = `proposals/client-profiles/status-counts/${
-          query.toString() ? `?${query.toString()}` : ''
-        }`;
+        const url = clientCountsUrl(search);
         const response = await get_request(url);
         this.statusCounts = response.data && typeof response.data === 'object'
           ? response.data
