@@ -49,8 +49,10 @@ nuevas por frame ni temporizador permanente; sólo medición mientras la guía e
   deja visible el destino al cerrar ese cajón. Se conservan las siete regresiones
   previas de restauración, cancelación y último destino. Otra regresión programa
   una medición y comprueba que cerrar la guía libera el observador y cancela el
-  frame pendiente, mediante las fronteras del navegador. Objetivo focal: store11
-  + host9 + composable9 (29 unitarios), más 19 E2E.
+  frame pendiente, mediante las fronteras del navegador. La regresión de retarget
+  reproduce la copia activa de Driver y comprueba que sucesivas mediciones
+  conservan el destino en el paso configurado sin reiniciar el resaltado. Objetivo
+  focal: store11 + host9 + composable10 (30 unitarios), más 19 E2E.
 - E2E de apertura real: Documentos → Proyectos → proyecto propio → Bugs →
   navegación móvil → Ayuda → guía
   completada. El cajón desaparece, el centro de Resumen cae en el hueco real del
@@ -65,7 +67,7 @@ nuevas por frame ni temporizador permanente; sólo medición mientras la guía e
 La comprobación SVG usa geometría renderizada (`isPointInFill`), no sólo la clase
 que Driver asigna al destino. Las APIs son fixtures de frontera, sin DB desplegada.
 Antes de medir se esperan los frames del render y las animaciones finitas activas
-del contenido/navegación mediante `Animation.finished`. Se excluyen animaciones
+del contenido/navegación y de la tarjeta mediante `Animation.finished`. Se excluyen animaciones
 pausadas e infinitas y se dejan procesar los frames de refresco posteriores, sin
 esperas fijas. Así una coincidencia transitoria antes de terminar el layout no
 acredita el anclaje final. Esta precisión responde al cotejo técnico de DevQA
@@ -104,3 +106,28 @@ Mismos flujos de guía general y de proyecto, sin rutas, vistas ni capacidades
 nuevas. Catálogos de vistas conservan identidad y conteos; se revisa el diff
 semántico. La auditoría estática del mapa E2E debe registrar las nuevas regresiones
 y mantener explícitas las brechas de outcomes ajenas al arreglo.
+
+
+## Corrección de la integración tras CI4e2497fd
+
+El shard10 de Tests42403528543 falló en cinco regresiones nuevas y requirió
+reintentos en otras dos. Las cuatro entradas compactas buscaban la fila de
+escritorio inexistente: `ProjectsTable` renderiza una tarjeta en móvil. El helper
+ahora pulsa la fila o tarjeta visible del mismo proyecto; conserva la navegación
+Documentos→Proyectos→proyecto→Bugs→Ayuda y todas las aserciones geométricas.
+
+El caso general y los reintentos mostraron en las trazas el recorte que vuelve a
+un destino de tamaño cero. Driver1.10.2 resuelve por copia el paso activo, mientras
+`drive()` vuelve a leer el array configurado. La primera integración modificaba
+esa copia, por lo que no persistía el destino nuevo. Ahora se actualiza la entrada
+configurada del índice actual; si ya contiene el mismo nodo, sólo se refresca,
+sin redibujar continuamente durante las mediciones de layout. La regresión unitaria
+modela esa frontera y dos mediciones sucesivas. No se relajan los huecos SVG ni la
+posición de la tarjeta para obtener verde. Esto corrige el candidato de rama;
+no atribuye retrospectivamente el momento exacto del fallo B del corte d012.
+
+DEVQA008 ya está CLOSED_RUNTIME_RELEASED: cierre734bedec/receipt4b85fcfb y dictamen
+conjunto98ddae5e cotejados. Runtime/servednull, tested d012 conservado. No se reabre
+el entorno ni se repara el archivo; el nuevo SHA necesita CI propio y acuerdo de
+ventana futura/DEVLISTO. Pausa, claro no acreditado y positivosAppi/voz bloqueados
+se mantienen separados del anclaje. No pruebas/builds locales por esta corrección.

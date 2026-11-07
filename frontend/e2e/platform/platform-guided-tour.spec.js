@@ -157,7 +157,8 @@ async function openProjectsFromDocuments(page) {
 
 async function openOwnedProjectFromDocuments(page) {
   await openProjectsFromDocuments(page)
-  await page.getByTestId(`project-row-${project.id}`).click()
+  await page.getByTestId(`project-row-${project.id}`)
+    .or(page.getByTestId(`project-card-${project.id}`)).filter({ visible: true }).click()
   await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}$`))
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name)
 }
@@ -170,11 +171,11 @@ async function waitForTourLayout(page) {
     await nextFrame()
     const animations = document.getAnimations().filter((animation) => {
       const target = animation.effect?.target
-      return target instanceof Element && target.closest('main, aside')
+      return target instanceof Element && target.closest('main, aside, [data-testid="platform-tour-popover"]')
         && animation.playState === 'running'
         && Number.isFinite(animation.effect.getComputedTiming().endTime)
     })
-    // Await actual finite layout transitions; ignore paused animations and spinners.
+    // Await layout and card animations before inspecting or advancing the tour.
     await Promise.allSettled(animations.map((animation) => animation.finished))
     await nextFrame()
     await nextFrame()

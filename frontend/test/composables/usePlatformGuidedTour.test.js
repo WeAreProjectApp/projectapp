@@ -188,6 +188,36 @@ describe('usePlatformGuidedTour', () => {
     expect(tour.activeTour.value.id).toBe(17)
   })
 
+  it('keeps the visible menu destination across repeated breakpoint measurements', async () => {
+    // Driver returns a resolved active-step copy but re-reads configured steps on drive().
+    const desktopTarget = addTarget('projects')
+    const mobileTarget = addTarget('projects')
+    mobileTarget.getClientRects = () => []
+    const frames = []
+    window.requestAnimationFrame = jest.fn((callback) => { frames.push(callback); return frames.length })
+    window.cancelAnimationFrame = jest.fn()
+    driver.refresh = jest.fn()
+    driver.getActiveElement = jest.fn().mockReturnValue(desktopTarget)
+    store.tours = [tourFixture([step('projects')])]
+    mountHarness()
+    await tour.start(17)
+    const config = globalThis.__platformDriverFactory.mock.calls[0][0]
+    driver.getConfig = jest.fn().mockReturnValue(config)
+    driver.getActiveStep = jest.fn().mockReturnValue({ ...config.steps[0] })
+    desktopTarget.getClientRects = () => []
+    mobileTarget.getClientRects = () => [{ width: 24, height: 24 }]
+    window.matchMedia = jest.fn().mockImplementation((query) => ({ matches: query === '(max-width: 767px)' }))
+
+    window.dispatchEvent(new Event('resize'))
+    await frames.shift()()
+    window.dispatchEvent(new Event('resize'))
+    await frames.shift()()
+
+    expect(config.steps[0].element).toBe(mobileTarget)
+    expect(driver.drive).toHaveBeenCalledTimes(2)
+    expect(driver.refresh).toHaveBeenCalledTimes(1)
+  })
+
   it('releases pending layout work when the guide closes', async () => {
     // Fails if a closed guide keeps a DOM observer or queued measurement alive.
     const observed = new Set()

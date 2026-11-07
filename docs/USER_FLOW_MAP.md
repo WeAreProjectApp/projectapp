@@ -7998,7 +7998,7 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible. Al cambiar de tamaño conserva el paso y selecciona el enlace visible de escritorio o del cajón móvil.
+Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible. Al cambiar de tamaño conserva el paso y selecciona el enlace visible de escritorio o del cajón móvil. El anclaje se conserva en mediciones posteriores sobre el destino visible, tras asentarse la distribución y la tarjeta.
 
 | Resultado | Interacción y evidencia |
 |---|---|
@@ -8014,7 +8014,7 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas. Los controles explicados quedan visibles al cerrar el cajón global y el recorte sigue su geometría al cambiar entre móvil, tableta y escritorio.
+Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas. Los controles explicados quedan visibles al cerrar el cajón global y el recorte sigue su geometría al cambiar entre móvil, tableta y escritorio. La entrada usa fila o tarjeta según el tamaño y conserva el destino tras posteriores mediciones de layout.
 
 | Resultado | Interacción y evidencia |
 |---|---|

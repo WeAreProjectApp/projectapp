@@ -97,10 +97,12 @@ export function usePlatformGuidedTour() {
       if (driver !== instance || token !== runToken || currentStep.value !== key) return
       if (!element && key !== 'welcome') { await pause(); return }
       observeTarget(element)
-      if (element && instance.getActiveElement() !== element) {
-        // Desktop and drawer navigation use different DOM nodes for the same target.
-        instance.getActiveStep().element = element
-        instance.drive(instance.getActiveIndex())
+      const index = instance.getActiveIndex()
+      const step = instance.getConfig().steps?.[index]
+      if (element && step && step.element !== element) {
+        // Driver resolves an active-step copy; drive() reads the configured step.
+        step.element = element
+        instance.drive(index)
       } else instance.refresh()
     })
   }
