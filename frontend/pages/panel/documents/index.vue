@@ -607,6 +607,7 @@ const route = useRoute();
 const router = useRouter();
 const { openRow } = useRowNavigation();
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
+useHead({ title: 'Gestor Documental | ProjectApp' });
 
 const documentStore = useDocumentStore();
 const folderStore = useDocumentFolderStore();

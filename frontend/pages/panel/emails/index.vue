@@ -236,8 +236,8 @@
 
       <div v-if="emailStore.isLoadingHistory" class="text-xs text-text-subtle py-4 text-center">Cargando historial...</div>
 
-      <div v-else-if="!emailStore.history.length" class="text-xs text-text-subtle py-4 text-center">
-        No se han enviado correos aún.
+      <div v-else-if="!emailStore.history.length" class="text-xs text-text-subtle py-4 text-center" data-testid="email-history-empty">
+        {{ hasAppliedHistoryFilters ? 'Ningún correo coincide con los filtros aplicados.' : 'No se han enviado correos aún.' }}
       </div>
 
       <div v-else class="space-y-2">
@@ -553,6 +553,7 @@ const expandedIds = ref({});
 const selectedBodyEntry = ref(null);
 const selectedPdfAttachment = ref(null);
 const selectedResendEntry = ref(null);
+const hasAppliedHistoryFilters = computed(() => Object.values(emailStore.historyFilters).some(Boolean));
 const historyFilters = ref({
   recipient: '',
   family: '',

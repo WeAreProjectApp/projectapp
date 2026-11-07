@@ -609,6 +609,7 @@ import { stateBadgeVariant } from '~/utils/documentState';
 import { formatDate } from '~/utils/formatDate';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
+useHead({ title: 'Proyectos | ProjectApp' });
 
 const store = usePanelProjectsStore();
 const notify = usePanelNotify();

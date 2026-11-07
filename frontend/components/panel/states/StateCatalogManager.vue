@@ -692,15 +692,15 @@ function activeCount(state) {
         </article>
       </div>
     </section>
+    <ConfirmModal
+      v-model="confirmState.open"
+      :title="confirmState.title"
+      :message="confirmState.message"
+      :confirm-text="confirmState.confirmText"
+      :cancel-text="confirmState.cancelText"
+      :variant="confirmState.variant"
+      @confirm="handleConfirmed"
+      @cancel="handleCancelled"
+    />
   </main>
-  <ConfirmModal
-    v-model="confirmState.open"
-    :title="confirmState.title"
-    :message="confirmState.message"
-    :confirm-text="confirmState.confirmText"
-    :cancel-text="confirmState.cancelText"
-    :variant="confirmState.variant"
-    @confirm="handleConfirmed"
-    @cancel="handleCancelled"
-  />
 </template>
