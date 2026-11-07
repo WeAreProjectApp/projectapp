@@ -26,6 +26,7 @@ const FOCUSABLE_SELECTOR = [
  * @param {import('vue').Ref<boolean>} options.active - Trap on/off switch
  * @param {(() => HTMLElement|null)|null} [options.initialFocus] - Preferred
  *   initial focus target; return null to fall through to the defaults
+ * @param {import('vue').Ref<boolean>|boolean} [options.paused] - Leave focus handling to a nested dialog without forgetting the original opener
  * @returns {{ activate: () => Promise<void>, deactivate: () => void }}
  */
 export function useFocusTrap(containerRef, { active, initialFocus = null, paused = false } = {}) {
