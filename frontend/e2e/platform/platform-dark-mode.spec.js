@@ -26,7 +26,7 @@ async function openSummary(page, user, theme) {
         : apiPath === 'accounts/projects/' ? [project] : [];
     return { status: 200, contentType: 'application/json', body: JSON.stringify(body) };
   });
-  await page.goto('/es-co/platform', { waitUntil: 'domcontentloaded' });
+  await page.goto('/platform', { waitUntil: 'domcontentloaded' });
   await page.getByTestId(/^project-(?:row|card)-1$/).click();
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name);
   await expect(page.getByText('Progreso', { exact: true })).toBeVisible();
@@ -56,8 +56,8 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
     test.setTimeout(60_000);
 
     for (const [theme, target, action, nextAction] of [
-      ['dark', 'light', 'Activar modo claro', 'Activar modo oscuro'],
-      ['light', 'dark', 'Activar modo oscuro', 'Activar modo claro'],
+      ['dark', 'light', 'Switch to light mode', 'Switch to dark mode'],
+      ['light', 'dark', 'Switch to dark mode', 'Switch to light mode'],
     ]) {
       for (const [role, user] of [['admin', mockPlatformAdmin], ['client', mockPlatformClient]]) {
         test(`persists the visible theme selection for ${role} from ${theme}`, {
