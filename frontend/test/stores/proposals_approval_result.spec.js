@@ -25,4 +25,52 @@ describe('Approval result synchronization', () => {
     expect(create_request).toHaveBeenCalledTimes(1);
     expect(get_request).not.toHaveBeenCalled();
   });
+
+  it('replaces the old client with the persisted approval client', async () => {
+    const store = useProposalStore();
+    store.currentProposal = { ...createProposal(), client: { id: 12, name: 'Cliente anterior' } };
+    store.proposals = [{ ...store.currentProposal }];
+    const client = { profile_id: 27, name: 'Cliente confirmado', email: 'nuevo@example.com', phone: '', company: 'Nueva empresa', is_email_placeholder: false };
+    create_request.mockResolvedValue({ data: {
+      action: 'confirm', source_hash: 'confirmed-source', draft_client: client,
+      client: { profile_id: 12, name: 'Cliente congelado' },
+      proposal: { id: 91, status: 'accepted', linked_project: { id: 45 } },
+    } });
+
+    await store.submitApproval(91, { action: 'confirm' });
+
+    expect(store.currentProposal).toMatchObject({
+      client: { id: 27, name: client.name, email: client.email, phone: '', company: client.company },
+      client_name: client.name, client_email: client.email, client_phone: '', proposal_source_hash: 'confirmed-source',
+    });
+    expect(store.proposals[0].client.id).toBe(27);
+    expect(create_request).toHaveBeenCalledTimes(1);
+    expect(get_request).not.toHaveBeenCalled();
+  });
+
+  it('clears obsolete contact values when the approved client has empty fields', async () => {
+    const store = useProposalStore();
+    store.currentProposal = { ...createProposal(), client_phone: '3001234567', client_email: 'anterior@example.com' };
+    create_request.mockResolvedValue({ data: {
+      action: 'confirm', draft_client: { profile_id: 27, name: 'Cliente sin contacto', email: '', phone: '', company: '' },
+      proposal: { id: 91, status: 'accepted' },
+    } });
+
+    await store.submitApproval(91, { action: 'confirm' });
+
+    expect(store.currentProposal).toMatchObject({ client_email: '', client_phone: '', client: { company: '' } });
+  });
+
+  it('keeps the current client when a historical review is deferred', async () => {
+    const store = useProposalStore();
+    store.currentProposal = { ...createProposal(), client: { id: 12, name: 'Cliente actual' } };
+    create_request.mockResolvedValue({ data: {
+      action: 'defer', draft_client: { profile_id: 27, name: 'Borrador' },
+      proposal: { id: 91, status: 'accepted' },
+    } });
+
+    await store.submitApproval(91, { action: 'defer' });
+
+    expect(store.currentProposal.client).toEqual({ id: 12, name: 'Cliente actual' });
+  });
 });

@@ -147,7 +147,7 @@ const EMAIL_ROW = {
   proposal: null,
 };
 
-function setupMock(page) {
+function setupMock(page, { registerFailure = () => false } = {}) {
   return mockApi(page, async ({ route, apiPath }) => {
     if (apiPath === 'auth/check/') return authCheck;
 
@@ -156,10 +156,22 @@ function setupMock(page) {
     }
 
     if (apiPath === 'proposals/client-profiles/status-counts/') {
+      const search = (new URL(route.request().url()).searchParams.get('search') || '').toLowerCase();
+      if (registerFailure('counts', search)) {
+        return { status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'counts_failed' }) };
+      }
+      const matching = search
+        ? ALL_CLIENTS.filter((client) => client.name.toLowerCase().includes(search))
+        : ALL_CLIENTS;
       return {
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ all: 4, active: 4, orphans: 0, archived: 0 }),
+        body: JSON.stringify({
+          all: matching.length,
+          active: matching.filter((client) => !client.is_orphan).length,
+          orphans: matching.filter((client) => client.is_orphan).length,
+          archived: matching.filter((client) => client.is_archived).length,
+        }),
       };
     }
 
@@ -179,6 +191,9 @@ function setupMock(page) {
     if (apiPath === 'proposals/client-profiles/') {
       const search = (new URL(route.request().url())
         .searchParams.get('search') || '').toLowerCase();
+      if (registerFailure('rows', search)) {
+        return { status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'rows_failed' }) };
+      }
       const rows = search
         ? ALL_CLIENTS.filter((c) => c.name.toLowerCase().includes(search))
         : ALL_CLIENTS;
@@ -224,12 +239,22 @@ function setupMock(page) {
   });
 }
 
-async function gotoClients(page) {
-  await page.goto('/panel/clients');
+async function gotoClients(page, locale = '') {
+  await page.goto(`${locale}/panel/clients`);
   await expect(page.getByRole('heading', { name: 'Clientes' })).toBeVisible({ timeout: 30_000 });
 }
 
 const rowsShown = (page) => page.locator('[data-testid^="client-row-"]');
+
+function waitForClientRegister(page, search) {
+  return Promise.all([
+    'proposals/client-profiles/',
+    'proposals/client-profiles/status-counts/',
+  ].map((path) => page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return url.pathname.endsWith(path) && (url.searchParams.get('search') || '') === search;
+  })));
+}
 
 /** Level 1 is the way into level 2: the subfilters only exist under a module. */
 async function openModule(page, moduleId) {
@@ -419,6 +444,56 @@ test.describe('Admin Clients Filter Presets', () => {
     await expect(page.getByText('Mimittos SAS')).toBeVisible();
     await expect(page).toHaveURL(/clientTab=hosting-charged/);
   });
+
+  test('clears a no-match register before restoration (PA-243)', {
+    tag: [...ADMIN_CLIENTS_FILTER_PRESETS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Catches previous client cards surviving while the search counters say zero.
+    await setupMock(page);
+    await gotoClients(page, '/es-co');
+    await expect(rowsShown(page)).toHaveCount(4);
+    await expect(page.getByTestId('clients-status-all')).toHaveText('Todos (4)');
+
+    const noMatches = waitForClientRegister(page, 'sin coincidencias');
+    await page.getByTestId('clients-search-input').fill('sin coincidencias');
+    await noMatches;
+    await expect(rowsShown(page)).toHaveCount(0);
+    await expect(page.getByText('No se encontraron clientes con ese criterio.')).toHaveCount(1);
+    await expect(page.getByTestId('clients-status-all')).toHaveText('Todos (0)');
+
+    const restored = waitForClientRegister(page, '');
+    await page.getByTestId('clients-search-input').fill('');
+    await restored;
+    await expect(rowsShown(page)).toHaveCount(4);
+    await expect(page.getByTestId('clients-status-all')).toHaveText('Todos (4)');
+  });
+
+  for (const failedEndpoint of ['rows', 'counts']) {
+    test(`clears a failed ${failedEndpoint} register before retry (PA-243)`, {
+      tag: [...ADMIN_CLIENTS_FILTER_PRESETS, '@role:admin', '@outcome:failure'],
+    }, async ({ page }) => {
+      // Catches either register boundary leaving older cards or counters visible.
+      const control = { endpoint: null };
+      await setupMock(page, { registerFailure: (endpoint) => control.endpoint === endpoint });
+      await gotoClients(page, '/es-co');
+      await expect(rowsShown(page)).toHaveCount(4);
+
+      control.endpoint = failedEndpoint;
+      const failed = waitForClientRegister(page, 'sin coincidencias');
+      await page.getByTestId('clients-search-input').fill('sin coincidencias');
+      await failed;
+      await expect(page.getByRole('alert')).toContainText('No se pudieron cargar los clientes. Vuelve a intentar.');
+      await expect(rowsShown(page)).toHaveCount(0);
+      await expect(page.getByTestId('clients-status-all')).toHaveText('Todos');
+
+      control.endpoint = null;
+      const retried = waitForClientRegister(page, 'sin coincidencias');
+      await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
+      await retried;
+      await expect(rowsShown(page)).toHaveCount(0);
+      await expect(page.getByTestId('clients-status-all')).toHaveText('Todos (0)');
+    });
+  }
 
   test('the client status is transversal and travels in the URL', {
     tag: [...ADMIN_CLIENTS_FILTER_PRESETS, '@role:admin', '@outcome:success'],

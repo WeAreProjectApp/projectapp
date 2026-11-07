@@ -14,12 +14,12 @@
           v-if="isAdminUser"
           type="button"
           class="inline-flex items-center gap-1.5 text-sm text-text-brand hover:underline whitespace-nowrap"
-          title="Abrir la ficha comercial en el panel (pestaña nueva)"
+          :title="t('projectAccess.commercialRecord.title')"
           data-testid="project-back-to-panel"
           @click="openPanelRecord"
         >
           <ArrowTopRightOnSquareIcon class="w-4 h-4" />
-          Ficha comercial
+          {{ t('projectAccess.commercialRecord.label') }}
         </button>
       </div>
       <p v-if="project" class="mt-1 text-sm text-green-light">
@@ -47,13 +47,15 @@ import ProjectBreadcrumb from '~/components/platform/projects/ProjectBreadcrumb.
 import ProjectSecondarySidebar from '~/components/platform/projects/ProjectSecondarySidebar.vue'
 
 const route = useRoute()
+const localePath = useLocalePath()
+const { t } = useI18n()
 const store = usePlatformProjectsStore()
 const authStore = usePlatformAuthStore()
 
 const isAdminUser = computed(() => authStore.isAdmin)
 
 function openPanelRecord() {
-  window.open(`/panel/projects?highlight=${projectId.value}`, '_blank')
+  window.open(localePath({ path: '/panel/projects', query: { highlight: projectId.value } }), '_blank')
 }
 
 const projectId = computed(() => Number(route.params.id))

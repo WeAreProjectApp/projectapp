@@ -15,8 +15,8 @@ const mockStore = {
   statusCounts: {},
   isLoading: false,
   isUpdating: false,
-  fetchClients: jest.fn(),
-  fetchStatusCounts: jest.fn(),
+  fetchClientRegister: jest.fn(),
+  invalidateClientRegister: jest.fn(),
   fetchClient: jest.fn(),
   createClient: jest.fn(),
   deleteClient: jest.fn(),
@@ -118,8 +118,9 @@ describe('panel/clients index page', () => {
     mockStore.statusCounts = {};
     mockStore.isLoading = false;
     mockStore.isUpdating = false;
-    mockStore.fetchClients.mockReset().mockResolvedValue({ success: true, data: [] });
-    mockStore.fetchStatusCounts.mockReset().mockResolvedValue({ success: true, data: {} });
+    mockStore.fetchClientRegister.mockReset().mockResolvedValue({ success: true, data: [] });
+    mockStore.invalidateClientRegister.mockReset();
+    mockStore.error = null;
     mockStore.fetchClient.mockReset().mockResolvedValue({ success: true, data: { proposals: [] } });
     mockStore.createClient.mockReset().mockResolvedValue({ success: true });
     mockStore.deleteClient.mockReset().mockResolvedValue({ success: true });
@@ -185,8 +186,8 @@ describe('panel/clients index page', () => {
     // `limit` asks for the endpoint's hard cap: the page does not paginate
     // server-side and the subfilters (and their counts) run over whatever was
     // loaded, so a 100-row window would make them lie.
-    expect(mockStore.fetchClients).toHaveBeenNthCalledWith(1, { search: '', orphans: null, archived: false, limit: 500, silent: false });
-    expect(mockStore.fetchClients).toHaveBeenNthCalledWith(2, { search: '', orphans: true, archived: false, limit: 500, silent: false });
+    expect(mockStore.fetchClientRegister).toHaveBeenNthCalledWith(1, { search: '', orphans: null, archived: false, limit: 500, silent: false });
+    expect(mockStore.fetchClientRegister).toHaveBeenNthCalledWith(2, { search: '', orphans: true, archived: false, limit: 500, silent: false });
   });
 
   it('keeps the status out of the module row it used to compete with', async () => {
@@ -238,7 +239,7 @@ describe('panel/clients index page', () => {
     jest.advanceTimersByTime(250);
     await flushPromises();
 
-    expect(mockStore.fetchStatusCounts).toHaveBeenLastCalledWith({ search: 'acme' });
+    expect(mockStore.fetchClientRegister).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'acme' }));
   });
 
   it('submits the create modal payload trimmed and refreshes the list', async () => {
@@ -262,7 +263,7 @@ describe('panel/clients index page', () => {
       address: '',
       billing_code: '',
     });
-    expect(mockStore.fetchClients).toHaveBeenCalledTimes(2);
+    expect(mockStore.fetchClientRegister).toHaveBeenCalledTimes(2);
   });
 
   it('creates a client with its billing identity in one step', async () => {
@@ -333,11 +334,11 @@ describe('panel/clients index page', () => {
     await flushPromises();
 
     await wrapper.get('[data-testid="clients-search-input"]').setValue('ana');
-    expect(mockStore.fetchClients).toHaveBeenCalledTimes(1);
+    expect(mockStore.fetchClientRegister).toHaveBeenCalledTimes(1);
 
     jest.advanceTimersByTime(250);
     await flushPromises();
 
-    expect(mockStore.fetchClients).toHaveBeenNthCalledWith(2, { search: 'ana', orphans: null, archived: false, limit: 500, silent: false });
+    expect(mockStore.fetchClientRegister).toHaveBeenNthCalledWith(2, { search: 'ana', orphans: null, archived: false, limit: 500, silent: false });
   });
 });

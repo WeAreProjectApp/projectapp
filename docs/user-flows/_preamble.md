@@ -212,6 +212,8 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 
 #### FLOW: `platform-project-detail`
 
+PA-241: el retorno administrativo desde el encabezado o Cambiar estado abre la ficha comercial del mismo proyecto en otra pestaña y conserva el idioma es-co/en-us y el resaltado. El acceso sigue oculto para clientes.
+
 - **Module:** platform
 - **Role:** platform-admin / platform-client
 - **Priority:** P2

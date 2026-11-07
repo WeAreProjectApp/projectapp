@@ -50,7 +50,7 @@
             Editar
           </BaseButton>
           <BaseButton variant="secondary" size="md" @click="openPanelLifecycle">
-            Cambiar estado en la ficha comercial
+            {{ t('projectAccess.commercialRecord.changeState') }}
           </BaseButton>
         </div>
       </div>
@@ -119,6 +119,8 @@ definePageMeta({
 
 const authStore = usePlatformAuthStore()
 const projectsStore = usePlatformProjectsStore()
+const localePath = useLocalePath()
+const { t } = useI18n()
 
 const project = computed(() => projectsStore.currentProject)
 const phases = ref([])
@@ -184,6 +186,6 @@ async function handleEditSubmit() {
 }
 
 function openPanelLifecycle() {
-  window.open(`/panel/projects?highlight=${project.value.id}`, '_blank')
+  window.open(localePath({ path: '/panel/projects', query: { highlight: project.value.id } }), '_blank')
 }
 </script>

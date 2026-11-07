@@ -633,6 +633,43 @@ async function visibleIncomeIds(page) {
     rows.map((row) => Number(row.getAttribute('data-testid').replace('accounting-row-', ''))));
 }
 
+const LONG_GROUPED_INCOME = incomeRow({
+  client: 5,
+  client_name: 'Cliente QA',
+  project: 91,
+  project_name: 'QA PA-225 Proyecto con nombre largo y espacios',
+  concept: 'QA PA-225 Referencia comercial que necesita ancho de lectura',
+});
+
+async function expectReadableGroupedIncome(page, hasProjectHeader) {
+  const row = page.getByTestId('accounting-row-1');
+  await expect(row).toContainText(LONG_GROUPED_INCOME.concept);
+  await expect(row).toContainText(LONG_GROUPED_INCOME.project_name);
+  const action = page.getByTestId('income-actions-1');
+  const actionBox = await action.boundingBox();
+  expect(actionBox.width).toBeGreaterThanOrEqual(44);
+  if (hasProjectHeader) {
+    const conceptHeader = page.getByRole('columnheader', { name: 'Concepto', exact: true });
+    const projectHeader = page.getByRole('columnheader', { name: 'Proyecto', exact: true });
+    const [concept, project, conceptLabel, projectLabel] = await Promise.all([
+      conceptHeader.boundingBox(), projectHeader.boundingBox(),
+      conceptHeader.getByText('Concepto', { exact: true }).boundingBox(),
+      projectHeader.getByText('Proyecto', { exact: true }).boundingBox(),
+    ]);
+    expect(concept.width).toBeGreaterThan(conceptLabel.width + 20);
+    expect(project.width).toBeGreaterThan(projectLabel.width + 20);
+    expect(concept.x + concept.width).toBeLessThanOrEqual(project.x + 1);
+  }
+  expect(await page.evaluate(() => Math.max(
+    document.documentElement.scrollWidth, document.body.scrollWidth,
+  ) <= document.documentElement.clientWidth + 1)).toBe(true);
+  await action.click();
+  await expect(page.getByTestId('income-actions-modal').getByTestId('income-action-edit-1'))
+    .toHaveCount(1);
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await expect(page.getByTestId('income-actions-modal')).toHaveCount(0);
+}
+
 async function openIncomeMute(page, incomeId = 1) {
   await page.getByTestId(`income-actions-${incomeId}`).click();
   await page.getByTestId(`income-action-toggle-mute-${incomeId}`).click();
@@ -3097,6 +3134,33 @@ test.describe('Admin Accounting Incomes — vista agrupada por cliente', () => {
     await action.click();
     await expect(page.getByTestId('income-actions-modal')).toBeVisible();
   });
+
+  for (const { alias, hasProjectHeader } of [
+    { alias: 'compact', hasProjectHeader: false },
+    { alias: 'portrait', hasProjectHeader: false },
+    { alias: 'landscape', hasProjectHeader: false },
+    { alias: 'desktop', hasProjectHeader: true },
+    { alias: 'wide', hasProjectHeader: true },
+  ]) {
+    test.describe(`grouped long names at ${alias}`, () => {
+      test.use(viewportUse(alias));
+
+      test('keeps Concepto legible across themes (PA-242)', {
+        tag: [...ADMIN_ACCOUNTING_INCOME_CLIENT, '@role:admin', '@outcome:success', `@viewport:${alias}`],
+      }, async ({ page }) => {
+        // quality: allow-duplicate (per-viewport contract: grouped income readability at ${alias})
+        // Catches a narrow Concepto track, overlapping headers, or inaccessible row actions.
+        await mockApi(page, buildHandler({
+          rows: [LONG_GROUPED_INCOME], calls: [], incomeViewMode: 'grouped',
+        }));
+        await navigateToIncomesFromPanel(page);
+        await expectReadableGroupedIncome(page, hasProjectHeader);
+        await page.getByRole('button', { name: 'Cambiar a modo oscuro' }).click();
+        await expect(page.getByRole('button', { name: 'Cambiar a modo claro' })).toHaveCount(1);
+        await expectReadableGroupedIncome(page, hasProjectHeader);
+      });
+    });
+  }
 
   test('the in-page toggle is session-only: classic appears, nothing persists', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CLIENT, '@role:admin', '@outcome:success'],
