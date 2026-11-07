@@ -1,5 +1,8 @@
 <script setup>
-definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
-const localePath = useLocalePath();
-await navigateTo({ path: localePath('/panel/emails'), query: { tab: 'status' } }, { replace: true, redirectCode: 301 });
+definePageMeta({
+  layout: 'admin',
+  middleware: ['admin-auth', 'legacy-email-deliverability-route'],
+});
 </script>
+
+<template><div /></template>

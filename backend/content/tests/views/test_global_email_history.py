@@ -664,6 +664,89 @@ def test_retry_rejects_a_replacement_recipient_without_sending(admin_client):
     assert EmailLog.objects.count() == 1
 
 
+@pytest.mark.parametrize('recipient_kind', (
+    EmailLog.RecipientKind.TO, EmailLog.RecipientKind.CC,
+))
+def test_exact_retry_retains_original_client_for_unregistered_alias(
+    admin_client, make_client_profile, recipient_kind,
+):
+    """Falla si un alias válido pierde la asociación del fallo original."""
+    client = make_client_profile(email='registered@example.com')
+    original = make_snapshot_log()
+    original.recipient = 'client-alias@example.com'
+    original.client = client
+    original.status = EmailLog.Status.FAILED
+    original.recipient_kind = recipient_kind
+    original.save(update_fields=['recipient', 'client', 'status', 'recipient_kind'])
+
+    response = admin_client.post(reverse(
+        'retry-standalone-email', kwargs={'log_id': original.pk},
+    ), {}, format='json')
+
+    assert response.status_code == 201
+    retry = EmailLog.objects.get(pk=response.data['id'])
+    assert retry.client_id == client.pk
+    assert retry.audience == EmailLog.Audience.CLIENT
+    assert retry.recipient == original.recipient
+    assert retry.retry_of_id == original.pk
+    assert mail.outbox[0].to == [original.recipient]
+    history = global_history(admin_client)
+    assert history.data['results'][0]['to_recipients'][0]['client_id'] == client.pk
+    assert history.data['results'][0]['audience'] == EmailLog.Audience.CLIENT
+
+
+def test_failed_exact_retry_retains_original_client_for_unregistered_alias(
+    admin_client, make_client_profile,
+):
+    """Falla si otro error de transporte desvincula el intento de su cliente."""
+    client = make_client_profile(email='registered@example.com')
+    original = make_snapshot_log()
+    original.recipient = 'client-alias@example.com'
+    original.client = client
+    original.status = EmailLog.Status.FAILED
+    original.save(update_fields=['recipient', 'client', 'status'])
+
+    with patch(
+        'content.services.email_delivery_service.EmailMessage.send',
+        side_effect=OSError('SMTP unavailable'),
+    ):
+        response = admin_client.post(reverse(
+            'retry-standalone-email', kwargs={'log_id': original.pk},
+        ), {}, format='json')
+
+    assert response.status_code == 502
+    retry = EmailLog.objects.get(pk=response.data['id'])
+    assert retry.status == EmailLog.Status.FAILED
+    assert retry.client_id == client.pk
+    assert retry.audience == EmailLog.Audience.CLIENT
+    assert retry.recipient == original.recipient
+    assert retry.retry_of_id == original.pk
+
+
+def test_exact_resend_attributes_replacement_address_to_its_registered_client(
+    admin_client, make_client_profile,
+):
+    """Falla si reenviar a otra dirección hereda un cliente que no le corresponde."""
+    original_client = make_client_profile(email='registered@example.com')
+    replacement_client = make_client_profile(email='replacement@example.com')
+    original = make_snapshot_log()
+    original.recipient = 'client-alias@example.com'
+    original.client = original_client
+    original.save(update_fields=['recipient', 'client'])
+
+    response = admin_client.post(
+        reverse('resend-standalone-email', kwargs={'log_id': original.pk}),
+        {'recipient': replacement_client.user.email},
+        format='json',
+    )
+
+    assert response.status_code == 200
+    resent = EmailLog.objects.get(pk=response.data['email_log_id'])
+    assert resent.client_id == replacement_client.pk
+    assert resent.audience == EmailLog.Audience.CLIENT
+    assert mail.outbox[0].to == [replacement_client.user.email]
+
+
 def test_failed_snapshot_retry_keeps_a_linked_failed_history_attempt(admin_client):
     """Falla si un segundo fallo SMTP desaparece del historial o pierde su origen."""
     log = make_snapshot_log()
