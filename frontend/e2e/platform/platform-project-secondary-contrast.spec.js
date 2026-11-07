@@ -12,15 +12,12 @@ const PROJECT = {
   bugs_open_count: 0, changes_pending_count: 0, phases_total_amount: 0,
   last_activity_at: '2026-11-06T12:00:00Z',
 };
-const enterProjects = {
-  compact: async page => {
-    await page.getByRole('button', { name: 'Abrir navegación' }).click();
-    await page.getByRole('link', { name: /^(Mis proyectos|Proyectos)$/ }).filter({ visible: true }).click();
-  },
-  portrait: page => page.getByRole('link', { name: /^(Mis proyectos|Proyectos)$/ }).filter({ visible: true }).click(),
-  landscape: page => page.getByRole('link', { name: /^(Mis proyectos|Proyectos)$/ }).filter({ visible: true }).click(),
-  desktop: page => page.getByRole('link', { name: /^(Mis proyectos|Proyectos)$/ }).filter({ visible: true }).click(),
-  wide: page => page.getByRole('link', { name: /^(Mis proyectos|Proyectos)$/ }).filter({ visible: true }).click(),
+const openNavigation = {
+  compact: page => page.getByRole('button', { name: 'Abrir navegación' }).click(),
+  portrait: async () => {},
+  landscape: async () => {},
+  desktop: async () => {},
+  wide: async () => {},
 };
 
 async function contrast(locator) {
@@ -63,7 +60,8 @@ for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
         });
         // quality: allow-deep-link (authenticated Profile is the shell entry; reach the list through its navigation)
         await page.goto('/es-co/platform/profile', { waitUntil: 'domcontentloaded' });
-        await enterProjects[profile](page);
+        await openNavigation[profile](page);
+        await page.getByRole('link', { name: /^(Mis proyectos|Proyectos)$/ }).filter({ visible: true }).click();
 
         await expect.poll(() => page.locator('#platform-projects').evaluate(element => Boolean(element.closest('.dark')))).toBe(theme === 'dark');
         const activity = page.getByTestId('project-last-activity-77');
