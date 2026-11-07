@@ -33,13 +33,14 @@ def test_register_counts_match_the_full_name_result(admin_client, make_client_pr
 
 
 def test_autocomplete_excludes_an_archived_full_name(admin_client, make_client_profile):
+    active = make_client_profile(first_name='PA-216 QA', last_name='client')
     make_client_profile(first_name='PA-216 QA', last_name='client', archived_at=datetime(2026, 11, 7, tzinfo=timezone.utc))
 
     response = admin_client.get(reverse('search-proposal-clients'), {'q': 'PA-216 QA client'})
 
     assert response.status_code == 200
-    assert response.data == []
-    assert response['X-Total-Count'] == '0'
+    assert [row['id'] for row in response.data] == [active.pk]
+    assert response['X-Total-Count'] == '1'
 
 
 def test_full_name_search_keeps_non_admin_access_denied(api_client, make_client_profile):

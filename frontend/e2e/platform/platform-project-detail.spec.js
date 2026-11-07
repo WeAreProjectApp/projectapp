@@ -121,31 +121,29 @@ test.describe('Platform Project Detail — Admin', () => {
     await expect(deliveryLink).toHaveAttribute('href', /\/platform\/projects\/1\/delivery$/);
   });
 
-  test('admin keeps the detail locale in both commercial-record popups (PA-241)', {
-    tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-admin', '@outcome:success'],
-  }, async ({ page }) => {
-    // Catches either commercial-record action dropping localePath and opening English from Spanish.
-    await setupDetailMocks(page, { user: mockPlatformAdmin });
-    for (const { locale, label, changeState } of [
-      { locale: '/es-co', label: 'Ficha comercial', changeState: 'Cambiar estado en la ficha comercial' },
-      { locale: '/en-us', label: 'Commercial record', changeState: 'Change status in the commercial record' },
-    ]) {
+  for (const { locale, entry, label } of [
+    { locale: '/es-co', entry: 'header', label: 'Ficha comercial' },
+    { locale: '/es-co', entry: 'lifecycle', label: 'Cambiar estado en la ficha comercial' },
+    { locale: '/en-us', entry: 'header', label: 'Commercial record' },
+    { locale: '/en-us', entry: 'lifecycle', label: 'Change status in the commercial record' },
+  ]) {
+    test(`admin preserves ${locale} in the ${entry} commercial-record popup (PA-241)`, {
+      tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-admin', '@outcome:success'],
+    }, async ({ page }) => {
+      // quality: allow-duplicate (per-locale entry point: both commercial links preserve their route context)
+      await setupDetailMocks(page, { user: mockPlatformAdmin });
       await gotoProjectDetail(page, locale);
-      const backLink = page.getByTestId('project-back-to-panel');
-      await expect(backLink).toHaveText(label);
-      const backPopup = page.context().waitForEvent('page');
-      await backLink.click();
-      const commercialRecord = await backPopup;
-      await expect(commercialRecord).toHaveURL(`${locale}/panel/projects?highlight=1`);
-      await commercialRecord.close();
+      const action = page.getByRole('button', { name: label, exact: true });
+      await expect(action).toHaveText(label);
 
-      const statePopup = page.context().waitForEvent('page');
-      await page.getByRole('button', { name: changeState, exact: true }).click();
-      const lifecycleRecord = await statePopup;
-      await expect(lifecycleRecord).toHaveURL(`${locale}/panel/projects?highlight=1`);
-      await lifecycleRecord.close();
-    }
-  });
+      const popupPromise = page.context().waitForEvent('page');
+      await action.click();
+      const popup = await popupPromise;
+
+      await expect(popup).toHaveURL(`${locale}/panel/projects?highlight=1`);
+      await popup.close();
+    });
+  }
 
   test('admin sees Editar button', {
     tag: ['@outcome:display', ...PLATFORM_PROJECT_DETAIL, '@role:platform-admin'],

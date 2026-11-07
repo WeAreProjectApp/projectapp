@@ -108,8 +108,10 @@ async function mockApproval(page, state, { rejectFirst = null } = {}) {
       state.draftClient = submission.payload.new_client
         ? { ...submission.payload.new_client, id: 102 }
         : state.clients.find((client) => client.id === submission.payload.client_profile_id) || state.client;
+      if (submission.payload.new_client) state.clients.push(state.draftClient);
       if (submission.payload.new_project) {
         state.project = { id: 42, name: submission.payload.new_project.name, client_profile_id: state.draftClient.id };
+        state.projects.push(state.project);
       } else if (submission.payload.project_id) {
         state.project = state.projects.find((project) => project.id === submission.payload.project_id) || state.project;
       }
@@ -188,9 +190,30 @@ function editorApprovalScenario(kind) {
     phone: '+573005551212', company: 'Canónica SAS',
   };
   const project = { id: 42, name: 'Proyecto Canónico', client_profile_id: client.id, client: { profile_id: client.id } };
-  state.clients.push(client);
-  state.projects.push(project);
+  if (kind === 'existing') {
+    state.clients.push(client);
+    state.projects.push(project);
+  }
   return { state, client, project, kind };
+}
+
+function expectEditorApprovalSelection(scenario) {
+  const payload = scenario.state.submissions[0].payload;
+  const expected = {
+    existing: {
+      client_profile_id: scenario.client.id, project_id: scenario.project.id,
+      new_client: undefined, new_project: undefined,
+    },
+    new: {
+      client_profile_id: undefined, project_id: undefined,
+      new_client: expect.objectContaining({ name: scenario.client.name, email: scenario.client.email }),
+      new_project: expect.objectContaining({ name: scenario.project.name }),
+    },
+  };
+  expect({
+    client_profile_id: payload.client_profile_id, project_id: payload.project_id,
+    new_client: payload.new_client, new_project: payload.new_project,
+  }).toEqual(expected[scenario.kind]);
 }
 
 async function openEditorApproval(page) {
@@ -394,6 +417,7 @@ for (const kind of ['existing', 'new']) {
     await editorApprovalActions[kind](page, modal, scenario);
     await modal.getByTestId('approval-confirm').click();
     await expect(modal).toHaveCount(0);
+    expectEditorApprovalSelection(scenario);
     await expect(page.getByTestId('general-finance-general-discount')).toHaveValue('17');
     await expectCanonicalProjectData(page, scenario.client, scenario.project);
     page.once('dialog', (dialog) => dialog.accept());
