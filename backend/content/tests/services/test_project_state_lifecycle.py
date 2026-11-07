@@ -119,20 +119,20 @@ def test_suspended_preview_preserves_caused_debt(project, client_profile):
     assert preview['blockers'] == []
 
 
-@freeze_time('2026-11-07 12:00:00')
 def test_operating_preview_leaves_future_income_collectible(project, client_profile, actor):
     """Falla si API/MCP anuncian una cancelación que la transición no ejecuta."""
-    income = expected_income(project, client_profile, days=7)
-    target = state('evolving')
+    with freeze_time(project.created_at + timedelta(hours=1)):
+        income = expected_income(project, client_profile, days=7)
+        target = state('evolving')
 
-    preview = preview_transition(project, target)
-    apply_transition(project, target, actor=actor, impact_token=preview['impact_token'])
+        preview = preview_transition(project, target)
+        apply_transition(project, target, actor=actor, impact_token=preview['impact_token'])
 
-    income.refresh_from_db()
-    assert preview['target_effect'] == 'operating'
-    assert preview['future_incomes'] == []
-    assert income.kind == IncomeRecord.Kind.EXPECTED
-    assert income.total_amount == Decimal('900000.00')
+        income.refresh_from_db()
+        assert preview['target_effect'] == 'operating'
+        assert preview['future_incomes'] == []
+        assert income.kind == IncomeRecord.Kind.EXPECTED
+        assert income.total_amount == Decimal('900000.00')
 
 
 def test_suspended_transition_keeps_expected_income(project, client_profile, actor):
