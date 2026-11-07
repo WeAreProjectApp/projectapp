@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-07 — app not running)
 /**
  * PA-211 foreground color inside rich-text highlights.
  *

@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-07 — app not running)
 /**
  * PA-211 proposal-reader counterpart for the global editorial color rule.
  *
