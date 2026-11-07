@@ -4,7 +4,8 @@ Los cambios de estado conservan sus reglas financieras. Suspender, completar o
 dar de baja pueden dejar ingresos futuros sin cobrar fuera de los esperados,
 con estado Cancelado, y archivar cobros futuros de hosting. No se borran los
 registros ni se confunden con ingresos perdidos. En desarrollo y Operando no
-anuncian esas modificaciones. La baja conserva las decisiones explícitas sobre
+anuncian esas modificaciones. La API y MCP también devuelven vacías las listas
+de cancelaciones futuras para esas transiciones, usando el mismo efecto operativo. La baja conserva las decisiones explícitas sobre
 saldo por cobrar o saldo perdido; completar exige resolver deuda causada.
 
 ## Eliminación selectiva
