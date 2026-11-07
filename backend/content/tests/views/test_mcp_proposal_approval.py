@@ -246,7 +246,8 @@ def test_defer_accepts_without_link(api_client, access, proposal):
 
     proposal.refresh_from_db()
     assert result['isError'] is False
-    assert result['structuredContent']['action'] == 'defer'
+    assert result['structuredContent']['confirmed'] is True
+    assert result['structuredContent']['result']['action'] == 'defer'
     assert proposal.status == 'accepted'
     assert proposal.deliverable_id is None
     assert proposal.approval_files.count() == 0

@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, onBeforeMount, watch } from 'vue'
 import { ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
@@ -74,7 +74,7 @@ const errorMessage = computed(() => store.errorStatus === 403
   : store.errorStatus === 404 ? 'El proyecto no está disponible. Vuelve al listado para consultar tus proyectos.'
     : 'No pudimos cargar este espacio. Comprueba tu sesión y vuelve a intentarlo.')
 
-onMounted(() => { if (projectId.value) store.fetchProject(projectId.value) })
+onBeforeMount(() => { if (projectId.value) store.fetchProject(projectId.value) })
 watch(projectId, (id) => { if (id) store.fetchProject(id) }, { flush: 'sync' })
 
 function statusChipClass(state) {

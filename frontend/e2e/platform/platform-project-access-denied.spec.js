@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-06 — app not running)
 /**
  * E2E coverage for the project-space access-denied state.
  *
