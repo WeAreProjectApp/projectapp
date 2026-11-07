@@ -2,10 +2,10 @@
   <div class="space-y-4" data-testid="secure-link-fields">
     <p v-if="type?.key === 'credentials'" class="text-sm text-text-muted">{{ t('secureLinks.credentialsHint') }}</p>
     <template v-for="group in groups" :key="group.key">
-      <BaseButton v-if="group.optional && group.fields.length" type="button" variant="ghost" size="sm" :aria-expanded="showDetails" :aria-controls="detailsId" data-testid="secure-link-more-details" @click="showDetails = !showDetails">
+      <BaseButton v-if="collapsible && group.optional && group.fields.length" type="button" variant="ghost" size="sm" :aria-expanded="showDetails" :aria-controls="detailsId" data-testid="secure-link-more-details" @click="showDetails = !showDetails">
         {{ t('secureLinks.moreDetails') }}
       </BaseButton>
-      <BaseCollapse v-if="group.fields.length" :id="group.optional ? detailsId : undefined" :open="!group.optional || showDetails">
+      <BaseCollapse v-if="group.fields.length" :id="group.optional ? detailsId : undefined" :open="!collapsible || !group.optional || showDetails">
       <BaseFormRow :cols="2" :gap="4">
     <BaseFormField
       v-for="field in group.fields"
@@ -85,6 +85,7 @@ const props = defineProps({
   idPrefix: { type: String, default: 'secure-link' },
   disabled: { type: Boolean, default: false },
   excludeKeys: { type: Array, default: () => [] },
+  collapsible: { type: Boolean, default: true },
 });
 const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
@@ -115,9 +116,9 @@ function isMultiline(field) {
   return field.kind === 'textarea' || (field.kind === 'secret' && field.max_length > 2000);
 }
 
-// One-line values that are long by nature (a token, a subject) keep the full
+// One-line values that are long by nature (a token) keep the full
 // row; every other one-line field takes half of it.
-const LONG_SINGLE_LINE_KEYS = new Set(['secret_key', 'subject']);
+const LONG_SINGLE_LINE_KEYS = new Set(['secret_key']);
 
 function isWide(field) {
   return isMultiline(field) || LONG_SINGLE_LINE_KEYS.has(field.key);
