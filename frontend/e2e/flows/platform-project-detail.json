@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal.",
+  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal. El retorno administrativo a la ficha comercial conserva el idioma activo es-co/en-us, el proyecto resaltado y la apertura en otra pestaña, tanto desde el encabezado como desde Cambiar estado.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

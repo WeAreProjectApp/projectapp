@@ -6,9 +6,11 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "View client list with search, client-status filtering (Todos/Activos/Huérfanos/Inactivos — a transversal selector next to the search box since the filters were reorganised by business module, no longer the top tab row), expand client to see linked proposals, and empty state. The global panel refresh button invalidates the per-client detail cache and refetches expanded rows so renamed/reassigned proposals appear.",
+  "description": "View client list with search, client-status filtering (Todos/Activos/Huérfanos/Inactivos — a transversal selector next to the search box since the filters were reorganised by business module, no longer the top tab row), expand client to see linked proposals, and empty state. The global panel refresh button invalidates the per-client detail cache and refetches expanded rows so renamed/reassigned proposals appear. La búsqueda publica filas y contadores de la misma consulta, descarta respuestas anteriores, vacía tarjetas y paginación sin coincidencias y ofrece reintento ante errores. Busca también por nombre completo.",
   "expectedSpecs": 3,
   "outcomes": [
-    "display"
+    "display",
+    "success",
+    "failure"
   ]
 }

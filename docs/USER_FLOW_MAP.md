@@ -214,6 +214,8 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 
 #### FLOW: `platform-project-detail`
 
+PA-241: el retorno administrativo desde el encabezado o Cambiar estado abre la ficha comercial del mismo proyecto en otra pestaña y conserva el idioma es-co/en-us y el resaltado. El acceso sigue oculto para clientes.
+
 - **Module:** platform
 - **Role:** platform-admin / platform-client
 - **Priority:** P2
@@ -4388,7 +4390,7 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
   2. Client list loads from `GET /api/proposals/client-profiles/`, and the per-status counts from `GET /api/proposals/client-profiles/status-counts/`.
   3. Clients render with name, email, proposal count, and orphan/placeholder/inactive badges.
   4. Admin uses the status selector (data-testid: `clients-status-<id>`), labelled with each option's count — sends `?orphans=true/false` / `?inactive=true` and mirrors the choice in `?status=`.
-  5. Admin searches clients by name, email, or company.
+  5. Admin searches clients by full name, email, or company. Rows and status counts publish together for the latest query; obsolete responses are ignored. No matches clears the cards and pagination; a failed load shows a retry action instead of stale results.
   6. Admin expands a client row to view individual proposals (lazy-loaded via `GET /api/proposals/client-profiles/:id/`).
   7. Pressing the global panel refresh button invalidates the per-client detail cache and refetches expanded rows, so renamed/reassigned proposals show up.
 - **Coverage:** ⚠️ Partial
@@ -6117,7 +6119,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
 | `admin-mcps` | admin | P2 | display,success,error,failure | 14 |
-| `admin-mini-crm-clients` | admin | P2 | display | 3 |
+| `admin-mini-crm-clients` | admin | P2 | display,success,failure | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
 | `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |
 | `admin-monitoring-case-note` | monitoring | P2 | success,error,failure,display | — |
@@ -8795,7 +8797,7 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 |---|---|---|
 | success | Aprobar desde una propuesta expandida en Clientes | Modal compartido antes de guardar; al completar se refresca la ficha correspondiente |
 | success | Confirmar cliente y proyecto existentes | Propuesta vinculada al proyecto elegido, sin crear otro |
-| success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental |
+| success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental; Proyecto > Datos muestra inmediatamente el cliente confirmado y conserva borradores de otras áreas |
 | success | Desactivar contratos de la propuesta y adjuntar varios archivos | El nuevo paquete usa los personalizados y conserva detalle comercial/técnico |
 | success | Volver a aprobar después de una corrección administrativa de estado | Revisar condiciones del borrador y confirmar otro paquete sin alterar los archivos previos |
 | success | Cancelar antes de confirmar | Estado previo conservado sin crear proyecto ni documentos |
@@ -8808,6 +8810,8 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora todos los anexos activos. Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
 
 Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresión desde Clientes.
+
+PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
 
 ### FLOW: `admin-proposal-change-history`
 
