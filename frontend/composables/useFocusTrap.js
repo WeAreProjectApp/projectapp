@@ -28,7 +28,7 @@ const FOCUSABLE_SELECTOR = [
  *   initial focus target; return null to fall through to the defaults
  * @returns {{ activate: () => Promise<void>, deactivate: () => void }}
  */
-export function useFocusTrap(containerRef, { active, initialFocus = null } = {}) {
+export function useFocusTrap(containerRef, { active, initialFocus = null, paused = false } = {}) {
   let previouslyFocused = null;
 
   function focusables() {
@@ -38,6 +38,7 @@ export function useFocusTrap(containerRef, { active, initialFocus = null } = {})
   }
 
   function onKeydown(event) {
+    if (unref(paused)) return;
     if (event.key !== 'Tab') return;
     const el = unref(containerRef);
     if (!el) return;
