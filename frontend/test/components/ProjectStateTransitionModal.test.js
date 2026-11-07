@@ -112,7 +112,7 @@ function mountModal() {
         BaseButton: {
           props: ['disabled'],
           emits: ['click'],
-          template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+          template: '<button :disabled="disabled" @click="$emit(\'click\', $event)"><slot /></button>',
         },
       },
     },
