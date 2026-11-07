@@ -415,7 +415,7 @@ for (const kind of ['existing', 'new']) {
     await mockApproval(page, scenario.state);
     const modal = await openEditorApproval(page);
     await editorApprovalActions[kind](page, modal, scenario);
-    await modal.getByTestId('approval-confirm').click();
+    await page.getByTestId('approval-confirm').click();
     await expect(modal).toHaveCount(0);
     expectEditorApprovalSelection(scenario);
     await expect(page.getByTestId('general-finance-general-discount')).toHaveValue('17');
