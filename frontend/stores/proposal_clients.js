@@ -65,7 +65,12 @@ export const useProposalClientsStore = defineStore('proposalClients', {
       this._registerGeneration += 1;
       this._registerAbortController?.abort();
       this._registerAbortController = null;
-      this.$patch({ clients: [], statusCounts: {}, error: null, isLoading: pending });
+      this.$patch((state) => {
+        state.clients = [];
+        state.statusCounts = {};
+        state.error = null;
+        state.isLoading = pending;
+      });
     },
 
     /** Publish rows and counts from one query together; obsolete loads never commit. */
@@ -82,16 +87,20 @@ export const useProposalClientsStore = defineStore('proposalClients', {
           get_request(clientCountsUrl(params.search), { signal: controller.signal }),
         ]);
         if (generation !== this._registerGeneration) return { success: false, cancelled: true };
-        this.$patch({
-          clients: Array.isArray(rows.data) ? rows.data : [],
-          statusCounts: counts.data && typeof counts.data === 'object' && !Array.isArray(counts.data)
-            ? counts.data : {},
+        this.$patch((state) => {
+          state.clients = Array.isArray(rows.data) ? rows.data : [];
+          state.statusCounts = counts.data && typeof counts.data === 'object' && !Array.isArray(counts.data)
+            ? counts.data : {};
         });
         return { success: true, data: this.clients };
       } catch (error) {
         if (generation !== this._registerGeneration) return { success: false, cancelled: true };
         controller.abort();
-        this.$patch({ clients: [], statusCounts: {}, error: error?.response?.data?.error || 'fetch_failed' });
+        this.$patch((state) => {
+          state.clients = [];
+          state.statusCounts = {};
+          state.error = error?.response?.data?.error || 'fetch_failed';
+        });
         return { success: false, errors: error?.response?.data };
       } finally {
         if (generation === this._registerGeneration) {

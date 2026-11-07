@@ -52,6 +52,8 @@ describe('Client register query consistency', () => {
 
   it('invalidates the pending query before the debounce launches its replacement', async () => {
     const store = useProposalClientsStore();
+    store.clients = rows;
+    store.statusCounts = counts;
     const oldRows = pendingResponse();
     get_request.mockReturnValueOnce(oldRows.promise).mockResolvedValueOnce({ data: counts });
 
