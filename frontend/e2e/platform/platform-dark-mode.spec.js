@@ -55,15 +55,15 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
     test.use({ viewport });
     test.setTimeout(60_000);
 
-    for (const theme of ['dark', 'light']) {
+    for (const [theme, target, action, nextAction] of [
+      ['dark', 'light', 'Activar modo claro', 'Activar modo oscuro'],
+      ['light', 'dark', 'Activar modo oscuro', 'Activar modo claro'],
+    ]) {
       for (const [role, user] of [['admin', mockPlatformAdmin], ['client', mockPlatformClient]]) {
         test(`persists the visible theme selection for ${role} from ${theme}`, {
           tag: ['@outcome:success', ...PLATFORM_SIDEBAR_NAVIGATION, `@role:platform-${role}`],
         }, async ({ page }, testInfo) => {
           await openSummary(page, user, theme);
-          const target = theme === 'dark' ? 'light' : 'dark';
-          const action = theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro';
-          const nextAction = theme === 'dark' ? 'Activar modo oscuro' : 'Activar modo claro';
           const surface = () => page.getByText('Progreso', { exact: true }).evaluate((element) => getComputedStyle(element.parentElement).backgroundColor);
           const originalSurface = await surface();
           await openNavigation(page, viewport);
