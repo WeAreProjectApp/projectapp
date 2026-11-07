@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from freezegun import freeze_time
 
 from accounts.models import HostingSubscription, Project, UserProfile
 from content.models import (
@@ -116,6 +117,22 @@ def test_suspended_preview_preserves_caused_debt(project, client_profile):
     assert preview['pending_incomes'][0]['id'] == income.pk
     assert preview['future_incomes'] == []
     assert preview['blockers'] == []
+
+
+def test_operating_preview_leaves_future_income_collectible(project, client_profile, actor):
+    """Falla si API/MCP anuncian una cancelación que la transición no ejecuta."""
+    with freeze_time(project.created_at + timedelta(hours=1)):
+        income = expected_income(project, client_profile, days=7)
+        target = state('evolving')
+
+        preview = preview_transition(project, target)
+        apply_transition(project, target, actor=actor, impact_token=preview['impact_token'])
+
+        income.refresh_from_db()
+        assert preview['target_effect'] == 'operating'
+        assert preview['future_incomes'] == []
+        assert income.kind == IncomeRecord.Kind.EXPECTED
+        assert income.total_amount == Decimal('900000.00')
 
 
 def test_suspended_transition_keeps_expected_income(project, client_profile, actor):
