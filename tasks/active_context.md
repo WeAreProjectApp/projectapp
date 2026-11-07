@@ -1,3 +1,7 @@
+> **PA-246 — 2026-11-07:** el resumen compartido expone el título del documento
+> también fuera del paquete vigente. Propuestas, Gestor y MCP conservan identidad
+> y archivos; regresiones de transición y recarga preparadas para CI.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

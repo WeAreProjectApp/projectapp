@@ -59,6 +59,7 @@ def test_document_connector_reads_the_shared_approved_identity(api_client, docum
     assert result['isError'] is False
     assert result['structuredContent']['document']['document_id'] == binding.document_id
     assert result['structuredContent']['document']['current_file_id'] == binding.current_file_id
+    assert result['structuredContent']['document']['title'] == binding.document.title
     assert confirmed_proposal.approval_packages.count() == 1
 
 

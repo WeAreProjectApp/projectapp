@@ -11,6 +11,13 @@ const error = ref('');
 const revisionOpen = ref(false);
 const en = computed(() => locale.value.startsWith('en'));
 const pending = computed(() => data.value?.shared_documents?.some(item => item.has_pending_changes));
+function documentTitle(item) {
+  return item.title
+    || data.value?.confirmed_files?.find(file => file.id === item.current_file_id)?.title
+    || item.history?.find(file => file.id === item.current_file_id)?.title
+    || item.history?.[0]?.title
+    || `${en.value ? 'Document' : 'Documento'} #${item.document_id}`;
+}
 let generation = 0;
 async function load() {
   const ticket = ++generation;
@@ -36,7 +43,7 @@ watch(() => [props.proposalId, props.refreshKey], (value, old) => {
       <p class="text-sm text-text-muted">{{ en ? 'Approved downloads stay unchanged until you confirm a new package.' : 'Las descargas aprobadas se conservan hasta confirmar un nuevo paquete.' }}</p>
       <ul class="space-y-3">
         <li v-for="item in data.shared_documents" :key="item.document_id" class="space-y-1 break-words">
-          <NuxtLink :to="localePath(`/panel/documents/${item.document_id}/edit`)" class="text-sm text-text-brand underline">{{ data.confirmed_files.find(file => file.id === item.current_file_id)?.title || item.source_key }}</NuxtLink>
+          <NuxtLink :to="localePath(`/panel/documents/${item.document_id}/edit`)" class="text-sm text-text-brand underline">{{ documentTitle(item) }}</NuxtLink>
           <span v-if="!item.is_current" class="ml-2 text-xs text-text-muted">{{ en ? 'Historical' : 'Histórico' }}</span>
           <details class="text-sm text-text-default">
             <summary class="cursor-pointer">{{ en ? 'Revisions' : 'Revisiones' }}</summary>

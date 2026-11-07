@@ -27,9 +27,10 @@ function preview(state) {
     commercial_summary: { title: state.proposal.title, total_investment: '12000000', currency: 'COP', payment_milestones: [], hosting_tiers: [] },
     contracts: { available: true, modality: 'single', documents: [{ id: 501, title: 'Contrato Atlas' }] },
     optional_documents: [],
-    confirmed_files: [{ id: 802, title: 'Contrato Atlas', filename: 'atlas-v2.pdf', document_type: 'contract', download_url: `/api/proposals/${PROPOSAL_ID}/approval/files/802/` }],
+    confirmed_files: state.historical ? [] : [{ id: 802, title: 'Contrato Atlas', filename: 'atlas-v2.pdf', document_type: 'contract', download_url: `/api/proposals/${PROPOSAL_ID}/approval/files/802/` }],
     shared_documents: [{
-      document_id: 91, source_key: 'contract:single', current_file_id: 802, is_current: true, has_pending_changes: state.pending,
+      document_id: 91, title: 'Contrato Atlas', source_key: state.historical ? 'original-6' : 'contract:single',
+      current_file_id: 802, is_current: !state.historical, has_pending_changes: state.pending,
       history: [
         { id: 802, package_number: 2, title: 'Contrato Atlas', filename: 'atlas-v2.pdf', download_url: `/api/proposals/${PROPOSAL_ID}/approval/files/802/` },
         { id: 801, package_number: 1, title: 'Contrato Atlas', filename: 'atlas-v1.pdf', download_url: `/api/proposals/${PROPOSAL_ID}/approval/files/801/` },
@@ -183,3 +184,26 @@ for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
     });
   });
 }
+
+
+test('keeps the historical resource title after reloading both surfaces', {
+  tag: ['@flow:admin-proposal-shared-documents', '@module:admin', '@role:admin', '@outcome:display'],
+}, async ({ page }) => {
+  const state = { ...fixture(), packageNumber: 3, pending: false, historical: true };
+  await mockSharedDocuments(page, state);
+  await openDocumentsFromPanel(page);
+  const shared = page.getByTestId('proposal-shared-documents');
+
+  await expect(shared.getByRole('link', { name: 'Contrato Atlas', exact: true })).toHaveAttribute('href', '/es-co/panel/documents/91/edit');
+  await expect(shared).toContainText('Histórico');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await shared.getByRole('link', { name: 'Contrato Atlas', exact: true }).click();
+  await expect(page).toHaveURL(/\/panel\/documents\/91\/edit$/);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  await expect(shared.getByRole('link', { name: 'Contrato Atlas', exact: true })).toHaveAttribute('href', '/es-co/panel/documents/91/edit');
+  await expect(shared).toContainText('Histórico');
+  await shared.getByText('Revisiones', { exact: true }).click();
+  await expect(shared.getByRole('link', { name: 'Contrato Atlas · v2', exact: true })).toHaveAttribute('href', `/api/proposals/${PROPOSAL_ID}/approval/files/802/`);
+  expect(state.submissions).toEqual([]);
+});
