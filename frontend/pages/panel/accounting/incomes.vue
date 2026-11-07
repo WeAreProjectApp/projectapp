@@ -323,12 +323,14 @@
           />
         </template>
         <template #cell-project_name="{ row }">
-          <span v-if="row.project_name" class="inline-flex items-center gap-1">
+          <span v-if="row.project_name" class="flex min-w-0 items-start gap-1">
             <HighlightText
+              class="min-w-0 flex-1"
               :text="row.project_name"
               :query="currentFilters.search"
             />
             <ProjectSpaceLink
+              class="shrink-0"
               :project-id="row.project"
               :data-testid="`income-project-space-${row.id}`"
             />
