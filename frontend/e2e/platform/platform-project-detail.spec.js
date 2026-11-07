@@ -63,8 +63,8 @@ function setupDetailMocks(page, { user, project = mockProject }) {
   });
 }
 
-async function gotoProjectDetail(page) {
-  await page.goto('/platform/projects/1', { waitUntil: 'domcontentloaded' });
+async function gotoProjectDetail(page, locale = '') {
+  await page.goto(`${locale}/platform/projects/1`, { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
   await expect(
     page.getByRole('heading', { name: 'E-commerce Platform', exact: true }),
@@ -121,21 +121,30 @@ test.describe('Platform Project Detail — Admin', () => {
     await expect(deliveryLink).toHaveAttribute('href', /\/platform\/projects\/1\/delivery$/);
   });
 
-  test('admin jumps back to the commercial record in a new tab (PA-50)', {
+  test('admin keeps the detail locale in both commercial-record popups (PA-241)', {
     tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-admin', '@outcome:success'],
   }, async ({ page }) => {
+    // Catches either commercial-record action dropping localePath and opening English from Spanish.
     await setupDetailMocks(page, { user: mockPlatformAdmin });
-    await gotoProjectDetail(page);
+    for (const { locale, label, changeState } of [
+      { locale: '/es-co', label: 'Ficha comercial', changeState: 'Cambiar estado en la ficha comercial' },
+      { locale: '/en-us', label: 'Commercial record', changeState: 'Change status in the commercial record' },
+    ]) {
+      await gotoProjectDetail(page, locale);
+      const backLink = page.getByTestId('project-back-to-panel');
+      await expect(backLink).toHaveText(label);
+      const backPopup = page.context().waitForEvent('page');
+      await backLink.click();
+      const commercialRecord = await backPopup;
+      await expect(commercialRecord).toHaveURL(`${locale}/panel/projects?highlight=1`);
+      await commercialRecord.close();
 
-    const backLink = page.getByTestId('project-back-to-panel');
-    await expect(backLink).toBeVisible();
-
-    const popupPromise = page.context().waitForEvent('page');
-    await backLink.click();
-    const popup = await popupPromise;
-
-    await popup.waitForURL(/\/panel\/projects\?highlight=1/, { timeout: 25_000 });
-    await expect(popup).toHaveURL(/\/panel\/projects\?highlight=1/);
+      const statePopup = page.context().waitForEvent('page');
+      await page.getByRole('button', { name: changeState, exact: true }).click();
+      const lifecycleRecord = await statePopup;
+      await expect(lifecycleRecord).toHaveURL(`${locale}/panel/projects?highlight=1`);
+      await lifecycleRecord.close();
+    }
   });
 
   test('admin sees Editar button', {
@@ -166,6 +175,6 @@ test.describe('Platform Project Detail — Client', () => {
     ).toBeVisible();
     await expect(page.getByRole('button', { name: /editar/i })).not.toBeVisible();
     // PA-50: the panel is admin territory; the back-link must not exist here.
-    await expect(page.getByTestId('project-back-to-panel')).not.toBeVisible();
+    await expect(page.getByTestId('project-back-to-panel')).toHaveCount(0);
   });
 });

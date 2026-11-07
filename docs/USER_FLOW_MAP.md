@@ -4499,6 +4499,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **E2E Specs:** `e2e/admin/admin-clients-filter-presets.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
 - **Backend Tests:** `content/tests/views/test_proposal_clients_views.py::TestPresetAnnotations`, `content/tests/views/test_proposal_clients_views.py::TestDocumentsModuleAnnotations`, `content/tests/views/test_proposal_clients_views.py::TestClientStatusCounts`, `accounts/tests/test_seed_filter_tabs.py::TestDropClientStatusTabsMigration`
 
+PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ninguna paginación anterior. Limpiar restaura el registro. Si falla la lectura de filas o de contadores, la vista muestra error y Reintentar recupera ambos resultados para la consulta vigente. Regresiones: `admin-clients-filter-presets.spec.js` (success/failure), con esperas a las dos fronteras HTTP.
+
 ### FLOW: `admin-clients-documents-section`
 
 - **Module:** admin
@@ -6022,7 +6024,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-client-retained-data` | admin | P1 | display,error,failure | 5 |
 | `admin-clients-config-tab` | admin | P3 | — | 0 |
 | `admin-clients-documents-section` | admin | P2 | display,success | 2 |
-| `admin-clients-filter-presets` | admin | P2 | display,success | 17 |
+| `admin-clients-filter-presets` | admin | P2 | display,success,failure | 17 |
 | `admin-commercial-video-resources` | admin | P1 | display,success,error,failure | 4 |
 | `admin-communication-folders` | admin | P1 | display,success,error,failure | — |
 | `admin-consulting-distribution` | commercial | P1 | display,success,failure | — |
@@ -6119,7 +6121,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
 | `admin-mcps` | admin | P2 | display,success,error,failure | 14 |
-| `admin-mini-crm-clients` | admin | P2 | display,success,failure | 3 |
+| `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
 | `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |
 | `admin-monitoring-case-note` | monitoring | P2 | success,error,failure,display | — |
