@@ -686,7 +686,7 @@ const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCo
 
 function onApprovalCompleted(result) {
   approvalCompleted(result);
-  if (!result.draft_client || result.action === 'defer') return;
+  if (!result.draft_client || result.action !== 'confirm') return;
   const refreshed = clientFormValues();
   // Only the fields this operation committed get a new baseline. Other tabs
   // can still hold unsaved work and must keep their existing dirty state.
