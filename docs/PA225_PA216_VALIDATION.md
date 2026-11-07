@@ -12,7 +12,7 @@ Datos ficticios: administrador de Panel y perfil admin de Plataforma, propietari
 
 1. En `/panel/projects`, comprobar disponibilidad en tabla y tarjetas. Acciones → Ver detalle → Abrir espacio en la plataforma abre otra pestaña con el ID correcto. Repetir desde la acción de fila.
 2. Renombrar el proyecto ficticio y repetir ambos saltos: permanece el mismo ID. La acción Ficha comercial de Plataforma abre Panel con `highlight=<id>` sólo para admin.
-3. Abrir las referencias de Hosting, Ingresos y Cuentas de cobro. Una referencia sin proyecto informa Sin proyecto y no ofrece enlace; seleccionar un proyecto existente habilita el destino correcto. No hay una vinculación separada: Panel y Plataforma comparten Project.
+3. Abrir las referencias de Hosting, Ingresos y Cuentas de cobro. Una referencia sin proyecto muestra el texto visible Sin proyecto y no ofrece enlace; en Ingresos comprobar clásico, agrupado y Detalle e historial. Seleccionar un proyecto existente habilita el destino correcto. No hay una vinculación separada: Panel y Plataforma comparten Project.
 4. Con propietario, comprobar acceso; con otro cliente, explicación de falta de acceso sin nombre, datos, navegación interna ni retorno al Panel. Sin sesión, inicio de sesión. Abrir ID inexistente muestra no disponible. Navegar de un proyecto accesible a uno denegado no recupera contenido anterior.
 
 ## PA-216

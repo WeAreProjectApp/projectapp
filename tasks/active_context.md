@@ -1,3 +1,7 @@
+## 2026-11-07 — PA-225, referencia sin proyecto en Contabilidad
+
+QA devolvió PA225-03 del PR #569 sobre 4d960880: Ingresos mostraba «—» sin explicar la referencia nula. La corrección muestra «Sin proyecto» en clásico, agrupado y detalle, y aplica la misma etiqueta visible en Hosting y Cuentas de cobro; conserva la ausencia de enlace. Regresiones de navegador preparadas para CI. El runtime de DEVQA-006 conserva su corte durante el recorrido; la asociación ya realizada del ingreso 57 y su aviso interno registrado no se revierten. El nuevo corte exige CI propio y reprueba coordinada.
+
 ## 2026-11-06 — PA-225 y PA-216, correcciones de QA
 
 Acceso al espacio por ID desde el detalle y disponibilidad visible en Proyectos; errores de acceso sin datos anteriores. Aprobación diferida sin aprovisionamiento y anexos opcionales con selección explícita, inicialmente vacía; revisiones conservan la selección previa y su historia. Estos criterios actualizan la política de cierre obligatorio y anexos automáticos registrada en octubre. No se rehabilita la aceptación pública. Sin migraciones ni cambios automáticos de históricos. Validación automatizada exclusivamente en CI y Chrome coordinado con dev-qa; resultados pendientes de la entrega de esta rama.
