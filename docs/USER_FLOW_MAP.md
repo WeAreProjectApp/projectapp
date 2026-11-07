@@ -3896,6 +3896,7 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
   6. API call to `PATCH /api/proposals/:id/update/`.
   7. Success feedback displays.
 - **Branches:**
+  - [Vencimiento] Días suma fechas calendario en la zona local del navegador y conserva la hora. La carga no escribe cambios; edición, reversión, guardado y reapertura conservan la correspondencia.
   - [Datos del proyecto] Proyecto → Datos está disponible en todos los estados. Reúne el cliente y los contactos con guardado propio; una propuesta ya vinculada conserva su cliente. El proyecto actual se muestra allí y su cambio exige destino del mismo cliente, motivo, revisión y confirmación.
   - [Recursos y correos] Recursos pertenece a Propuesta. Los enlaces anteriores a Comunicación → Recursos abren la nueva ubicación. Firma, funcionalidades y fases del correo se guardan desde Comunicación → Correos sin sobrescribir cambios pendientes en General.
   - [Disponibilidad de Documentos] La pestaña está disponible en todos los estados y permanece seleccionada cuando la propuesta pasa a finalizada. General conserva los PDFs originales de propuestas en borrador, vencidas y finalizadas, distintos de los documentos formales.
