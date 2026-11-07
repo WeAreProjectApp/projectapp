@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "From the proposal and document manager, the administrator consults the same document identity, current package and history. A new reviewed package preserves its prior versions and linked client/project: with split contracts, service approval off confirms the product contract plus active annexes; on confirms product and service contracts plus active annexes. The approval preview and custom-document requirements expose only the required contract types. Editing structured sources or replacing enabled draft attachments remains possible. A stale source or failed confirmation preserves the selected switch, draft and current approved package until an explicit retry succeeds.",
+  "description": "From the proposal and document manager, the administrator consults the same document identity, current package and history. Historical resources keep their descriptive title outside the current package, including after reloading either surface. A new reviewed package preserves its prior versions and linked client/project: with split contracts, service approval off confirms the product contract plus active annexes; on confirms product and service contracts plus active annexes. The approval preview and custom-document requirements expose only the required contract types. Editing structured sources or replacing enabled draft attachments remains possible. A stale source or failed confirmation preserves the selected switch, draft and current approved package until an explicit retry succeeds.",
   "outcomes": [
     "success",
     "error",

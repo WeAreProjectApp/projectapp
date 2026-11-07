@@ -8,7 +8,7 @@
 | error | Confirmar con una versión desactualizada | Conflicto visible; formulario y archivo conservados |
 | error | Guardar un adjunto con una huella antigua y consultar la versión actual | El archivo elegido se conserva; la versión solo cambia tras una revisión explícita |
 | failure | El servidor falla al confirmar o guardar un adjunto | Mensaje visible; archivo y formulario conservados para reintentar |
-| display | Abrir el historial | Títulos, versión vigente y revisiones descargables del recurso |
+| display | Abrir el historial y recargar propuesta y gestor | Título descriptivo conservado al pasar a Histórico, misma identidad y revisiones descargables |
 
 Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
 
