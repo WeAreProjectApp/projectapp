@@ -16,14 +16,24 @@ de IA puede seguir sin estar disponible aunque su interruptor esté encendido.
 
 `PlatformTourProgress` es único por usuario y recorrido, independiente del
 proyecto que se use como contexto. Completar o saltar es terminal para el inicio
-automático; repetir manualmente no borra ese acuse. Las pausas por navegación o
-por abrir Appi/video permiten retomar manualmente desde Ayuda. Un acuse que
+automático; repetir manualmente no borra ese acuse. Un cambio de ruta dentro de
+la app o la apertura de otra superficie (Appi/video) puede pausar la guía para
+retomarla desde Ayuda. No existe un botón Pausar y los destinos resaltados no
+permiten navegar, salvo el lanzador de Appi cuando está disponible; la existencia
+del watcher de ruta no acredita una pausa voluntaria por mouse. Un acuse que
 falla al guardar queda en una cola local separada por usuario hasta sincronizar.
 
 Un fallo de configuración impide el inicio automático. Se revalida al recuperar
 foco, cambiar ruta, avanzar y cada 30 segundos durante un recorrido activo.
 El menú móvil y el foco se restauran al salir. Driver.js se importa sólo al
 iniciar una guía; se respeta la preferencia de movimiento reducido.
+
+Antes de mostrar un destino del proyecto o formulario se cierra el cajón global;
+los pasos de navegación global lo abren sólo en móvil. La guía observa cambios
+del contenido y del tamaño de pantalla y actualiza el recorte y la tarjeta tras
+las transiciones. Al cruzar escritorio/móvil vuelve a seleccionar el control
+visible, conservando el paso; los observadores se liberan al terminar o pausar.
+La repetición manual y el cambio de tamaño no eliminan los acuses terminales.
 
 El destino actual se registra al seleccionarlo, antes de la animación: cerrar
 una tarjeta inmediatamente conserva ese paso. El inicio automático sólo marca

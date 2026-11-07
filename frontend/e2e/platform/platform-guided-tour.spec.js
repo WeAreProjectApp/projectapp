@@ -8,7 +8,7 @@ import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
 import { setPlatformAuth, mockPlatformClient } from '../helpers/platform-auth.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
-import { viewportUse } from '../helpers/viewports.js'
+import { viewportUse, VIEWPORTS } from '../helpers/viewports.js'
 import {
   PLATFORM_GUIDED_TOUR_GENERAL,
   PLATFORM_GUIDED_TOUR_PROJECT,
@@ -75,6 +75,7 @@ async function setupClient(page, {
   await setPlatformAuth(page, { user: platformClient })
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return json(platformClient)
+    if (apiPath === 'accounts/documents/' && method === 'GET') return json({ documents: [], email: platformClient.email, email_verified: true })
     if (apiPath === 'accounts/projects/' && method === 'GET') return json([project])
     if (apiPath === `accounts/projects/${project.id}/` && method === 'GET') return json(project)
     if (apiPath === `accounts/projects/${project.id}/phases/` && method === 'GET') return json([])
@@ -133,6 +134,80 @@ async function openBugFormFromProject(page) {
   await page.getByRole('link', { name: 'Bugs', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Reporte de bugs', exact: true })).toHaveText('Reporte de bugs')
   await page.getByRole('button', { name: 'Reportar bug', exact: true }).click()
+}
+
+async function openMobileNavigation(page) {
+  const navigation = page.getByRole('button', { name: 'Abrir navegación', exact: true })
+  if (await navigation.isVisible()) await navigation.click()
+}
+
+async function openHelp(page) {
+  await openMobileNavigation(page)
+  await page.getByTestId('platform-help-trigger').filter({ visible: true }).click()
+}
+
+async function openProjectsFromDocuments(page) {
+  await page.goto('/es-co/platform/documents', { waitUntil: 'domcontentloaded' })
+  await waitForNuxtApp(page)
+  await expect(page.getByRole('heading', { name: 'Mis documentos', exact: true })).toHaveText('Mis documentos')
+  await openMobileNavigation(page)
+  await page.getByRole('link', { name: 'Proyectos', exact: true }).filter({ visible: true }).click()
+  await expect(page.getByRole('heading', { name: 'Mis proyectos', exact: true })).toHaveText('Mis proyectos')
+}
+
+async function openOwnedProjectFromDocuments(page) {
+  await openProjectsFromDocuments(page)
+  await page.getByTestId(`project-row-${project.id}`)
+    .or(page.getByTestId(`project-card-${project.id}`)).filter({ visible: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}$`))
+  await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name)
+}
+
+async function waitForTourLayout(page) {
+  await page.evaluate(async () => {
+    const nextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve))
+    // Let responsive styles, Vue and the tour's resize handler reach the browser.
+    await nextFrame()
+    await nextFrame()
+    const animations = document.getAnimations().filter((animation) => {
+      const target = animation.effect?.target
+      return target instanceof Element && target.closest('main, aside, [data-testid="platform-tour-popover"]')
+        && animation.playState === 'running'
+        && Number.isFinite(animation.effect.getComputedTiming().endTime)
+    })
+    // Await layout and card animations before inspecting or advancing the tour.
+    await Promise.allSettled(animations.map((animation) => animation.finished))
+    await nextFrame()
+    await nextFrame()
+  })
+}
+
+async function expectHighlightedTarget(page, key) {
+  await waitForTourLayout(page)
+  const target = page.locator(`[data-tour="${key}"]`).filter({ visible: true })
+  await expect(target).toBeInViewport()
+  // Check the rendered cutout, not Driver's cached element or its CSS marker.
+  await expect.poll(() => target.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    const svg = document.querySelector('svg.driver-overlay')
+    const path = svg?.querySelector('path')
+    const popover = document.querySelector('[data-testid="platform-tour-popover"]')
+    if (!path || !popover || !svg.getScreenCTM()) return null
+    const center = new DOMPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+    const point = center.matrixTransform(svg.getScreenCTM().inverse())
+    const card = popover.getBoundingClientRect()
+    const horizontalGap = Math.max(0, rect.left - card.right, card.left - rect.right)
+    const verticalGap = Math.max(0, rect.top - card.bottom, card.top - rect.bottom)
+    return {
+      targetHasArea: rect.width > 0 && rect.height > 0,
+      cutoutContainsTargetCenter: !path.isPointInFill(point),
+      cardIsAdjacentToTarget: horizontalGap <= 32 && verticalGap <= 32,
+    }
+  })).toEqual({ targetHasArea: true, cutoutContainsTargetCenter: true, cardIsAdjacentToTarget: true })
+}
+
+function completedProjectGuide() {
+  return tour({ id: 418, slug: 'project-overview', context: 'project', status: 'completed', target: 'project-summary', title: 'Resumen del proyecto' })
 }
 
 test.describe('Platform guided tour', () => {
@@ -416,5 +491,103 @@ test.describe('Platform guided tour on compact screens', () => {
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('heading', { name: 'Mis proyectos', exact: true })).toBeVisible()
     await expect(page.getByTestId('platform-tour-popover')).toHaveCount(0)
+  })
+
+})
+
+test.describe('Platform guided tour responsive anchors', () => {
+  test.setTimeout(60_000)
+
+  test.describe('project guide opened from the compact drawer', () => {
+    test.use(viewportUse('compact'))
+
+    test('Help exposes the highlighted project control outside the drawer', {
+      tag: [...PLATFORM_GUIDED_TOUR_PROJECT, '@role:platform-client', '@outcome:display'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (Documentos is the authenticated client landing; Projects, the project, Bugs, drawer and Help are reached through UI clicks)
+      // Bug caught: the project cutout illuminates Hosting in the drawer over the real Summary.
+      await setupClient(page, { projectTours: [completedProjectGuide()] })
+      await openOwnedProjectFromDocuments(page)
+      await page.getByRole('link', { name: 'Bugs', exact: true }).click()
+      await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}/bugs$`))
+
+      await openHelp(page)
+      await page.getByTestId('platform-help-tour-project-overview').filter({ visible: true }).click()
+
+      await expect(page.getByTestId('platform-tour-popover')).toContainText('Resumen del proyecto')
+      await expect(page.getByRole('button', { name: 'Cerrar navegación', exact: true })).toHaveCount(0)
+      await expectHighlightedTarget(page, 'project-summary')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.getByRole('heading', { name: 'Reporte de bugs', exact: true })).toBeVisible()
+      await expect(page.getByTestId('platform-tour-popover')).toHaveCount(0)
+    })
+  })
+
+  for (const { from, to } of [
+    { from: 'desktop', to: 'compact' },
+    { from: 'wide', to: 'compact' },
+    { from: 'compact', to: 'portrait' },
+    { from: 'compact', to: 'landscape' },
+    { from: 'compact', to: 'wide' },
+  ]) {
+    test.describe(`project guide resize ${from} to ${to}`, () => {
+      test.use(viewportUse(from))
+
+      test('the open project highlight follows its control across the breakpoint', {
+        tag: [...PLATFORM_GUIDED_TOUR_PROJECT, '@role:platform-client', '@outcome:display'],
+      }, async ({ page }) => {
+        // quality: allow-deep-link (Documentos is the authenticated client landing; Projects, project, Bugs and Help navigation are exercised before resizing)
+        // Bug caught: a breakpoint moves Summary while the cutout stays at its old coordinates.
+        await setupClient(page, { projectTours: [completedProjectGuide()] })
+        await openOwnedProjectFromDocuments(page)
+        await page.getByRole('link', { name: 'Bugs', exact: true }).click()
+        await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}/bugs$`))
+        await openHelp(page)
+        await page.getByTestId('platform-help-tour-project-overview').filter({ visible: true }).click()
+        await expectHighlightedTarget(page, 'project-summary')
+
+        await page.setViewportSize(VIEWPORTS[to])
+
+        await expect(page.getByTestId('platform-tour-popover')).toContainText('Resumen del proyecto')
+        await expect(page.getByRole('button', { name: 'Cerrar navegación', exact: true })).toHaveCount(0)
+        await expectHighlightedTarget(page, 'project-summary')
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.getByRole('heading', { name: 'Reporte de bugs', exact: true })).toBeVisible()
+        await expect(page.getByTestId('platform-tour-popover')).toHaveCount(0)
+      })
+    })
+  }
+
+  test.describe('general guide across the mobile breakpoint', () => {
+    test.use(viewportUse('desktop'))
+
+    test('the open navigation highlight moves to the visible menu', {
+      tag: [...PLATFORM_GUIDED_TOUR_GENERAL, '@role:platform-client', '@outcome:display'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (Documentos is the authenticated setup landing; Projects, Help, guide selection and Next are reached through UI clicks)
+      // Bug caught: resizing keeps Driver attached to a hidden zero-size desktop navigation link.
+      const general = tour({ id: 419, slug: 'general', context: 'general', status: 'completed', title: 'Guía general adaptable', steps: [
+        { target: 'welcome', title_es: 'Bienvenida', title_en: 'Welcome', description_es: 'Inicio.', description_en: 'Start.' },
+        { target: 'projects', title_es: 'Tus proyectos', title_en: 'Your projects', description_es: 'Consulta tus proyectos.', description_en: 'Check your projects.' },
+        { target: 'documents', title_es: 'Tus documentos', title_en: 'Your documents', description_es: 'Consulta tus documentos.', description_en: 'Check your documents.' },
+      ] })
+      await setupClient(page, { globalTours: [general] })
+      await openProjectsFromDocuments(page)
+      await openHelp(page)
+      await page.getByTestId('platform-help-tour-general').click()
+      await page.getByTestId('platform-tour-next').click()
+      await expectHighlightedTarget(page, 'projects')
+
+      await page.setViewportSize(VIEWPORTS.compact)
+
+      await expect(page.getByRole('button', { name: 'Cerrar navegación', exact: true })).toBeVisible()
+      await expectHighlightedTarget(page, 'projects')
+      await page.getByTestId('platform-tour-next').click()
+      await expect(page.getByTestId('platform-tour-popover')).toContainText('Tus documentos')
+      await expectHighlightedTarget(page, 'documents')
+      await page.setViewportSize(VIEWPORTS.portrait)
+      await expect(page.getByRole('button', { name: 'Cerrar navegación', exact: true })).toHaveCount(0)
+      await expectHighlightedTarget(page, 'documents')
+    })
   })
 })
