@@ -459,6 +459,7 @@ test.describe('Platform guided tour responsive anchors', () => {
     test('Help exposes the highlighted project control outside the drawer', {
       tag: [...PLATFORM_GUIDED_TOUR_PROJECT, '@role:platform-client', '@outcome:display'],
     }, async ({ page }) => {
+      // quality: allow-deep-link (authenticated Projects is the client landing; this test reaches the project guide through project, Bugs, drawer and Help clicks)
       // Bug caught: the project cutout illuminates Hosting in the drawer over the real Summary.
       await setupClient(page, { projectTours: [completedProjectGuide()] })
       await openOwnedProject(page)
@@ -490,6 +491,7 @@ test.describe('Platform guided tour responsive anchors', () => {
       test('the open project highlight follows its control across the breakpoint', {
         tag: [...PLATFORM_GUIDED_TOUR_PROJECT, '@role:platform-client', '@outcome:display'],
       }, async ({ page }) => {
+        // quality: allow-deep-link (authenticated Projects is the client landing; project, Bugs and Help navigation are exercised before resizing the open guide)
         // Bug caught: a breakpoint moves Summary while the cutout stays at its old coordinates.
         await setupClient(page, { projectTours: [completedProjectGuide()] })
         await openOwnedProject(page)
@@ -517,6 +519,7 @@ test.describe('Platform guided tour responsive anchors', () => {
     test('the open navigation highlight moves to the visible menu', {
       tag: [...PLATFORM_GUIDED_TOUR_GENERAL, '@role:platform-client', '@outcome:display'],
     }, async ({ page }) => {
+      // quality: allow-deep-link (authenticated Projects is the setup landing; Help, guide selection and Next clicks reach the navigation highlight under test)
       // Bug caught: resizing keeps Driver attached to a hidden zero-size desktop navigation link.
       const general = tour({ id: 419, slug: 'general', context: 'general', status: 'completed', title: 'Guía general adaptable', steps: [
         { target: 'welcome', title_es: 'Bienvenida', title_en: 'Welcome', description_es: 'Inicio.', description_en: 'Start.' },
