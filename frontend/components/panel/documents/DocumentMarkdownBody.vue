@@ -97,7 +97,7 @@ const safeHtml = computed(() => {
   line-height: 1.4;
   margin-top: 1rem;
   margin-bottom: 0.4rem;
-  color: #059669;
+  color: #047857;
 }
 .markdown-preview :deep(.md-h4),
 .markdown-preview :deep(.md-h5),
@@ -107,7 +107,7 @@ const safeHtml = computed(() => {
   line-height: 1.4;
   margin-top: 0.85rem;
   margin-bottom: 0.35rem;
-  color: #059669;
+  color: #047857;
 }
 .markdown-preview :deep(.md-p) {
   margin-bottom: 0.75rem;

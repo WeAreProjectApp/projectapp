@@ -34,6 +34,13 @@ Se extienden los flujos existentes `platform-sidebar-navigation` y `admin-docume
 
 ## Coordinación y límites
 
+Revisión adicional de la paleta Markdown: los títulos pequeños h3–h6 de
+Amigable declaraban el mismo #059669 del enlace rechazado. Se unifica su
+color claro con #047857 y se amplía el contenido de las cuatro regresiones
+del renderer para medir esos títulos con la misma referencia de 4,5:1. Es
+una observación de código; no se presenta como una medición nueva en Chrome.
+La reprueba de R3 debe medir también esos encabezados en ambas apariencias.
+
 Sólo DevQA opera el entorno. No iniciar otro servidor, cambiar el corte servido, escribir datos de su turno o aplicar parches durante el recorrido. DEVQA-001 está cerrado; la reprueba requiere nuevo SHA, CI verde, ficha y nueva concesión de la dupla qa2/dev-qa2 sin interrumpir DEVQA-002.
 
 Los hallazgos de foco detrás de modales, validación en inglés y desbordamientos responsive conservan su seguimiento separado. No se incluyen en estos tres fixes ni se declara aprobado el barrido completo por los resultados anteriores. La aceptación de Chrome del nuevo corte sigue pendiente.
