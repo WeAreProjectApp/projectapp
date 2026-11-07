@@ -1,3 +1,4 @@
+/** Catches missing theme controls, non-persistent cover removal and unreadable theme surfaces (PA-227). */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setPlatformAuth, mockPlatformAdmin, mockPlatformClient } from '../helpers/platform-auth.js';
@@ -13,7 +14,7 @@ const project = {
 
 async function openSummary(page, user, theme) {
   await setPlatformAuth(page, { user });
-  await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme);
+  await page.addInitScript((value) => localStorage.setItem('platform_theme', localStorage.getItem('platform_theme') || value), theme);
   let profile = { ...user };
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'PATCH') {
@@ -38,10 +39,14 @@ async function attachEvidence(page, testInfo) {
   });
 }
 
-async function openCustomization(page, viewport) {
+async function openNavigation(page, viewport) {
   if (viewport.width < 768) {
     await page.getByRole('button', { name: 'Abrir navegación', exact: true }).click();
   }
+}
+
+async function openCustomization(page, viewport) {
+  await openNavigation(page, viewport);
   await page.getByRole('button', { name: 'Personalizar apariencia', exact: true }).filter({ visible: true }).first().click();
 }
 
@@ -52,6 +57,33 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
 
     for (const theme of ['dark', 'light']) {
       for (const [role, user] of [['admin', mockPlatformAdmin], ['client', mockPlatformClient]]) {
+        test(`persists the visible theme selection for ${role} from ${theme}`, {
+          tag: ['@outcome:success', ...PLATFORM_SIDEBAR_NAVIGATION, `@role:platform-${role}`],
+        }, async ({ page }, testInfo) => {
+          await openSummary(page, user, theme);
+          const target = theme === 'dark' ? 'light' : 'dark';
+          const action = theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro';
+          const nextAction = theme === 'dark' ? 'Activar modo oscuro' : 'Activar modo claro';
+          const surface = () => page.getByText('Progreso', { exact: true }).evaluate((element) => getComputedStyle(element.parentElement).backgroundColor);
+          const originalSurface = await surface();
+          await openNavigation(page, viewport);
+
+          await page.getByRole('button', { name: action, exact: true }).filter({ visible: true }).click();
+
+          await expect(page.getByRole('button', { name: nextAction, exact: true }).filter({ visible: true })).toHaveText(nextAction);
+          await expect.poll(surface).not.toBe(originalSurface);
+          const selectedSurface = await surface();
+          expect(await page.evaluate(() => localStorage.getItem('platform_theme'))).toBe(target);
+
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name);
+          await openNavigation(page, viewport);
+
+          await expect(page.getByRole('button', { name: nextAction, exact: true }).filter({ visible: true })).toHaveText(nextAction);
+          await expect.poll(surface).toBe(selectedSurface);
+          await attachEvidence(page, testInfo);
+        });
+
         test(`keeps summary text readable for ${role} in ${theme}`, {
           tag: ['@outcome:display', ...PLATFORM_PROJECT_DETAIL, `@role:platform-${role}`],
         }, async ({ page }, testInfo) => {
@@ -96,6 +128,30 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
         await attachEvidence(page, testInfo);
       });
 
+      test(`persists custom cover removal in ${theme}`, {
+        tag: ['@outcome:success', ...PLATFORM_SIDEBAR_NAVIGATION, '@role:platform-admin'],
+      }, async ({ page }, testInfo) => {
+        await page.route('**/qa-cover.svg', (route) => route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#050c0a"/></svg>',
+        }));
+        await openSummary(page, { ...mockPlatformAdmin, custom_cover_image: '/qa-cover.svg' }, theme);
+        await expect(page.getByTestId('platform-cover')).toBeVisible();
+        await openCustomization(page, viewport);
+        const customization = page.getByRole('dialog', { name: 'Personalizar interfaz', exact: true });
+
+        await customization.getByRole('button', { name: 'Quitar', exact: true }).click();
+
+        await expect(page.getByTestId('platform-cover')).toHaveCount(0);
+        await customization.getByRole('button', { name: 'Cerrar personalización', exact: true }).click();
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name);
+        await expect(page.getByTestId('platform-cover')).toHaveCount(0);
+        await openCustomization(page, viewport);
+        await expect(customization.getByRole('button', { name: 'Quitar', exact: true })).toHaveCount(0);
+        await attachEvidence(page, testInfo);
+      });
+
       for (const [family, shade] of [['Esmerald', 0], ['Esmerald', 8], ['Yellow', 4]]) {
         test(`keeps personalized actions readable with ${family} ${shade} in ${theme}`, {
           tag: ['@outcome:display', ...PLATFORM_SIDEBAR_NAVIGATION, '@role:platform-admin'],
@@ -132,7 +188,7 @@ for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {
             name: 'cover.svg', mimeType: 'image/svg+xml',
             buffer: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${color}"/></svg>`),
           });
-          await expect(page.locator('.platform-cover')).toBeVisible();
+          await expect(page.getByTestId('platform-cover')).toBeVisible();
           await customization.getByRole('button', { name: 'Cerrar personalización', exact: true }).click();
           await expect(customization).toBeHidden();
 

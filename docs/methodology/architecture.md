@@ -1292,6 +1292,14 @@ filtros, modales, formularios, acciones y workspaces está en el
 [estándar responsivo del panel](../RESPONSIVE_STANDARD.md). Sus cinco viewports
 de aceptación son obligatorios para todo cambio de UI bajo `/panel/**`.
 
+Platform exposes the saved light/dark preference through labelled controls in
+the desktop sidebar (including its collapsed state) and mobile drawer. Clearing
+an uploaded cover sends an explicit `custom_cover_image: null` to `PATCH me/`;
+omitting that field preserves it. Gallery selection clears the uploaded cover
+in the same request. The UI changes the cover only after a successful profile
+update so a failed request retains the saved image. Markdown preview links use
+the same readable light-mode colors in the friendly and professional templates.
+
 Responsive behavior for the internal panel is a second design-system layer.
 `frontend/config/responsive.js` is the single source for width bands and the
 five reference viewports. Tailwind exposes those bands as namespaced

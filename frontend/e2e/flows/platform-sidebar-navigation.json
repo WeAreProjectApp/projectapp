@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Left sidebar layout with collapsible navigation (Principal, Proyectos, Administración sections), mobile hamburger drawer, theme toggle (light/dark), profile link, and logout. Personalized palettes choose readable foregrounds; cover images retain theme surfaces and teleported customization follows the active document mode. Shared Platform controls retain their existing activation and custom layout through the base button semantics.",
+  "description": "Left sidebar layout with collapsible navigation (Principal, Proyectos, Administración sections), mobile hamburger drawer, visible theme toggle (light/dark) with a persisted choice after reload, profile link, and logout. Personalized palettes choose readable foregrounds; cover images retain theme surfaces and teleported customization follows the active document mode. Removing a custom cover clears the saved profile image and survives reload; gallery selection replaces the uploaded cover. Shared Platform controls retain their existing activation and custom layout through the base button semantics.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

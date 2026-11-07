@@ -179,11 +179,14 @@ export function usePlatformCustomTheme() {
   }
 
   async function setCoverImage(path) {
-    coverImage.value = path
-    customCoverImageUrl.value = ''
-    applyTheme()
-    detectCoverBrightness()
-    try { await authStore.updateProfile({ cover_image: path }) } catch { /* silent */ }
+    try {
+      const result = await authStore.updateProfile({ cover_image: path, custom_cover_image: null })
+      if (!result.success) return
+      coverImage.value = path
+      customCoverImageUrl.value = ''
+      applyTheme()
+      detectCoverBrightness()
+    } catch { /* Keep the saved cover visible when persistence fails. */ }
   }
 
   async function setCustomCoverImage(file) {
@@ -209,10 +212,7 @@ export function usePlatformCustomTheme() {
   }
 
   async function clearCover() {
-    coverImage.value = ''
-    customCoverImageUrl.value = ''
-    coverDark.value = false
-    try { await authStore.updateProfile({ cover_image: '' }) } catch { /* silent */ }
+    await setCoverImage('')
   }
 
   async function clearAll() {
@@ -221,7 +221,7 @@ export function usePlatformCustomTheme() {
     customCoverImageUrl.value = ''
     coverDark.value = false
     applyTheme()
-    try { await authStore.updateProfile({ theme_color: '', cover_image: '' }) } catch { /* silent */ }
+    try { await authStore.updateProfile({ theme_color: '', cover_image: '', custom_cover_image: null }) } catch { /* silent */ }
   }
 
   const hasTheme = computed(() => Boolean(themeColor.value))

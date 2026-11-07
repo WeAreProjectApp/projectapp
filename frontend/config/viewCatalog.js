@@ -1216,7 +1216,7 @@ export const viewCatalogSections = [
         reference: 'perfil de plataforma y Ayuda compartida con videos y recorridos',
         audience: 'client',
         viewType: 'config',
-        notes: 'Ayuda está disponible en el menú de clientes y abre los videos a petición, también después de completar un recorrido. Indica el idioma español y los subtítulos en ambas interfaces; los clips de Appi y voz sólo aparecen con su capacidad disponible.',
+        notes: 'Ayuda está disponible en el menú de clientes y abre los videos a petición, también después de completar un recorrido. Indica el idioma español y los subtítulos en ambas interfaces; los clips de Appi y voz sólo aparecen con su capacidad disponible. La navegación permite activar modo claro u oscuro en escritorio y móvil y conserva la elección al recargar. Personalizar apariencia permite cambiar el color y la portada o quitar la imagen guardada.',
       },
       {
         label: 'Proyectos',

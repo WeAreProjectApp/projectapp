@@ -181,11 +181,11 @@ const safeHtml = computed(() => {
   margin: 1.25rem 0;
 }
 .markdown-preview :deep(.md-link) {
-  color: #059669;
+  color: #047857;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.markdown-preview :deep(.md-link:hover) { color: #047857; }
+.markdown-preview :deep(.md-link:hover) { color: #065f46; }
 .markdown-preview :deep(strong) { font-weight: 600; }
 .markdown-preview :deep(em) { font-style: italic; }
 .markdown-preview :deep(del) { text-decoration: line-through; color: #6b7280; }
@@ -349,7 +349,6 @@ const safeHtml = computed(() => {
 .markdown-preview--professional :deep(.md-table tbody tr:nth-child(even)) {
   background-color: #e6efef;
 }
-.markdown-preview--professional :deep(.md-link) { color: #059669; }
 .markdown-preview--professional :deep(.md-code-block) {
   background-color: #e5e7eb;
   border-color: #d1d5db;

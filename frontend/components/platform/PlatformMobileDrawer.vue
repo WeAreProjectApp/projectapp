@@ -106,6 +106,23 @@
             </div>
           </div>
 
+          <BaseButton
+            unstyled
+            type="button"
+            :aria-label="themeToggleLabel"
+            class="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg text-xs font-medium text-text-muted transition hover:bg-primary-soft hover:text-text-brand focus-visible:ring-2 focus-visible:ring-focus-ring dark:hover:bg-surface/[0.06] dark:hover:text-white"
+            @click="$emit('toggleTheme')"
+          >
+            <svg class="h-4 w-4 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <template v-if="isDark">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+              </template>
+              <path v-else d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+            {{ themeToggleLabel }}
+          </BaseButton>
+
           <div class="mt-2 flex items-center gap-1">
             <!-- Theme customization -->
             <BaseButton
@@ -149,6 +166,8 @@ const props = defineProps({
   isDark: { type: Boolean, default: true },
 })
 
+const { t } = useI18n()
+const themeToggleLabel = computed(() => t(props.isDark ? 'global.theme.enableLight' : 'global.theme.enableDark'))
 const authStore = usePlatformAuthStore()
 
 const { primaryItems, accountItems, adminItems, isActive } = usePlatformNav()

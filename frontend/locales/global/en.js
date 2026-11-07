@@ -1,4 +1,8 @@
 export default {
+    theme: {
+      enableLight: "Switch to light mode",
+      enableDark: "Switch to dark mode",
+    },
     navbar: {
       menu_button: "Menu",
       get_in_touch: "Contact",
@@ -62,4 +66,3 @@ export default {
       sign_in: "Sign In",
     },
   };
-  

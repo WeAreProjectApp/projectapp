@@ -4,7 +4,7 @@
 
 const mockAuthStore = {
   user: null,
-  updateProfile: jest.fn().mockResolvedValue(undefined),
+  updateProfile: jest.fn().mockResolvedValue({ success: true }),
 }
 
 jest.mock('../../stores/platform-auth', () => ({
@@ -24,7 +24,7 @@ describe('usePlatformCustomTheme', () => {
   beforeEach(() => {
     jest.resetModules()
     mockAuthStore.user = null
-    mockAuthStore.updateProfile.mockClear().mockResolvedValue(undefined)
+    mockAuthStore.updateProfile.mockClear().mockResolvedValue({ success: true })
     mockRequest.mockReset()
     document.documentElement.removeAttribute('style')
     usePlatformCustomTheme = require('../../composables/usePlatformCustomTheme').usePlatformCustomTheme
@@ -84,13 +84,13 @@ describe('usePlatformCustomTheme', () => {
     expect(mockAuthStore.updateProfile).toHaveBeenCalledWith({ theme_color: '#2874f3' })
   })
 
-  it('setCoverImage clears custom url and calls updateProfile', async () => {
+  it('setCoverImage replaces the uploaded cover', async () => {
     const theme = usePlatformCustomTheme()
     theme.customCoverImageUrl.value = 'https://old'
     await theme.setCoverImage('n.jpg')
     expect(theme.coverImage.value).toBe('n.jpg')
     expect(theme.customCoverImageUrl.value).toBe('')
-    expect(mockAuthStore.updateProfile).toHaveBeenCalledWith({ cover_image: 'n.jpg' })
+    expect(mockAuthStore.updateProfile).toHaveBeenCalledWith({ cover_image: 'n.jpg', custom_cover_image: null })
   })
 
   it('setCustomCoverImage updates user from response', async () => {
@@ -105,11 +105,12 @@ describe('usePlatformCustomTheme', () => {
     expect(mockAuthStore.user.custom_cover_image).toBe('https://cdn/x.png')
   })
 
-  it('clearCover resets cover fields', async () => {
+  it('clearCover removes both saved cover sources', async () => {
     const theme = usePlatformCustomTheme()
     theme.coverImage.value = 'a.jpg'
     theme.customCoverImageUrl.value = 'https://u'
     await theme.clearCover()
+    expect(mockAuthStore.updateProfile).toHaveBeenCalledWith({ cover_image: '', custom_cover_image: null })
     expect(theme.coverImage.value).toBe('')
     expect(theme.customCoverImageUrl.value).toBe('')
     expect(theme.isCoverDark.value).toBe(false)
@@ -285,11 +286,28 @@ describe('usePlatformCustomTheme', () => {
     await expect(theme.setCoverImage('x.jpg')).resolves.toBeUndefined()
   })
 
-  it('clearCover ignores updateProfile rejection', async () => {
+  it('clearCover preserves the cover on request failure', async () => {
     mockAuthStore.updateProfile.mockRejectedValueOnce(new Error('net'))
     const theme = usePlatformCustomTheme()
+    theme.customCoverImageUrl.value = 'https://cdn/saved.png'
+
     await expect(theme.clearCover()).resolves.toBeUndefined()
-    expect(theme.coverImage.value).toBe('')
+
+    expect(theme.customCoverImageUrl.value).toBe('https://cdn/saved.png')
+  })
+
+  it.each([
+    ['clearCover', (theme) => theme.clearCover()],
+    ['setCoverImage', (theme) => theme.setCoverImage('gallery.jpg')],
+  ])('%s preserves the cover when the profile store rejects the update', async (_name, action) => {
+    mockAuthStore.updateProfile.mockResolvedValueOnce({ success: false, message: 'No pudimos actualizar tu perfil.' })
+    const theme = usePlatformCustomTheme()
+    theme.customCoverImageUrl.value = 'https://cdn/saved.png'
+
+    await action(theme)
+
+    expect(theme.customCoverImageUrl.value).toBe('https://cdn/saved.png')
+    expect(theme.hasCover.value).toBe(true)
   })
 
   it('clearAll ignores updateProfile rejection', async () => {

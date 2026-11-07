@@ -10,6 +10,7 @@
     <!-- Background: cover image fixed behind everything -->
     <div
       v-if="hasCover"
+      data-testid="platform-cover"
       class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
       :style="coverBgStyle"
     />
