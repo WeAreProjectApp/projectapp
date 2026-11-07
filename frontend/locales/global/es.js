@@ -66,4 +66,3 @@ export default {
       sign_in: "Iniciar Sesión",
     },
   };
-  

@@ -42,7 +42,10 @@ def test_autocomplete_excludes_an_archived_full_name(admin_client, make_client_p
     assert response['X-Total-Count'] == '0'
 
 
-def test_full_name_search_keeps_non_admin_access_denied(api_client):
+def test_full_name_search_keeps_non_admin_access_denied(api_client, make_client_profile):
+    profile = make_client_profile()
+    api_client.force_authenticate(user=profile.user)
+
     response = api_client.get(reverse('search-proposal-clients'), {'q': 'PA-216 QA client'})
 
     assert response.status_code == 403
