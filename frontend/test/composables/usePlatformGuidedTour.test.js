@@ -54,6 +54,9 @@ describe('usePlatformGuidedTour', () => {
   let originalScrollTo
   let originalScrollX
   let originalScrollY
+  let originalResizeObserver
+  let originalRequestAnimationFrame
+  let originalCancelAnimationFrame
 
   function mountHarness() {
     const wrapper = mount(defineComponent({
@@ -85,6 +88,9 @@ describe('usePlatformGuidedTour', () => {
     originalScrollTo = Object.getOwnPropertyDescriptor(window, 'scrollTo')
     originalScrollX = Object.getOwnPropertyDescriptor(window, 'scrollX')
     originalScrollY = Object.getOwnPropertyDescriptor(window, 'scrollY')
+    originalResizeObserver = globalThis.ResizeObserver
+    originalRequestAnimationFrame = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame')
+    originalCancelAnimationFrame = Object.getOwnPropertyDescriptor(window, 'cancelAnimationFrame')
     global.CSS = { escape: (value) => value }
     globalThis.__platformTourNextTick = jest.fn().mockResolvedValue(undefined)
     global.useI18n = () => ({ t: (key) => key, locale: ref('es-CO') })
@@ -126,6 +132,9 @@ describe('usePlatformGuidedTour', () => {
     restoreWindowProperty('scrollTo', originalScrollTo)
     restoreWindowProperty('scrollX', originalScrollX)
     restoreWindowProperty('scrollY', originalScrollY)
+    restoreGlobal('ResizeObserver', originalResizeObserver)
+    restoreWindowProperty('requestAnimationFrame', originalRequestAnimationFrame)
+    restoreWindowProperty('cancelAnimationFrame', originalCancelAnimationFrame)
     jest.clearAllMocks()
   })
 
@@ -177,6 +186,31 @@ describe('usePlatformGuidedTour', () => {
 
     expect(sidebar.isMobileOpen.value).toBe(false)
     expect(tour.activeTour.value.id).toBe(17)
+  })
+
+  it('releases pending layout work when the guide closes', async () => {
+    // Fails if a closed guide keeps a DOM observer or queued measurement alive.
+    const observed = new Set()
+    const frames = new Map()
+    globalThis.ResizeObserver = jest.fn(() => ({
+      observe: (element) => observed.add(element),
+      unobserve: (element) => observed.delete(element),
+      disconnect: () => observed.clear(),
+    }))
+    window.requestAnimationFrame = jest.fn((callback) => { frames.set(1, callback); return 1 })
+    window.cancelAnimationFrame = jest.fn((frame) => frames.delete(frame))
+    const target = addTarget('projects')
+    store.tours = [tourFixture([step('projects')])]
+    mountHarness()
+    await tour.start(17)
+    expect(observed.has(target)).toBe(true)
+    window.dispatchEvent(new Event('resize'))
+    expect(frames.size).toBe(1)
+
+    await tour.cancel()
+
+    expect(observed.size).toBe(0)
+    expect(frames.size).toBe(0)
   })
 
   it('cancels a run paused while a navigation target is being prepared', async () => {

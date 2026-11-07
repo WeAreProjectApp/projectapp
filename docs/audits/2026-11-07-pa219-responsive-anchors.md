@@ -47,7 +47,10 @@ nuevas por frame ni temporizador permanente; sólo medición mientras la guía e
 
 - Unitario del composable: abrir guía contextual con el cajón de Ayuda abierto
   deja visible el destino al cerrar ese cajón. Se conservan las siete regresiones
-  previas de restauración, cancelación y último destino.
+  previas de restauración, cancelación y último destino. Otra regresión programa
+  una medición y comprueba que cerrar la guía libera el observador y cancela el
+  frame pendiente, mediante las fronteras del navegador. Objetivo focal: store11
+  + host9 + composable9 (29 unitarios), más 19 E2E.
 - E2E de apertura real: Documentos → Proyectos → proyecto propio → Bugs →
   navegación móvil → Ayuda → guía
   completada. El cajón desaparece, el centro de Resumen cae en el hueco real del
