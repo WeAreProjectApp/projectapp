@@ -166,13 +166,13 @@ def payment(*incomes):
 
 
 def test_completion_notice_retry_preserves_the_payment(smtp_transport, superuser):
+    income = expected_income()
+    settle_incomes(payment(income), superuser)
+    notice = IncomeCompletionNotice.objects.get(income=income)
     settings = AccountingSettings.load()
     settings.notifications_enabled = True
     settings.save(update_fields=['notifications_enabled'])
     NotificationRecipient.objects.create(email='contabilidad@example.test')
-    income = expected_income()
-    settle_incomes(payment(income), superuser)
-    notice = IncomeCompletionNotice.objects.get(income=income)
     smtp_transport.return_value.sendmail.side_effect = SMTPException('Unavailable')
     assert send_completion_notice(notice.pk) is False
     failed = EmailLog.objects.get(template_key='income_completed_account_pending')
