@@ -115,6 +115,24 @@ la espera del selector y todas las aserciones del lote. La
 ya aprobó el shard que contiene el criterio de altura del encabezado de Ingresos.
 La aceptación de los 40 requiere la siguiente corrida completa sobre el nuevo SHA.
 
+El SHA `006d7d027435aea08e1e1c74dba9834afcc567ae` aprobó el
+[Quality Gate](https://github.com/WeAreProjectApp/projectapp/actions/runs/42310973866)
+y 61 de los 62 jobs
+[responsive](https://github.com/WeAreProjectApp/projectapp/actions/runs/42310973673).
+Los 40 escenarios propios se ejecutaron y 39 aprobaron; la preparación y el
+embudo compacto ya pasan. El caso del selector compacto falla en la comprobación
+táctil final de `helpers/test.js`, tras aprobar sus aserciones de contenido y
+geometría, porque se destruye el contexto durante una navegación. No se acredita
+ese escenario como aprobado.
+
+La traza muestra la carga inicial de Secciones y `vuedraggable` al elegir el grupo
+Propuesta, antes de Detalle técnico. Después se solicita de nuevo el documento y
+Vue con un hash distinto. La preparación anterior abría directamente el destino
+técnico, por lo que omitía esa pestaña intermedia y sus dependencias. Se prepara
+también Secciones y se espera su cabecera de Inversión antes de los otros destinos.
+No se captura ni ignora la excepción de navegación, no se modifica el control
+responsive compartido y no se añaden reintentos de escenarios. Reprueba pendiente.
+
 ## Guion y cierre visible
 
 Encargo inicial enviado directamente a dev-qa y preservado en
