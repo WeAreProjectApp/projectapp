@@ -75,6 +75,7 @@ async function setupClient(page, {
   await setPlatformAuth(page, { user: platformClient })
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return json(platformClient)
+    if (apiPath === 'accounts/documents/' && method === 'GET') return json({ documents: [], email: platformClient.email, email_verified: true })
     if (apiPath === 'accounts/projects/' && method === 'GET') return json([project])
     if (apiPath === `accounts/projects/${project.id}/` && method === 'GET') return json(project)
     if (apiPath === `accounts/projects/${project.id}/phases/` && method === 'GET') return json([])
@@ -135,10 +136,30 @@ async function openBugFormFromProject(page) {
   await page.getByRole('button', { name: 'Reportar bug', exact: true }).click()
 }
 
-async function openHelp(page) {
+async function openMobileNavigation(page) {
   const navigation = page.getByRole('button', { name: 'Abrir navegación', exact: true })
   if (await navigation.isVisible()) await navigation.click()
+}
+
+async function openHelp(page) {
+  await openMobileNavigation(page)
   await page.getByTestId('platform-help-trigger').filter({ visible: true }).click()
+}
+
+async function openProjectsFromDocuments(page) {
+  await page.goto('/es-co/platform/documents', { waitUntil: 'domcontentloaded' })
+  await waitForNuxtApp(page)
+  await expect(page.getByRole('heading', { name: 'Mis documentos', exact: true })).toHaveText('Mis documentos')
+  await openMobileNavigation(page)
+  await page.getByRole('link', { name: 'Proyectos', exact: true }).filter({ visible: true }).click()
+  await expect(page.getByRole('heading', { name: 'Mis proyectos', exact: true })).toHaveText('Mis proyectos')
+}
+
+async function openOwnedProjectFromDocuments(page) {
+  await openProjectsFromDocuments(page)
+  await page.getByTestId(`project-row-${project.id}`).click()
+  await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}$`))
+  await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name)
 }
 
 async function expectHighlightedTarget(page, key) {
@@ -459,10 +480,10 @@ test.describe('Platform guided tour responsive anchors', () => {
     test('Help exposes the highlighted project control outside the drawer', {
       tag: [...PLATFORM_GUIDED_TOUR_PROJECT, '@role:platform-client', '@outcome:display'],
     }, async ({ page }) => {
-      // quality: allow-deep-link (authenticated Projects is the client landing; this test reaches the project guide through project, Bugs, drawer and Help clicks)
+      // quality: allow-deep-link (Documentos is the authenticated client landing; Projects, the project, Bugs, drawer and Help are reached through UI clicks)
       // Bug caught: the project cutout illuminates Hosting in the drawer over the real Summary.
       await setupClient(page, { projectTours: [completedProjectGuide()] })
-      await openOwnedProject(page)
+      await openOwnedProjectFromDocuments(page)
       await page.getByRole('link', { name: 'Bugs', exact: true }).click()
       await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}/bugs$`))
 
@@ -491,10 +512,10 @@ test.describe('Platform guided tour responsive anchors', () => {
       test('the open project highlight follows its control across the breakpoint', {
         tag: [...PLATFORM_GUIDED_TOUR_PROJECT, '@role:platform-client', '@outcome:display'],
       }, async ({ page }) => {
-        // quality: allow-deep-link (authenticated Projects is the client landing; project, Bugs and Help navigation are exercised before resizing the open guide)
+        // quality: allow-deep-link (Documentos is the authenticated client landing; Projects, project, Bugs and Help navigation are exercised before resizing)
         // Bug caught: a breakpoint moves Summary while the cutout stays at its old coordinates.
         await setupClient(page, { projectTours: [completedProjectGuide()] })
-        await openOwnedProject(page)
+        await openOwnedProjectFromDocuments(page)
         await page.getByRole('link', { name: 'Bugs', exact: true }).click()
         await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}/bugs$`))
         await openHelp(page)
@@ -519,7 +540,7 @@ test.describe('Platform guided tour responsive anchors', () => {
     test('the open navigation highlight moves to the visible menu', {
       tag: [...PLATFORM_GUIDED_TOUR_GENERAL, '@role:platform-client', '@outcome:display'],
     }, async ({ page }) => {
-      // quality: allow-deep-link (authenticated Projects is the setup landing; Help, guide selection and Next clicks reach the navigation highlight under test)
+      // quality: allow-deep-link (Documentos is the authenticated setup landing; Projects, Help, guide selection and Next are reached through UI clicks)
       // Bug caught: resizing keeps Driver attached to a hidden zero-size desktop navigation link.
       const general = tour({ id: 419, slug: 'general', context: 'general', status: 'completed', title: 'Guía general adaptable', steps: [
         { target: 'welcome', title_es: 'Bienvenida', title_en: 'Welcome', description_es: 'Inicio.', description_en: 'Start.' },
@@ -527,7 +548,7 @@ test.describe('Platform guided tour responsive anchors', () => {
         { target: 'documents', title_es: 'Tus documentos', title_en: 'Your documents', description_es: 'Consulta tus documentos.', description_en: 'Check your documents.' },
       ] })
       await setupClient(page, { globalTours: [general] })
-      await openProjects(page)
+      await openProjectsFromDocuments(page)
       await openHelp(page)
       await page.getByTestId('platform-help-tour-general').click()
       await page.getByTestId('platform-tour-next').click()

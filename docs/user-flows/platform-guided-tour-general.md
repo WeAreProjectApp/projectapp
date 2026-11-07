@@ -9,7 +9,7 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 
 | Resultado | Interacción y evidencia |
 |---|---|
-| display | Entrar a Proyectos, abrir la guía desde Ayuda y avanzar hasta Proyectos/Documentos. Redimensionar escritorio→móvil→tableta; comprobar texto, control visible, hueco SVG y tarjeta junto al destino. |
+| display | Entrar por Documentos y navegar a Proyectos, abrir la guía desde Ayuda y avanzar hasta Proyectos/Documentos. Redimensionar escritorio→móvil→tableta; comprobar texto, control visible, hueco SVG y tarjeta junto al destino. |
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |

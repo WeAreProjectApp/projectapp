@@ -48,7 +48,8 @@ nuevas por frame ni temporizador permanente; sólo medición mientras la guía e
 - Unitario del composable: abrir guía contextual con el cajón de Ayuda abierto
   deja visible el destino al cerrar ese cajón. Se conservan las siete regresiones
   previas de restauración, cancelación y último destino.
-- E2E de apertura real: proyecto propio → Bugs → navegación móvil → Ayuda → guía
+- E2E de apertura real: Documentos → Proyectos → proyecto propio → Bugs →
+  navegación móvil → Ayuda → guía
   completada. El cajón desaparece, el centro de Resumen cae en el hueco real del
   SVG y la tarjeta queda junto al control. Recargar conserva su acuse terminal.
 - E2E por transiciones: desktop→compact, wide→compact, compact→portrait,
@@ -60,7 +61,10 @@ nuevas por frame ni temporizador permanente; sólo medición mientras la guía e
 
 La comprobación SVG usa geometría renderizada (`isPointInFill`), no sólo la clase
 que Driver asigna al destino. Las APIs son fixtures de frontera, sin DB desplegada.
-Nuevas pruebas aún pendientes de resultado del CI del SHA que las publique.
+Las pruebas visuales parten de Documentos, entrada autenticada real según login
+y middleware, y llegan a Proyectos y Ayuda mediante clics. La excepción de setup
+del gate se limita a esa entrada; no elimina navegación ni aserciones. Nuevas
+pruebas aún pendientes de resultado del CI del SHA que las publique.
 No se ejecutan tests ni builds locales y CI no acredita Chrome manual.
 
 ## Reprueba futura sin alterar la ronda vigente
