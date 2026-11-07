@@ -1,3 +1,7 @@
+## 2026-11-07 — PA-216, dirección del cliente creado al aprobar
+
+El caso C de DEVQA-006 confirmó que el formulario enviaba la dirección, pero el serializer de aprobación no la admitía y el cliente nuevo la perdía. El contrato compartido Panel/MCP ahora acepta `address` opcional hasta 512 caracteres; el servicio existente la conserva. Comercial 6.5.0 y Propuestas 6.3.0 publican el campo. Regresiones de persistencia, vacío y rechazo sin efectos preparadas para CI. No cambia la activación ni se repara el cliente 27. El runtime 4d960880 y los casos de QA en curso quedan a cargo de DevQA; la entrega futura exige CI del nuevo SHA y reprueba coordinada, con firmas relacionadas aún bloqueadas.
+
 ## 2026-11-07 — PA-225, referencia sin proyecto en Contabilidad
 
 QA devolvió PA225-03 del PR #569 sobre 4d960880: Ingresos mostraba «—» sin explicar la referencia nula. La corrección muestra «Sin proyecto» en clásico, agrupado y detalle, y aplica la misma etiqueta visible en Hosting y Cuentas de cobro; conserva la ausencia de enlace. Regresiones de navegador preparadas para CI. El runtime de DEVQA-006 conserva su corte durante el recorrido; la asociación ya realizada del ingreso 57 y su aviso interno registrado no se revierten. El nuevo corte exige CI propio y reprueba coordinada.

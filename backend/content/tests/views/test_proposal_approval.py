@@ -238,9 +238,42 @@ def test_inline_client_and_project_are_created_on_confirmation(reviewed_proposal
     values['new_client'] = {'name': 'Inline', 'email': 'inline@example.com'}
     result = review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
     profile = UserProfile.objects.get(user__email='inline@example.com')
+    assert profile.address == ''
     assert Project.objects.get(pk=result['linked_project']['id']).client_id == profile.user_id
     reviewed_proposal.refresh_from_db()
     assert reviewed_proposal.client_id == profile.pk
+
+
+@pytest.mark.parametrize('address', ['Dirección ficticia QA006 C', 'A' * 512, ''], ids=['entered', 'max-length', 'blank'])
+def test_panel_confirmation_persists_new_client_address(admin_client, reviewed_proposal, address):
+    """Falla si confirmar desde Panel descarta la dirección introducida al crear el cliente."""
+    values = payload(reviewed_proposal, reviewed_proposal.client)
+    values.pop('client_profile_id')
+    values['new_client'] = {'name': 'Inline', 'email': 'inline@example.com', 'address': address}
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 200
+    reviewed_proposal.refresh_from_db()
+    assert reviewed_proposal.client.address == address
+
+
+@pytest.mark.parametrize('address', ['A' * 513, None], ids=['overlong', 'null'])
+def test_panel_confirmation_rejects_invalid_client_address(admin_client, reviewed_proposal, address):
+    """Falla si una dirección inválida crea un cliente o inicia el cierre de la propuesta."""
+    values = payload(reviewed_proposal, reviewed_proposal.client)
+    values.pop('client_profile_id')
+    values['new_client'] = {'name': 'Inline', 'email': 'inline@example.com', 'address': address}
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert set(response.json()['new_client']) == {'address'}
+    assert not UserProfile.objects.filter(user__email='inline@example.com').exists()
+    assert Project.objects.count() == 0
+    assert ProposalApprovalFile.objects.count() == 0
+    reviewed_proposal.refresh_from_db()
+    assert reviewed_proposal.status == 'negotiating'
 
 
 def test_legacy_link_keeps_deliverable_for_first_packet(reviewed_proposal, approval_client, admin_user):

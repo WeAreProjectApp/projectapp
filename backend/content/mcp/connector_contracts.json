@@ -36,8 +36,8 @@
     "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "b68aa97a5ec0a8fcd43d1ef3fac5901b88a9ea52872815abcd135410ff50fc0e",
-    "version": "6.4.0"
+    "sha256": "78e4b8fd4216cb99f0310c6d26dd794f7593da0935149092e2ad74e8e34a9a30",
+    "version": "6.5.0"
   },
   "communications": {
     "sha256": "b99b5c4041d56804c00bce3a649b9b4df087ce60a9fbd64fed91e98df4c2c7b7",
@@ -80,8 +80,8 @@
     "version": "4.4.2"
   },
   "proposals": {
-    "sha256": "a695c4f5fb1e17e9de600de43469d1dadcede80dd47fefa877f5b5b91c272dc1",
-    "version": "6.2.0"
+    "sha256": "71aa1bced1dee1b206f64bec0a2628b30dcc94ff3c979edd8651101aa02cd43e",
+    "version": "6.3.0"
   },
   "tasks": {
     "sha256": "fed0f09607abc3c68adae1e6a9c3c963a57315a03e08a28941e0ef7e61419db1",

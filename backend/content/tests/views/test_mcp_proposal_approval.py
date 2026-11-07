@@ -132,6 +132,36 @@ def test_repeat_confirmation_reuses_link(api_client, access, proposal, approval_
     assert proposal.approval_files.count() == 4
 
 
+def test_confirmation_persists_new_client_address(api_client, access, proposal, approval_arguments):
+    """Falla si el contrato MCP rechaza o pierde la dirección ofrecida por el mismo formulario del Panel."""
+    token, _ = access
+    approval_arguments['new_client']['address'] = 'Dirección ficticia QA006 C'
+    preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
+
+    result = confirm(api_client, token, preview)
+
+    assert result['isError'] is False
+    proposal.refresh_from_db()
+    assert proposal.client.address == 'Dirección ficticia QA006 C'
+
+
+@pytest.mark.parametrize('address', ['A' * 513, None], ids=['overlong', 'null'])
+def test_invalid_client_address_blocks_preview(api_client, access, proposal, approval_arguments, address):
+    """Falla si MCP previsualiza una dirección que Panel no puede guardar."""
+    token, _ = access
+    approval_arguments['new_client']['address'] = address
+    client_count_before = UserProfile.objects.clients().count()
+
+    result = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
+
+    assert result['isError'] is True
+    assert McpActionIntent.objects.count() == 0
+    assert UserProfile.objects.clients().count() == client_count_before
+    assert Project.objects.count() == 0
+    proposal.refresh_from_db()
+    assert (proposal.status, proposal.deliverable_id) == ('draft', None)
+
+
 def test_tampered_asset_blocks_confirmation(api_client, access, proposal, approval_arguments, assets):
     token, _ = access
     preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)

@@ -53,6 +53,12 @@ y `request_id`. Los archivos personalizados viajan como `custom_files` y
 su descripción como `custom_documents`. En multipart la metadata se envía
 en el campo JSON `payload`.
 
+Al crear un cliente en esta revisión, `new_client.address` es opcional y admite
+hasta 512 caracteres, igual que el perfil. La confirmación conserva la dirección
+introducida; omitirla o dejarla vacía mantiene una dirección vacía. Panel y MCP
+aplican la misma validación antes de crear entidades. Esto no activa la cuenta
+del cliente ni envía una invitación.
+
 El servidor valida cliente, pertenencia del proyecto, documentos y versión
 antes de guardar, incluidas las condiciones automáticas resueltas desde el
 catálogo de horas. Los clientes comerciales no archivados pueden vincularse
