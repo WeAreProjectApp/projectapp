@@ -1,16 +1,16 @@
 <template>
   <div
     :class="[
-      { dark: isDark },
       hasCover ? 'platform-cover' : '',
       hasCover && isCoverDark ? 'platform-cover-dark' : '',
       hasTheme && !hasCover ? 'platform-color-only' : '',
     ]"
-    class="relative min-h-screen"
+    class="relative min-h-screen text-text-default"
   >
     <!-- Background: cover image fixed behind everything -->
     <div
       v-if="hasCover"
+      data-testid="platform-cover"
       class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
       :style="coverBgStyle"
     />
@@ -29,14 +29,14 @@
     <!-- Mobile top bar -->
     <div
       class="mobile-topbar sticky top-0 z-30 flex h-14 items-center justify-between border-b border-input-border/[0.06] px-4 md:hidden"
-      :class="hasCover ? '' : 'bg-surface/80 backdrop-blur-xl dark:bg-primary-strong/90'"
+      :class="hasCover ? '' : 'bg-surface/80 backdrop-blur-xl dark:bg-surface-muted/90'"
     >
       <BaseButton
         unstyled
         icon-only
         type="button"
         aria-label="Abrir navegación"
-        class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-text-brand dark:bg-primary dark:text-white"
+        class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-text-brand dark:bg-surface dark:text-white"
         @click="openMobile"
       >
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,11 +44,11 @@
         </svg>
       </BaseButton>
       <NuxtLink :to="localePath('/platform/projects')" class="text-base font-bold tracking-tight text-text-brand dark:text-white">
-        Project<span class="text-green-light dark:text-accent">App.</span>
+        Project<span class="text-text-muted dark:text-text-brand">App.</span>
       </NuxtLink>
       <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full">
         <img v-if="authStore.user?.avatar_display_url" :src="authStore.user.avatar_display_url" alt="Avatar" class="h-full w-full object-cover" />
-        <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-white dark:bg-accent-soft dark:text-text-brand">
+        <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary dark:bg-accent dark:text-on-accent">
           {{ authStore.userInitials }}
         </div>
       </div>
@@ -86,21 +86,24 @@
       <Transition name="theme-popover">
         <div
           v-if="showThemePicker"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="platform-theme-title"
           class="fixed inset-0 z-50 flex items-end justify-center bg-black/30 px-4 pb-4 backdrop-blur-sm sm:items-center sm:pb-0"
           @click.self="showThemePicker = false"
         >
-          <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-input-border/[0.06] bg-surface p-6 shadow-2xl dark:border-white/[0.06] dark:bg-primary sm:p-8">
+          <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-input-border/[0.06] bg-surface p-6 shadow-2xl dark:border-white/[0.06] sm:p-8">
             <div class="mb-5 flex items-center justify-between">
               <div>
-                <h3 class="text-lg font-semibold text-text-brand dark:text-white">Personalizar interfaz</h3>
-                <p class="mt-1 text-xs text-green-light">Escoge un color y una imagen para hacer tuyo este espacio.</p>
+                <h3 id="platform-theme-title" class="text-lg font-semibold text-text-brand dark:text-white">Personalizar interfaz</h3>
+                <p class="mt-1 text-xs text-text-muted">Escoge un color y una imagen para hacer tuyo este espacio.</p>
               </div>
               <BaseButton
                 unstyled
                 icon-only
                 type="button"
                 aria-label="Cerrar personalización"
-                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-green-light transition hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white"
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-muted transition hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white"
                 @click="showThemePicker = false"
               >
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -115,7 +118,7 @@
 </template>
 
 <script setup>
-import { provide, watch, onMounted, onUnmounted, ref, computed } from 'vue'
+import { provide, watch, onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformTheme } from '~/composables/usePlatformTheme'
 import { usePlatformSidebar } from '~/composables/usePlatformSidebar'
@@ -152,6 +155,8 @@ const {
   hasCover,
   isCoverDark,
   hydrate: hydrateCustomTheme,
+  release: releaseCustomTheme,
+  applyTheme: applyCustomTheme,
 } = usePlatformCustomTheme()
 
 const platformHelp = usePlatformHelp()
@@ -168,14 +173,29 @@ authStore.hydrate()
 
 onMounted(() => {
   hydrateTheme()
+  applyDocumentTheme()
   hydrateSidebar()
   hydrateCustomTheme()
   setupResizeListener()
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   cleanupResizeListener()
+  releaseCustomTheme()
+  document.documentElement.classList.remove('dark')
 })
+
+// Portals render under body, so the document must own the active mode.
+// The incoming layout applies its own independently persisted preference.
+function applyDocumentTheme() {
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.toggle('dark', isDark.value)
+}
+
+watch(isDark, () => {
+  applyDocumentTheme()
+  applyCustomTheme()
+}, { flush: 'sync' })
 
 provide('toggleSidebar', toggleSidebar)
 provide('toggleTheme', toggle)

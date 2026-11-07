@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal.",
+  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal. Summary copy, empty phases and dialogs retain at least 4.5:1 text contrast in both themes across the five reference viewports.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

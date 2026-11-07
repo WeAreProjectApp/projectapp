@@ -1275,8 +1275,12 @@ centred against the label and help block.
 
 Semantic theme tokens live in `frontend/assets/styles/theme.css` and are exposed
 as Tailwind colors (`bg-surface`, `text-text-default`, `border-input-border`,
-etc.). Light/dark values flip with the `.dark` class on `<html>`, toggled by
-`useDiagnosticDarkMode`. Base components in `frontend/components/base/`
+etc.). Light/dark values flip with the `.dark` class on `<html>`. Panel uses
+`useDiagnosticDarkMode`; Platform applies `usePlatformTheme` from its layout so
+portals under `body` inherit the same tokens. Platform releases its custom CSS
+variables before leaving the layout; the next layout restores its own saved
+preference. Custom palettes choose black/white button foregrounds and a readable
+brand shade independently; cover images keep opaque reading surfaces. Base components in `frontend/components/base/`
 (`BaseInput`, `BaseSelect`, `BaseTextarea`, `BaseButton`, `BaseBadge`,
 `BaseCard`, `BaseDrawer`) wrap native HTML using these tokens, so consumer markup does not
 need `dark:` variants. New views must prefer these tokens and components;
@@ -1287,6 +1291,14 @@ example. El contrato transversal de breakpoints, anchos máximos, tablas, tabs,
 filtros, modales, formularios, acciones y workspaces está en el
 [estándar responsivo del panel](../RESPONSIVE_STANDARD.md). Sus cinco viewports
 de aceptación son obligatorios para todo cambio de UI bajo `/panel/**`.
+
+Platform exposes the saved light/dark preference through labelled controls in
+the desktop sidebar (including its collapsed state) and mobile drawer. Clearing
+an uploaded cover sends an explicit `custom_cover_image: null` to `PATCH me/`;
+omitting that field preserves it. Gallery selection clears the uploaded cover
+in the same request. The UI changes the cover only after a successful profile
+update so a failed request retains the saved image. Markdown preview links use
+the same readable light-mode colors in the friendly and professional templates.
 
 Responsive behavior for the internal panel is a second design-system layer.
 `frontend/config/responsive.js` is the single source for width bands and the

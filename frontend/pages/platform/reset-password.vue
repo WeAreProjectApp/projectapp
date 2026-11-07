@@ -25,7 +25,7 @@
 
       <div class="rounded-3xl border border-white/[0.1] bg-white/95 p-8 shadow-2xl backdrop-blur-2xl">
         <h2 class="text-xl font-medium text-text-default">Define tu nueva contraseña</h2>
-        <p class="mt-2 text-sm leading-6 text-green-light">
+        <p class="mt-2 text-sm leading-6 text-text-muted">
           Al guardar quedarás conectado a la plataforma automáticamente.
         </p>
 
@@ -45,7 +45,7 @@
               type="password"
               autocomplete="new-password"
               minlength="8"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
               placeholder="Mínimo 8 caracteres"
             >
           </div>
@@ -58,7 +58,7 @@
               type="password"
               autocomplete="new-password"
               minlength="8"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
               placeholder="Repite la contraseña"
             >
           </div>

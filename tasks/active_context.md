@@ -1,3 +1,15 @@
+## PA-227 — RESP-R068 incorporado al alcance (2026-11-07 UTC)
+
+Ampliación autorizada de la reprueba: el selector de tema de `/panel/styleguide` cambia ahora la preferencia general del Panel mediante `useDarkMode`, con etiqueta, colores renderizados y persistencia compartidos. El antecedente de Chrome corresponde a main `b01448a2` y STAFF64; el candidato nuevo deberá validarse con STAFF16 a 412×915 y 1440×900, junto a R1/R2/R3. Se preparan cuatro regresiones E2E con teclado, recarga, control general, contraste y evidencia. Mapa de vistas y flujo `admin-styleguide` ampliados sin rutas ni nodos nuevos. Automatizadas sólo en CI; todavía sin aceptación Chrome ni nuevo turno concedido. Guion: `docs/audits/PA-227/DEVQA-001-retest.md`.
+
+## PA-227 — Correcciones tras DEVQA-001 (2026-11-06)
+
+Chrome de qa2 rechazó el corte `2b0de3a93e36cd71a52114104a5756edabdf9741` pese a sus 91 controles CI aprobados: faltaba un selector visible de tema en Plataforma, Quitar portada no persistía y el enlace Markdown en claro medía 3,77:1. Correcciones preparadas en la misma rama/PR #558: controles de tema de escritorio y móvil; retirada explícita del archivo personalizado en el perfil; enlace compartido entre las apariencias Amigable/Profesional con color de mayor contraste. Regresiones de interfaz, persistencia real del perfil y contraste incorporadas para CI, sin ejecución local. Nuevo SHA/CI y reprueba Chrome pendientes; no acredita aceptación. El entorno y la evidencia de DevQA se conservan. Detalles y guion: `docs/audits/PA-227/DEVQA-001-retest.md`.
+
+## PA-227 — Modo oscuro de Panel y Plataforma (2026-11-06)
+
+Barrido y correcciones en `fix/06112026-pa227-dark-mode`, desde `b01448a2`. DEV desechable con datos ficticios; suites automatizadas sólo en CI. Inventario, matriz y evidencia en `docs/audits/PA-227/`. PR #558 abierto. Herencia del tema, contraste de colores personalizados, portadas, paginación y textos secundarios corregidos. Los servidores propios se apagaron al centralizar QA en DevQA (2026-11-06); la revisión de estados y el contraste de Markdown continúan pendientes de ese turno. CI y evidencia final pendientes.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

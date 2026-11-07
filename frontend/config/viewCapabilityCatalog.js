@@ -278,7 +278,7 @@ const panelCapabilities = [
     'Mantiene coherencia entre quienes operan, las vistas disponibles y el sistema de diseño.',
     [
       feature('panel-product-reference', 'Consultar mapa y sistema de diseño',
-        'Expone la taxonomía de vistas y los componentes visuales compartidos.',
+        'Expone la taxonomía de vistas y los componentes visuales compartidos; la guía permite comprobarlos con el tema claro/oscuro del Panel.',
         'Facilita explicar el producto y mantener una interfaz consistente.',
         ['/panel/views', '/panel/styleguide'],
         { icon: 'sitemap', stage: 'Referencia' }),
@@ -312,7 +312,7 @@ const platformCapabilities = [
         ['/platform/admin-login', '/platform/forgot-password', '/platform/reset-password', '/platform/verify-code'],
         { icon: 'refresh', actors: ['client', 'team'], stage: 'Ingreso' }),
       feature('platform-profile-management', 'Mantener el perfil al día',
-        'Centraliza los datos personales y la configuración de la cuenta. Para clientes, Ayuda permite repetir recorridos guiados y consultar videos en un modal sin reproducción automática; los clips de Appi y voz dependen de las funciones disponibles. El primer ingreso y el primer proyecto ofrecen orientación por usuario.',
+        'Centraliza los datos personales y la configuración de la cuenta. La navegación de escritorio y móvil permite elegir modo claro u oscuro y conservarlo al recargar; Personalizar apariencia guarda colores y portadas y permite retirar la imagen personalizada. Para clientes, Ayuda permite repetir recorridos guiados y consultar videos en un modal sin reproducción automática; los clips de Appi y voz dependen de las funciones disponibles. El primer ingreso y el primer proyecto ofrecen orientación por usuario.',
         'Mantiene la experiencia y las comunicaciones vinculadas a la persona correcta.', ['/platform/profile'],
         { icon: 'settings', actors: ['client', 'team'], stage: 'Cuenta' }),
     ],

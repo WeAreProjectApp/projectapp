@@ -1,7 +1,7 @@
 <template>
   <div id="platform-client-detail" class="space-y-6">
     <div data-enter>
-      <NuxtLink :to="localePath('/platform/clients')" class="inline-flex items-center text-sm font-medium text-green-light transition hover:text-text-default dark:hover:text-white">
+      <NuxtLink :to="localePath('/platform/clients')" class="inline-flex items-center text-sm font-medium text-text-muted transition hover:text-text-default dark:hover:text-white">
         ← Volver a clientes
       </NuxtLink>
       <h1 class="mt-3 font-light text-3xl text-text-default">Detalle del cliente</h1>
@@ -11,11 +11,11 @@
       {{ pageMessage }}
     </div>
 
-    <div v-if="platformClientsStore.isLoading" class="rounded-3xl border border-border-default bg-surface px-6 py-14 text-center text-sm text-green-light shadow-sm" data-enter>
+    <div v-if="platformClientsStore.isLoading" class="rounded-3xl border border-border-default bg-surface px-6 py-14 text-center text-sm text-text-muted shadow-sm" data-enter>
       Cargando cliente...
     </div>
 
-    <div v-else-if="!platformClientsStore.currentClient" class="rounded-3xl border border-border-default bg-surface px-6 py-14 text-center text-sm text-green-light shadow-sm" data-enter>
+    <div v-else-if="!platformClientsStore.currentClient" class="rounded-3xl border border-border-default bg-surface px-6 py-14 text-center text-sm text-text-muted shadow-sm" data-enter>
       No encontramos el cliente solicitado.
     </div>
 
@@ -30,28 +30,28 @@
                 alt="Avatar"
                 class="h-full w-full object-cover"
               />
-              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-base font-bold text-white dark:bg-accent dark:text-text-default">
+              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-base font-bold text-on-primary dark:bg-accent dark:text-on-accent">
                 {{ clientInitials }}
               </div>
             </div>
             <div class="min-w-0">
               <h2 class="truncate text-lg font-medium text-text-default">{{ form.first_name }} {{ form.last_name }}</h2>
-              <p class="mt-0.5 truncate text-sm text-green-light">{{ platformClientsStore.currentClient.email }}</p>
+              <p class="mt-0.5 truncate text-sm text-text-muted">{{ platformClientsStore.currentClient.email }}</p>
             </div>
           </div>
 
           <dl class="mt-6 grid gap-3">
             <div class="rounded-xl border border-border-default p-4">
-              <dt class="text-xs uppercase tracking-[0.16em] text-green-light/60">Empresa</dt>
+              <dt class="text-xs uppercase tracking-[0.16em] text-text-muted">Empresa</dt>
               <dd class="mt-2 text-sm font-medium text-text-default">{{ form.company_name || '—' }}</dd>
             </div>
             <div class="rounded-xl border border-border-default p-4">
-              <dt class="text-xs uppercase tracking-[0.16em] text-green-light/60">Teléfono</dt>
+              <dt class="text-xs uppercase tracking-[0.16em] text-text-muted">Teléfono</dt>
               <dd class="mt-2 text-sm font-medium text-text-default">{{ form.phone || '—' }}</dd>
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="rounded-xl border border-border-default p-4">
-                <dt class="text-xs uppercase tracking-[0.16em] text-green-light/60">Estado</dt>
+                <dt class="text-xs uppercase tracking-[0.16em] text-text-muted">Estado</dt>
                 <dd class="mt-2">
                   <span class="inline-flex rounded-full px-3 py-1 text-xs font-medium" :class="statusClass(platformClientsStore.currentClient)">
                     {{ statusLabel(platformClientsStore.currentClient) }}
@@ -59,7 +59,7 @@
                 </dd>
               </div>
               <div class="rounded-xl border border-border-default p-4">
-                <dt class="text-xs uppercase tracking-[0.16em] text-green-light/60">Creado</dt>
+                <dt class="text-xs uppercase tracking-[0.16em] text-text-muted">Creado</dt>
                 <dd class="mt-2 text-sm font-medium text-text-default">{{ formatDate(platformClientsStore.currentClient.created_at) }}</dd>
               </div>
             </div>
@@ -87,42 +87,42 @@
       <section data-enter>
         <article class="rounded-3xl border border-border-default bg-surface p-6 shadow-sm">
           <h2 class="text-base font-medium text-text-default">Editar cliente</h2>
-          <p class="mt-2 text-sm leading-6 text-green-light">
+          <p class="mt-2 text-sm leading-6 text-text-muted">
             Ajusta la información visible para el equipo y el cliente dentro del portal.
           </p>
 
           <form class="mt-6 grid gap-5 sm:grid-cols-2" @submit.prevent="handleSave">
             <div>
               <label for="client-first-name" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Nombre</label>
-              <input id="client-first-name" v-model="form.first_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
+              <input id="client-first-name" v-model="form.first_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
             </div>
 
             <div>
               <label for="client-last-name" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Apellido</label>
-              <input id="client-last-name" v-model="form.last_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
+              <input id="client-last-name" v-model="form.last_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
             </div>
 
             <div class="sm:col-span-2">
               <label for="client-email" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Email</label>
-              <input id="client-email" :value="platformClientsStore.currentClient.email" type="email" disabled class="w-full rounded-xl border border-border-default bg-surface-muted/20 px-4 py-3 text-sm text-green-light outline-none dark:bg-white/5">
+              <input id="client-email" :value="platformClientsStore.currentClient.email" type="email" disabled class="w-full rounded-xl border border-border-default bg-surface-muted/20 px-4 py-3 text-sm text-text-muted outline-none dark:bg-white/5">
             </div>
 
             <div>
               <label for="client-company" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Empresa</label>
-              <input id="client-company" v-model="form.company_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
+              <input id="client-company" v-model="form.company_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
             </div>
 
             <div>
               <label for="client-phone" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Teléfono</label>
-              <input id="client-phone" v-model="form.phone" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
+              <input id="client-phone" v-model="form.phone" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
             </div>
 
             <label class="sm:col-span-2 flex items-center justify-between rounded-xl border border-border-default px-4 py-4">
               <div>
                 <p class="text-sm font-medium text-text-default">Cuenta activa</p>
-                <p class="mt-1 text-xs text-green-light">Desactiva esta opción si necesitas pausar el acceso del cliente.</p>
+                <p class="mt-1 text-xs text-text-muted">Desactiva esta opción si necesitas pausar el acceso del cliente.</p>
               </div>
-              <input v-model="form.is_active" type="checkbox" class="h-5 w-5 rounded border-border-default bg-surface-muted/40 text-text-default focus:ring-esmerald/30 dark:bg-primary-strong dark:text-accent dark:focus:ring-lemon/30">
+              <input v-model="form.is_active" type="checkbox" class="h-5 w-5 rounded border-border-default bg-surface-muted/40 text-text-default focus:ring-esmerald/30 dark:bg-surface-muted dark:text-text-brand dark:focus:ring-lemon/30">
             </label>
 
             <div class="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:justify-end">
@@ -197,8 +197,8 @@ function statusLabel(client) {
 }
 
 function statusClass(client) {
-  if (!client?.is_active) return 'bg-white/10 text-green-light/60'
-  if (!client?.is_onboarded) return 'bg-amber-100 text-amber-700 dark:bg-lemon/10 dark:text-accent'
+  if (!client?.is_active) return 'bg-white/10 text-text-muted'
+  if (!client?.is_onboarded) return 'bg-amber-100 text-amber-700 dark:bg-primary-soft dark:text-text-brand'
   return 'bg-emerald-500/15 text-emerald-400'
 }
 

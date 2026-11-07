@@ -52,26 +52,26 @@
       <!-- Status filter tabs -->
       <div class="mb-5 flex gap-1.5 overflow-x-auto pb-1" data-enter>
         <!-- design-tokens: allow-raw-button (native status filter tabs select the current list) -->
-        <button
+        <BaseButton unstyled
           v-for="tab in statusTabs"
           :key="tab.value"
           type="button"
           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition"
           :class="activeFilter === tab.value
-            ? 'bg-primary text-white dark:bg-accent dark:text-text-default'
-            : 'text-green-light hover:bg-surface-muted/50 dark:hover:bg-white/10'"
+            ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent'
+            : 'text-text-muted hover:bg-surface-muted/50 dark:hover:bg-white/10'"
           @click="activeFilter = tab.value"
         >
           {{ tab.label }}
-          <span v-if="tab.count !== undefined" class="ml-1 opacity-60">{{ tab.count }}</span>
-        </button>
+          <span v-if="tab.count !== undefined" class="ml-1">{{ tab.count }}</span>
+        </BaseButton>
       </div>
 
       <!-- Table (md+) / Cards (mobile) -->
       <template v-if="filteredRequests.length">
       <div v-if="!isMobile" class="overflow-x-auto rounded-2xl border border-border-default bg-surface" data-enter>
         <table class="min-w-full text-left text-sm">
-          <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-green-light/70">
+          <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-text-muted">
             <tr>
               <th class="px-4 py-3">Solicitud</th>
               <th class="px-4 py-3">Estado</th>
@@ -100,7 +100,7 @@
                     <p v-if="cr.source_requirement" class="mt-0.5 line-clamp-1 text-[10px] text-teal-600 dark:text-teal-300">
                       Sobre: {{ cr.source_requirement.title }}
                     </p>
-                    <p v-else-if="cr.module_or_screen" class="mt-0.5 line-clamp-1 text-[10px] text-green-light/60">{{ cr.module_or_screen }}</p>
+                    <p v-else-if="cr.module_or_screen" class="mt-0.5 line-clamp-1 text-[10px] text-text-muted">{{ cr.module_or_screen }}</p>
                   </div>
                 </div>
               </td>
@@ -108,7 +108,7 @@
                 <select
                   v-if="authStore.isAdmin && !cr.is_archived"
                   :value="cr.status"
-                  class="rounded-full border border-border-default bg-surface-muted/40 px-2 py-1 text-[10px] font-medium text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+                  class="rounded-full border border-border-default bg-surface-muted/40 px-2 py-1 text-[10px] font-medium text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
                   @click.stop
                   @change="onQuickStatus(cr, $event.target.value)"
                 >
@@ -132,9 +132,9 @@
                   {{ priorityLabel(cr.suggested_priority) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-xs text-green-light">{{ cr.created_by_name }}</td>
-              <td class="px-4 py-3 text-xs text-green-light/70">{{ formatDate(cr.created_at) }}</td>
-              <td class="px-2 py-3 text-right text-green-light/40">›</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ cr.created_by_name }}</td>
+              <td class="px-4 py-3 text-xs text-text-muted">{{ formatDate(cr.created_at) }}</td>
+              <td class="px-2 py-3 text-right text-text-muted">›</td>
             </tr>
           </tbody>
         </table>
@@ -143,7 +143,7 @@
       <!-- Cards (mobile) -->
       <div v-else class="space-y-3" data-enter>
         <!-- design-tokens: allow-raw-button (selectable ticket card opens the detail dialog in place) -->
-        <button
+        <BaseButton unstyled
           v-for="cr in filteredRequests"
           :key="cr.id"
           type="button"
@@ -160,28 +160,28 @@
                 <span v-if="cr.linked_requirement_id" class="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-text-brand">Convertida</span>
               </div>
               <p v-if="cr.source_requirement" class="mt-0.5 line-clamp-1 text-[10px] text-teal-600 dark:text-teal-300">Sobre: {{ cr.source_requirement.title }}</p>
-              <p v-else-if="cr.module_or_screen" class="mt-0.5 line-clamp-1 text-[10px] text-green-light/60">{{ cr.module_or_screen }}</p>
+              <p v-else-if="cr.module_or_screen" class="mt-0.5 line-clamp-1 text-[10px] text-text-muted">{{ cr.module_or_screen }}</p>
             </div>
-            <span class="shrink-0 text-green-light/40">›</span>
+            <span class="shrink-0 text-text-muted">›</span>
           </div>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" :class="statusBadgeClass(cr.status)">{{ statusLabel(cr.status) }}</span>
             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" :class="priorityBadgeClass(cr.suggested_priority)">{{ priorityLabel(cr.suggested_priority) }}</span>
           </div>
-          <div class="mt-2 flex items-center justify-between gap-2 text-xs text-green-light/70">
+          <div class="mt-2 flex items-center justify-between gap-2 text-xs text-text-muted">
             <span class="truncate">{{ cr.created_by_name }}</span>
             <span class="shrink-0">{{ formatDate(cr.created_at) }}</span>
           </div>
-        </button>
+        </BaseButton>
       </div>
       </template>
 
       <!-- Empty state -->
       <div v-else class="py-16 text-center" data-enter>
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-muted/50 dark:bg-white/5">
-          <svg class="h-8 w-8 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          <svg class="h-8 w-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
         </div>
-        <p class="text-sm text-green-light">
+        <p class="text-sm text-text-muted">
           {{ activeFilter === 'all' ? 'No hay solicitudes de cambio aún.' : 'No hay solicitudes con este estado.' }}
         </p>
         <BaseButton variant="accent" size="md" class="mt-4" v-if="!authStore.isAdmin" @click="openCreateModal">
@@ -208,20 +208,20 @@
                 <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
-                  <input v-model="createForm.title" type="text" required placeholder="¿Qué cambio necesitas?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <input v-model="createForm.title" type="text" required placeholder="¿Qué cambio necesitas?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Descripción</label>
-                  <textarea v-model="createForm.description" rows="3" placeholder="Describe el cambio con el mayor detalle posible..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                  <textarea v-model="createForm.description" rows="3" placeholder="Describe el cambio con el mayor detalle posible..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Módulo / Pantalla</label>
-                    <input v-model="createForm.module_or_screen" type="text" placeholder="Ej: Catálogo" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                    <input v-model="createForm.module_or_screen" type="text" placeholder="Ej: Catálogo" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Prioridad sugerida</label>
-                    <select v-model="createForm.suggested_priority" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40">
+                    <select v-model="createForm.suggested_priority" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
                       <option value="low">Baja</option>
                       <option value="medium">Media</option>
                       <option value="high">Alta</option>
@@ -229,7 +229,7 @@
                     </select>
                   </div>
                 </div>
-                <label class="flex items-center gap-2 text-xs text-green-light">
+                <label class="flex items-center gap-2 text-xs text-text-muted">
                   <input v-model="createForm.is_urgent" type="checkbox" class="rounded border-border-default" />
                   Marcar como urgente
                 </label>
@@ -245,8 +245,8 @@
                   >
                     <input ref="screenshotInput" type="file" accept="image/*" class="hidden" @change="handleScreenshotSelect" />
                     <div v-if="!screenshotPreview" class="py-4 text-center">
-                      <svg class="mx-auto mb-1.5 h-6 w-6 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      <p class="text-[11px] text-green-light/50">Arrastra o haz clic para subir</p>
+                      <svg class="mx-auto mb-1.5 h-6 w-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <p class="text-[11px] text-text-muted">Arrastra o haz clic para subir</p>
                     </div>
                     <div v-else class="relative w-full p-2">
                       <img :src="screenshotPreview" alt="Preview" class="mx-auto max-h-32 rounded-lg object-contain" />
@@ -284,12 +284,12 @@
               <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <h2 class="text-lg font-bold text-text-default">Importar respuestas (JSON)</h2>
-                  <p class="mt-1 text-xs text-green-light/70">
+                  <p class="mt-1 text-xs text-text-muted">
                     Pega un array con `id` + los campos a actualizar (`status`, `admin_response`, `estimated_time`, `estimated_cost`).
                     Los ítems se aplican por id, los demás se ignoran.
                   </p>
                 </div>
-                <BaseButton unstyled icon-only type="button" aria-label="Cerrar importación" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-green-light transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="closeImportModal">
+                <BaseButton unstyled icon-only type="button" aria-label="Cerrar importación" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-muted transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="closeImportModal">
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </BaseButton>
               </div>
@@ -302,7 +302,7 @@
                     rows="14"
                     spellcheck="false"
                     placeholder='[{"id": 1, "status": "approved", "admin_response": "...", "estimated_time": "2 semanas", "estimated_cost": 500000}]'
-                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-green-light/40 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/20 dark:focus:border-lemon/40"
+                    class="w-full resize-y rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 font-mono text-xs text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                   />
                 </div>
 
@@ -342,12 +342,12 @@
                     <span v-if="detailCR.is_archived" class="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivado</span>
                     <span v-if="detailCR.is_urgent" class="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-red-600 dark:text-red-400">Urgente</span>
                   </div>
-                  <p v-if="detailCR.is_archived && detailCR.archived_at" class="mb-1 text-[10px] text-green-light/60">
+                  <p v-if="detailCR.is_archived && detailCR.archived_at" class="mb-1 text-[10px] text-text-muted">
                     Archivado el {{ formatDate(detailCR.archived_at) }}
                   </p>
                   <h2 class="text-lg font-bold text-text-default">{{ detailCR.title }}</h2>
                 </div>
-                <BaseButton unstyled icon-only type="button" aria-label="Cerrar detalle" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-green-light transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="detailCR = null">
+                <BaseButton unstyled icon-only type="button" aria-label="Cerrar detalle" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-muted transition hover:bg-surface-muted hover:text-text-default dark:hover:bg-white/10 dark:hover:text-white" @click="detailCR = null">
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </BaseButton>
               </div>
@@ -356,12 +356,12 @@
               <div v-if="detailCR.source_requirement" class="mb-5 rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
                 <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-300">Sobre el requerimiento</p>
                 <p class="text-sm font-medium text-text-default">{{ detailCR.source_requirement.title }}</p>
-                <p v-if="detailCR.source_requirement.phase_title" class="mt-0.5 text-[11px] text-green-light/70">
+                <p v-if="detailCR.source_requirement.phase_title" class="mt-0.5 text-[11px] text-text-muted">
                   Fase: {{ detailCR.source_requirement.phase_title }}
                 </p>
                 <NuxtLink
                   :to="localePath(`/platform/projects/${projectId}/delivery?stage=${detailCR.source_requirement.stage_id}#requirement-${detailCR.source_requirement.id}`)"
-                  class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-text-brand underline decoration-text-brand/30 transition hover:decoration-text-brand dark:text-accent dark:decoration-accent/30 dark:hover:decoration-accent"
+                  class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-text-brand underline decoration-text-brand/30 transition hover:decoration-text-brand dark:text-text-brand dark:decoration-accent/30 dark:hover:decoration-accent"
                 >
                   {{ t('platformDelivery.seeDelivery') }}
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M5 12h16" /></svg>
@@ -371,7 +371,7 @@
               <IssueHistory :ticket="detailCR" />
 
               <!-- Description -->
-              <div v-if="detailCR.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-green-light">
+              <div v-if="detailCR.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-text-muted">
                 {{ detailCR.description }}
               </div>
 
@@ -386,23 +386,23 @@
               <!-- Meta -->
               <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Módulo</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Módulo</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ detailCR.module_or_screen || '—' }}</p>
                 </div>
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Solicitado por</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Solicitado por</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ detailCR.created_by_name }}</p>
                 </div>
                 <div class="rounded-xl border border-border-muted p-3">
-                  <p class="text-[10px] font-medium uppercase tracking-wider text-green-light/60">Fecha</p>
+                  <p class="text-[10px] font-medium uppercase tracking-wider text-text-muted">Fecha</p>
                   <p class="mt-1 text-xs font-semibold text-text-default">{{ formatDate(detailCR.created_at) }}</p>
                 </div>
               </div>
 
               <!-- Admin response -->
               <div v-if="detailCR.admin_response" class="mb-5 rounded-xl border-l-2 border-l-esmerald/30 bg-surface-muted/20 p-4 dark:border-l-lemon/40">
-                <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-esmerald/60 dark:text-lemon/60">Respuesta del equipo</p>
-                <p class="text-sm leading-relaxed text-green-light">{{ detailCR.admin_response }}</p>
+                <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-brand dark:text-lemon/60">Respuesta del equipo</p>
+                <p class="text-sm leading-relaxed text-text-muted">{{ detailCR.admin_response }}</p>
                 <div v-if="detailCR.estimated_time || detailCR.estimated_cost" class="mt-3 flex flex-wrap gap-3">
                   <span v-if="detailCR.estimated_time" class="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-text-default dark:bg-white/10 dark:text-white">
                     <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="1.5" /><path d="M12 6v6l4 2" stroke-width="1.5" /></svg>
@@ -422,16 +422,16 @@
 
               <!-- Admin actions -->
               <div v-if="authStore.isAdmin" class="mb-5 space-y-3">
-                <div v-if="detailCR.is_archived" class="rounded-xl border border-border-default px-4 py-3 text-xs text-green-light/70">
+                <div v-if="detailCR.is_archived" class="rounded-xl border border-border-default px-4 py-3 text-xs text-text-muted">
                   Esta solicitud está archivada.
                 </div>
                 <template v-else>
                   <div v-if="showEvaluateForm" class="rounded-xl border border-border-default p-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-green-light/60">Evaluar solicitud</p>
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Evaluar solicitud</p>
                     <div class="space-y-3">
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Estado</label>
-                        <select v-model="evalForm.status" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40">
+                        <select v-model="evalForm.status" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
                           <option value="pending">Pendiente</option>
                           <option value="evaluating">En evaluación</option>
                           <option value="approved">Aprobada</option>
@@ -442,7 +442,7 @@
                       </div>
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Respuesta</label>
-                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" admin id="change-response-evidence" />
                       <IssueContractReply v-model="contractReply" :project-id="projectId" kind="change" :ticket="detailCR" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
@@ -450,11 +450,11 @@
                       <div class="grid grid-cols-2 gap-3">
                         <div>
                           <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Tiempo estimado</label>
-                          <input v-model="evalForm.estimated_time" type="text" placeholder="Ej: 2 semanas" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                          <input v-model="evalForm.estimated_time" type="text" placeholder="Ej: 2 semanas" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                         </div>
                         <div>
                           <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Costo estimado</label>
-                          <input v-model.number="evalForm.estimated_cost" type="number" min="0" step="1000" placeholder="0" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                          <input v-model.number="evalForm.estimated_cost" type="number" min="0" step="1000" placeholder="0" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                         </div>
                       </div>
                       <div class="flex justify-end gap-2">
@@ -482,7 +482,7 @@
 
               <!-- Comments -->
               <div class="mb-4">
-                <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-green-light/60">
+                <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
                   Comentarios{{ detailCR.comments ? ` (${detailCR.comments.length})` : '' }}
                 </p>
 
@@ -495,9 +495,9 @@
                   >
                     <div class="mb-1 flex items-center justify-between">
                       <span class="text-xs font-medium text-text-default">{{ comment.user_name }}</span>
-                      <span class="text-[10px] text-green-light/40">{{ formatDate(comment.created_at) }}</span>
+                      <span class="text-[10px] text-text-muted">{{ formatDate(comment.created_at) }}</span>
                     </div>
-                    <p class="text-sm leading-relaxed text-green-light">{{ comment.content }}</p>
+                    <p class="text-sm leading-relaxed text-text-muted">{{ comment.content }}</p>
                     <IssueAttachments :attachments="comment.attachments" />
                     <span v-if="comment.is_internal" class="mt-1 inline-block text-[9px] font-semibold uppercase tracking-wider text-amber-500">Interno</span>
                   </div>
@@ -509,7 +509,7 @@
                     v-model="newComment"
                     type="text"
                     placeholder="Escribe un comentario..."
-                    class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40"
+                    class="flex-1 rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40"
                   />
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!newComment.trim()">
                     Enviar
@@ -517,7 +517,7 @@
                 </form>
                 <IssueEvidenceFields v-if="!detailCR.is_archived" v-model="commentEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" id="change-comment-evidence" />
                 <p v-if="crStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-danger-strong">{{ crStore.error }}</p>
-                <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-green-light/60">
+                <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-text-muted">
                   <input v-model="commentInternal" type="checkbox" class="rounded border-border-default" />
                   Comentario interno (solo admins)
                 </label>

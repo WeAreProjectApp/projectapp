@@ -1,6 +1,6 @@
 <template>
   <div v-if="sortedHistory.length" class="mt-4 border-t border-input-border pt-4">
-    <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-green-light/60">
+    <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
       {{ title }}
     </p>
     <ul class="space-y-2.5">
@@ -12,8 +12,8 @@
         <span class="text-xs font-medium text-text-brand dark:text-white">
           {{ statusLabel(h.from_status) }} → {{ statusLabel(h.to_status) }}
         </span>
-        <span class="text-[10px] text-green-light/70">{{ formatDateTime(h.created_at) }}</span>
-        <span v-if="h.source" class="text-[10px] text-green-light/50">{{ sourceLabel(h.source) }}</span>
+        <span class="text-[10px] text-text-muted">{{ formatDateTime(h.created_at) }}</span>
+        <span v-if="h.source" class="text-[10px] text-text-muted">{{ sourceLabel(h.source) }}</span>
       </li>
     </ul>
   </div>
