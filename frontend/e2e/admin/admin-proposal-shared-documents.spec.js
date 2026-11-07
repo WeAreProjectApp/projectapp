@@ -191,6 +191,7 @@ test('keeps the historical resource title after reloading both surfaces', {
 }, async ({ page }) => {
   const state = { ...fixture(), packageNumber: 3, pending: false, historical: true };
   await mockSharedDocuments(page, state);
+  // quality: allow-deep-link (authenticated Panel is the shell entry; navigate through Proposals to Documents)
   await openDocumentsFromPanel(page);
   const shared = page.getByTestId('proposal-shared-documents');
 
