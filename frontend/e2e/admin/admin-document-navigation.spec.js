@@ -509,11 +509,12 @@ test.describe('Admin document project/client navigation', () => {
       await drawer.getByRole('button', { name: 'Cerrar', exact: true }).click();
     }
     await expect(page.getByTestId('folder-header-name')).toHaveText('Fase 1.5');
-    longFolder.project_name = PROJECT_PHASE.project_name;
-    longNavigation.projects.find((project) => project.id === 41).name = PROJECT_PHASE.project_name;
+    const normalProjectName = navigationPayload.projects.find((project) => project.id === 41).name;
+    longFolder.project_name = normalProjectName;
+    longNavigation.projects.find((project) => project.id === 41).name = normalProjectName;
     await page.setViewportSize(VIEWPORTS.compact);
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('folder-header-project')).toHaveText(PROJECT_PHASE.project_name);
+    await expect(page.getByTestId('folder-header-project')).toHaveText(normalProjectName);
     const normalCanvas = await page.evaluate(() => ({
       width: document.documentElement.clientWidth,
       scroll: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),

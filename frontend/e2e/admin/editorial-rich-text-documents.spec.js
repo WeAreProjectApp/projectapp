@@ -242,6 +242,7 @@ test.describe('Editorial rich text in documents', () => {
       for (const target of ['light', 'dark']) {
         await setPanelTheme(page, target);
         await expect(code).toBeVisible();
+        await expect(code).toHaveAttribute('aria-pressed', 'true');
         const colors = await code.evaluate((node) => {
           const rgb = (value) => value.match(/\d+/g).slice(0, 3).map(Number);
           const style = getComputedStyle(node);
