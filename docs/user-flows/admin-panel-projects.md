@@ -10,3 +10,5 @@
 - **Branches:** missing name/client marks each incomplete control without sending; duplicate name warns and still saves; backend 400 keeps the modal open and places the serializer message under its field; zero counts render as plain text; non-superusers see plain counts (no links).
 - **Coverage:** ✅ Covered, incluidas validación local/API junto al campo, footer limpio, ancho uniforme, estado inicial coherente, creación de cliente visible, orden del ciclo, aislamiento entre ayuda y filtro, contención geométrica de la ayuda, estados en cero dentro del detalle compacto, acciones de filtro/navegación y display responsivo en los cinco anchos reales.
 - **E2E Specs:** `e2e/admin/admin-panel-projects.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
+
+- **PA-225:** Listado y tarjetas indican la disponibilidad del espacio; acciones y detalle abren el mismo ID en una pestaña nueva.

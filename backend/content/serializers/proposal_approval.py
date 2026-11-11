@@ -6,6 +6,7 @@ class NewApprovalClientSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=311)
     email = serializers.EmailField(required=False, allow_blank=True, default='')
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True, default='')
+    address = serializers.CharField(max_length=512, required=False, allow_blank=True, default='')
     company = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
     nit = serializers.CharField(max_length=32, required=False, allow_blank=True, default='')
     billing_code = serializers.CharField(max_length=12, required=False, allow_blank=True, allow_null=True, default=None)

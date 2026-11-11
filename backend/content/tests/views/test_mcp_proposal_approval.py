@@ -16,7 +16,7 @@ from content.mcp.context import McpExecutionContext, use_mcp_context
 from content.mcp.proposal_approval_tools import PREVIEW_TOOL
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import store_artifact
-from content.models import McpActionIntent, McpConnector, McpCredential, McpUpload, ProposalApprovalFile
+from content.models import McpActionIntent, McpConnector, McpCredential, McpUpload, ProposalApprovalFile, ProposalDocument
 from content.tests.views.test_proposal_approval import _ensure_approval_project_state
 
 pytestmark = pytest.mark.django_db
@@ -132,6 +132,36 @@ def test_repeat_confirmation_reuses_link(api_client, access, proposal, approval_
     assert proposal.approval_files.count() == 4
 
 
+def test_confirmation_persists_new_client_address(api_client, access, proposal, approval_arguments):
+    """Falla si el contrato MCP rechaza o pierde la dirección ofrecida por el mismo formulario del Panel."""
+    token, _ = access
+    approval_arguments['new_client']['address'] = 'Dirección ficticia QA006 C'
+    preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
+
+    result = confirm(api_client, token, preview)
+
+    assert result['isError'] is False
+    proposal.refresh_from_db()
+    assert proposal.client.address == 'Dirección ficticia QA006 C'
+
+
+@pytest.mark.parametrize('address', ['A' * 513, None], ids=['overlong', 'null'])
+def test_invalid_client_address_blocks_preview(api_client, access, proposal, approval_arguments, address):
+    """Falla si MCP previsualiza una dirección que Panel no puede guardar."""
+    token, _ = access
+    approval_arguments['new_client']['address'] = address
+    client_count_before = UserProfile.objects.clients().count()
+
+    result = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
+
+    assert result['isError'] is True
+    assert McpActionIntent.objects.count() == 0
+    assert UserProfile.objects.clients().count() == client_count_before
+    assert Project.objects.count() == 0
+    proposal.refresh_from_db()
+    assert (proposal.status, proposal.deliverable_id) == ('draft', None)
+
+
 def test_tampered_asset_blocks_confirmation(api_client, access, proposal, approval_arguments, assets):
     token, _ = access
     preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
@@ -233,9 +263,11 @@ def test_other_credential_cannot_confirm_packet(api_client, access, approval_arg
     assert Project.objects.count() == 0
 
 
-def test_defer_rejects_acceptance_without_link(api_client, access, proposal):
-    """Falla si el conector aprueba al posponer la revisión del proyecto."""
+def test_defer_accepts_without_link(api_client, access, proposal):
+    """Falla si el conector crea recursos al aceptar una propuesta diferida."""
     token, _ = access
+    proposal.status = 'negotiating'
+    proposal.save(update_fields=['status'])
     preview = rpc(api_client, token, 'review_proposal_approval', {
         'proposal_id': proposal.pk, 'action': 'defer',
     })
@@ -243,12 +275,31 @@ def test_defer_rejects_acceptance_without_link(api_client, access, proposal):
     result = confirm(api_client, token, preview)
 
     proposal.refresh_from_db()
-    assert result['isError'] is True
-    assert result['structuredContent']['error']['code'] == 'VALIDATION_ERROR'
-    assert proposal.status == 'draft'
+    assert result['isError'] is False
+    assert result['structuredContent']['confirmed'] is True
+    assert result['structuredContent']['result']['action'] == 'defer'
+    assert proposal.status == 'accepted'
     assert proposal.deliverable_id is None
     assert proposal.approval_files.count() == 0
     assert Project.objects.count() == 0
+
+
+def test_mcp_selected_annex_is_persisted(api_client, access, proposal, approval_arguments):
+    """Falla si el cierre MCP pierde el anexo elegido antes de crear el paquete."""
+    token, _ = access
+    annex = ProposalDocument.objects.create(proposal=proposal, document_type='legal_annex', title='MCP annex')
+    annex.file.save('mcp-annex.pdf', ContentFile(b'%PDF-1.4 mcp annex'))
+    current = rpc(api_client, token, 'get_proposal_approval', {'proposal_id': proposal.pk})
+    approval_arguments['source_hash'] = current['structuredContent']['source_hash']
+    approval_arguments['selected_document_ids'] = [annex.pk]
+
+    preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
+    result = confirm(api_client, token, preview)
+
+    proposal.refresh_from_db()
+    assert result['isError'] is False
+    assert proposal.platform_approval_manifest['selected_document_ids'] == [annex.pk]
+    assert proposal.approval_files.get(source_key=f'original-{annex.pk}').file.read() == b'%PDF-1.4 mcp annex'
 
 
 def test_status_accepted_requires_review(api_client, access, proposal):

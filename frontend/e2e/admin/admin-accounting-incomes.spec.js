@@ -834,6 +834,27 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     });
   });
 
+  for (const viewMode of ['classic', 'grouped']) {
+    test(`identifies an unassigned project in the ${viewMode} income view`, {
+      tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await mockApi(page, buildHandler({
+        rows: [incomeRow({ project: null, project_name: null })],
+        calls: [],
+        incomeViewMode: viewMode,
+      }));
+      await navigateToIncomesFromPanel(page);
+
+      await expect(page.getByTestId('income-no-project-1').filter({ visible: true }))
+        .toHaveText('Sin proyecto');
+      await expect(page.getByTestId('income-project-space-1')).toHaveCount(0);
+      await page.getByTestId('income-open-1').filter({ visible: true }).click();
+
+      await expect(page.getByTestId('income-detail-project')).toContainText('Proyecto: Sin proyecto');
+    });
+  }
+
   test('renders the mocked income rows', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {

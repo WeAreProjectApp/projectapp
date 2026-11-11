@@ -259,6 +259,29 @@ test.describe('Admin Panel Projects — space link and assign flow', () => {
     expect(calls.some((c) => c.apiPath === 'accounts/session-token-bridge/')).toBe(true);
   });
 
+  test('the detail action keeps the platform-space link for the same project id', {
+    tag: [...ADMIN_PANEL_PROJECTS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Catches the detail modal losing the only direct route to its project space.
+    const calls = [];
+    await mockApi(page.context(), buildHandler({ calls }));
+    await gotoProjects(page);
+
+    await openProjectAction(page, 1, 'detail');
+    const modal = page.getByTestId('project-access-modal');
+    await expect(modal).toContainText('Kore');
+    const spaceLink = modal.getByTestId('project-detail-space-link');
+    await expect(spaceLink).toContainText('Abrir espacio en la plataforma');
+
+    const popupPromise = page.context().waitForEvent('page');
+    await spaceLink.click();
+    const popup = await popupPromise;
+
+    await popup.waitForURL(/\/platform\/projects\/1/, { timeout: 25_000 });
+    await expect(popup).toHaveURL(/\/platform\/projects\/1/);
+    expect(calls.some((c) => c.apiPath === 'accounts/session-token-bridge/')).toBe(true);
+  });
+
   test('a failed bridge lands on the platform login, never a broken link', {
     tag: [...ADMIN_PANEL_PROJECTS, '@role:admin', '@outcome:failure'],
   }, async ({ page }) => {

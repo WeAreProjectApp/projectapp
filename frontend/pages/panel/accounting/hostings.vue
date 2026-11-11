@@ -195,7 +195,7 @@
             class="text-text-subtle"
             title="Sin proyecto vinculado"
             :data-testid="`hosting-no-project-${row.id}`"
-          >—</span>
+          >Sin proyecto</span>
         </template>
         <!-- El conteo de ciclos es la dirección del histórico: un enlace de
              verdad, no sólo la entrada «Ciclos de pago» del menú de la fila. -->

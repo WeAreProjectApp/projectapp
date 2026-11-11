@@ -339,7 +339,7 @@
               :data-testid="`income-project-space-${row.id}`"
             />
           </span>
-          <span v-else class="text-text-subtle">—</span>
+          <span v-else class="text-text-subtle" :data-testid="`income-no-project-${row.id}`">{{ NO_PROJECT_LABEL }}</span>
         </template>
       </IncomeGroupedTable>
 
@@ -436,7 +436,7 @@
                 :data-testid="`income-project-space-${row.id}`"
               />
             </span>
-            <span v-else class="text-text-subtle">—</span>
+            <span v-else class="text-text-subtle" :data-testid="`income-no-project-${row.id}`">{{ NO_PROJECT_LABEL }}</span>
           </template>
         </AccountingTable>
 
