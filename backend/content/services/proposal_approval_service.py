@@ -124,6 +124,9 @@ def selected_optional_ids(proposal, package=None):
 
 
 def preview(proposal):
+    draft_client = _client_summary(proposal.client)
+    if draft_client is not None:
+        draft_client['is_email_placeholder'] = proposal.client.is_email_placeholder
     manifest = proposal.platform_approval_manifest
     client = manifest['client'] if 'client' in manifest else _client_summary(proposal.client)
     commercial_summary = manifest['commercial_summary'] if 'commercial_summary' in manifest else _commercial_summary(proposal)
@@ -146,7 +149,7 @@ def preview(proposal):
     package = latest_package(proposal)
     current_hash = source_hash(proposal)
     shared = [shared_summary(binding, package=package, current_hash=current_hash) for binding in proposal.document_bindings.select_related('proposal', 'current_file', 'source_document').prefetch_related('revisions__package')]
-    return {'draft_client': _client_summary(proposal.client), 'draft_commercial_summary': _commercial_summary(proposal), 'use_proposal_contracts': (package.manifest if package else manifest).get('use_proposal_contracts', True), 'shared_documents': shared, 'package_number': package.number if package else None, 'source_hash': current_hash, 'client': client, 'linked_project': linked, 'project_reassignment_required': bool(linked) and linked['id'] is None, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'service_contract_approved': proposal.service_contract_approved, 'required_document_types': sorted(contract_variants.approved_doc_types(proposal)), 'available': error is None, 'documents': docs, 'error': error}, 'selected_document_ids': selected_optional_ids(proposal, package), 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in optional_documents(proposal)], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in (package.files.all() if package else proposal.approval_files.all())], 'proposal': summary}
+    return {'draft_client': draft_client, 'draft_commercial_summary': _commercial_summary(proposal), 'use_proposal_contracts': (package.manifest if package else manifest).get('use_proposal_contracts', True), 'shared_documents': shared, 'package_number': package.number if package else None, 'source_hash': current_hash, 'client': client, 'linked_project': linked, 'project_reassignment_required': bool(linked) and linked['id'] is None, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'service_contract_approved': proposal.service_contract_approved, 'required_document_types': sorted(contract_variants.approved_doc_types(proposal)), 'available': error is None, 'documents': docs, 'error': error}, 'selected_document_ids': selected_optional_ids(proposal, package), 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in optional_documents(proposal)], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in (package.files.all() if package else proposal.approval_files.all())], 'proposal': summary}
 
 
 def _original_contracts(proposal):

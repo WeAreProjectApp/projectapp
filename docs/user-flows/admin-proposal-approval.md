@@ -9,7 +9,7 @@
 |---|---|---|
 | success | Aprobar desde una propuesta expandida en Clientes | Modal compartido antes de guardar; al completar se refresca la ficha correspondiente |
 | success | Confirmar cliente y proyecto existentes | Propuesta vinculada al proyecto elegido, sin crear otro |
-| success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental |
+| success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental; Proyecto > Datos muestra inmediatamente el cliente confirmado y conserva borradores de otras áreas |
 | success | Desactivar contratos de la propuesta y adjuntar varios archivos | El nuevo paquete usa los personalizados y conserva detalle comercial/técnico |
 | success | Volver a aprobar después de una corrección administrativa de estado | Revisar condiciones del borrador y confirmar otro paquete sin alterar los archivos previos |
 | success | Cancelar antes de confirmar | Estado previo conservado sin crear proyecto ni documentos |
@@ -24,3 +24,5 @@ La aprobación pública se retiró. El cierre interno exige cliente, proyecto y 
 Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresión desde Clientes.
 
 - **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
+
+PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
