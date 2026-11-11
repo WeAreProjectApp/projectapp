@@ -112,12 +112,19 @@ function mountModal() {
         BaseButton: {
           props: ['disabled'],
           emits: ['click'],
-          template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+          template: '<button :disabled="disabled" @click="$emit(\'click\', $event)"><slot /></button>',
         },
       },
     },
   });
   return { wrapper, store };
+}
+
+async function choose(wrapper, testid, value) {
+  await wrapper.get(`[data-testid="${testid}"]`).trigger('click');
+  await flushPromises();
+  await wrapper.get(`[data-testid="${testid}-${value}"]`).trigger('click');
+  await flushPromises();
 }
 
 describe('ProjectStateTransitionModal', () => {
@@ -143,7 +150,7 @@ describe('ProjectStateTransitionModal', () => {
     expect(wrapper.get('[data-testid="base-modal-actions"]')
       .find('[role="alert"]').exists()).toBe(false);
 
-    await target.setValue('4');
+    await choose(wrapper, 'project-state-target', '4');
 
     expect(target.attributes('aria-invalid')).toBeUndefined();
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
@@ -163,7 +170,7 @@ describe('ProjectStateTransitionModal', () => {
     create_request.mockResolvedValueOnce({ data: impact });
     const { wrapper } = mountModal();
     await wrapper.setProps({ open: true });
-    await wrapper.get('[data-testid="project-state-target"]').setValue('4');
+    await choose(wrapper, 'project-state-target', '4');
 
     await wrapper.get('[data-testid="project-state-preview"]').trigger('click');
     await flushPromises();
@@ -180,7 +187,7 @@ describe('ProjectStateTransitionModal', () => {
     const { wrapper } = mountModal();
     await wrapper.setProps({ open: true });
 
-    await wrapper.get('[data-testid="project-state-target"]').setValue('3');
+    await choose(wrapper, 'project-state-target', '3');
 
     expect(wrapper.get('[data-testid="project-state-selected-help"]').text())
       .toContain('Está en producción mientras se desarrolla una ampliación.');
@@ -210,7 +217,7 @@ describe('ProjectStateTransitionModal', () => {
       });
     const { wrapper } = mountModal();
     await wrapper.setProps({ open: true });
-    await wrapper.get('[data-testid="project-state-target"]').setValue('6');
+    await choose(wrapper, 'project-state-target', '6');
     await wrapper.get('[data-testid="project-state-preview"]').trigger('click');
     await flushPromises();
 
@@ -227,7 +234,7 @@ describe('ProjectStateTransitionModal', () => {
     expect(wrapper.get('[data-testid="base-modal-actions"]')
       .find('[role="alert"]').exists()).toBe(false);
 
-    await incomeDecision.setValue('keep_receivable');
+    await choose(wrapper, 'project-state-income-41', 'keep_receivable');
     expect(incomeDecision.attributes('aria-invalid')).toBeUndefined();
     expect(wrapper.findAll('[role="alert"]').map((alert) => alert.text())).toEqual([
       'Escribe una nota porque la baja omite el paso previo por Suspendido.',
@@ -253,4 +260,21 @@ describe('ProjectStateTransitionModal', () => {
     );
     expect(wrapper.emitted('changed')).toHaveLength(1);
   });
+  it('omits cancellation messages for an operating transition', async () => {
+    create_request.mockResolvedValueOnce({ data: {
+      target_effect: 'operating', future_incomes: [{ id: 41 }], future_payments: [51],
+      pending_incomes: [], active_hostings: [], blockers: [],
+    } });
+    const { wrapper } = mountModal();
+    await wrapper.setProps({ open: true });
+    await choose(wrapper, 'project-state-target', '3');
+
+    await wrapper.get('[data-testid="project-state-preview"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="project-state-impact"]').text()).toContain('Consecuencias antes de confirmar');
+    expect(wrapper.get('[data-testid="project-state-impact"]').text()).not.toContain('Cancelado');
+    expect(wrapper.get('[data-testid="project-state-impact"]').text()).not.toContain('se archivarán');
+  });
+
 });

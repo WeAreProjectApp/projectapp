@@ -89,6 +89,10 @@ validación manual, integración ni despliegue.
 > Asunto retirado del catálogo compartido, sin migración de datos ni cambio de tokens.
 > Validación automatizada exclusivamente en CI; revisión manual por coordinar.
 
+> **PA-248 — 2026-11-07:** eliminación forzada desde su modal, conservación
+> obligatoria del historial de facturación y permiso MCP explícito. Migración
+> accounts.0091 pendiente de deploy; automatización de pruebas sólo en CI.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

@@ -31,7 +31,7 @@ RETAINED_MODELS = {
     'content.linktreetemplate', 'content.contracttemplate',
     'content.entityhistory', 'content.entityrevision', 'content.accountingchangelog',
     'content.proposalapprovalfile', 'content.proposalapprovalpackage',
-    'content.proposaldocumentbinding', 'accounts.billingcontextevent',
+    'content.proposaldocumentbinding',
     'accounts.deliverypromptcontext', 'accounts.deliverypromptsource',
     'accounts.deliveryevidenceemail', 'accounts.deliveryevidenceemailfile',
     'accounts.deliveryevidenceemailattempt',
@@ -96,8 +96,15 @@ class ProjectForceDeleteError(ProposalActionError):
 
 def require_superuser(actor):
     from content.mcp.context import current_mcp_context
-    if current_mcp_context() is not None:
-        raise PermissionDenied('La eliminación forzada sólo está disponible en el panel.')
+    context = current_mcp_context()
+    if context is not None:
+        credential = context.credential
+        if (context.connector.slug == 'projects' and credential is not None
+                and credential.is_usable and credential.connector_id == context.connector.pk
+                and context.actor is not None and context.actor.pk == actor.pk
+                and credential.allows('force_delete_project')):
+            return
+        raise PermissionDenied('La eliminación forzada requiere permiso MCP explícito de Proyectos.')
     if not getattr(actor, 'is_superuser', False):
         raise PermissionDenied('Sólo un superusuario puede forzar la eliminación de proyectos.')
 
@@ -131,12 +138,19 @@ class ProjectDeletionPlan:
                       for model, _ in self.inventory if model._meta.label_lower in CATEGORIES}
         if set(self.delete_keys) - known_keys:
             self._conflict(project, 'La selección contiene datos que no aparecen en esta revisión.')
+        for model, _ in self.inventory:
+            category = CATEGORIES.get(model._meta.label_lower, {})
+            if category.get('selectable') is False and category['key'] in self.delete_keys:
+                self._conflict(project, f"«{category['label']}» se conserva siempre y no se puede eliminar.")
         for (model, _), row in self.inventory.items():
             if model is not Project and model._meta.label_lower not in CATEGORIES:
                 self._conflict(row, 'Hay información relacionada aún no clasificada. No se puede eliminar de forma segura.')
         self.rows = {key: row for key, row in self.inventory.items()
-                     if key[0] is Project or CATEGORIES.get(key[0]._meta.label_lower, {}).get('key') in self.delete_keys}
+                     if key[0] is Project or (
+                         CATEGORIES.get(key[0]._meta.label_lower, {}).get('selectable', True)
+                         and CATEGORIES.get(key[0]._meta.label_lower, {}).get('key') in self.delete_keys)}
         self._check_selection()
+        self._check_protected_sources()
         self.layers, self.cycle_links = self._deletion_order()
 
     def _read(self, queryset):
@@ -235,6 +249,13 @@ class ProjectDeletionPlan:
                     )
                     if self._read(external):
                         self._conflict(row, 'Otra entidad conserva una referencia compartida a estos datos. Resuelve ese vínculo antes de eliminar.')
+
+    def _check_protected_sources(self):
+        """Evidence only prevents deleting its source, never retaining it."""
+        for row in self.rows.values():
+            for relation in row._meta.get_fields(include_hidden=True):
+                if not isinstance(relation, (models.ManyToOneRel, models.OneToOneRel)):
+                    continue
                 if (relation.related_model._meta.label_lower in RETAINED_MODELS
                         and not relation.many_to_many
                         and relation.field.remote_field.on_delete in (models.PROTECT, models.RESTRICT)):
