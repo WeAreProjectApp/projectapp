@@ -209,7 +209,7 @@ test.describe('PA-230 hosting link from a collection account', () => {
   }, async ({ page }) => {
     // Catches the bug where the hosting selector is empty even when the project already has a linked hosting.
     await arrange(page);
-    await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
     await waitForNuxtApp(page);
     await page.locator('aside').getByRole('link', { name: 'Resumen', exact: true }).click();
     await page.getByTestId('accounting-subnav-incomes').click();
@@ -217,7 +217,7 @@ test.describe('PA-230 hosting link from a collection account', () => {
     await page.getByTestId('income-actions-1').click();
     await page.getByTestId('income-action-generate-collection-1').click();
     await page.getByTestId('billing-nature').selectOption('hosting');
-    await expect(page.getByTestId('billing-hosting-choice').getByRole('option', { name: 'aurora.test · Trimestral · Activo' }))
+    await expect(page.getByTestId('billing-hosting-choice').getByRole('option', { name: 'aurora.test · Quarterly · Active' }))
       .toHaveCount(1);
   });
 
