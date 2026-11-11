@@ -86,7 +86,7 @@ const variants = {
   danger: 'bg-danger-strong text-on-danger hover:opacity-90 border border-transparent',
   'danger-ghost': 'bg-transparent text-danger-strong hover:bg-danger-soft border border-transparent',
   link: 'bg-transparent text-text-brand hover:underline',
-  accent: 'bg-accent text-primary-strong hover:brightness-95 border border-transparent',
+  accent: 'bg-accent text-on-accent hover:bg-accent-strong border border-transparent',
 }
 
 const sizes = {

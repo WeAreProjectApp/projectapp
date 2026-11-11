@@ -8,10 +8,10 @@
       <template v-for="item in items" :key="item.disabled ? item.label : item.href">
         <span
           v-if="item.disabled"
-          class="flex shrink-0 cursor-not-allowed items-center justify-between gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium opacity-40"
+          class="flex shrink-0 cursor-not-allowed items-center justify-between gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium text-text-muted"
         >
           {{ item.label }}
-          <span class="rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-text-muted">Pronto</span>
+          <span class="rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-text-default">Pronto</span>
         </span>
         <NuxtLink
           v-else
@@ -21,8 +21,8 @@
           :class="[
             'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition',
             isActive(item.href)
-              ? 'bg-primary-soft text-text-brand dark:bg-lemon/10 dark:text-accent'
-              : 'text-green-light hover:bg-primary-soft hover:text-text-brand dark:hover:text-accent',
+              ? 'bg-primary-soft text-text-brand dark:bg-primary-soft dark:text-text-brand'
+              : 'text-text-muted hover:bg-primary-soft hover:text-text-brand dark:hover:text-text-brand',
           ]"
         >
           {{ item.label }}

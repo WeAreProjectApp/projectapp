@@ -1,5 +1,5 @@
 <template>
-  <div v-if="tour.completedTour.value && store.videoEnabled && videoAvailable" class="fixed bottom-5 left-4 z-50 max-w-sm rounded-2xl border border-border-default bg-surface p-4 shadow-xl dark:bg-primary" role="status">
+  <div v-if="tour.completedTour.value && store.videoEnabled && videoAvailable" class="fixed bottom-5 left-4 z-50 max-w-sm rounded-2xl border border-border-default bg-surface p-4 shadow-xl dark:bg-surface" role="status">
     <p class="mb-3 text-sm text-text-default">{{ t('platformHelp.videoInvitation') }}</p>
     <div class="flex gap-2">
       <BaseButton variant="accent" @click="openVideo">{{ t('platformHelp.video') }}</BaseButton>

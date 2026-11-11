@@ -3,7 +3,7 @@
     <section class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between" data-enter>
       <div>
         <h1 class="font-light text-3xl text-text-default">Clientes</h1>
-        <p class="mt-2 max-w-2xl text-sm leading-7 text-green-light">
+        <p class="mt-2 max-w-2xl text-sm leading-7 text-text-muted">
           Invita clientes, revisa su estado de onboarding y administra sus accesos.
         </p>
       </div>
@@ -15,16 +15,16 @@
 
     <section class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between" data-enter>
       <div class="flex flex-wrap gap-2">
-        <button
+        <BaseButton unstyled
           v-for="filter in filters"
           :key="filter.value"
           type="button"
           class="rounded-full px-4 py-2 text-sm font-medium transition"
-          :class="activeFilter === filter.value ? 'bg-primary text-white dark:bg-accent dark:text-text-default' : 'text-green-light hover:text-text-default dark:hover:text-white'"
+          :class="activeFilter === filter.value ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent' : 'text-text-muted hover:text-text-default dark:hover:text-white'"
           @click="activeFilter = filter.value"
         >
           {{ filter.label }}
-        </button>
+        </BaseButton>
       </div>
 
       <div class="w-full lg:max-w-sm">
@@ -32,7 +32,7 @@
           v-model="search"
           type="text"
           placeholder="Buscar por nombre, email o empresa"
-          class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20"
+          class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20"
         >
       </div>
     </section>
@@ -42,17 +42,17 @@
     </div>
 
     <section class="rounded-3xl border border-border-default bg-surface shadow-sm" data-enter>
-      <div v-if="platformClientsStore.isLoading" class="px-6 py-14 text-center text-sm text-green-light">
+      <div v-if="platformClientsStore.isLoading" class="px-6 py-14 text-center text-sm text-text-muted">
         Cargando clientes...
       </div>
 
-      <div v-else-if="filteredClients.length === 0" class="px-6 py-14 text-center text-sm text-green-light">
+      <div v-else-if="filteredClients.length === 0" class="px-6 py-14 text-center text-sm text-text-muted">
         {{ search.trim() ? 'No encontramos clientes con ese criterio.' : 'Todavía no hay clientes en esta vista.' }}
       </div>
 
       <!-- Móvil: lista de filas-tarjeta -->
       <div v-else-if="isMobile" class="divide-y divide-border-muted">
-        <button
+        <BaseButton unstyled
           v-for="client in filteredClients"
           :key="client.user_id"
           type="button"
@@ -68,47 +68,47 @@
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <p class="truncate font-medium text-text-default">{{ client.first_name }} {{ client.last_name }}</p>
-              <span v-if="!client.is_active" class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-white/10 dark:text-green-light/70">Inactivo</span>
+              <span v-if="!client.is_active" class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-white/10 dark:text-text-muted">Inactivo</span>
             </div>
-            <p class="truncate text-xs text-green-light/60">{{ client.email }}</p>
+            <p class="truncate text-xs text-text-muted">{{ client.email }}</p>
             <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
               <div>
-                <dt class="text-green-light/50">Empresa</dt>
-                <dd class="truncate text-green-light">{{ client.company_name || '—' }}</dd>
+                <dt class="text-text-muted">Empresa</dt>
+                <dd class="truncate text-text-muted">{{ client.company_name || '—' }}</dd>
               </div>
               <div>
-                <dt class="text-green-light/50">Proyectos</dt>
-                <dd class="text-green-light">{{ client.active_projects_count ?? 0 }} / {{ client.total_projects_count ?? 0 }}</dd>
+                <dt class="text-text-muted">Proyectos</dt>
+                <dd class="text-text-muted">{{ client.active_projects_count ?? 0 }} / {{ client.total_projects_count ?? 0 }}</dd>
               </div>
               <div>
-                <dt class="text-green-light/50">Plan hosting</dt>
+                <dt class="text-text-muted">Plan hosting</dt>
                 <dd>
-                  <span v-if="client.hosting_plan" class="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-medium text-text-brand dark:bg-lemon/10 dark:text-accent">{{ planLabel(client.hosting_plan) }}</span>
-                  <span v-else class="text-green-light/60">—</span>
+                  <span v-if="client.hosting_plan" class="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-medium text-text-brand dark:bg-primary-soft dark:text-text-brand">{{ planLabel(client.hosting_plan) }}</span>
+                  <span v-else class="text-text-muted">—</span>
                 </dd>
               </div>
               <div>
-                <dt class="text-green-light/50">Próx. renovación</dt>
+                <dt class="text-text-muted">Próx. renovación</dt>
                 <dd :class="renewalClass(client.hosting_renewal_at)">{{ formatDate(client.hosting_renewal_at) }}</dd>
               </div>
               <div>
-                <dt class="text-green-light/50">Valor renovación</dt>
-                <dd class="text-green-light">{{ formatMoney(client.hosting_renewal_value) }}</dd>
+                <dt class="text-text-muted">Valor renovación</dt>
+                <dd class="text-text-muted">{{ formatMoney(client.hosting_renewal_value) }}</dd>
               </div>
               <div>
-                <dt class="text-green-light/50">Última actividad</dt>
-                <dd class="text-green-light/70">{{ relativeTime(client.last_activity_at) }}</dd>
+                <dt class="text-text-muted">Última actividad</dt>
+                <dd class="text-text-muted">{{ relativeTime(client.last_activity_at) }}</dd>
               </div>
             </dl>
           </div>
-          <span class="shrink-0 self-center text-green-light/40">›</span>
-        </button>
+          <span class="shrink-0 self-center text-text-muted">›</span>
+        </BaseButton>
       </div>
 
       <div v-else class="overflow-x-auto">
         <table class="min-w-full text-left text-sm">
           <thead>
-            <tr class="border-b border-border-default text-xs uppercase tracking-[0.16em] text-green-light/60">
+            <tr class="border-b border-border-default text-xs uppercase tracking-[0.16em] text-text-muted">
               <th class="px-6 py-4 font-medium">Cliente</th>
               <th class="px-6 py-4 font-medium">Empresa</th>
               <th class="px-6 py-4 font-medium">Proyectos</th>
@@ -137,9 +137,9 @@
                   <div>
                     <div class="flex items-center gap-2">
                       <p class="font-medium text-text-default">{{ client.first_name }} {{ client.last_name }}</p>
-                      <span v-if="!client.is_active" class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-white/10 dark:text-green-light/70">Inactivo</span>
+                      <span v-if="!client.is_active" class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-white/10 dark:text-text-muted">Inactivo</span>
                     </div>
-                    <div class="mt-0.5 flex items-center gap-1 text-xs text-green-light/60">
+                    <div class="mt-0.5 flex items-center gap-1 text-xs text-text-muted">
                       <span>{{ client.email }}</span>
                       <svg v-if="!client.has_logged_in_once" class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-label="Sin acceso aún">
                         <title>Sin acceso aún</title>
@@ -149,20 +149,20 @@
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 text-green-light">{{ client.company_name || '—' }}</td>
-              <td class="px-6 py-4 text-green-light">{{ client.active_projects_count ?? 0 }} / {{ client.total_projects_count ?? 0 }}</td>
+              <td class="px-6 py-4 text-text-muted">{{ client.company_name || '—' }}</td>
+              <td class="px-6 py-4 text-text-muted">{{ client.active_projects_count ?? 0 }} / {{ client.total_projects_count ?? 0 }}</td>
               <td class="px-6 py-4">
-                <span v-if="client.hosting_plan" class="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-text-brand dark:bg-lemon/10 dark:text-accent">
+                <span v-if="client.hosting_plan" class="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-text-brand dark:bg-primary-soft dark:text-text-brand">
                   {{ planLabel(client.hosting_plan) }}
                 </span>
-                <span v-else class="text-green-light/60">—</span>
+                <span v-else class="text-text-muted">—</span>
               </td>
               <td class="px-6 py-4" :class="renewalClass(client.hosting_renewal_at)">
                 {{ formatDate(client.hosting_renewal_at) }}
               </td>
-              <td class="px-6 py-4 text-green-light">{{ formatMoney(client.hosting_renewal_value) }}</td>
-              <td class="px-6 py-4 text-sm text-green-light/70">{{ relativeTime(client.last_activity_at) }}</td>
-              <td class="px-2 py-4 text-right text-green-light/40">›</td>
+              <td class="px-6 py-4 text-text-muted">{{ formatMoney(client.hosting_renewal_value) }}</td>
+              <td class="px-6 py-4 text-sm text-text-muted">{{ relativeTime(client.last_activity_at) }}</td>
+              <td class="px-2 py-4 text-right text-text-muted">›</td>
             </tr>
           </tbody>
         </table>
@@ -183,7 +183,7 @@
             <div class="flex items-start justify-between gap-4">
               <div>
                 <h2 :id="inviteTitleId" class="text-xl font-medium text-text-default">Invitar cliente</h2>
-                <p class="mt-2 text-sm text-green-light">
+                <p class="mt-2 text-sm text-text-muted">
                   Crea el acceso inicial y envía credenciales temporales por email.
                 </p>
               </div>
@@ -193,7 +193,7 @@
                 icon-only
                 type="button"
                 aria-label="Cerrar invitación"
-                class="flex h-9 w-9 items-center justify-center rounded-full text-green-light transition hover:text-text-default dark:hover:text-white"
+                class="flex h-9 w-9 items-center justify-center rounded-full text-text-muted transition hover:text-text-default dark:hover:text-white"
                 @click="closeInviteModal"
               >
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,27 +209,27 @@
             <form class="mt-6 grid gap-5 sm:grid-cols-2" @submit.prevent="handleCreateClient">
               <div class="sm:col-span-2">
                 <label for="invite-email" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Email</label>
-                <input id="invite-email" v-model="inviteForm.email" type="email" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="cliente@empresa.com">
+                <input id="invite-email" v-model="inviteForm.email" type="email" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="cliente@empresa.com">
               </div>
 
               <div>
                 <label for="invite-first-name" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Nombre</label>
-                <input id="invite-first-name" v-model="inviteForm.first_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="Nombre">
+                <input id="invite-first-name" v-model="inviteForm.first_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="Nombre">
               </div>
 
               <div>
                 <label for="invite-last-name" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Apellido</label>
-                <input id="invite-last-name" v-model="inviteForm.last_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="Apellido">
+                <input id="invite-last-name" v-model="inviteForm.last_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="Apellido">
               </div>
 
               <div>
                 <label for="invite-company" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Empresa</label>
-                <input id="invite-company" v-model="inviteForm.company_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="Empresa">
+                <input id="invite-company" v-model="inviteForm.company_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="Empresa">
               </div>
 
               <div>
                 <label for="invite-phone" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Teléfono</label>
-                <input id="invite-phone" v-model="inviteForm.phone" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="+57 300 000 0000">
+                <input id="invite-phone" v-model="inviteForm.phone" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-surface-muted dark:text-white dark:placeholder:text-text-muted dark:focus:border-lemon/40 dark:focus:ring-lemon/20" placeholder="+57 300 000 0000">
               </div>
 
               <div class="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:justify-end">
@@ -358,8 +358,8 @@ function statusLabel(client) {
 }
 
 function statusClass(client) {
-  if (!client.is_active) return 'bg-white/10 text-green-light/60'
-  if (!client.is_onboarded) return 'bg-amber-100 text-amber-700 dark:bg-lemon/10 dark:text-accent'
+  if (!client.is_active) return 'bg-white/10 text-text-muted'
+  if (!client.is_onboarded) return 'bg-amber-100 text-amber-700 dark:bg-primary-soft dark:text-text-brand'
   return 'bg-emerald-500/15 text-emerald-400'
 }
 
@@ -388,9 +388,9 @@ function relativeTime(iso) {
 }
 
 function renewalClass(iso) {
-  if (!iso) return 'text-green-light/60'
+  if (!iso) return 'text-text-muted'
   const days = Math.floor((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  return days <= 30 ? 'text-amber-700 dark:text-amber-300 font-medium' : 'text-green-light'
+  return days <= 30 ? 'text-amber-700 dark:text-amber-300 font-medium' : 'text-text-muted'
 }
 
 function goToClient(id) {
