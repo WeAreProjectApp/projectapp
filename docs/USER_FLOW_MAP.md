@@ -8536,6 +8536,8 @@ Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, mot
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
 
+- **Integración 2026-11-11:** El retorno conserva la ruta e idioma originales sin duplicar su prefijo.
+
 ### FLOW: `admin-accounting-record-history`
 
 - **Module:** admin
@@ -8743,6 +8745,8 @@ En **Gestionar carpetas**, **Dentro de** busca por fragmento de nombre y conserv
 - Fallo del servidor: se conserva el manejo de errores de creación/reordenamiento existente.
 - Presentación: destino y rama visibles antes de confirmar.
 - Regresión CI: `admin-document-folder-create.spec.js`, `admin-document-folder-manage.spec.js` y `admin-document-folders.spec.js`. La aprobación manual Chrome sobre datos aislados se registra por separado.
+
+- **Integración 2026-11-11:** El cierre del formulario secundario devuelve el foco al botón que abrió la edición.
 
 ### FLOW: `admin-document-gallery`
 
