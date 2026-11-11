@@ -294,3 +294,25 @@ problemas ni drift. Registro de flows, catálogo y contrato responsivo coherente
 Pendientes de integración: P0 coordina el tren de PRs y la composición P4. La revocación de accesos P4 se absorbe por commit publicado; no se copia
 desde su worktree. No se cambian el fallo contable ajeno de P3, guías por roles,
 prompt/core, enlaces seguros, correos ni políticas de publicación documental.
+
+## PA-230 — vínculo de hosting desde la cuenta (2026-11-06)
+
+El GET administrativo de hosting añade `selection`, calculado sin consultas ni
+escrituras adicionales sobre el inventario existente: candidatos reconocibles,
+bloqueos y posibilidad de alta. Un registro único coherente se revisa y confirma
+con el escritor y el control de versión existentes; no se eligen equivalencias.
+Las relaciones múltiples, contradictorias o con cambio de origen operativo
+requieren conciliación explícita. El alta usa el escritor contable existente y
+mantiene fijo el cliente/proyecto del ingreso. Crear no emite una cuenta.
+
+La conciliación presenta referencias y motivo en lenguaje legible, con pasos
+históricos desplegables. El borrador de regreso vive en sessionStorage de la
+pestaña, vinculado al administrador y origen permitido; la URL contiene sólo un
+identificador opaco. Regresar relee el ingreso/hosting y comprueba propiedad,
+recupera los campos editados y exige una nueva vista previa. Cancelar o emitir
+retira el borrador. No cambia el contrato MCP de asociación/evidencia ni el JWT;
+la proyección de selección nueva es exclusiva del Panel.
+
+Automatizadas sólo en CI. DevQA concede el turno y prepara datos ficticios,
+correo y archivos aislados; QA frontend realiza Chrome. El registro de esta
+implementación no acredita validación, integración ni despliegue.

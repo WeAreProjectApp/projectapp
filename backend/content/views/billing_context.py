@@ -45,8 +45,11 @@ def account_context(request, account_id):
 @permission_classes([IsSuperUser])
 def reconciliation(request, project_id):
     if request.method == 'GET':
-        return Response({'inventory': hosting_inventory(project_id, request.user),
-                         'overview': project_hosting_read(project_id, request.user)})
+        from accounts.services.hosting_selection import hosting_selection
+        inventory = hosting_inventory(project_id, request.user)
+        return Response({'inventory': inventory,
+                         'overview': project_hosting_read(project_id, request.user),
+                         'selection': hosting_selection(inventory)})
     serializer = HostingReconciliationSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     return Response(reconcile_hosting(project_id, request.user, serializer.validated_data,
