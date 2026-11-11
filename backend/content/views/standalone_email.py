@@ -1,3 +1,4 @@
+from content.services.email_privacy_policy import credential_email
 from content.services.editorial_email import email_formats
 """
 Standalone branded email endpoints — send, defaults, history.
@@ -496,7 +497,7 @@ def list_standalone_emails(request):
             'audience': log.audience,
             'audience_label': log.get_audience_display(),
             'sent_at': log.sent_at.isoformat(),
-            'metadata': log.metadata,
+            'metadata': {'content_redacted': True} if credential_email(log.template_key) else log.metadata,
             'has_body': log.body_id is not None,
             'copies': delivery_copy_payloads(log),
             **delivery_recipient_payloads(log),
@@ -537,6 +538,9 @@ def standalone_email_attachment(request, log_id, attachment_id):
         ),
         pk=log_id,
     )
+    from content.services.email_privacy_policy import credential_email
+    if credential_email(log.template_key):
+        return Response({'detail': 'Contenido de acceso protegido.'}, status=403)
     attachment = get_object_or_404(
         EmailAttachmentSnapshot.objects.select_related('snapshot'),
         pk=attachment_id,
@@ -596,6 +600,9 @@ def resend_standalone_email(request, log_id):
         ),
         pk=log_id,
     )
+    from content.services.email_privacy_policy import credential_email
+    if credential_email(log.template_key):
+        return Response({'detail': 'Los mensajes de acceso no se reenvían desde el historial.'}, status=403)
     if not log.snapshot_id:
         return Response(
             {

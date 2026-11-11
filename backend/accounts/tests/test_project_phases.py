@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Deliverable, Project, ProjectPhase, UserProfile
 from accounts.services.project_phases import (
@@ -293,8 +294,8 @@ def test_client_lists_own_project_phases(client_user, project, business_proposal
     assert response.json()[0]['proposal']['id'] == business_proposal.pk
 
 
-def test_profileless_user_lists_own_project_phases(db):
-    """Fails if an owner without a profile loses access to their project phases."""
+def test_profileless_token_cannot_list_own_project_phases(db):
+    """Fails if owning a project grants access without an authorized account."""
     from content.models import BusinessProposal
 
     owner = User.objects.create_user(
@@ -314,15 +315,15 @@ def test_profileless_user_lists_own_project_phases(db):
     ProjectPhase.objects.create(
         project=project, business_proposal=business_proposal, order=1,
     )
-    tokens = get_tokens_for_user(owner)
+    # The application issuer rejects profileless accounts before minting tokens.
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(owner)}')
 
     response = client.get(f'/api/accounts/projects/{project.id}/phases/')
 
     assert not UserProfile.objects.filter(user=owner).exists()
-    assert response.status_code == 200
-    assert response.json()[0]['proposal']['id'] == business_proposal.pk
+    assert response.status_code == 401
+    assert response.json()['code'] == 'token_not_valid'
 
 
 def test_client_cannot_list_foreign_project_phases(client_user, project, business_proposal):
@@ -343,22 +344,22 @@ def test_client_cannot_list_foreign_project_phases(client_user, project, busines
 
 
 def test_profileless_user_cannot_list_foreign_project_phases(db, project, business_proposal):
-    """Fails if a missing profile bypasses tenant filtering for project phases."""
+    """Fails if an unauthorized token can probe whether another project exists."""
     foreign_user = User.objects.create_user(
         username='profileless-foreign@example.com',
         email='profileless-foreign@example.com',
         password='x',
     )
     add_phase(project, business_proposal)
-    tokens = get_tokens_for_user(foreign_user)
+    # Exercise API rejection independently of the application issuer's guard.
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(foreign_user)}')
 
     response = client.get(f'/api/accounts/projects/{project.id}/phases/')
 
     assert not UserProfile.objects.filter(user=foreign_user).exists()
-    assert response.status_code == 404
-    assert response.json() == {'detail': 'project_not_found'}
+    assert response.status_code == 401
+    assert response.json()['code'] == 'token_not_valid'
 
 
 def test_project_phase_list_query_budget_is_constant(authed_client, project, client_user):

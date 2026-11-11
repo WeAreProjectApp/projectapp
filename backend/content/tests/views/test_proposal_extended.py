@@ -664,7 +664,7 @@ class TestProposalEmailServiceCooldown:
 
 @freeze_time('2026-01-15T10:00:00Z')
 class TestSendMagicLinkEmail:
-    def test_send_magic_link_email_success(self, db):
+    def test_send_magic_link_email_success(self, db, mailoutbox):
         """send_magic_link_email sends email and logs it."""
         from content.services.proposal_email_service import ProposalEmailService
 
@@ -677,16 +677,14 @@ class TestSendMagicLinkEmail:
             expires_at=FROZEN_NOW + timedelta(days=10),
         )
 
-        with patch(
-            'content.services.proposal_email_service.EmailMultiAlternatives',
-        ) as mock_cls:
-            mock_instance = stub_email_message()
-            mock_cls.return_value = mock_instance
-            result = ProposalEmailService.send_magic_link_email('magic@test.com', [p])
+        result = ProposalEmailService.send_magic_link_email('magic@test.com', [p])
 
         assert result is True
-        mock_instance.attach_alternative.assert_called_once()
-        mock_instance.send.assert_called_once()
+        assert len(mailoutbox) == 1
+        assert mailoutbox[0].to == ['magic@test.com']
+        assert mailoutbox[0].cc == []
+        assert mailoutbox[0].bcc == []
+        assert mailoutbox[0].alternatives[0].mimetype == 'text/html'
         assert EmailLog.objects.filter(
             template_key='magic_link', recipient='magic@test.com',
         ).exists()
@@ -712,15 +710,13 @@ class TestSendMagicLinkEmail:
         )
 
         with patch(
-            'content.services.proposal_email_service.EmailMultiAlternatives',
-        ) as mock_cls:
-            mock_instance = stub_email_message()
-            mock_instance.send.side_effect = Exception('SMTP error')
-            mock_cls.return_value = mock_instance
+            'content.services.proposal_email_service.EmailMultiAlternatives.send',
+            side_effect=Exception('SMTP error'),
+        ) as mock_send:
             result = ProposalEmailService.send_magic_link_email('fail@test.com', [p])
 
         assert result is False
-        mock_instance.send.assert_called_once()
+        mock_send.assert_called_once()
         assert EmailLog.objects.filter(
             template_key='magic_link', status='failed',
         ).exists()

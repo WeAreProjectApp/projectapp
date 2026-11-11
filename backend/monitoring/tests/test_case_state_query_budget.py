@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timezone
 
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -14,8 +15,8 @@ from monitoring.models import Case, CaseActivity, Resource, Source
 User = get_user_model()
 CASES_URL = "/api/monitoring/cases/"
 MAX_CASE_STATE_QUERIES = 8
-# Measured historical regression ceiling, not compliance with mutation budget <= 8.
-MAX_CHANGED_CASE_STATE_HISTORICAL_QUERIES = 9
+# Historical ceiling plus one mandatory access-revocation profile read.
+MAX_CHANGED_CASE_STATE_HISTORICAL_QUERIES = 10
 
 
 def _table_selects(queries, model):
@@ -45,6 +46,11 @@ def staff_client(db):
     """Authenticate a real staff session for the session-protected monitoring route."""
     staff = User.objects.create_user(
         username="case-state-budget", password="test-password", is_staff=True
+    )
+    UserProfile.objects.create(
+        user=staff,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
     )
     client = APIClient()
     client.force_login(staff)
@@ -111,6 +117,7 @@ def test_staff_state_change_serializes_preloaded_case_relations(
     assert (activity.actor_id, activity.text) == (staff.pk, "Checked.")
     assert len(queries) <= MAX_CHANGED_CASE_STATE_HISTORICAL_QUERIES
     assert len(queries) - len(no_op_queries) == 2
+    assert len(_table_selects(queries, UserProfile)) == 1
     assert tuple(
         len(_table_selects(queries, model)) for model in (Case, Source, Resource)
     ) == (1, 1, 1)

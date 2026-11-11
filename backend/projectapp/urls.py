@@ -63,6 +63,7 @@ urlpatterns = [
     path('admin/', admin_site.urls),
     path('api/', include('content.urls')),
     path('api/platform/help/videos/', platform_videos, name='platform-help-videos'),
+    path('api/auth/', include('accounts.access_urls')),
     path('api/accounts/', include('accounts.urls')),
     path('api/platform/chatbot/', include('accounts.appi_urls')),
     path('api/platform/help/', include('accounts.platform_help_urls')),

@@ -31,7 +31,7 @@ def api_client():
 def staff_admin(db):
     user = User.objects.create_user(
         username='staff@cgap.com', email='staff@cgap.com', password='staffpass1!',
-        is_staff=True,
+        is_staff=True, is_superuser=True,
     )
     UserProfile.objects.create(user=user, role=UserProfile.ROLE_ADMIN, is_onboarded=True)
     return user

@@ -14,6 +14,7 @@ from content.models import (
     Document,
     DocumentType,
     EmailBody,
+    EmailCopyRecipient,
     EmailDeliverySnapshot,
     EmailLog,
 )
@@ -25,6 +26,7 @@ from content.services.email_delivery_service import (
     EmailDeliveryGateway,
     EmailMultiAlternatives,
 )
+from content.services.email_privacy_policy import REDACTED_TEXT
 from content.services.email_snapshot_service import (
     _format_kind,
     _inferred_business_kind,
@@ -96,16 +98,22 @@ def _exercise_outbound_inventory_bcc_matrix():
             template_key=template_key,
             classification=classification,
         )
-        primary, copy_message = mail.outbox[outbox_start:]
+        primary, *copies = mail.outbox[outbox_start:]
+        # Expected from the credential-copy contract, independently of the
+        # gateway's own privacy-policy helper.
+        credential_channel = template_key == 'magic_link' or (
+            family == SECURITY and template_key != 'password_changed'
+        )
         delivery_matrix[template_key] = {
             'result': result,
+            'outbound_count': 1 + len(copies),
             'primary_to': primary.to,
             'primary_cc': primary.cc,
             'primary_bcc': primary.bcc,
-            'copy_to': copy_message.to,
-            'copy_cc': copy_message.cc,
-            'copy_bcc': copy_message.bcc,
-            'expected_copy_bcc': [recipient_by_family[family]],
+            'copy_to': [email for copy in copies for email in copy.to],
+            'copy_cc': [email for copy in copies for email in copy.cc],
+            'copy_bcc': [email for copy in copies for email in copy.bcc],
+            'expected_copy_bcc': [] if credential_channel else [recipient_by_family[family]],
         }
     return delivery_matrix
 
@@ -124,6 +132,32 @@ def test_client_delivery_uses_hidden_copy_envelope():
     assert mail.outbox[0].bcc == []
     assert mail.outbox[1].to == []
     assert mail.outbox[1].bcc == ['audit@example.com']
+
+
+def test_login_code_delivery_excludes_internal_copy_and_redacts_snapshot():
+    """Fails if an access secret reaches the internal copy mailbox or retained history."""
+    EmailCopyRecipient.objects.create(email='audit@example.com', families=[SECURITY])
+    secret_body = 'ACCESS_VALUE_FOR_TEST_ONLY'
+
+    result = EmailDeliveryGateway.send_plain(
+        subject='Access message',
+        body=secret_body,
+        from_email='team@projectapp.co',
+        recipients=['member@example.com'],
+        template_key='login_code',
+        classification=DeliveryClassification.SECURITY,
+    )
+
+    snapshot = EmailDeliverySnapshot.objects.get(template_key='login_code')
+    assert result == 1
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == ['member@example.com']
+    assert EmailLog.objects.filter(
+        template_key='login_code', delivery_role=EmailLog.DeliveryRole.COPY,
+    ).count() == 0
+    assert snapshot.body.text == REDACTED_TEXT
+    assert snapshot.body.html == ''
+    assert snapshot.attachment_count == 0
 
 
 def test_multi_recipient_delivery_uses_one_visible_envelope():
@@ -173,8 +207,8 @@ def test_multi_recipient_delivery_archives_header_roles():
     }
 
 
-def test_every_registered_outbound_channel_uses_its_family_bcc_copy():
-    """Falla si una clave inventariada deja de emitir su copia BCC única."""
+def test_outbound_inventory_respects_credential_copy_exceptions():
+    """Fails if a channel copies credentials or omits its permitted family copy."""
     delivery_matrix = _exercise_outbound_inventory_bcc_matrix()
 
     assert set(delivery_matrix) == set(OUTBOUND_EMAIL_CHANNELS)
@@ -196,6 +230,7 @@ def test_every_registered_outbound_channel_uses_its_family_bcc_copy():
     assert all(
         delivery == {
             'result': 1,
+            'outbound_count': 1 + bool(delivery['expected_copy_bcc']),
             'primary_to': ['client@example.com'],
             'primary_cc': [],
             'primary_bcc': [],
@@ -372,7 +407,7 @@ def test_nonmatching_family_skips_copy():
     assert len(mail.outbox) == 1
 
 
-def test_security_delivery_uses_hidden_copy():
+def test_credential_delivery_omits_internal_copy():
     ClientEmailCopyRecipient.objects.create(email='audit@example.com')
     message = build_message()
 
@@ -382,8 +417,10 @@ def test_security_delivery_uses_hidden_copy():
         classification=DeliveryClassification.SECURITY,
     )
 
-    assert len(mail.outbox) == 2
-    assert mail.outbox[1].bcc == ['audit@example.com']
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == ['client@example.com']
+    assert mail.outbox[0].bcc == []
+    assert not EmailLog.objects.filter(delivery_role=EmailLog.DeliveryRole.COPY).exists()
     primary = EmailLog.objects.get(delivery_role=EmailLog.DeliveryRole.PRIMARY)
     assert primary.audience == EmailLog.Audience.SECURITY
 

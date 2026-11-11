@@ -48,6 +48,12 @@ class TestFullOnboardingFlow:
         assert len(mailoutbox) == 1
         assert 'Bienvenido' in mailoutbox[0].subject
 
+        enable = api_client.patch(
+            f"/api/accounts/clients/{resp.json()['user_id']}/",
+            {'is_active': True}, format='json', **headers,
+        )
+        assert enable.status_code == 200
+
         # Extract temp password from plain-text fallback
         body = mailoutbox[0].body
         temp_password = None
@@ -97,9 +103,14 @@ class TestFullOnboardingFlow:
     def test_wrong_otp_code_fails(self, api_client, admin_user, mailoutbox):
         headers = _admin_headers(api_client, admin_user)
 
-        api_client.post('/api/accounts/clients/', {
+        created = api_client.post('/api/accounts/clients/', {
             'email': 'otp@test.com', 'first_name': 'A', 'last_name': 'B',
         }, **headers)
+        enable = api_client.patch(
+            f"/api/accounts/clients/{created.json()['user_id']}/",
+            {'is_active': True}, format='json', **headers,
+        )
+        assert enable.status_code == 200
 
         body = mailoutbox[0].body
         temp_password = None

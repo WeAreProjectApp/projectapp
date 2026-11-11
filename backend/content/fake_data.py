@@ -235,6 +235,8 @@ EXEMPT_MODELS = {
     # Seen steps and audit events require real user or administrator actions;
     # demo generation must not suppress onboarding or fabricate its history.
     'accounts.PlatformTourProgress', 'accounts.PlatformHelpEvent',
+    # Login and access-control events are security evidence from real actions.
+    'accounts.AccessEvent',
     # Real provider secrets, paid activity and private expiring jobs are never fabricated.
     'accounts.PlatformAICredential', 'accounts.PlatformAIJob',
     'accounts.PlatformAIUsage', 'accounts.PlatformAIEvent',
@@ -279,6 +281,7 @@ EXEMPT_MODELS = {
     'accounts.DeliveryOperation',
     'content.IncomeSettlement',
     'accounts.VerificationCode', 'content.LinkedInToken',
+    'accounts.LoginChallenge', 'accounts.AccessRateBucket', 'accounts.GoogleIdentity',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',
     'content.ProposalContractChangeIntent',
     'content.ProposalProjectReassignment',

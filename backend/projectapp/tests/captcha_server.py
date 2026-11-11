@@ -28,6 +28,7 @@ def main():
     import django
     django.setup()
     import requests
+    from django.apps import apps
     from django.conf import settings
     from django.contrib.auth import get_user_model
     from django.contrib.staticfiles.handlers import StaticFilesHandler
@@ -73,6 +74,9 @@ def main():
         EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
         RECAPTCHA_ENABLED=True, RECAPTCHA_SITE_KEY='browser-test-site-key',
         RECAPTCHA_SECRET_KEY='browser-test-secret', RECAPTCHA_ALLOWED_HOSTNAMES=['127.0.0.1'],
+        # Browser tests exercise the current runtime schema. Migration history
+        # is covered separately and makes this isolated fixture too slow to start.
+        MIGRATION_MODULES={config.label: None for config in apps.get_app_configs()},
     ):
         databases = setup_databases(verbosity=0, interactive=False)
         try:

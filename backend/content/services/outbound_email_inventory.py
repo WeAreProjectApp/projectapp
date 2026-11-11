@@ -101,7 +101,8 @@ OUTBOUND_EMAIL_CHANNELS = {
     'proposal_notification_diagnostic': TASKS_OPERATIONS,
 
     # Authentication and credential-bearing messages. Product policy
-    # explicitly requires these to be copied and retained in full.
+    # excludes credentials from copies and retains a neutral receipt only.
+    'login_code': SECURITY,
     'client_invitation': SECURITY,
     'admin_invitation': SECURITY,
     'password_changed': SECURITY,

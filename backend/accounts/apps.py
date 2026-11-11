@@ -7,6 +7,7 @@ class AccountsConfig(AppConfig):
     verbose_name = 'Platform Accounts'
 
     def ready(self):
+        import accounts.access_signals  # noqa: F401
         import accounts.signals  # noqa: F401
         import accounts.project_client_access_hooks  # noqa: F401
         import accounts.platform_ai_hooks  # noqa: F401

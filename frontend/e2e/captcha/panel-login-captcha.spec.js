@@ -19,7 +19,7 @@ test.describe('Panel CAPTCHA', () => {
     // quality: allow-deep-link (the public panel entry is the start; its real link opens Django login)
     await page.goto('/es-co/panel/login', { waitUntil: 'domcontentloaded' })
 
-    await page.getByRole('link', { name: /Ir al Django Admin/ }).click()
+    await page.getByRole('link', { name: 'Entrar con contraseña', exact: true }).click()
     await page.getByLabel('Username:', { exact: true }).fill(captchaCredentials.email)
     await page.getByLabel('Password:', { exact: true }).fill(captchaCredentials.password)
 

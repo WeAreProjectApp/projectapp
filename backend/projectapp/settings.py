@@ -73,6 +73,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.access_middleware.AccessVersionMiddleware',
     'content.services.entity_history.EntityHistoryMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -563,3 +564,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 # Integrity observations are private; scheduled scans never apply fixes.
 DATA_INTEGRITY_DAILY_ENABLED = config('DATA_INTEGRITY_DAILY_ENABLED', default=True, cast=bool)
 DATA_INTEGRITY_DAILY_HOUR = config('DATA_INTEGRITY_DAILY_HOUR', default=3, cast=int)
+
+# Google identity is scoped to this application; never reuse another project's client.
+GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default='')
+ACCESS_TRUSTED_PROXY_IPS = config('ACCESS_TRUSTED_PROXY_IPS', default='', cast=lambda value: tuple(item.strip() for item in value.split(',') if item.strip()))

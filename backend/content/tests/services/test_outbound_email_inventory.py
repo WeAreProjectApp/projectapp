@@ -124,6 +124,7 @@ def test_operations_inventory_lists_every_channel():
 
 def test_security_inventory_lists_every_channel():
     assert _channels_for(SECURITY) == {
+        'login_code',
         'client_invitation',
         'admin_invitation',
         'password_changed',
