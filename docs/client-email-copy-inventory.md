@@ -14,8 +14,8 @@ construcción.
 
 ## Inventario (60 canales documentados)
 
-La fuente ejecutable registra 66 canales; las filas que faltan aquí son de
-entregas de Platform y formalización, y se completan con su propia revisión.
+La fuente ejecutable registra 67 canales; las filas que faltan aquí son de
+entregas de Platform, formalización y alertas de compras, y se completan con su propia revisión.
 
 | # | Familia configurable | Clave de plantilla | Salida / disparador |
 |---:|---|---|---|
