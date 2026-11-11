@@ -255,6 +255,7 @@ async function handleCreate() {
 }
 
 function startEdit(folder) {
+  dialogRef.value?.querySelector(`[data-testid="folder-manager-row-${folder.id}"] [aria-label="Editar carpeta"]`)?.focus();
   editingFolder.value = folder;
   deletingFolder.value = null;
   showFolderForm.value = true;

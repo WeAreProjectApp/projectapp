@@ -50,7 +50,7 @@ class TestDocumentListSerializer:
             'active_states',
             'content_excerpt', 'created_at', 'updated_at',
             'is_archived', 'archived_at', 'archived_cause',
-            'thread_summary', 'movable', 'content_format', 'pdf',
+            'thread_summary', 'movable', 'content_format', 'pdf', 'calculator',
         }
         assert set(data.keys()) == expected
         assert data['content_format'] == 'markdown'
@@ -128,7 +128,7 @@ class TestDocumentDetailSerializer:
             'created_at', 'updated_at',
             'is_archived', 'archived_at', 'archived_cause',
             'thread_summary', 'editable', 'movable', 'move_blockers', 'etag',
-            'content_format', 'pdf', 'content_editable', 'pdf_replaceable',
+            'content_format', 'pdf', 'calculator', 'content_editable', 'pdf_replaceable',
         }
         assert set(data.keys()) == expected
         assert data['content_editable'] is True

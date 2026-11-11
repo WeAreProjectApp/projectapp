@@ -98,3 +98,34 @@ PROJECT_CALCULATOR_TOOLS = [
           'project-calculator-approve', method='POST', path=('version_id',),
           fields={'note': TEXT, 'if_match': MATCH}, required=('note', 'if_match'), sensitive=True),
 ]
+
+_FIELD_DESCRIPTIONS = {
+    'definition': 'Definición completa de señales, parámetros y reglas de la calculadora.',
+    'note': 'Motivo del ajuste o de la aprobación; queda en el historial.',
+    'if_match': 'Versión/ETag obtenida al consultar el registro que se modificará.',
+    'document_id': 'Id del documento general que se sincronizará.',
+    'revision_id': 'Id de la revisión general conservada.',
+    'base_revision_id': 'Id de la revisión general fija desde la que se prepara el borrador.',
+    'project_id': 'Id del proyecto al que pertenece la estimación o versión.',
+    'project_version_id': 'Id de la versión particular del proyecto que se consulta o registra.',
+    'version_id': 'Id de la versión particular que se ajustará o aprobará.',
+    'estimate_id': 'Id de la estimación cuyo cierre o evidencia se consulta.',
+    'limit': 'Número máximo de registros por página, dentro del límite indicado.',
+    'offset': 'Número de registros anteriores que se omiten al paginar.',
+    'request_id': 'UUID estable de esta solicitud para evitar duplicar el registro.',
+    'definition_digest': 'Huella SHA256 de la definición exacta utilizada para clasificar.',
+    'requirement': 'Descripción completa del requerimiento que se clasifica.',
+    'size': 'Talla propuesta por la clasificación realizada en el chat externo.',
+    'signal_ids': 'Identificadores de las señales de la definición que sustentan la talla.',
+    'explanation': 'Justificación completa de la clasificación y sus señales.',
+    'expected_size': 'Talla esperada por el equipo para comparar la clasificación.',
+    'actual_hours': 'Horas reales de ejecución sustentadas por la evidencia.',
+    'hourly_cost_cop': 'Costo interno por hora en COP; null cuando no se conoce.',
+    'evidence': 'Evidencia completa del esfuerzo real registrado.',
+    'cause': 'Explicación de la desviación o corrección registrada.',
+    'supersedes_id': 'Id del último cierre que este registro corrige sin borrar su historial.',
+}
+for _calculator_tool in CALCULATOR_TOOLS + PROJECT_CALCULATOR_TOOLS:
+    for _field, _field_schema in _calculator_tool['input_schema']['properties'].items():
+        if not _field_schema.get('description'):
+            _field_schema['description'] = _FIELD_DESCRIPTIONS[_field]

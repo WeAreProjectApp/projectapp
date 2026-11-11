@@ -60,7 +60,6 @@ const localePath = useLocalePath()
 const { t } = useI18n()
 const store = usePlatformProjectsStore()
 const authStore = usePlatformAuthStore()
-const localePath = useLocalePath()
 
 const isAdminUser = computed(() => authStore.isAdmin)
 

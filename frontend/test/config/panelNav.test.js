@@ -83,6 +83,7 @@ describe('getPanelNavSections', () => {
       { label: 'Nueva propuesta', href: '/panel/proposals/create', icon: 'plus' },
       { label: 'Diagnósticos', href: '/panel/diagnostics', icon: 'file' },
       { label: 'Nuevo diagnóstico', href: '/panel/diagnostics/create', icon: 'plus' },
+      { label: 'Calculadora de requerimientos', href: '/panel/requirement-calculator', icon: 'settings' },
       { divider: true },
       { label: 'Defaults', href: '/panel/defaults', icon: 'settings' },
     ]);
@@ -117,6 +118,7 @@ describe('getPanelNavSections', () => {
         '/en-us/panel/proposals/create',
         '/en-us/panel/diagnostics',
         '/en-us/panel/diagnostics/create',
+        '/en-us/panel/requirement-calculator',
         '/en-us/panel/defaults',
       ],
       ['/en-us/panel/hour-packages', '/en-us/panel/additional-modules'],

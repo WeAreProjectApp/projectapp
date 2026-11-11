@@ -106,6 +106,7 @@ describe('viewCapabilityCatalog', () => {
         '/panel/proposals/:id/edit',
         '/panel/diagnostics',
         '/panel/diagnostics/create', '/panel/diagnostics/:id/edit',
+        '/panel/requirement-calculator',
         '/panel/defaults',
         '/panel/proposals/defaults',
         '/panel/diagnostics/defaults',

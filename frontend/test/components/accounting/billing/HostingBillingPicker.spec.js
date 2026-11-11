@@ -68,7 +68,10 @@ function mountPicker(props = {}) {
       modelValue: { ...model },
       data: pickerData(),
       ...props,
-      'onUpdate:modelValue': value => wrapper.setProps({ modelValue: value }),
+      'onUpdate:modelValue': value => {
+        props['onUpdate:modelValue']?.(value)
+        wrapper.setProps({ modelValue: value })
+      },
     },
     global: {
       plugins: [i18n],
@@ -206,7 +209,8 @@ describe('HostingBillingPicker', () => {
       selection: { candidates: [candidate({ project_hosting_id: null, hosting_record_id: 33, requires_association: true })] },
     })
     create_request.mockReturnValue(latePreview.promise)
-    const wrapper = mountPicker({ data })
+    const onUpdate = jest.fn()
+    const wrapper = mountPicker({ data, 'onUpdate:modelValue': onUpdate })
 
     await wrapper.get('[data-testid="billing-hosting-choice"]').setValue('record:33')
     await wrapper.get('[data-testid="billing-hosting-review"]').trigger('click')
@@ -214,7 +218,7 @@ describe('HostingBillingPicker', () => {
     latePreview.resolve({ data: { proposal: { operational_record_id: 33 } } })
     await flushPromises()
 
-    expect(wrapper.emitted('update:modelValue')).toEqual([[
+    expect(onUpdate.mock.calls).toEqual([[
       { ...model, project_hosting_id: null, hosting_payment_id: null },
     ]])
   })

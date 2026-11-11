@@ -425,7 +425,7 @@ test('translates raw send states in the global Historial', {
   await navigateToEmails(page);
   await page.getByRole('tab', { name: 'Historial' }).click();
 
-  const historyRows = page.locator('tbody tr');
+  const historyRows = page.locator('[data-testid^="email-history-record-"]');
   await expect(historyRows.getByText('Enviado', { exact: true })).toBeVisible();
   await expect(historyRows.getByText('Fallido', { exact: true })).toBeVisible();
   await expect(historyRows.getByText('Sent', { exact: true })).toHaveCount(0);

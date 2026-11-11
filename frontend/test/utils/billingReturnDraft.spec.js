@@ -30,9 +30,11 @@ describe('billingReturnDraft', () => {
   // Falla si el borrador se reutiliza después de volver al formulario y limpiar su regreso.
   it('removes a saved draft after the return completes', () => {
     const id = saveBillingReturnDraft(12, validDraft)
+    const siblingId = saveBillingReturnDraft(12, validDraft)
     removeBillingReturnDraft(id)
 
     expect(readBillingReturnDraft(id, 12)).toBeNull()
+    expect(readBillingReturnDraft(siblingId, 12)).toEqual({ ...validDraft, actorId: 12, schema: 1 })
   })
 
   // Falla si contenido corrupto o de otra persona puede recuperar un formulario ajeno.
@@ -47,6 +49,7 @@ describe('billingReturnDraft', () => {
 
   // Falla si una URL distinta a los formularios de contabilidad puede inyectar un regreso al flujo.
   it('denies a draft from an unrelated origin', () => {
+    const siblingId = saveBillingReturnDraft(12, validDraft)
     sessionStorage.setItem(`${prefix}foreign`, JSON.stringify({
       ...validDraft,
       actorId: 12,
@@ -55,5 +58,6 @@ describe('billingReturnDraft', () => {
     }))
 
     expect(readBillingReturnDraft('foreign', 12)).toBeNull()
+    expect(readBillingReturnDraft(siblingId, 12)).toEqual({ ...validDraft, actorId: 12, schema: 1 })
   })
 })

@@ -55,7 +55,7 @@ test.describe('Admin Accounting Hosting Billing', () => {
     await expect(
       page.getByRole('dialog').getByText('german@korehealths.com', { exact: false }),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^(Cancelar|Cancel)$/ }).click();
     await expect(
       page.getByRole('heading', { name: 'Enviar cuenta de cobro' }),
     ).toHaveCount(0);

@@ -288,6 +288,7 @@ test.describe('PA-230 hosting link from a collection account', () => {
     await page.getByRole('button', { name: 'Aplicar conciliación' }).click();
     await expect(page.getByRole('status')).toHaveText('Asociación guardada. Ya puedes volver a la cuenta de cobro.');
     await page.getByRole('link', { name: 'Volver a la cuenta de cobro' }).click();
+    await expect(page).toHaveURL(/\/es-co\/panel\/accounting\/incomes(?:\?|$)/);
     await expect(page.getByRole('heading', { name: 'Nueva cuenta de cobro', exact: true })).toHaveText('Nueva cuenta de cobro');
     await expect(page.getByTestId('collection-form-concept')).toHaveValue('Hosting Aurora conciliado');
     await expect(page.getByTestId('collection-form-description')).toHaveValue('Conservar esta descripción al conciliar');

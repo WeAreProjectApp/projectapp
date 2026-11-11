@@ -238,25 +238,25 @@ def _client_document_copy(document):
 
 def _seed_project_lifecycle_catalog():
     from importlib import import_module
+    from content.models import DocumentState, DocumentStateGroup
 
-    from django.apps import apps
-
-    from content.models import DocumentState
-
-    import_module(
-        "content.migrations.0214_seed_project_lifecycle_states"
-    ).seed_project_states(apps, None)
-    active = DocumentState.objects.get(catalog="projects", system_key="active")
-    DocumentState.objects.create(
-        catalog="projects",
-        name="En evolución",
-        normalized_name="en evolucion",
-        slug="evolving",
-        color="blue",
-        group=active.group,
-        order=2,
-        system_key="evolving",
-        operational_effect="operating",
+    group, _ = DocumentStateGroup.objects.get_or_create(
+        catalog="projects", name="Ciclo del proyecto",
+        defaults={"selection_mode": "exclusive", "order": 0},
+    )
+    states = import_module("content.migrations.0214_seed_project_lifecycle_states").PROJECT_STATES
+    for name, key, color, effect, order in states:
+        DocumentState.objects.get_or_create(
+            catalog="projects", system_key=key,
+            defaults={"name": name, "normalized_name": name.casefold(),
+                      "slug": key.replace("_", "-"), "color": color,
+                      "group": group, "order": order, "operational_effect": effect},
+        )
+    DocumentState.objects.get_or_create(
+        catalog="projects", system_key="evolving",
+        defaults={"name": "En evolución", "normalized_name": "en evolucion",
+                  "slug": "evolving", "color": "blue", "group": group,
+                  "order": 2, "operational_effect": "operating"},
     )
 
 

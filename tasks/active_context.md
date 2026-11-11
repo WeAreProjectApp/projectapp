@@ -1,3 +1,13 @@
+## 2026-11-11 — Tren de integración de 25 PRs
+
+Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.
+Se preservan las migraciones publicadas y se unen las hojas mediante
+accounts.0092_merge_parallel_features y content.0307_merge_parallel_features.
+El contrato combinado publica Comercial 6.6.0 y Proyectos 5.1.0; conserva
+accesos, eliminación protegida y el módulo independiente de integridad.
+Las regresiones de retorno de hosting, resúmenes, historial y contratos se
+validan en CI. Esta nota no acredita CI verde, integración ni aprobación manual.
+
 ## PA-231 — Contrato de fake data (2026-11-06)
 
 Trabajo backend en `fix/06112026-pa231-fake-data`: el comando canónico incorpora
