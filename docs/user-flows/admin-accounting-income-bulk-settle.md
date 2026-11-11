@@ -15,3 +15,5 @@
 El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
 
 Cambiar únicamente entre base y total incluido conserva los centavos recibidos y el reparto automático. Editar el porcentaje en modo total incluido permite seguir ajustando el valor recibido sin conservar una captura desactualizada.
+
+Cada ingreso seleccionado con destinatario válido genera su confirmación después de completar la liquidación y deja un envío principal en Historial de Emails. Un fallo conserva el dinero liquidado y puede reintentarse desde Historial cuando su evidencia permite reconstruir el mensaje original.

@@ -12,6 +12,7 @@ describe('usePanelSidebar (SSR — window undefined)', () => {
     // Mock vue to avoid ESM import issues in Node env
     jest.doMock('vue', () => ({
       ref: (v) => ({ value: v }),
+      computed: (getter) => ({ get value() { return getter() } }),
       onMounted: jest.fn(),
       onUnmounted: jest.fn(),
     }))

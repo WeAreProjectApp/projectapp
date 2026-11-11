@@ -47,7 +47,7 @@ describe('getPanelNavSections', () => {
     expect(communications.label).toBe('Comunicaciones');
     expect(communications.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ label: 'Hilos con clientes', href: '/panel/communications' }),
-      expect.objectContaining({ label: 'Enviar emails', href: '/panel/emails' }),
+      expect.objectContaining({ label: 'Emails', href: '/panel/emails' }),
     ]));
   });
 
@@ -67,7 +67,7 @@ describe('getPanelNavSections', () => {
   });
 
   it('splits commercial work, offerings, and programs into ordered menu sections', () => {
-    // Fails if a new commercial item is put back into the wrong menu section or a visual grouping is lost.
+    // Fails if email delivery or consulting returns to Comercial, or consulting loses its separator after Células.
     const sections = getPanelNavSections(identityLocalePath);
     const [commercial, offerings, programs] = ['commercial', 'offerings', 'programs']
       .map((id) => sections.find((section) => section.id === id));
@@ -83,10 +83,8 @@ describe('getPanelNavSections', () => {
       { label: 'Nueva propuesta', href: '/panel/proposals/create', icon: 'plus' },
       { label: 'Diagnósticos', href: '/panel/diagnostics', icon: 'file' },
       { label: 'Nuevo diagnóstico', href: '/panel/diagnostics/create', icon: 'plus' },
-      { label: 'Consultoría y asesoría', href: '/panel/consulting', icon: 'search' },
       { divider: true },
       { label: 'Defaults', href: '/panel/defaults', icon: 'settings' },
-      { label: 'Entregabilidad email', href: '/panel/proposals/email-deliverability', icon: 'mail' },
     ]);
     expect(offerings.items).toEqual([
       { label: 'Paquetes de requerimientos', href: '/panel/hour-packages', icon: 'package' },
@@ -97,6 +95,8 @@ describe('getPanelNavSections', () => {
       { label: 'Building with Us', href: '/panel/building-with-us', icon: 'handshake' },
       { divider: true },
       { label: 'Células', href: '/panel/cells', icon: 'team' },
+      { divider: true },
+      { label: 'Consultoría y asesoría', href: '/panel/consulting', icon: 'conversation' },
     ]);
   });
 
@@ -117,15 +117,14 @@ describe('getPanelNavSections', () => {
         '/en-us/panel/proposals/create',
         '/en-us/panel/diagnostics',
         '/en-us/panel/diagnostics/create',
-        '/en-us/panel/consulting',
         '/en-us/panel/defaults',
-        '/en-us/panel/proposals/email-deliverability',
       ],
       ['/en-us/panel/hour-packages', '/en-us/panel/additional-modules'],
       [
         '/en-us/panel/partnership-program',
         '/en-us/panel/building-with-us',
         '/en-us/panel/cells',
+        '/en-us/panel/consulting',
       ],
     ]);
   });

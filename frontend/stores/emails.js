@@ -30,6 +30,18 @@ export const useEmailStore = defineStore('emails', {
   }),
 
   actions: {
+    async retryEmail(logId) {
+      try {
+        const response = await create_request(`emails/history/${logId}/retry/`, {});
+        return { success: true, data: response.data };
+      } catch (error) {
+        return {
+          success: false,
+          data: error.response?.data,
+          message: error.response?.data?.detail || 'No se pudo reintentar el correo.',
+        };
+      }
+    },
     async fetchDefaults() {
       this.isLoadingDefaults = true;
       this.error = null;

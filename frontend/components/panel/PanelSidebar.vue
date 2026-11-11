@@ -1,9 +1,11 @@
 <template>
   <aside
+    data-testid="panel-sidebar"
     :class="[
       'fixed inset-y-0 left-0 z-30 flex flex-col border-r transition-all duration-300 ease-in-out',
       'border-border-default/[0.06] bg-surface dark:border-white/[0.06] dark:bg-primary-strong',
-      isCollapsed ? 'w-[64px]' : 'w-[240px]',
+      'w-[var(--panel-sidebar-width,240px)]',
+      isResizing ? 'transition-none select-none' : '',
     ]"
   >
     <div
@@ -54,6 +56,7 @@
             />
             <SidebarItem
               v-else
+              wrap-label
               :item="item"
               :is-collapsed="isCollapsed"
               :is-active="isItemActive(item)"
@@ -63,6 +66,21 @@
         </div>
       </div>
     </nav>
+
+    <BaseResizeHandle
+      v-if="!isCollapsed"
+      class="absolute inset-y-0 -right-1 z-10 w-2"
+      :value="expandedWidth"
+      :min="PANEL_SIDEBAR_MIN"
+      :max="PANEL_SIDEBAR_MAX"
+      :label="t('panelUsability.resizeMenu')"
+      test-id="panel-sidebar-resize-handle"
+      @pointer-start="startResize"
+      @pointer-move="moveResize"
+      @pointer-end="endResize"
+      @resize="resizeWidth"
+      @reset="resetWidth"
+    />
 
     <div class="shrink-0 border-t border-border-default/[0.06] p-3 dark:border-white/[0.06]">
       <!-- Identity chip -->
@@ -144,6 +162,10 @@ import { themeToggleLabel } from '~/composables/useDarkMode'
 import { useProposalStore } from '~/stores/proposals'
 import SidebarItem from '~/components/platform/SidebarItem.vue'
 import PanelPwaInstallButton from '~/components/pwa/PanelPwaInstallButton.vue'
+import BaseResizeHandle from '~/components/base/BaseResizeHandle.vue'
+import {
+  usePanelSidebar, PANEL_SIDEBAR_MIN, PANEL_SIDEBAR_MAX,
+} from '~/composables/usePanelSidebar'
 
 defineEmits(['toggle-theme'])
 
@@ -155,9 +177,13 @@ const props = defineProps({
 })
 
 const localePath = useLocalePath()
+const { t } = useI18n()
 const route = useRoute()
 
 const toggleSidebar = inject('togglePanelSidebar', null)
+const {
+  expandedWidth, isResizing, startResize, moveResize, endResize, resizeWidth, resetWidth,
+} = usePanelSidebar()
 
 const proposalStore = useProposalStore()
 const sections = computed(() =>

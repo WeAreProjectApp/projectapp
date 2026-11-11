@@ -411,6 +411,7 @@ def list_standalone_emails(request):
         history_queryset,
         snapshot_payload,
     )
+    from content.services.email_retry_service import error_message, prepare_retry_sources, retry_payload
 
     logs = history_queryset()
     if request.query_params.get('scope') != 'all':
@@ -477,6 +478,10 @@ def list_standalone_emails(request):
     page_logs = attach_delivery_recipients(
         attach_delivery_copies(logs[offset:offset + page_size]),
     )
+    prepare_retry_sources(page_logs + [
+        recipient for log in page_logs
+        for recipient in getattr(log, '_delivery_recipients', [])
+    ])
     family_labels = dict(EMAIL_COPY_FAMILY_CHOICES)
     data = []
     for log in page_logs:
@@ -499,8 +504,10 @@ def list_standalone_emails(request):
             'sent_at': log.sent_at.isoformat(),
             'metadata': {'content_redacted': True} if credential_email(log.template_key) else log.metadata,
             'has_body': log.body_id is not None,
+            'error_message': error_message(log),
             'copies': delivery_copy_payloads(log),
-            **delivery_recipient_payloads(log),
+            **delivery_recipient_payloads(log, retry_actor=request.user),
+            **retry_payload(log, request.user),
             **snapshot_payload(log),
         })
     return Response({
@@ -511,6 +518,40 @@ def list_standalone_emails(request):
         'has_next': offset + page_size < total,
         'attachment_type_options': attachment_type_options(),
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def retry_standalone_email(request, log_id):
+    """Retry the original failed address, never a caller-supplied destination."""
+    from content.services import email_retry_service
+    from content.services.accounting_email_retry_service import RetryError
+    from content.services.email_snapshot_service import (
+        EmailSnapshotCaptureError, EmailSnapshotResendError,
+    )
+
+    log = get_object_or_404(
+        EmailLog.objects.select_related('snapshot__body', 'client', 'proposal'),
+        pk=log_id, delivery_role=EmailLog.DeliveryRole.PRIMARY,
+    )
+    if request.data:
+        return Response({'detail': 'El reintento usa el destinatario del fallo y no admite cambios.'}, status=400)
+    if email_retry_service.requires_superuser(log) and not request.user.is_superuser:
+        return Response({'detail': 'Solo un superusuario puede reconstruir este envío contable.'}, status=403)
+    try:
+        attempt = email_retry_service.retry_send(log, request.user)
+    except RetryError as exc:
+        attempt = log.retries.order_by('-sent_at', '-pk').first()
+        return Response({'detail': str(exc), 'id': attempt.pk if attempt else None}, status=409)
+    except EmailSnapshotCaptureError as exc:
+        return Response({'detail': str(exc)}, status=503)
+    except EmailSnapshotResendError as exc:
+        attempt = log.retries.order_by('-sent_at', '-pk').first()
+        return Response({'detail': str(exc), 'id': attempt.pk if attempt else None}, status=502)
+    return Response({
+        'id': attempt.pk, 'status': attempt.status,
+        'recipient': attempt.recipient, 'retry_of': attempt.retry_of_id,
+    }, status=201)
 
 
 @api_view(['GET'])

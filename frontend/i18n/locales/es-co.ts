@@ -1,5 +1,6 @@
 export default defineI18nLocale(async () => {
   const [
+    panelUsability,
     global,
     richText,
     accountingPocket,
@@ -52,6 +53,7 @@ export default defineI18nLocale(async () => {
     documentFolders,
     procurement,
   ] = await Promise.all([
+    import('../../locales/panelUsability/es.js').then(m => m.default),
     import('~/locales/global/es.js'),
     import('~/locales/richText/es.js'),
     import('~/locales/accountingPocket/es.js'),
@@ -106,6 +108,7 @@ export default defineI18nLocale(async () => {
   ])
 
   return {
+    panelUsability,
     global: global.default,
     richText: richText.default,
     accountingPocket: accountingPocket.default,
