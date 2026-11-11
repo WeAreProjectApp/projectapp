@@ -7413,6 +7413,7 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
   - [Failure] Un fallo del servidor conserva el borrador de edición para reintentar.
 - **Cobertura:** ✅ display/success/error/failure.
 - **E2E:** `e2e/admin/admin-document-states-manage.spec.js`
+- **Regresión PA-232:** volver desde el catálogo debe recuperar encabezado, acciones y registros en el Gestor sin recarga. Comparar con la entrada desde el menú a 412×915, 1440×900 y 2560×1440; las nuevas pruebas comprueban también el título del navegador y errores de transición. Ejecución y dictamen manual se registran por SHA, por separado.
 
 ### FLOW: `admin-document-state-workflow`
 
@@ -8808,6 +8809,7 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 | Intentar fusionar sin destino | error | Confirmar fusión → mensaje junto al selector; elegir destino lo limpia |
 | Retirar un estado usado | error | Confirmar retiro → explicación de proyectos activos → estado permanece |
 | Guardar durante una falla del servidor | failure | Editar nombre → HTTP 5xx visible → borrador permanece para reintentar |
+| Volver a proyectos desde el catálogo | success | Catálogo → listado con encabezado, acciones y registros, título actualizado y sin recarga en móvil, escritorio y monitor amplio (PA-232) |
 
 - **Coverage:** ✅ Las cuatro clases están cubiertas.
 - **E2E Specs:** `e2e/admin/admin-project-lifecycle-states.spec.js`

@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal.",
+  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal. Adding phases and editing a project expose named modal dialogs, move mouse focus inside on opening and return it to the opener on closing in both themes (PA-234).",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

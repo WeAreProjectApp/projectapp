@@ -8,6 +8,9 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_KANBAN_TASKS } from '../helpers/flow-tags.js';
+import { PANEL_VIEWPORTS } from '../helpers/viewports.js';
+import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
 
 const authCheck = {
   status: 200,
@@ -24,6 +27,15 @@ function board(overrides = {}) {
   };
 }
 
+async function openTasksFromMenu(page) {
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  }
+  await page.getByRole('link', { name: 'Kanban', exact: true }).click();
+}
+
 test.describe('Admin Kanban Tasks', () => {
   test.setTimeout(60_000);
 
@@ -33,6 +45,38 @@ test.describe('Admin Kanban Tasks', () => {
       userAuth: { id: 9000, role: 'admin', is_staff: true },
     });
   });
+
+  for (const profile of ['compact', 'desktop']) {
+    for (const scenario of [
+      { mode: 'creation', open: (page) => page.getByTestId('new-task-btn').click(), title: '' },
+      { mode: 'editing', open: (page) => page.getByText('Tarea ficticia PA-236', { exact: true }).click(), title: 'Tarea ficticia PA-236' },
+    ]) {
+      test(`names the task fields in ${scenario.mode} at ${profile}`, {
+        tag: [...ADMIN_KANBAN_TASKS, '@role:admin', '@outcome:display'],
+      }, async ({ page }) => {
+        const task = { id: 9, title: 'Tarea ficticia PA-236', description: 'Detalle correcto', status: 'todo', priority: 'medium', assignee: null, due_date: null, position: 0 };
+        await page.setViewportSize(PANEL_VIEWPORTS[profile]);
+        await mockApi(page, async ({ apiPath }) => {
+          if (apiPath === 'auth/check/') return authCheck;
+          if (apiPath === 'tasks/') return { status: 200, contentType: 'application/json', body: JSON.stringify(board({ todo: [task] })) };
+          if (apiPath.startsWith('tasks/')) return { status: 200, contentType: 'application/json', body: '[]' };
+          return null;
+        });
+        await openTasksFromMenu(page);
+        await scenario.open(page);
+
+        const dialog = page.getByRole('dialog');
+        for (const label of ['Title', 'Description', 'Status', 'Priority', 'Tablero', 'Due date', 'Assigned to']) {
+          const control = dialog.getByLabel(label, { exact: false });
+          await expect(control).toHaveAccessibleName(new RegExp(`^${label}`));
+        }
+        await expect(dialog.getByLabel('Title', { exact: false })).toHaveValue(scenario.title);
+        await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+        await expect(dialog).not.toBeVisible();
+        await expect(page.getByTestId('column-todo')).toContainText(task.title);
+      });
+    }
+  }
 
   test('renders four columns and creates a task in TO DO', {
     tag: [...ADMIN_KANBAN_TASKS, '@role:admin', '@outcome:display', '@outcome:success'],
