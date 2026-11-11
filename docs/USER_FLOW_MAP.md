@@ -5563,6 +5563,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Formato editorial:** El contenido admite modos Visual y Fuente Markdown, listas, tablas, colores y alineación; el guardado conserva la fuente única y su declaración de formato.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
 
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
+
 ### FLOW: `admin-document-edit`
 
 - **Module:** admin
@@ -5598,6 +5601,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 
 - **Formato editorial:** Visual y Fuente Markdown comparten contenido e historial. Alternar, guardar y reabrir conserva listas, tablas, color y alineación. Notas y borradores utilizan el mismo editor; WhatsApp sólo ofrece formato nativo. Un formato inválido mantiene la fuente para corregirla.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
+
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
 
 ### FLOW: `admin-document-thread`
 

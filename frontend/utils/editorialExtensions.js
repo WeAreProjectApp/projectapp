@@ -30,6 +30,7 @@ const EditorialColor = Color.extend({
 
 // The standard extension adds data-color and color:inherit. The persisted
 // vocabulary deliberately uses only the presentation property it represents.
+// Shared editorial CSS supplies foreground inheritance under colored spans.
 const EditorialHighlight = Highlight.extend({
   addAttributes() {
     return { color: {
