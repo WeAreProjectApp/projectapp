@@ -293,3 +293,9 @@ def summary(found=None):
         decision = decision_for(key)
         counts.setdefault(anchor, Counter())[decision.status if decision else 'undecided'] += 1
     return {anchor: dict(statuses) for anchor, statuses in sorted(counts.items())}
+
+
+_decide(exempt('Definiciones y evidencia de calculadora conservadas por sus servicios versionados.'), '''
+    accounts.Project.calculator_document content.RequirementCalculator.document
+    content.ProjectCalculatorVersion.project content.ProjectCalculatorVersion.document content.CalculatorEstimate.project
+''')

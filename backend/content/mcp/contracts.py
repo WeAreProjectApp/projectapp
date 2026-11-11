@@ -156,7 +156,7 @@ MCP_MODEL_CONTRACTS = {
                     'description status state_review_required progress start_date '
                     'estimated_end_date payment_milestones hosting_tiers '
                     'hosting_start_date production_url staging_url admin_url '
-                    'repository_url admin_username',
+                    'repository_url admin_username calculator_document',
                 )
                 | _excluded(
                     'Credencial cifrada del sitio del proyecto: nunca debe salir por MCP.',
@@ -816,7 +816,7 @@ PROJECT_CONTRACTS = (
     ),
     _contract(
         'accounts.Project',
-        read_only='id created_at updated_at',
+        read_only='id created_at updated_at calculator_document',
         read_write=(
             'name description client status current_state state_review_required '
             'progress start_date estimated_end_date payment_milestones hosting_tiers '
@@ -1356,6 +1356,27 @@ BILLING_CATALOG_CONTRACTS = (
 )
 
 
+CALCULATOR_GENERAL_CONTRACTS = (
+    _contract('content.RequirementCalculator', read_only='id current_revision document'),
+    _contract('content.CalculatorRevision', read_only='id definition digest note author created_at'),
+    _contract('content.CalculatorEstimate',
+        read_only='id author created_at',
+        read_write='definition_digest revision project_version project request_id requirement size signal_ids explanation expected_size',
+        excluded=_excluded('Copia interna inmutable de los parámetros aplicados; los resultados de calibración usan esa copia sin exponerla al cliente.', 'snapshot')),
+    _contract('content.CalculatorActual', read_only='id author created_at',
+        read_write='estimate supersedes actual_hours hourly_cost_cop evidence cause'),
+)
+
+CALCULATOR_PROJECT_CONTRACTS = (
+    _contract('content.ProjectCalculatorVersion',
+        read_only='id project base_revision document digest author approved_by approved_at pdf_digest created_at updated_at',
+        read_write='definition status note',
+        excluded=_excluded('Bytes congelados servidos exclusivamente por la descarga del documento aprobado.', 'pdf_content')),
+    _contract('content.ProjectCalculatorChange', read_only='id version digest status note author created_at',
+        excluded=_excluded('Copia interna de cada ajuste; MCP entrega el índice de eventos y la definición efectiva de la versión.', 'definition')),
+)
+
+
 from content.mcp.issue_contracts import build_issue_contracts
 
 MCP_MODEL_CONTRACTS.update({
@@ -1367,9 +1388,10 @@ MCP_MODEL_CONTRACTS.update({
         + MCP_MODEL_CONTRACTS['proposals']
         + MCP_MODEL_CONTRACTS['diagnostics']
         + COMMERCIAL_CATALOG_CONTRACTS
+        + CALCULATOR_GENERAL_CONTRACTS
     ),
     'projects': (
-        PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS
+        PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS + CALCULATOR_PROJECT_CONTRACTS
         + (
             _contract('accounts.PlatformHelpSettings', read_only='id version', read_write='tour_enabled video_enabled'),
             _contract('accounts.ClientPlatformHelpSettings', read_only='id user version', read_write='tour_enabled video_enabled'),

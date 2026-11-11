@@ -179,6 +179,7 @@ class GeneratedDocumentReadMixin:
         from content.services.uploaded_pdf_service import pdf_metadata
         data['content_format'] = instance.content_format
         data['pdf'] = pdf_metadata(instance)
+        data['calculator'] = (instance.metadata or {}).get('requirement_calculator')
         return data
 
     def get_display_state(self, obj):
@@ -504,6 +505,12 @@ class DocumentCreateUpdateSerializer(EditorialModelSerializer):
         return super().to_internal_value(data)
 
     def validate(self, attrs):
+        from content.services.calculator_documents import managed, MESSAGE
+        if self.instance is not None and managed(self.instance):
+            allowed = {'status', 'is_client_visible'}
+            if set(attrs) - allowed:
+                raise serializers.ValidationError({'detail': MESSAGE})
+
         """Guarda de carpeta archivada + resolución de la asociación.
 
         Ambas van a nivel de objeto y no de campo porque dependen del estado

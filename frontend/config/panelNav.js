@@ -51,6 +51,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Nueva propuesta', href: lp('/panel/proposals/create'), icon: 'plus' },
         { label: 'Diagnósticos', href: lp('/panel/diagnostics'), icon: 'file' },
         { label: 'Nuevo diagnóstico', href: lp('/panel/diagnostics/create'), icon: 'plus' },
+        { label: 'Calculadora de requerimientos', href: lp('/panel/requirement-calculator'), icon: 'settings' },
         { divider: true },
         { label: 'Defaults', href: lp('/panel/defaults'), icon: 'settings' },
       ],

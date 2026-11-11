@@ -14,9 +14,15 @@ class HistoryQuerySet(models.QuerySet):
         from content.services.entity_history import capture_instance, history_operation
         from content.services.entity_history_registry import tracks_fields
         if not tracks_fields(self.model, kwargs):
+            if self.model._meta.label_lower == 'content.document':
+                from content.services.calculator_documents import protect_bulk_write
+                protect_bulk_write(self.filter(metadata__has_key='requirement_calculator'), kwargs)
             return super().update(**kwargs)
         with history_operation():
             rows = list(self.select_for_update().order_by('pk'))
+            if self.model._meta.label_lower == 'content.document':
+                from content.services.calculator_documents import protect_bulk_write
+                protect_bulk_write(rows, kwargs)
             for row in rows:
                 capture_instance(row)
             # Snapshot a child's destination aggregate before reassignment,

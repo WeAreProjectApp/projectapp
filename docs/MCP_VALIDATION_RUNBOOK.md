@@ -20,6 +20,57 @@ Cambio compatible documentado en el [changelog](changelog/2026-11-07-proposal-ap
 
 Comercial 6.4.0 y Propuestas 6.2.0 conservan el servicio compartido con Panel. `review_proposal_approval` con `action=defer` y `accept_proposal=true` acepta sin cliente/proyecto nuevo ni paquete; `false` conserva el estado. Repetir no duplica cambios. Confirmar el cierre inicial usa sólo `selected_document_ids`, por defecto `[]`. `confirm_proposal_document_revision` admite esa lista: omitir conserva la selección elegible del paquete previo, `[]` la retira del vigente. Las lecturas exponen selección e identidad; los históricos, firmas y originales se conservan. Validar en CI confirmación sensible, defer, selección parcial/vacía/ajena/archivada, conflictos y nueva revisión; manual en DEV coordinado con dev-qa. No se acredita validación por escribir estos escenarios.
 
+## Calculadora por talla — commercial 6.5.0 / projects 4.5.1 (2026-11-05)
+
+La clasificación se aplica desde Claude/ChatGPT con la definición que devuelve MCP.
+El panel conserva parámetros y documentos; no ejecuta modelos. Horas reales, costos
+por hora y valores unitarios son internos. Todavía no existen cierres históricos para
+acreditar calibración económica.
+
+1. Consultar `get_requirement_calculator_settings`: sin inicializar muestra una
+   semilla y candidatos documentales, sin escribir. Previsualizar tampoco publica.
+   Publicar exige definición válida, motivo, `if_match` y confirmación sensible.
+   Comprobar nueva revisión/documento y sincronización XS/S/M con Paquetes; una
+   oferta emitida conserva sus valores. Dos editores con la misma huella: sólo
+   el primero guarda; el otro recibe conflicto. Parámetros L/XL pueden permanecer
+   pendientes de medición, sin inventar costos.
+2. Consultar `get_requirement_calculator` con descripción y proyecto. Aplica la
+   versión aprobada; si no existe, devuelve la general con aviso. Un borrador
+   requiere selección explícita. El chat entrega talla y explicación; PROJECT
+   queda fuera del paquete y XL se puede entregar como capacidad delimitada.
+3. Consultar `get_project_requirement_calculator`; crear un borrador desde una
+   revisión general, consultar `get_project_calculator_version` y editar sólo
+   parámetros existentes con motivo/huella. Rechazar cambios de cuerpo, fórmulas,
+   estructura, segundo borrador y escrituras obsoletas. El resumen no transporta
+   PDF ni definiciones completas de todas las versiones.
+4. Aprobar mediante `approve_project_requirement_calculator` y confirmación:
+   documento y bytes PDF quedan congelados, el proyecto apunta al documento.
+   Un error al generar PDF revierte la aprobación completa. Publicar después una
+   revisión general no modifica ese documento/PDF. Una nueva negociación crea
+   otro borrador/documento y conserva la aprobada anterior. Visibilidad/envío al
+   cliente son acciones separadas; la definición general siempre es interna.
+5. Intentar cambiar contenido, composición o asociación del documento por API o
+   MCP Documentos: se rechaza y dirige al módulo de calculadora. Las notas privadas
+   y publicación de la copia particular no modifican la definición. Aprobación
+   de calculadora y firma de contrato son estados independientes.
+6. Registrar estimación con UUID, revisión, huella y señales válidas. El reintento
+   idéntico devuelve el mismo registro; reutilizar UUID con otro contenido/alcance
+   se rechaza. Registrar esfuerzo real con evidencia/causa; corregir mediante
+   `supersedes_id` del último cierre, sin borrarlo. Consultar calibración separa
+   definiciones efectivas y tallas, informa mediana, costo y consistencia revisada,
+   Los listados llevan resúmenes y tres cierres recientes; `get_requirement_estimate`
+   devuelve el texto completo y `list_requirement_actuals` pagina toda la evidencia.
+   El informe de cohortes también se pagina. La medición
+   exige al menos tres muestras y sólo propone revisión: nunca cambia precios.
+7. Comprobar permiso staff, alcance de conector, actor y confirmación sensible.
+   No se envían mensajes ni se publica al cliente durante este guion.
+
+Contrato de campos: `content/mcp/contracts.py` clasifica los registros nuevos,
+la relación opcional Project→Document y los archivos internos excluidos.
+Validación: pruebas focales `test_requirement_calculator.py` de servicios/vistas,
+`test_mcp_requirement_calculator.py`, `mcp_schema_report` para ambos conectores,
+`mcp_inventory --check` y pruebas de clasificación de campos de MCP.
+
 ## IA de Plataforma — projects 4.1.1 (2026-10-24)
 
 El conector projects incorpora `get/update_platform_ai_settings`,

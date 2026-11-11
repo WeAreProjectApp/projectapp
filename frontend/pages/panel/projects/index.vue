@@ -867,6 +867,7 @@ const { t } = useI18n();
 function handleProjectAction(action, row) {
   projectActionTarget.value = null;
   const handlers = {
+    calculator: () => navigateTo({ path: projectIdeasLocalePath('/panel/requirement-calculator'), query: { project: String(row.id) } }),
     ideas: () => navigateTo(projectIdeasLocalePath(`/panel/projects/${row.id}/ideas`)),
     brand: () => { brandProject.value = row; },
     detail: () => openAccessDetail(row),

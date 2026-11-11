@@ -21,6 +21,8 @@ def _keys(text):
 
 
 AUTHORSHIP_RELATIONS = _keys('''
+content.CalculatorRevision.author content.ProjectCalculatorVersion.author content.ProjectCalculatorVersion.approved_by
+content.CalculatorEstimate.author content.CalculatorActual.author content.ProjectCalculatorChange.author
 accounts.CollectionAccountContext.pending_by
 accounts.AppiConversation.actor accounts.AppiTurn.actor
 admin.LogEntry.user

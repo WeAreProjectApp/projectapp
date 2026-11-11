@@ -30,7 +30,7 @@ COMMERCIAL_MEMBERS = (
 )
 SECTION_NOTES = {
     'commercial': (
-        'Comercial reúne Clientes; Propuestas, Diagnósticos y Consultoría y asesoría; y Configuración '
+        'Comercial reúne Clientes; Propuestas, Diagnósticos, Consultoría y asesoría y Calculadora de requerimientos; y Configuración '
         '(Defaults y entregabilidad email). Paquetes de requerimientos y módulos adicionales '
         'se administran en Nuestra oferta (offerings). Los programas y sus '
         'contratos se administran en Programas (programs).'

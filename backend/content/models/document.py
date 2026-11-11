@@ -251,6 +251,11 @@ class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
             ),
         ]
 
+    def delete(self, *args, **kwargs):
+        from content.services.calculator_documents import protect_delete
+        protect_delete(self)
+        return super().delete(*args, **kwargs)
+
     def __str__(self):
         return self.title
 
@@ -268,6 +273,8 @@ class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
         return is_contract_mirror(self)
 
     def save(self, *args, **kwargs):
+        from content.services.calculator_documents import protect_save
+        protect_save(self)
         if not self.slug:
             self.slug = safe_slug(self.title)
         super().save(*args, **kwargs)

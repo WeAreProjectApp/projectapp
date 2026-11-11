@@ -152,6 +152,8 @@ Automatizadas exclusivamente en CI. La reprueba manual requiere dupla y SHA serv
 > también fuera del paquete vigente. Propuestas, Gestor y MCP conservan identidad
 > y archivos; regresiones de transición y recarga preparadas para CI.
 
+> **Calculadora de requerimientos — implementación de sesión, 2026-11-05:** Comercial administra definición, señales, parámetros internos y documento sincronizado por panel/MCP. Los proyectos conservan variantes en Borrador/Aprobada con aprobación del equipo y PDF congelado; actualizar la general no altera acuerdos anteriores. El chat externo clasifica XS–XL/Proyecto, sin ejecutar un modelo en el panel. Los cierres preservan evidencia, correcciones y definición exacta; sus listados/detalles se paginan. Los precios XS/S/M se comparten con Paquetes y las ofertas emitidas quedan fijas. Valores provisionales hasta tener mediciones reales. QA local aprobado: 27 casos de navegador por lotes, incluidos cinco perfiles de pantalla, contratos MCP, componentes y servidor; evidencia y límites en `docs/audits/2026-11-05-requirement-calculator-qa.md`. Entrega y CI se verifican en PR #555; sin migraciones ni despliegue sobre el servicio.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

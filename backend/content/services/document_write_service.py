@@ -16,6 +16,9 @@ def document_etag(document):
 
 def movement_blockers(document):
     from content.services.proposal_shared_documents import binding_for
+    from content.services.calculator_documents import managed
+    if managed(document):
+        return ['requirement_calculator']
     if binding_for(document):
         return ["proposal_shared_source"]
     if is_contract_mirror(document):
