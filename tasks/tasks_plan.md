@@ -1,3 +1,5 @@
+> **Contratación estatal interna — 2026-11-05:** desarrollo independiente en rama de sesión: panel/API/MCP, filtros OR palabras/UNSPSC más criterios AND, alertas inmediata/diaria/semanal con destinatarios editables y seguimiento con análisis externo. Pruebas locales por capas aprobadas; entrega y CI en el PR #552. Operación en `docs/PROCUREMENT.md`; sin lectura de buzones ni IA interna.
+
 > **Enlaces seguros — 2026-10-26:** jerarquía propia, navegación compartida,
 > clasificación inicial por proyecto y MCP de administración completo.
 > Migraciones mediante deploy; entrega y validación se verifican en el PR.

@@ -293,6 +293,13 @@ const panelCapabilities = [
     ],
     { icon: 'shield', stage: 'Gobierno' },
   ),
+  capability('panel-procurement', 'Contratación estatal',
+    'Oportunidades SECOP II, alertas filtradas y seguimiento del equipo.',
+    'Permite encontrar procesos y registrar por qué interesan mediante panel o asistente externo.',
+    [feature('panel-procurement-workspace', 'Buscar y seguir oportunidades públicas',
+      'Consulta y exporta procesos, guarda búsquedas, administra destinatarios y frecuencias, revisa entregas y registra análisis y descartes con historial. Un único MCP ofrece las mismas acciones; el asistente externo lee el correo.',
+      'Centraliza oportunidades y decisiones sin IA interna.', ['/panel/procurement', '/panel/procurement/:id'], { icon: 'search' })],
+    { icon: 'search' }),
 ]
 
 const platformCapabilities = [
@@ -608,7 +615,7 @@ export const viewCapabilityCatalog = {
     space('panel-internal', 'Panel interno',
       'El espacio donde el equipo dirige ventas, contenido, proyectos, comunicaciones y finanzas.',
       'Concentra la operación que sostiene cada relación comercial y cada entrega.',
-      ['admin-panel', 'panel-accounting', 'panel-mcps'], panelCapabilities,
+      ['panel-procurement', 'admin-panel', 'panel-accounting', 'panel-mcps'], panelCapabilities,
       [
         { from: 'panel-overview-work', to: 'panel-commercial', label: 'prioriza oportunidades' },
         { from: 'panel-offerings', to: 'panel-commercial', label: 'aporta soluciones' },

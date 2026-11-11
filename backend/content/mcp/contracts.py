@@ -1633,6 +1633,19 @@ MCP_MODEL_CONTRACTS['offerings'] = tuple(
 )
 MCP_MODEL_CONTRACTS['programs'] = ()
 
+MCP_MODEL_CONTRACTS['procurement'] = (
+    _contract('procurement.Settings', read_only='id updated_at', read_write='sync_enabled email_enabled sync_time daily_time weekly_time weekly_day lookback_days'),
+    _contract('procurement.Opportunity', read_only='id source_id reference title description entity_name entity_nit department city method contract_type source_status budget unspsc_code published_at source_updated_at closing_at source_url first_seen_at synced_at', excluded={'source_data': 'Respuesta pública original interna; el MCP recibe campos normalizados.'}),
+    _contract('procurement.Classification', read_only='id opportunity owner previous_state updated_at', read_write='state notes'),
+    _contract('procurement.Activity', read_only='id classification actor action snapshot created_at', excluded={'credential': 'Atribución interna de la credencial, nunca su secreto.'}),
+    _contract('procurement.SavedSearch', read_only='id owner updated_at', read_write='name filters is_favorite'),
+    _contract('procurement.Alert', read_only='id version created_by updated_at', read_write='name filters recipients frequency is_active'),
+    _contract('procurement.SyncRun', read_only='id status processed created errors message requested_by started_at finished_at created_at', excluded={'cursor': 'Cursor interno reanudable; no es editable.'}),
+    _contract('procurement.Delivery', read_only='id opportunity_count recipient frequency status attempts error snapshot created_at attempted_at sent_at'),
+    _contract('procurement.Notification', excluded=_excluded('Elegibilidad y vinculación de outbox administradas sólo por servicios; consultar entregas para la evidencia enviada.', 'id alert opportunity recipient delivery filters_snapshot status created_at')),
+    _contract('procurement.ScheduleSlot', excluded=_excluded('Reserva interna para evitar ejecuciones duplicadas del reloj.', 'id kind day created_at')),
+)
+
 for canonical, (_, sources) in MODULE_CONNECTORS.items():
     grouped = {}
     for source in sources:

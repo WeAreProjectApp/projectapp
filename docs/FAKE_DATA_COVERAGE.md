@@ -347,3 +347,7 @@ Para repetir el mismo conjunto, desde esa copia y manteniendo `FAKE_DATA_ROOT`:
 usa SQLite y storage propios, captura correo y no conecta Redis. Rechaza un
 `DJANGO_ENV=production` exportado. Los nombres de archivo y las claves privadas
 no forman parte del contrato de replay; el SHA, la semilla y la fecha sí.
+
+## Contratación estatal
+
+`create_fake_procurement` integra oportunidades ficticias, cuatro estados de seguimiento, una búsqueda y una alerta inactiva en la actualización general. Sin red ni envíos. Comparte `FAKE_DATA_ALLOWED` y reloj reproducible; `delete_fake_data --confirm` limpia su grafo antes de retirar dueños, preservando configuración y conector.

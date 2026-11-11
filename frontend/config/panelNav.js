@@ -121,6 +121,9 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Configuración', href: lp('/panel/accounting/settings'), icon: 'settings' },
       ],
     },
+    { id: 'procurement', label: 'Contratación estatal', items: [
+      { label: 'Oportunidades SECOP', href: lp('/panel/procurement'), icon: 'search' },
+    ] },
     {
       // After `accounting` on purpose: the Hostings entry below points at
       // the accounting page, and the breadcrumb resolver walks sections in

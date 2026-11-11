@@ -93,6 +93,10 @@ validación manual, integración ni despliegue.
 > obligatoria del historial de facturación y permiso MCP explícito. Migración
 > accounts.0091 pendiente de deploy; automatización de pruebas sólo en CI.
 
+# Contratación estatal — implementación validada localmente (2026-11-05)
+
+Desarrollo independiente en `feat/05112026-procurement-module`. Referencia funcional GIM en GitHub `8ff8c12`; no se traslada código del cliente. App propia, panel, filtros únicos, alertas con destinatarios por alerta y MCP único. El análisis y la lectura del correo pertenecen al asistente externo. Sin IA interna ni recordatorios por cierre. Validación local: 43 casos backend, 12 unitarios, 20 funcionales y 10 de pantalla aprobados. Entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552); no acredita despliegue.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

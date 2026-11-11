@@ -6145,6 +6145,13 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-portfolio-delete` | admin | P2 | display,success | 1 |
 | `admin-portfolio-edit` | admin | P2 | display,success,error | 1 |
 | `admin-portfolio-list` | admin | P2 | display | 1 |
+| `admin-procurement-alerts` | procurement | P1 | display,success,error,failure | — |
+| `admin-procurement-classification` | procurement | P1 | display,success,error,failure | — |
+| `admin-procurement-deliveries` | procurement | P2 | display,success,error,failure | — |
+| `admin-procurement-filters-export` | procurement | P1 | display,success,error,failure | — |
+| `admin-procurement-opportunity-list` | procurement | P1 | display,success,failure | — |
+| `admin-procurement-saved-searches` | procurement | P2 | display,success,error,failure | — |
+| `admin-procurement-settings-sync` | procurement | P2 | display,success,error,failure | — |
 | `admin-project-access-detail` | admin | P1 | display,failure | — |
 | `admin-project-access-field-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-notes` | admin | P2 | display,success,error,failure | — |
@@ -8211,6 +8218,79 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 | success | Dictar una pregunta, revisar la transcripción en el campo y enviarla; la respuesta se crea con el mismo recibo y el marcador baja sólo una unidad. |
 | error | Alcanzar el cupo de la ventana móvil e intentar enviar o empezar una grabación; los controles permanecen bloqueados y se informa cuándo vuelve a haber cupo. |
 | failure | Fallar transcripción, envío o sondeo; se conserva la posibilidad de editar o descartar la grabación y un reintento con el mismo identificador no consume una segunda unidad. |
+
+
+## Section 39 — Contratación estatal (Nov 5, 2026)
+
+### FLOW: `admin-procurement-opportunity-list`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff navigates from the panel to the paginated SECOP II list, reads source status, opens a process and retries a failed load.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-filters-export`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff applies keyword OR UNSPSC filters with other criteria, uses URL state, clears and exports the same query. Invalid ranges and request failures remain visible.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-classification`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-saved-searches`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P2
+- **Routes:** `/panel/procurement`
+- **Description:** Staff creates, edits, applies, favorites and confirms deletion of named searches. Alert creation copies criteria. Invalid names and failed requests preserve the form.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-alerts`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff administers independent filters, one to ten recipients, immediate/daily/weekly frequency, activation and matching-process preview. Recipient validation and failed saves remain visible.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-settings-sync`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P2
+- **Routes:** `/panel/procurement`
+- **Description:** Staff requests public synchronization and configures Bogotá schedules, lookback, automatic updates and global email activation. Invalid settings and failures are explicit.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-deliveries`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P2
+- **Routes:** `/panel/procurement`
+- **Description:** Staff reviews paginated deliveries, attempts, errors and sent snapshots, then confirms retries. Uncertain sends warn to inspect the mailbox; rejected retries retain their dialog.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
 
 ## Unsectioned flows

@@ -368,6 +368,18 @@
         "platform-appi-availability",
         "platform-appi-shared-quota-audio"
       ]
+    },
+    {
+      "title": "Section 39 — Contratación estatal (Nov 5, 2026)",
+      "flows": [
+        "admin-procurement-opportunity-list",
+        "admin-procurement-filters-export",
+        "admin-procurement-classification",
+        "admin-procurement-saved-searches",
+        "admin-procurement-alerts",
+        "admin-procurement-settings-sync",
+        "admin-procurement-deliveries"
+      ]
     }
   ]
 }
