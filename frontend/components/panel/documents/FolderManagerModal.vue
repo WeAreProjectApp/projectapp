@@ -155,7 +155,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, toRef, useId, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, toRef, useId, watch } from 'vue';
 import { useFocusTrap } from '~/composables/useFocusTrap';
 import DocumentFolderSelect from '~/components/panel/documents/DocumentFolderSelect.vue';
 import FolderManagerTree from '~/components/panel/documents/FolderManagerTree.vue';
@@ -188,6 +188,23 @@ useFocusTrap(dialogRef, {
   active: toRef(props, 'modelValue'),
   paused: childOpen,
   initialFocus: () => dialogRef.value?.querySelector('[data-testid="folder-manager-new-name"]'),
+});
+
+// BaseModal closes before this parent's inert attribute is removed. Restore
+// the nested opener after the DOM update, when it can receive focus again.
+let childOpener = null;
+watch(childOpen, async (open, wasOpen) => {
+  if (typeof document === 'undefined') return;
+  if (open) {
+    childOpener = document.activeElement;
+  } else if (wasOpen) {
+    const opener = childOpener;
+    childOpener = null;
+    await nextTick();
+    if (props.modelValue && !childOpen.value && opener && document.contains(opener)) {
+      opener.focus();
+    }
+  }
 });
 
 let previousOverflow = null;

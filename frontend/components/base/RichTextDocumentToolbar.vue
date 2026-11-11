@@ -88,7 +88,7 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value;
     <div class="flex flex-wrap items-center gap-2">
       <div class="flex flex-wrap items-center gap-1" role="group" :aria-label="t('richText.textGroup')">
         <span class="w-full px-1 text-xs font-medium text-text-subtle">{{ t('richText.textGroup') }}</span>
-        <BaseButton v-for="tool in textTools" :key="tool.name" variant="ghost" size="sm" icon-only :aria-label="t(`richText.${tool.name}`)" :title="t(`richText.${tool.name}`)" :aria-pressed="active(tool.name)" :disabled="blocked" :disabled-reason="t('richText.readOnly')" :class="{ 'bg-surface-raised': active(tool.name) }" @mousedown.prevent @click="emit('run', tool.command)">
+        <BaseButton v-for="tool in textTools" :key="tool.name" :variant="active(tool.name) ? 'secondary' : 'ghost'" size="sm" icon-only :aria-label="t(`richText.${tool.name}`)" :title="t(`richText.${tool.name}`)" :aria-pressed="active(tool.name)" :disabled="blocked" :disabled-reason="t('richText.readOnly')" @mousedown.prevent @click="emit('run', tool.command)">
           <component :is="tool.icon" class="h-5 w-5" aria-hidden="true" />
         </BaseButton>
         <BaseButton variant="ghost" size="sm" icon-only :aria-label="t('richText.link')" :title="t('richText.link')" :aria-pressed="active('link')" :disabled="blocked" :disabled-reason="t('richText.readOnly')" @mousedown.prevent @click="emit('link')"><LinkIcon class="h-5 w-5" aria-hidden="true" /></BaseButton>
@@ -99,12 +99,12 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value;
           <option value="p">{{ t('richText.paragraph') }}</option>
           <option v-for="level in [1, 2, 3, 4, 5, 6]" :key="level" :value="level">{{ t('richText.headingLevel', { level }) }}</option>
         </select>
-        <BaseButton v-for="tool in paragraphTools" :key="tool.name" variant="ghost" size="sm" icon-only :aria-label="t(`richText.${tool.name}`)" :title="t(`richText.${tool.name}`)" :aria-pressed="active(tool.name)" :disabled="blocked" :disabled-reason="t('richText.readOnly')" :class="{ 'bg-surface-raised': active(tool.name) }" @mousedown.prevent @click="emit('run', tool.command)"><component :is="tool.icon" class="h-5 w-5" aria-hidden="true" /></BaseButton>
+        <BaseButton v-for="tool in paragraphTools" :key="tool.name" :variant="active(tool.name) ? 'secondary' : 'ghost'" size="sm" icon-only :aria-label="t(`richText.${tool.name}`)" :title="t(`richText.${tool.name}`)" :aria-pressed="active(tool.name)" :disabled="blocked" :disabled-reason="t('richText.readOnly')" @mousedown.prevent @click="emit('run', tool.command)"><component :is="tool.icon" class="h-5 w-5" aria-hidden="true" /></BaseButton>
         <BaseButton v-for="tool in [{ name: 'outdent', command: 'liftListItem', icon: ArrowUturnLeftIcon }, { name: 'indent', command: 'sinkListItem', icon: ArrowUturnRightIcon }]" :key="tool.name" variant="ghost" size="sm" icon-only :aria-label="t(`richText.${tool.name}`)" :title="t(`richText.${tool.name}`)" :disabled="!can(tool.command)" :disabled-reason="disabled ? t('richText.readOnly') : t('richText.listSelection')" @mousedown.prevent @click="emit('run', tool.command, 'listItem')"><component :is="tool.icon" class="h-5 w-5" aria-hidden="true" /></BaseButton>
       </div>
       <div class="flex flex-wrap items-center gap-1" role="group" :aria-label="t('richText.alignmentGroup')">
         <span class="w-full px-1 text-xs font-medium text-text-subtle">{{ t('richText.alignmentGroup') }}</span>
-        <BaseButton v-for="alignment in alignments" :key="alignment.name" variant="ghost" size="sm" icon-only :aria-label="t(`richText.${alignment.name}`)" :title="t(`richText.${alignment.name}`)" :aria-pressed="active({ textAlign: alignment.name })" :disabled="blocked" :disabled-reason="t('richText.readOnly')" :class="{ 'bg-surface-raised': active({ textAlign: alignment.name }) }" @mousedown.prevent @click="emit('run', 'setTextAlign', alignment.name)"><component :is="alignment.icon" class="h-5 w-5" aria-hidden="true" /></BaseButton>
+        <BaseButton v-for="alignment in alignments" :key="alignment.name" :variant="active({ textAlign: alignment.name }) ? 'secondary' : 'ghost'" size="sm" icon-only :aria-label="t(`richText.${alignment.name}`)" :title="t(`richText.${alignment.name}`)" :aria-pressed="active({ textAlign: alignment.name })" :disabled="blocked" :disabled-reason="t('richText.readOnly')" @mousedown.prevent @click="emit('run', 'setTextAlign', alignment.name)"><component :is="alignment.icon" class="h-5 w-5" aria-hidden="true" /></BaseButton>
       </div>
     </div>
     <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-border-default pt-2">
