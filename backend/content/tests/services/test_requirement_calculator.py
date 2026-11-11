@@ -411,6 +411,22 @@ def test_unassigned_project_context_warns(calculator_state, calculator_project):
     assert "no tiene calculadora aprobada" in context["warning"]
 
 
+def test_explicit_project_draft_context_identifies_unapproved_rules(
+    calculator_project, project_draft,
+):
+    """Fails if context treats an explicit unapproved agreement as the general calculator."""
+    context = calculator.calculator_context(
+        project_id=calculator_project.pk,
+        project_version_id=project_draft["id"],
+    )
+
+    assert context["project_version_id"] == project_draft["id"]
+    assert context["definition"] == project_draft["definition"]
+    assert context["warning"] == (
+        "Borrador explícito: sus condiciones todavía no están aprobadas."
+    )
+
+
 def test_recorded_closure_uses_actual_cost(calculator_state, calculator_admin):
     """Fails if an accepted closure stops contributing its measured execution cost."""
     config = calculator_state["definition"]
