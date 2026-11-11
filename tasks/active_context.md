@@ -148,6 +148,10 @@ Implementación en PR #572, rama `fix/07112026-pa241-244-navigation-clients`, ba
 
 Automatizadas exclusivamente en CI. La reprueba manual requiere dupla y SHA servido confirmados; solicitud de asignación enviada a Backlog. No acredita validación visual, cambios de datos, migraciones, merge ni despliegue. PA-225/PA-216 y la dirección persistida mantienen su alcance propio. Guion: `docs/audits/2026-11-07-pa241-244.md`.
 
+> **PA-246 — 2026-11-07:** el resumen compartido expone el título del documento
+> también fuera del paquete vigente. Propuestas, Gestor y MCP conservan identidad
+> y archivos; regresiones de transición y recarga preparadas para CI.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

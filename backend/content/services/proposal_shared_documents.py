@@ -114,9 +114,16 @@ def summary(binding, *, package=None, current_hash=None):
     revisions = cache.get('revisions')
     if revisions is None:
         revisions = binding.revisions.select_related('package').order_by('-pk')
+    revisions = list(revisions)
+    latest_revision = max(revisions, key=lambda row: row.pk, default=None)
+    title = (binding.document.title
+             or (binding.current_file.title if binding.current_file_id else '')
+             or (latest_revision.title if latest_revision else '')
+             or f"{'Document' if binding.proposal.language == 'en' else 'Documento'} #{binding.document_id}")
     return {
         'can_replace_binary': can_replace_binary(binding),
         'proposal_id': binding.proposal_id, 'document_id': binding.document_id,
+        'title': title,
         'source_key': binding.source_key, 'is_current': binding.is_current,
         'package_number': package.number if package else None,
         'current_file_id': binding.current_file_id,
