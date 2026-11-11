@@ -8,6 +8,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_CREATE, ADMIN_DOCUMENT_EDIT } from '../helpers/flow-tags.js';
+import { VIEWPORTS } from '../helpers/viewports.js';
 
 const authCheck = {
   status: 200,
@@ -33,6 +34,9 @@ async function mockDocumentEditorApi(page, state, onCreate = null) {
     if (apiPath === `documents/${state.document.id}/update/` && method === 'PATCH') {
       state.document = { ...state.document, ...route.request().postDataJSON() };
       return { status: 200, contentType: 'application/json', body: JSON.stringify(state.document) };
+    }
+    if (apiPath === 'documents/') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...state.document, content_excerpt: state.document.content_markdown, active_states: [] }]) };
     }
     if (
       apiPath === `documents/${state.document.id}/communications/`
@@ -68,6 +72,22 @@ async function mockDocumentEditorApi(page, state, onCreate = null) {
 
 function documentEditor(page) {
   return page.getByTestId('doc-markdown-editor');
+}
+
+function contrastRatio([r, g, b], [backR, backG, backB]) {
+  const luminance = ([red, green, blue]) => [red, green, blue].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  }).reduce((total, channel, index) => total + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  const [light, dark] = [luminance([r, g, b]), luminance([backR, backG, backB])].sort((a, b) => b - a);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+async function setPanelTheme(page, target) {
+  const isDark = await page.locator('html').evaluate((node) => node.classList.contains('dark'));
+  if ((target === 'dark') !== isDark) {
+    await page.getByRole('button', { name: target === 'dark' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro' }).first().click();
+  }
 }
 
 async function turnSourceIntoFormattedDocument(page) {
@@ -254,5 +274,104 @@ test.describe('Editorial rich text in documents', () => {
       markdown: '**Alcance aprobado**\n\n- Primero\n- Segundo',
       text_formats: { '/content_markdown': 'markdown_html_v1' },
     });
+  });
+
+  test('preserves an active Código control through source reload', {
+    // Bug caught: the active <> glyph blended into the dark toolbar and code formatting vanished after reopening.
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const state = { document: { ...documentBase, content_markdown: 'Normal codigo' } };
+    await mockDocumentEditorApi(page, state);
+    await page.goto('/es-co/panel/documents/91/edit', { waitUntil: 'domcontentloaded' });
+
+    const editor = documentEditor(page);
+    const visual = editor.getByTestId('rich-text-visual-input');
+    await visual.click();
+    await visual.evaluate((node) => {
+      const text = document.createTreeWalker(node, NodeFilter.SHOW_TEXT).nextNode();
+      const start = text.textContent.indexOf('codigo');
+      const range = document.createRange();
+      range.setStart(text, start); range.setEnd(text, start + 'codigo'.length);
+      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    });
+    const code = editor.getByRole('button', { name: /^(Código|Code)$/ });
+    await code.click();
+    await expect(code).toHaveAttribute('aria-pressed', 'true');
+    for (const profile of ['compact', 'portrait', 'desktop']) {
+      await page.setViewportSize(VIEWPORTS[profile]);
+      for (const target of ['light', 'dark']) {
+        await setPanelTheme(page, target);
+        await expect(code).toBeVisible();
+        await expect(code).toHaveAttribute('aria-pressed', 'true');
+        const colors = await code.evaluate((node) => {
+          const rgb = (value) => value.match(/\d+/g).slice(0, 3).map(Number);
+          const style = getComputedStyle(node);
+          return { foreground: rgb(style.color), background: rgb(style.backgroundColor) };
+        });
+        expect(contrastRatio(colors.foreground, colors.background), `${profile}/${target} Código glyph`).toBeGreaterThanOrEqual(3);
+      }
+    }
+    await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(editor.getByTestId('rich-text-source-input')).toHaveValue(/<code>|`codigo`/);
+
+    await page.getByTestId('doc-save').click();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await documentEditor(page).getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(documentEditor(page).getByTestId('rich-text-source-input')).toHaveValue(/<code>|`codigo`/);
+  });
+
+  for (const style of ['professional', 'friendly']) test(`renders ${style} paragraph headers legibly with colspan`, {
+    // Bug caught: HTML saved from Visual gave TH > P its body text color, making table headings unreadable.
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    const state = { document: { ...documentBase, template_style: style, content_markdown: '<table><thead><tr><th><p>Elemento</p></th><th colspan="2"><p>Cabecera combinada</p></th></tr></thead></table>' } };
+    await mockDocumentEditorApi(page, state);
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'Gestor Documental', exact: true }).click();
+    await page.getByTestId('document-open-91').click();
+
+    await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
+    const header = page.getByRole('columnheader', { name: 'Cabecera combinada' });
+    await expect(header).toHaveAttribute('colspan', '2');
+    for (const target of ['light', 'dark']) {
+      await setPanelTheme(page, target);
+      const colors = await header.locator('p').evaluate((node) => {
+        const rgb = (value) => value.match(/\d+/g).slice(0, 3).map(Number);
+        return { foreground: rgb(getComputedStyle(node).color), background: rgb(getComputedStyle(node.parentElement).backgroundColor) };
+      });
+      expect(contrastRatio(colors.foreground, colors.background), `${target} table header`).toBeGreaterThanOrEqual(4.5);
+    }
+    await expect(page.getByRole('columnheader', { name: 'Elemento' })).toHaveText('Elemento');
+    await page.getByRole('tab', { name: 'Editar', exact: true }).click();
+    await documentEditor(page).getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await documentEditor(page).getByTestId('rich-text-source-input').fill(`${state.document.content_markdown}\n\nControl guardado`);
+    await page.getByTestId('doc-save').click();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
+    await expect(page.getByRole('columnheader', { name: 'Cabecera combinada' })).toHaveAttribute('colspan', '2');
+    await expect(page.getByRole('columnheader', { name: 'Elemento' })).toHaveText('Elemento');
+  });
+
+  test('renders escaped punctuation in the saved gallery excerpt', {
+    // Bug caught: card previews displayed a Markdown escape before a normal period after reopening a document.
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const state = { document: { ...documentBase } };
+    await mockDocumentEditorApi(page, state);
+    await page.goto('/es-co/panel/documents/91/edit', { waitUntil: 'domcontentloaded' });
+    const editor = documentEditor(page);
+    await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await editor.getByTestId('rich-text-source-input').fill('Texto de control sin formato\\.\n\n`C:\\ruta`');
+    await page.getByTestId('doc-save').click();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await documentEditor(page).getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(documentEditor(page).getByTestId('rich-text-source-input')).toHaveValue('Texto de control sin formato\\.\n\n`C:\\ruta`');
+
+    await page.getByTestId('doc-cancel').click();
+    await page.getByTestId('doc-view-grid').click();
+    const card = page.getByTestId('document-card-91');
+    await expect(card).toContainText('Texto de control sin formato.');
+    await expect(card).not.toContainText('formato\\.');
+    await expect(card).toContainText('C:\\ruta');
   });
 });

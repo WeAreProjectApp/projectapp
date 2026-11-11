@@ -7,6 +7,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_NAVIGATION } from '../helpers/flow-tags.js';
+import { VIEWPORTS } from '../helpers/viewports.js';
 
 test.setTimeout(60_000);
 
@@ -225,7 +226,11 @@ function documentRowsFor(query) {
   return [entityDocument, unassignedDocument, ownFolderDocument];
 }
 
-async function setupNavigationApi(page, { navigationFailures = 0 } = {}) {
+async function setupNavigationApi(page, {
+  navigationFailures = 0,
+  folders = [PROJECT_ROOT, PROJECT_PHASE, OWN_FOLDER],
+  navigation = navigationPayload,
+} = {}) {
   let preferenceMode = 'project';
   let navigationAttempts = 0;
   const documentRequests = [];
@@ -246,11 +251,11 @@ async function setupNavigationApi(page, { navigationFailures = 0 } = {}) {
       if (navigationAttempts <= navigationFailures) {
         return jsonResponse({ detail: 'No pudimos cargar la navegación.' }, 503);
       }
-      return jsonResponse(navigationPayload);
+      return jsonResponse(navigation);
     }
     if (apiPath === 'documents/504/detail/') return jsonResponse(projectPhaseDocument);
     if (apiPath === 'document-folders/') {
-      return jsonResponse([PROJECT_ROOT, PROJECT_PHASE, OWN_FOLDER]);
+      return jsonResponse(folders);
     }
     if (apiPath === 'documents/counts/') {
       return jsonResponse({
@@ -460,6 +465,61 @@ test.describe('Admin document project/client navigation', () => {
       .toHaveAttribute('aria-current', 'page');
     await expect(page.getByTestId(`document-open-${projectPhaseDocument.id}`))
       .toBeFocused();
+  });
+
+  test('contains an unbroken project name inside the folder header', {
+    // Bug caught: a 200-character project name expanded the document page beyond a phone or tablet viewport.
+    tag: [...ADMIN_DOCUMENT_NAVIGATION, '@role:admin', '@outcome:success', '@responsive:documents'],
+  }, async ({ page }) => {
+    const longProjectName = 'Proyecto'.repeat(25);
+    const longFolder = { ...PROJECT_PHASE, project_name: longProjectName };
+    const longNavigation = {
+      ...navigationPayload,
+      projects: navigationPayload.projects.map((project) => (
+        project.id === 41 ? { ...project, name: longProjectName } : project
+      )),
+    };
+    await setupNavigationApi(page, { folders: [PROJECT_ROOT, longFolder, OWN_FOLDER], navigation: longNavigation });
+    await openDocumentsFromPanel(page);
+
+    await page.getByTestId('documents-navigation-project-41').click();
+    await page.getByTestId(`folder-open-${PROJECT_PHASE.id}`).click();
+    await expect(page.getByTestId('folder-header-project')).toHaveText(longProjectName);
+    await expect(page.getByTestId(`document-open-${projectPhaseDocument.id}`)).toContainText('Documento de Fase 1.5');
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    for (const profile of ['compact', 'portrait']) {
+      await page.setViewportSize(VIEWPORTS[profile]);
+      const canvas = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+      }));
+      expect(canvas.scrollWidth, `${profile} must keep the document canvas contained`).toBeLessThanOrEqual(canvas.clientWidth + 1);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('folder-header-project')).toHaveText(longProjectName);
+      const loadedCanvas = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+      }));
+      expect(loadedCanvas.scrollWidth).toBeLessThanOrEqual(loadedCanvas.clientWidth + 1);
+      await expect(page.getByTestId(`document-open-${projectPhaseDocument.id}`)).toBeVisible();
+      await page.getByTestId('folder-drawer-trigger').click();
+      const drawer = page.getByTestId('folder-drawer');
+      await expect(drawer).toContainText('Fase 1.5');
+      await drawer.getByRole('button', { name: 'Cerrar', exact: true }).click();
+    }
+    await expect(page.getByTestId('folder-header-name')).toHaveText('Fase 1.5');
+    const normalProjectName = navigationPayload.projects.find((project) => project.id === 41).name;
+    longFolder.project_name = normalProjectName;
+    longNavigation.projects.find((project) => project.id === 41).name = normalProjectName;
+    await page.setViewportSize(VIEWPORTS.compact);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('folder-header-project')).toHaveText(normalProjectName);
+    const normalCanvas = await page.evaluate(() => ({
+      width: document.documentElement.clientWidth,
+      scroll: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+    }));
+    expect(normalCanvas.scroll).toBeLessThanOrEqual(normalCanvas.width + 1);
   });
 
   test('requests server pages for project-owned folder navigation', {

@@ -290,7 +290,7 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
 .editorial-body { min-height: 0; overflow-y: auto; flex: 1 1 auto; }
 .editorial-editor > textarea { flex: 1 1 auto; }
 .editor-tool { display: inline-flex; min-height: 2rem; min-width: 2rem; align-items: center; justify-content: center; gap: .25rem; border-radius: .5rem; padding: .25rem .5rem; }
-.editor-tool:hover:not(:disabled), .editor-tool[aria-pressed='true'] { background: var(--color-surface-muted, #e6efef); color: var(--color-text-default, #002921); }
+.editor-tool:hover:not(:disabled), .editor-tool[aria-pressed='true'] { background: var(--color-surface-muted); color: var(--color-text); }
 .editor-tool:focus-visible { outline: 2px solid var(--color-focus-ring, #059669); outline-offset: 2px; }
 .editor-tool:disabled { opacity: .4; cursor: not-allowed; }
 .editorial-body :deep(.tiptap) { min-height: 8rem; padding: .75rem; outline: none; overflow-wrap: anywhere; }

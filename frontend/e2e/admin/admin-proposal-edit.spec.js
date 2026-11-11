@@ -430,4 +430,51 @@ test.describe('Admin Proposal Edit', () => {
     const savedReq = capturedSectionPayload.content_json.epics[0].requirements[0];
     expect(savedReq.linked_item_ids).toEqual(['item-views-home', 'item-views-contacto']);
   });
+
+  for (const scenario of [
+    { name: 'expired proposal', zone: 'America/Bogota', now: '2026-11-07T04:41:00-05:00', expiresAt: '2026-10-15T19:30:00-05:00', expected: '2026-11-14T19:30' },
+    { name: 'future proposal', zone: 'America/Bogota', now: '2026-11-07T04:41:00-05:00', expiresAt: '2026-11-10T19:30:00-05:00', expected: '2026-11-14T19:30' },
+    { name: 'year boundary', zone: 'UTC', now: '2026-12-28T23:59:00Z', expiresAt: '2026-12-20T19:30:00Z', expected: '2027-01-04T19:30' },
+    { name: 'daylight saving boundary', zone: 'America/New_York', now: '2026-03-07T23:59:00-05:00', expiresAt: '2026-03-05T19:30:00-05:00', expected: '2026-03-14T19:30' },
+  ]) test.describe(`calendar expiry: ${scenario.name}`, () => {
+    test.use({ timezoneId: scenario.zone });
+
+    test('preserves seven calendar days after reopening the proposal', {
+      // Bug caught: seven dates became eight days when hour differences were rounded.
+      tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      await page.clock.install({ time: new Date(scenario.now) });
+      const state = { proposal: { ...baseProposal, expires_at: scenario.expiresAt } };
+      await mockApi(page, async ({ apiPath, method, route }) => {
+        if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
+        if (apiPath === 'proposals/1/detail/') return { status: 200, contentType: 'application/json', body: JSON.stringify(state.proposal) };
+        if (apiPath === 'proposals/1/update/' && method === 'PATCH') {
+          state.proposal = { ...state.proposal, ...route.request().postDataJSON() };
+          return { status: 200, contentType: 'application/json', body: JSON.stringify(state.proposal) };
+        }
+        return null;
+      });
+      await page.goto('/es-co/panel/proposals/1/edit', { waitUntil: 'domcontentloaded' });
+      const date = page.getByTestId('proposal-expiry-date');
+      const days = page.getByTestId('proposal-expiry-days');
+      await expect(date).toHaveValue(/T19:30$/);
+      await expect(page.getByTestId('proposal-unsaved-notice')).toHaveCount(0);
+      const original = await date.inputValue();
+      await days.fill('7');
+      await date.click();
+      await expect(days).toHaveValue('7');
+      await expect(date).toHaveValue(scenario.expected);
+      await expect(page.getByTestId('proposal-unsaved-notice')).toBeVisible();
+      await date.fill(original);
+      await days.click();
+      await expect(page.getByTestId('proposal-unsaved-notice')).toHaveCount(0);
+      await days.fill('7');
+      await page.getByTestId('proposal-edit-submit').click();
+      await expect(page.getByTestId('proposal-unsaved-notice')).toHaveCount(0);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('proposal-expiry-days')).toHaveValue('7');
+      await expect(page.getByTestId('proposal-expiry-date')).toHaveValue(scenario.expected);
+      await expect(page.getByTestId('proposal-unsaved-notice')).toHaveCount(0);
+    });
+  });
 });

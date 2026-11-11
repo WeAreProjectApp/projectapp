@@ -66,6 +66,10 @@ en `docs/audits/2026-11-06-pa215-settlement-email.md`; automatizadas sólo en CI
 PR, resultado de CI y aceptación DEV se verificarán por separado; esta entrada
 no acredita despliegue ni validación manual.
 
+## Seguimientos PA-235 / PA-238 / PA-239 / PA-240 — 2026-11-07
+
+Implementación en rama propia sobre main y PR #571. Los encabezados contienen nombres largos; Código y cabeceras HTML TH>P conservan contraste; Gestionar carpetas recibe semántica modal y foco coherente; las tarjetas interpretan escapes Markdown sin alterar la fuente; los historiales comparten estados en español. Vencimiento usa días calendario de la zona del navegador con hora conservada, carga sin escritura y conversión local al reabrir. Sin migraciones ni cambios de API. Automatizadas exclusivamente en CI; reprueba manual solicitada por buzón a Backlog para asignar una única dupla al PR. Este registro no acredita CI verde, aprobación de QA, integración ni deploy. Guion: docs/audits/PA-235-238-239-240-handoff.md.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

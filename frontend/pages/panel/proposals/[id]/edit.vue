@@ -463,6 +463,7 @@
 </template>
 
 <script setup>
+import { toLocalDatetime } from '~/utils/proposalExpiry';
 import DashboardRadarDestination from '~/components/panel/dashboard/DashboardRadarDestination.vue';
 import { normalizeEditorialFeatures, remapEditorialArrayFormats } from '~/utils/editorialMetadata';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
@@ -1085,9 +1086,7 @@ function hydrateFormFromProposal() {
     hosting_discount_nine_month: proposal.value.hosting_discount_nine_month ?? 40,
     hosting_discount_semiannual: proposal.value.hosting_discount_semiannual ?? 20,
     hosting_discount_quarterly: proposal.value.hosting_discount_quarterly ?? 10,
-    expires_at: proposal.value.expires_at
-      ? proposal.value.expires_at.slice(0, 16)
-      : '',
+    expires_at: toLocalDatetime(proposal.value.expires_at),
     reminder_days: proposal.value.reminder_days,
     urgency_reminder_days: proposal.value.urgency_reminder_days ?? 15,
     discount_percent: proposal.value.discount_percent ?? 0,
