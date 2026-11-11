@@ -30,6 +30,32 @@ tarjetas. Sin cambios de datos o cálculos. Automatizadas sólo en CI y recorrid
 Chrome coordinado por DevQA; esta nota no acredita validación ni despliegue.
 Alcance y guion: `docs/audits/2026-11-06-pa228-responsive-overflow.md`.
 
+## PA-219 — Corrección de anclajes durante la ronda DEVQA-008 — 2026-11-07
+
+QA devuelve parcialmente el criterio de controles visibles sobre `d012f9e8`:
+la repetición del proyecto desde Ayuda móvil conserva el cajón por encima del
+destino; un resize deja la geometría antigua; la guía general conserva el nodo
+de escritorio oculto al pasar a móvil. Corrección en el mismo worktree/PR567:
+preparar el cajón según destino y observar la distribución mientras dura la guía,
+seleccionando el nodo visible al cruzar el breakpoint y liberando observadores
+al salir. Nuevas regresiones comprueban el recorte SVG y la tarjeta alrededor del
+control real, la reapertura y los acuses terminales. Pruebas sólo en CI.
+
+La ronda manual continúa en su copia `d012f9e8`; esta sesión no modifica runtime,
+datos, terminales ni prepara DEV. La nueva entrega necesita SHA/CI propios y
+acuerdo de reprueba. Detalle y límites (incluida pausa por mouse no acreditada):
+`docs/audits/2026-11-07-pa219-responsive-anchors.md`. Sin aprobación manual ni
+transferencia de verde entre SHAs por este registro.
+
+## PA-219 — Ayuda y recorridos con la identidad real de sesión — 2026-11-06
+
+Corrección en la rama de sesión `fix/06112026-pa219-platform-help`: Ayuda usa
+`user_id`, el identificador publicado por el perfil, para cargar recorridos,
+observar cambios de cuenta y sincronizar el progreso pendiente sin cruzar usuarios.
+Las pruebas del módulo reproducen el perfil sin el alias `id` que ocultaba el fallo.
+Pruebas automatizadas exclusivamente en CI; validación manual coordinada con
+dev-qa sobre el SHA servido. La entrada no acredita CI aprobado ni despliegue.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

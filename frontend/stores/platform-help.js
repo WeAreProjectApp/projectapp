@@ -27,12 +27,12 @@ export const usePlatformHelpStore = defineStore('platform-help', {
     },
     async fetchHelp(projectId) {
       const auth = usePlatformAuthStore()
-      if (!auth.isClient || !auth.user?.id) { this.reset(); return false }
+      if (!auth.isClient || !auth.user?.user_id) { this.reset(); return false }
       const request = ++this.request
-      const userId = auth.user.id
+      const userId = auth.user.user_id
       try {
         const response = await usePlatformApi().get(base, { baseURL: '', params: projectId ? { project_id: projectId } : {} })
-        if (request !== this.request || userId !== auth.user?.id) return false
+        if (request !== this.request || userId !== auth.user?.user_id) return false
         this.userId = userId
         this.tourEnabled = response.data.tour_enabled
         this.videoEnabled = response.data.video_enabled
@@ -49,7 +49,7 @@ export const usePlatformHelpStore = defineStore('platform-help', {
     async flushPending(userId) {
       const queued = pending(userId)
       for (const [id, value] of Object.entries(queued)) {
-        if (usePlatformAuthStore().user?.id !== userId) return
+        if (usePlatformAuthStore().user?.user_id !== userId) return
         try {
           await usePlatformApi().post(`${base}tours/${id}/progress/`, value, { baseURL: '' })
           // Merge with the current queue so a newer acknowledgement isn't lost.
@@ -61,7 +61,7 @@ export const usePlatformHelpStore = defineStore('platform-help', {
     },
     async acknowledge(tour, status, lastStep, projectId, manual = false) {
       const userId = this.userId
-      if (!userId || usePlatformAuthStore().user?.id !== userId) return
+      if (!userId || usePlatformAuthStore().user?.user_id !== userId) return
       const value = { status, revision: tour.revision, last_step: lastStep || '', manual,
         ...(tour.context !== 'general' && projectId ? { project_id: Number(projectId) } : {}) }
       if (!terminal.has(tour.status)) tour.status = status
