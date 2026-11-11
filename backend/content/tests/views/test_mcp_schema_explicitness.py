@@ -1,4 +1,4 @@
-"""Ratchets for the breaking documents 4 / projects 3 input contract sweep."""
+"""Ratchets for the closed documents, projects and data-integrity MCP input contracts."""
 
 from copy import deepcopy
 from unittest.mock import Mock

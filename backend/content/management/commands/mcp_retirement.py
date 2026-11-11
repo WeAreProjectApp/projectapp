@@ -31,8 +31,8 @@ class Command(BaseCommand):
             raise CommandError('El conector no está registrado en esta base.')
         spec = CONNECTORS[connector.slug]
         catalog = options['catalog']
-        if catalog == 'pre_split' and connector.slug != 'commercial':
-            raise CommandError('El catálogo pre_split sólo corresponde a Comercial.')
+        if catalog == 'pre_split' and connector.slug not in {'commercial', 'projects'}:
+            raise CommandError('El catálogo pre_split sólo corresponde a Comercial o Proyectos.')
         if options['migrated_credential']:
             credential = connector.credentials.select_for_update().filter(pk=options['migrated_credential']).first()
             replacements = list(McpCredential.objects.select_related('connector').filter(

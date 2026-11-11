@@ -11,6 +11,7 @@ MODULE_CONNECTORS = {
         'programs', 'partnership-program', 'building-with-us', 'building-on-demand',
     )),
     'projects': ('platform', ('projects',)),
+    'data-integrity': ('data-integrity', ('data-integrity',)),
     'documents': ('documents', ('documents',)),
     'communications': ('communications', ('communications',)),
     'content': ('site', ('content', 'blog', 'linkedin-personal')),
@@ -63,6 +64,8 @@ def tool_owner(name, source_slug):
     """Resolve operation ownership even when a historical slug spans sections."""
     if name in INFRASTRUCTURE_TOOLS:
         return CANONICAL_FOR[source_slug]
+    if name in INTEGRITY_TOOLS:
+        return 'data-integrity'
     if name in FINANCIAL_PROJECT_TOOLS:
         return 'accounting'
     if source_slug in COMMERCIAL_MEMBERS or source_slug in {'offerings', 'programs'}:
@@ -148,3 +151,5 @@ def catalog_problems(connectors, tools_by_slug):
     if set(modules) != {module for module, _ in MODULE_CONNECTORS.values()}:
         problems.append('canonical module set differs from module catalog')
     return problems
+
+INTEGRITY_TOOLS = frozenset({'describe_integrity_rules', 'list_integrity_findings', 'preview_integrity_fixes', 'apply_integrity_fixes', 'list_integrity_operations', 'preview_integrity_operation_undo', 'undo_integrity_operation'})

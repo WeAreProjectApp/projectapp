@@ -622,7 +622,12 @@ def mcp_endpoint(request, slug, token=None):
     if isinstance(payload, dict) and isinstance(payload.get('result'), dict) and (legacy_catalog or hidden_call):
         payload['result'].setdefault('_meta', {})['deprecation'] = {
             'replacement': spec.canonical_area,
-            **({'replacements': ['commercial', 'offerings', 'programs']} if slug == 'commercial' else {}),
+            **({'replacements': ['commercial', 'offerings', 'programs']} if slug == 'commercial' else
+               {'replacements': ['projects', 'data-integrity'],
+                'tool_replacement': 'data-integrity' if isinstance(params, dict) and params.get('name') in {
+                    'describe_integrity_rules', 'list_integrity_findings', 'preview_integrity_fixes',
+                    'apply_integrity_fixes', 'list_integrity_operations', 'preview_integrity_operation_undo',
+                    'undo_integrity_operation'} else 'projects'} if slug == 'projects' else {}),
             'message': 'Este acceso está en retirada; migra al catálogo canónico con una credencial nueva.',
             'minimum_compatibility_days': 30,
         }

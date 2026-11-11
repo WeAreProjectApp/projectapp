@@ -34,9 +34,11 @@ def dashboard_attention(request, kind, record_id=None):
     if kind in ('recurring_due', 'collection_documents_pending') and not request.user.is_superuser:
         return Response({'detail': 'No tienes permiso para consultar estos pagos.'}, status=403)
     today, now = today_bogota(), timezone.now()
-    records = attention_records(kind, today, now)
+    records = attention_records(kind, today, now, include_finance=request.user.is_superuser)
     if record_id is not None:
         obj = get_object_or_404(record_model(kind), pk=record_id)
+        if kind == 'data_integrity' and obj.domain == 'accounting' and not request.user.is_superuser:
+            return Response({'detail': 'Consulta este hallazgo desde Integridad de datos.'}, status=403)
         if kind == 'emails_failed' and obj.delivery_role != obj.DeliveryRole.PRIMARY:
             return Response({'detail': 'Envío no encontrado.'}, status=404)
         if isinstance(records, list):

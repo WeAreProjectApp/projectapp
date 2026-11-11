@@ -146,6 +146,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/panel/dashboard/',
     'frontend/components/stats/',
     'frontend/pages/panel/admins/',
+    'frontend/pages/panel/data-integrity.vue',
     'frontend/pages/panel/index.vue',
     'frontend/pages/panel/tasks/',
     'frontend/pages/panel/views.vue',
@@ -301,6 +302,7 @@ export function responsiveOwnerForView(sectionId, view) {
   const { file, url } = view;
   if (sectionId.startsWith('public-') || view.audience === 'public') return 'public';
   if (sectionId === 'panel-accounting') return 'accounting';
+  if (sectionId === 'panel-data-integrity') return 'dashboard';
   if (sectionId === 'panel-mcps') return 'mcp';
   if (sectionId === 'client-platform') return 'clients';
 

@@ -95,7 +95,7 @@ def retirement_status(connector, *, credential=None, catalog='legacy'):
     usage = McpUsageDaily.objects.filter(connector=connector, legacy=True)
     if pre_split:
         usage = usage.filter(credential__catalog='pre_split')
-    elif connector.slug == 'commercial':
+    elif connector.slug in {'commercial', 'projects'}:
         usage = usage.exclude(credential__catalog='pre_split')
     if credential is not None:
         usage = usage.filter(credential=credential)
@@ -114,7 +114,7 @@ def retirement_status(connector, *, credential=None, catalog='legacy'):
     return {
         'eligible': not blockers, 'blockers': blockers,
         'replacement': CANONICAL_FOR[connector.slug],
-        'replacements': ['commercial', 'offerings', 'programs'] if connector.slug == 'commercial' else [CANONICAL_FOR[connector.slug]],
+        'replacements': ['commercial', 'offerings', 'programs'] if connector.slug == 'commercial' else ['projects', 'data-integrity'] if connector.slug == 'projects' else [CANONICAL_FOR[connector.slug]],
         'catalog': catalog,
         'earliest_retirement_at': (started + timedelta(days=COMPATIBILITY_DAYS)).isoformat() if started else None,
         'last_legacy_use_at': last_used.isoformat() if last_used else None,
