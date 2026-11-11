@@ -46,6 +46,7 @@
         <AccountingStatCard
           label="Resultado anual"
           :value="money(incomesMeta.liquid_total)"
+          value-wrap
           :sub="incomesMeta.received_pct != null ? `${incomesMeta.received_pct}% recibido` : ''"
           tone="success"
           action="list"
@@ -65,6 +66,7 @@
         <AccountingStatCard
           label="Detalle operativo"
           :value="money(incomesMeta.current_month_liquid)"
+          value-wrap
           :sub="incomeOperationalSupport"
           :tone="incomePendingTotal > 0 ? 'warning' : 'brand'"
           action="list"
@@ -91,6 +93,7 @@
         <AccountingStatCard
           label="Total esperado (año)"
           :value="money(incomesMeta.expected_total)"
+          value-wrap
           sub="Año en curso"
           action="filter"
           action-label="Filtrar ingresos esperados del año"
@@ -107,6 +110,7 @@
         <AccountingStatCard
           label="Total líquido (año)"
           :value="money(incomesMeta.liquid_total)"
+          value-wrap
           :sub="incomesMeta.received_pct != null ? `${incomesMeta.received_pct}% recibido` : ''"
           tone="success"
           action="filter"
@@ -124,6 +128,7 @@
         <AccountingStatCard
           label="Perdido (año)"
           :value="money(incomesMeta.lost_total)"
+          value-wrap
           sub="Año en curso"
           :tone="Number(incomesMeta.lost_total) > 0 ? 'danger' : 'default'"
           action="filter"
@@ -141,6 +146,7 @@
         <AccountingStatCard
           label="Detalle operativo"
           :value="money(incomesMeta.current_month_liquid)"
+          value-wrap
           :sub="incomeOperationalSupport"
           :tone="incomePendingTotal > 0 ? 'warning' : 'brand'"
           action="list"
@@ -373,7 +379,7 @@
               :to="incomeDetailTo(row.id)"
               stretch
               :data-testid="`income-open-${row.id}`"
-              class="block truncate hover:text-text-brand transition-colors"
+              class="block min-w-0 whitespace-normal [overflow-wrap:anywhere] hover:text-text-brand transition-colors"
               :title="row.concept"
             >
               <HighlightText :text="row.concept" :query="currentFilters.search" />
@@ -1421,7 +1427,8 @@ const columns = [
   },
   {
     key: 'total_amount', label: 'Total', format: 'money', sortable: true,
-    responsive: { compact: 'keep', portrait: 'keep', landscape: 'keep' },
+    textPolicy: 'wrap',
+    responsive: { compact: 'group', portrait: 'keep', landscape: 'keep' },
   },
 ];
 

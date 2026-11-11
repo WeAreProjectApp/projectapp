@@ -21,6 +21,15 @@ Nueva carpeta desde el encabezado abre el formulario existente con destino visib
 
 Corrección en rama de sesión: General calcula los días de vigencia sin escribir el vencimiento al cargar o recargar el formulario. Sólo editar los días actualiza la fecha; se elimina el circuito de watchers que movía vencimientos pasados y podía producir actualizaciones recursivas cerca de medianoche. Regresiones de componente y E2E para carga asíncrona, edición, reversión y guardado exitoso/fallido. Las pruebas se ejecutan exclusivamente en CI. La aceptación visible de propuestas ficticias 10 y 11 requiere turno de DevQA y Chrome de Backlog ProjectApp; la aceptación para cierre requiere además el SHA integrado de main servido en DEV. Esta nota no acredita CI ni validación funcional aprobados.
 
+## 2026-11-06 — PA-228, desbordes responsive del Panel
+
+Implementación en rama `fix/06112026-pa228-responsive-overflow`: ocho casos de
+Dashboard, Recurrentes, Blog, Propuestas e Ingresos. Calendario horizontal móvil
+elegido por el operador; importes completos mediante ajuste optativo de las
+tarjetas. Sin cambios de datos o cálculos. Automatizadas sólo en CI y recorrido
+Chrome coordinado por DevQA; esta nota no acredita validación ni despliegue.
+Alcance y guion: `docs/audits/2026-11-06-pa228-responsive-overflow.md`.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
