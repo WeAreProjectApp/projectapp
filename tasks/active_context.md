@@ -1,3 +1,12 @@
+## PA-231 — Contrato de fake data (2026-11-06)
+
+Trabajo backend en `fix/06112026-pa231-fake-data`: el comando canónico incorpora
+Monitoreo y Enlaces seguros con semilla/fecha, casos QA identificables, archivos
+locales válidos y limpieza diferida al commit. Se amplía el contrato a las cuatro
+apps de negocio; las credenciales y evidencias externas siguen exentas.
+Validación automatizada exclusivamente en CI; no se operan servidores DEV ni
+se ejecutan migraciones desde el worktree. Ver `docs/FAKE_DATA_COVERAGE.md`.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
