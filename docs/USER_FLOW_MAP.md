@@ -5563,6 +5563,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Formato editorial:** El contenido admite modos Visual y Fuente Markdown, listas, tablas, colores y alineación; el guardado conserva la fuente única y su declaración de formato.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
 
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
+
 ### FLOW: `admin-document-edit`
 
 - **Module:** admin
@@ -5598,6 +5601,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 
 - **Formato editorial:** Visual y Fuente Markdown comparten contenido e historial. Alternar, guardar y reabrir conserva listas, tablas, color y alineación. Notas y borradores utilizan el mismo editor; WhatsApp sólo ofrece formato nativo. Un formato inválido mantiene la fuente para corregirla.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
+
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
 
 ### FLOW: `admin-document-thread`
 
@@ -8430,6 +8436,26 @@ Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, mot
   2. **display:** pulsar una referencia y llegar al Historial con esa fila cargada y expandida.
   3. **success/error/failure:** n/a; es navegación de evidencia. La protección 409 al eliminar se cubre en integración backend.
 - **E2E Spec:** `e2e/admin/admin-document-edit.spec.js`
+
+## Administración de carpetas de documentos
+
+**Rol:** administrador. Entrada: Panel → Gestor Documental.
+
+### PA-206 — creación contextual
+
+**Nueva carpeta** en el encabezado abre el formulario directo con destino visible: carpeta abierta o raíz definida del proyecto seleccionado. Guardar mantiene la ubicación del listado y muestra la nueva carpeta; cancelar no escribe. Sin raíz definida se conserva el proyecto y se propone una carpeta sin padre.
+
+### PA-207 — destinos buscables y jerarquía
+
+En **Gestionar carpetas**, **Dentro de** busca por fragmento de nombre y conserva la ruta de cada coincidencia. Admite **Ninguna (carpeta raíz)** y teclado; escribir sin elegir no cambia el destino confirmado. El árbol muestra los ancestros de cada subcarpeta. La edición y eliminación usan sus formularios compartidos; archivar y reordenar entre hermanas conservan su contrato.
+
+### Resultados y cobertura
+
+- Éxito: crear desde raíz/subcarpeta y elegir una subcarpeta entre nombres coincidentes; cancelar sin crear.
+- Error: nombre rechazado conserva formulario y destino.
+- Fallo del servidor: se conserva el manejo de errores de creación/reordenamiento existente.
+- Presentación: destino y rama visibles antes de confirmar.
+- Regresión CI: `admin-document-folder-create.spec.js`, `admin-document-folder-manage.spec.js` y `admin-document-folders.spec.js`. La aprobación manual Chrome sobre datos aislados se registra por separado.
 
 ### FLOW: `admin-document-gallery`
 

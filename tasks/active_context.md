@@ -12,6 +12,11 @@ se ejecutan migraciones desde el worktree. Ver `docs/FAKE_DATA_COVERAGE.md`.
 
 Nueva carpeta desde el encabezado abre el formulario existente con destino visible y contexto de carpeta/proyecto. Gestionar carpetas reutiliza el selector con búsqueda y rutas, y su árbol muestra ancestros. El editor Visual distingue el código en línea mediante tokens del tema, sin alterar su serialización. Sin cambios de esquema. Pruebas automatizadas exclusivamente en CI; DevQA recibió el preaviso para el recorrido Chrome sobre datos aislados. La aprobación visual y el CI se registrarán con SHA en el informe de la sesión.
 
+
+> **PA-211 — editor documental, 2026-11-06, en implementación:** se conserva Tiptap 3.32.0 y Markdown extendido. El cuerpo de Nuevo Documento y edición recibe una barra agrupada y contextual, con enlaces, tablas, avisos e índice. Comparación y alcance en `docs/document-editor-evaluation.md`. Pruebas automatizadas exclusivamente en CI y recorrido manual coordinado con dev-qa; el cierre queda pendiente de sus evidencias. No acredita despliegue.
+
+> **PA211-01 — combinación de color y resaltado, 2026-11-07:** Chrome detectó que un resaltado interior tomaba el negro del navegador aunque su fuente conservara el color explícito. La corrección en la rama de sesión aplica herencia sólo bajo spans editoriales con color, en editor, vista previa y lectores; conserva el resaltado sin color y el vocabulario guardado. Se preparan pruebas de color computado para CI. El entorno de QA sigue congelado en `1b7b761b` hasta acordar la reprueba; esta nota no acredita validación del arreglo.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
