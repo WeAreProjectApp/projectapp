@@ -55,7 +55,7 @@ const PROJECT_KORE = {
   client: 7,
   managed_project: 41,
   folder_kind: 'project',
-  is_system_managed: false,
+  is_system_managed: true,
   is_project_visible: true,
   managed_project_state: { name: 'Activo', system_key: 'active' },
   document_count: 2,
@@ -227,9 +227,9 @@ test.describe('Admin Document Folders', () => {
     await openDocuments(page);
 
     await page.getByRole('button', { name: /^Cuentas de cobro —/ }).click();
-    await page.getByTestId('documents-new-folder').click();
+    await page.getByRole('button', { name: 'Nueva carpeta' }).click();
 
-    const parentSelect = page.getByTestId('folder-form-parent');
+    const parentSelect = page.getByTestId('folder-manager-parent');
     await expect(parentSelect).toBeVisible();
     await expect(parentSelect.locator('option:checked')).toHaveText('Cuentas de cobro');
   });
@@ -273,9 +273,9 @@ test.describe('Admin Document Folders', () => {
     await setupFolderApi(page, [PROJECT_KORE]);
     await openDocuments(page);
 
-    await page.getByTestId('documents-new-folder').click();
+    await page.getByRole('button', { name: 'Nueva carpeta' }).click();
 
-    const parentSelect = page.getByTestId('folder-form-parent');
+    const parentSelect = page.getByTestId('folder-manager-parent');
     await expect(parentSelect.locator('option', { hasText: 'Kore Health' })).toHaveCount(1);
     await expect(parentSelect.locator('option:checked')).toHaveText('Ninguna (carpeta raíz)');
   });

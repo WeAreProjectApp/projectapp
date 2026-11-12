@@ -15,6 +15,9 @@ from content.models.document import Document
 
 def _delete_file(field):
     """Delete a FileField/ImageField file from storage if it has a value."""
+    from content.services.project_file_cleanup import project_cleanup_active
+    if project_cleanup_active():
+        return
     if field and field.name:
         try:
             field.storage.delete(field.name)

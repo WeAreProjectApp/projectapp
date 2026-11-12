@@ -38,21 +38,16 @@
         <BaseFormField label="Dentro de" for="folder-form-parent">
           <BaseSelect
             id="folder-form-parent"
-            :model-value="form.parent ?? ''"
+            v-model="form.parent"
             data-testid="folder-form-parent"
-            @update:model-value="form.parent = $event === '' ? null : Number($event)"
           >
-            <option value="">Ninguna (carpeta raíz)</option>
+            <option :value="null">Ninguna (carpeta raíz)</option>
             <option v-for="opt in parentOptions" :key="opt.id" :value="opt.id">
               {{ opt.label }}
             </option>
           </BaseSelect>
         </BaseFormField>
       </BaseFormRow>
-
-      <p class="text-sm text-text-muted [overflow-wrap:anywhere]" data-testid="folder-form-destination">
-        {{ t('documentFolders.destination', { path: destinationLabel }) }}
-      </p>
 
       <BaseFormField label="Cliente" :hint="inheritedNotice">
         <ClientAutocomplete
@@ -120,7 +115,7 @@ import { useId, computed, reactive, ref, watch } from 'vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import ProjectSelect from '~/components/accounting/ProjectSelect.vue';
 import { useClientProjectCascade } from '~/composables/useClientProjectCascade';
-import { buildFolderOptions, folderPathLabel } from '~/utils/folderOptions';
+import { buildFolderOptions } from '~/utils/folderOptions';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -135,12 +130,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'saved', 'change-client']);
 
 const folderStore = useDocumentFolderStore();
-const { t } = useI18n();
-const destinationLabel = computed(() => (
-  folderPathLabel(folderStore.folders, form.parent)
-    || (form.parent != null ? folderStore.folderById(form.parent)?.name : '')
-    || (form.parent != null ? t('documentFolders.unknownFolder', { id: form.parent }) : t('documentFolders.root'))
-));
 
 const form = reactive({ name: '', parent: null, client: null, project: null });
 const clientDisplayName = ref('');

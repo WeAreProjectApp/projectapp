@@ -41,13 +41,14 @@
                       @update:model-value="newNameError = ''"
                     />
                   </BaseFormField>
-                  <DocumentFolderSelect
-                    v-model="newParent"
-                    label="Dentro de"
-                    testid="folder-manager-parent"
-                    :show-hint="false"
-                    :root-option-label="t('documentFolders.root')"
-                  />
+                  <BaseFormField label="Dentro de">
+                    <BaseSelect v-model="newParent" data-testid="folder-manager-parent">
+                      <option value="">Ninguna (carpeta raíz)</option>
+                      <option v-for="opt in createOptions" :key="opt.id" :value="String(opt.id)">
+                        {{ opt.label }}
+                      </option>
+                    </BaseSelect>
+                  </BaseFormField>
                 </BaseFormRow>
                 <div class="flex justify-end">
                   <BaseButton
@@ -148,8 +149,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
-import DocumentFolderSelect from '~/components/panel/documents/DocumentFolderSelect.vue';
+import { computed, ref, watch } from 'vue';
 import FolderManagerTree from '~/components/panel/documents/FolderManagerTree.vue';
 import DeleteFolderModal from '~/components/panel/documents/DeleteFolderModal.vue';
 import FolderFormModal from '~/components/panel/documents/FolderFormModal.vue';
@@ -163,9 +163,8 @@ const emit = defineEmits([
 ]);
 
 const folderStore = useDocumentFolderStore();
-const { t } = useI18n();
 const newName = ref('');
-const newParent = ref(null);
+const newParent = ref('');
 const editingFolder = ref(null);
 const showFolderForm = ref(false);
 const deletingFolder = ref(null);
@@ -182,10 +181,32 @@ watch(() => props.modelValue, async (open) => {
     editingFolder.value = null;
     showFolderForm.value = false;
     newName.value = '';
-    newParent.value = props.initialParent;
+    newParent.value = props.initialParent == null ? '' : String(props.initialParent);
     await folderStore.fetchFolders();
   }
 });
+
+// Lista plana e indentada de carpetas para los <select> de carpeta padre.
+function buildFolderOptions(excludeId) {
+  const exclude = new Set();
+  if (excludeId != null) {
+    exclude.add(excludeId);
+    folderStore.descendantIdsOf(excludeId).forEach((id) => exclude.add(id));
+  }
+  const options = [];
+  const walk = (parentId, depth) => {
+    folderStore.childrenOf(parentId)
+      .filter((f) => !exclude.has(f.id))
+      .forEach((f) => {
+        options.push({ id: f.id, label: `${'   '.repeat(depth)}${f.name}` });
+        walk(f.id, depth + 1);
+      });
+  };
+  walk(null, 0);
+  return options;
+}
+
+const createOptions = computed(() => buildFolderOptions(null));
 
 function close() {
   emit('update:modelValue', false);
@@ -200,7 +221,7 @@ async function handleCreate() {
   errorMsg.value = '';
   // Crear dentro de una carpeta con dueño hereda su asociación: es el mismo
   // default que propone el formulario completo, no una atadura.
-  const parentId = newParent.value;
+  const parentId = newParent.value === '' ? null : Number(newParent.value);
   const parent = parentId == null ? null : folderStore.folderById(parentId);
   const result = await folderStore.createFolder({
     name,
@@ -210,7 +231,7 @@ async function handleCreate() {
   });
   if (result.success) {
     newName.value = '';
-    newParent.value = props.initialParent;
+    newParent.value = props.initialParent == null ? '' : String(props.initialParent);
     emit('changed');
   } else {
     newNameError.value = Array.isArray(result.errors?.name)

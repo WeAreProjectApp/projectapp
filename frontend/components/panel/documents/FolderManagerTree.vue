@@ -11,13 +11,12 @@
     @end="onReorderEnd"
   >
     <template #item="{ element: folder }">
-      <div :key="folder.id" :data-testid="`folder-manager-row-${folder.id}`">
+      <div :key="folder.id">
         <div
-          class="group relative flex flex-wrap items-center gap-2 px-2 py-2 rounded-lg border transition-all"
+          class="group flex items-center gap-2 px-2 py-2 rounded-lg border transition-all"
           :class="rowClass(folder)"
-          :style="{ marginLeft: `${Math.min(depth, 3) * 12}px` }"
+          :style="{ marginLeft: `${depth * 18}px` }"
         >
-          <span v-if="depth" aria-hidden="true" class="absolute -left-3 top-0 h-1/2 w-3 rounded-bl border-b-2 border-l-2 border-border-default"></span>
           <div
             v-if="!isManagedFolderKind(folder) && !folder.is_system_managed"
             class="folder-tree-handle flex-shrink-0 w-4 flex items-center justify-center
@@ -36,12 +35,9 @@
             </svg>
           </div>
 
-          <div class="flex-1 min-w-0 [overflow-wrap:anywhere]">
-            <p class="text-sm text-text-default" :class="depth === 0 ? 'font-semibold' : 'font-medium'">{{ folder.name }}</p>
-            <p v-if="ancestorNames.length" class="text-xs text-text-muted" :data-testid="`folder-manager-branch-${folder.id}`">
-              {{ ancestorNames.join(' / ') }}
-            </p>
-          </div>
+          <span class="flex-1 min-w-0 text-sm font-medium text-text-default truncate">
+            {{ folder.name }}
+          </span>
           <BaseBadge v-if="folder.folder_kind === 'project'" variant="info" size="sm">
             Automática
           </BaseBadge>
@@ -83,7 +79,6 @@
           :siblings="childrenOf(folder.id)"
           :parent-id="folder.id"
           :depth="depth + 1"
-          :ancestor-names="[...ancestorNames, folder.name]"
           :editing-id="editingId"
           :deleting-id="deletingId"
           class="mt-1"
@@ -108,7 +103,6 @@ const props = defineProps({
   siblings: { type: Array, default: () => [] },
   parentId: { type: Number, default: null },
   depth: { type: Number, default: 0 },
-  ancestorNames: { type: Array, default: () => [] },
   editingId: { type: Number, default: null },
   deletingId: { type: Number, default: null },
 });
