@@ -35,6 +35,7 @@ from content.mcp.operation_catalogs import (
     PROJECT_TOOLS,
 )
 from content.mcp.access_tools import ACCESS_TOOLS
+from content.mcp.hosting_control_tools import HOSTING_CONTROL_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.platform_secure_link_tools import PLATFORM_SECURE_LINK_TOOLS
 from content.mcp.proposal_formalization_tools import PROPOSAL_FORMALIZATION_TOOLS
@@ -215,7 +216,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['programs'],),
     ),
     'projects': ConnectorSpec(
-        'projects', '3.3.0', (PROJECT_TOOLS, ACCESS_TOOLS, PROJECT_CALCULATOR_TOOLS), uploads=True,
+        'projects', '3.4.0', (PROJECT_TOOLS, ACCESS_TOOLS, PROJECT_CALCULATOR_TOOLS, HOSTING_CONTROL_TOOLS), uploads=True,
     ),
     'content': ConnectorSpec(
         'content', '2.1.1',

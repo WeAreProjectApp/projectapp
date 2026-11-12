@@ -2,7 +2,7 @@
 
 **Estado:** obligatorio
 
-**Cobertura automatizada:** 141 vistas × 5 perfiles = 705 celdas
+**Cobertura automatizada:** 142 vistas × 5 perfiles = 710 celdas
 
 **Fuente de verdad:** `frontend/config/viewCatalog.js`, `frontend/config/responsive.js` y `frontend/e2e/responsive/catalog-scenarios.js`
 

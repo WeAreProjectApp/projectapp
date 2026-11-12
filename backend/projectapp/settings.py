@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'content',
     'accounts',
     'monitoring',
+    'hosting_control',
     'procurement',
     'secure_links',
     'corsheaders',
@@ -68,6 +69,7 @@ if ENABLE_SILK:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'hosting_guard.middleware.HostingControlMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -568,3 +570,9 @@ DATA_INTEGRITY_DAILY_HOUR = config('DATA_INTEGRITY_DAILY_HOUR', default=3, cast=
 # Google identity is scoped to this application; never reuse another project's client.
 GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default='')
 ACCESS_TRUSTED_PROXY_IPS = config('ACCESS_TRUSTED_PROXY_IPS', default='', cast=lambda value: tuple(item.strip() for item in value.split(',') if item.strip()))
+
+# PA-264: opt-in only on an enrolled production; no effect in default/DEV settings.
+HOSTING_CONTROL_ENABLED = config('HOSTING_CONTROL_ENABLED', default=False, cast=bool)
+HOSTING_CONTROL_TARGET = config('HOSTING_CONTROL_TARGET', default='')
+HOSTING_CONTROL_STATE_FILE = config('HOSTING_CONTROL_STATE_FILE', default='')
+HOSTING_CONTROL_EXEMPT_PATHS = ('/api/', '/admin/', '/health/', '/panel/')

@@ -1,0 +1,16 @@
+{
+  "id": "public-hosting-presentation",
+  "name": "Presentación pública de hosting",
+  "module": "public",
+  "roles": [
+    "visitor"
+  ],
+  "priority": "P1",
+  "description": "Consumo del adaptador público: banner utilizable, suspensión de vistas, navegación, recarga, retirada en pestaña abierta, desconexión y legibilidad móvil. Integración HTTP simulada en CI; no acredita despliegue real.",
+  "expectedSpecs": 5,
+  "outcomes": [
+    "success",
+    "failure",
+    "display"
+  ]
+}

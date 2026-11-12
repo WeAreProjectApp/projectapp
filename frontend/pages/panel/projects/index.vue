@@ -10,6 +10,7 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <BaseButton as="NuxtLink" to="/panel/projects/hosting" variant="secondary" data-testid="projects-hosting-control">Control de hosting</BaseButton>
         <BaseButton
           as="NuxtLink"
           to="/panel/projects/statuses"
@@ -867,6 +868,7 @@ const { t } = useI18n();
 function handleProjectAction(action, row) {
   projectActionTarget.value = null;
   const handlers = {
+    hosting: () => navigateTo({ path: '/panel/projects/hosting', query: { project: String(row.id) } }),
     calculator: () => navigateTo({ path: projectIdeasLocalePath('/panel/requirement-calculator'), query: { project: String(row.id) } }),
     ideas: () => navigateTo(projectIdeasLocalePath(`/panel/projects/${row.id}/ideas`)),
     brand: () => { brandProject.value = row; },

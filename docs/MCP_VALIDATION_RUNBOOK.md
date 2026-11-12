@@ -3038,3 +3038,14 @@ Validar listado/filtros/exportación, búsquedas con owner_id, alertas con desti
 ## Accesos autorizados — projects 4.5.0
 
 Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.
+
+
+## PA-264 · Hosting visual por producción
+
+Consultar `list_hosting_controls`/`get_hosting_control` con rol administrativo;
+verificar destino y versión. Cambiar cada modo con `set_hosting_control_mode`
+y confirmar. Editar ambos mensajes por separado con
+`update_hosting_control_message`; comprobar por Panel que el otro texto y el
+modo no cambian. Revisar historial, actor/vía y recibos. Repetir con versión
+anterior y credencial sin permiso: rechazo sin escritura. Sólo la confirmación
+del sitio acredita aplicación; la validación manual permanece pausada.

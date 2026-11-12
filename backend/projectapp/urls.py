@@ -53,6 +53,8 @@ urlpatterns = [
     path('sw.js', serve_pwa_file, {'filename': 'sw.js'}, name='pwa-worker'),
     path('api/procurement/', include('procurement.urls')),
     path('api/monitoring/', include('monitoring.urls')),
+    path('api/hosting-controls/', include('hosting_control.urls')),
+    path('api/hosting-runtime/', include('hosting_control.runtime_urls')),
     path('api/secure-links/', include('secure_links.urls')),
     path('api/health/', health_check, name='health-check'),
     path('api/platform/ai/', include('accounts.ai_urls')),

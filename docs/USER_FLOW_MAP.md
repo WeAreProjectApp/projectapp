@@ -6219,6 +6219,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-financing-explainer-visibility` | admin | P2 | success,failure | 2 |
 | `admin-financing-settings` | admin | P1 | display,success,error,failure | 4 |
 | `admin-high-engagement-alert` | admin | P2 | — | 0 |
+| `admin-hosting-controls` | admin | P1 | success,error,failure,display | 11 |
 | `admin-hour-packages-config` | admin | P3 | success,error,failure,display | — |
 | `admin-hour-packages-create` | admin | P2 | display,success,error | 1 |
 | `admin-hour-packages-delete` | admin | P2 | success,failure | 1 |
@@ -6544,6 +6545,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `public-financing-terms` | public | P2 | success | — |
 | `public-financing-theme` | public | P2 | success,failure | — |
 | `public-home` | public | P1 | display | 1 |
+| `public-hosting-presentation` | public | P1 | success,failure,display | 5 |
 | `public-landing-apps` | public | P3 | display | 1 |
 | `public-landing-software` | public | P3 | display | 1 |
 | `public-landing-web-design` | public | P2 | display | 1 |
@@ -8860,6 +8862,12 @@ Cobertura: `frontend/e2e/admin/admin-document-move-folder.spec.js`.
 - **E2E Spec:** `e2e/admin/admin-financing-settings.spec.js`
 - **Backend Tests:** `content/tests/views/test_financing_agreements.py`, `content/tests/services/test_financing_policy_service.py`
 
+# Control administrativo de hosting
+
+Seleccionar producción y verificar destino; cambiar entre tres modos excluyentes; editar mensajes independientes; distinguir intención y recibo; conservar borrador ante conflicto o fallo. Gestión equivalente por MCP cubierta en backend.
+
+Validación manual pendiente por pausa vigente. Tests autorados en CI; sin evidencia de producción.
+
 # Personalizar la marca del Linktree
 
 - **Rol:** admin. **Ruta:** `/panel/linktrees/:id/edit`.
@@ -10091,6 +10099,12 @@ conservan para la reprueba; CI añade esas longitudes a las dos variantes de
   no disponible no impide usar el tema durante la visita.
 - **Display:** no se registra una interacción adicional; se valida como parte
   del cambio de tema.
+
+# Presentación pública de hosting
+
+Consumo del adaptador público: banner utilizable, suspensión de vistas, navegación, recarga, retirada en pestaña abierta, desconexión y legibilidad móvil. Integración HTTP simulada en CI; no acredita despliegue real.
+
+Validación manual pendiente por pausa vigente. Tests autorados en CI; sin evidencia de producción.
 
 ### FLOW: `public-secure-link-create`
 

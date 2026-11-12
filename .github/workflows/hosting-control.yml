@@ -1,0 +1,46 @@
+name: Hosting control — focused contracts
+on:
+  pull_request:
+    branches: [main, master]
+concurrency:
+  group: hosting-control-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  hosting-contracts:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        file: [hosting_control/tests/test_controls.py, hosting_control/tests/test_guard.py, hosting_control/tests/test_receiver.py, content/tests/views/test_mcp_hosting_control.py]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pkg-config default-libmysqlclient-dev ffmpeg
+          pip install -r requirements.txt
+      - name: Verify new migration state
+        if: matrix.file == 'hosting_control/tests/test_controls.py'
+        env:
+          DJANGO_SETTINGS_MODULE: projectapp.settings_test
+        run: python manage.py makemigrations hosting_control --check --dry-run
+      - name: Export reviewed MCP fingerprint
+        if: matrix.file == 'hosting_control/tests/test_controls.py'
+        env:
+          DJANGO_SETTINGS_MODULE: projectapp.settings_test
+        run: python manage.py mcp_schema_report --slug projects --write-fingerprints
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.file == 'hosting_control/tests/test_controls.py'
+        with:
+          name: hosting-mcp-contract
+          path: backend/content/mcp/connector_contracts.json
+      - name: Verify focused behavior
+        run: pytest ${{ matrix.file }} --no-cov -q

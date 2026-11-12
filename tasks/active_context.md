@@ -1,3 +1,5 @@
+> **PA-264 — en implementación:** control visual de hosting por producción, con configuración central, mensajes independientes y recibos del destino. QA manual y servicios siguen pausados; no hay activaciones ni despliegues.
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.
