@@ -102,7 +102,8 @@ for (const viewport of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) 
           await expect(page.getByTestId('project-back-to-panel')).toHaveCount(0);
           await page.getByRole('link', { name: 'Volver a proyectos', exact: true }).click();
           await expect(page).toHaveURL(/\/es-co\/platform\/projects$/);
-          await page.getByTestId(`project-row-${own.id}`).click();
+          await page.getByTestId(`project-row-${own.id}`)
+            .or(page.getByTestId(`project-card-${own.id}`)).filter({ visible: true }).click();
           await expect(page.getByRole('heading', { name: own.name, exact: true })).toBeVisible();
           await expect(page.getByTestId('project-access-error')).toHaveCount(0);
           expect(writes).toEqual([]);

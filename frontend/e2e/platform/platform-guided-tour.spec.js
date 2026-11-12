@@ -125,7 +125,8 @@ async function openProjects(page) {
 
 async function openOwnedProject(page) {
   await openProjects(page)
-  await page.getByTestId(`project-row-${project.id}`).click()
+  await page.getByTestId(`project-row-${project.id}`)
+    .or(page.getByTestId(`project-card-${project.id}`)).filter({ visible: true }).click()
   await expect(page).toHaveURL(new RegExp(`/platform/projects/${project.id}$`))
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name)
 }
@@ -603,9 +604,9 @@ for (const viewport of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) 
         await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme)
       })
 
-      for (const [context, enter] of [
-        ['general', openProjects],
-        ['project', openOwnedProject],
+      for (const [context, enter, pageTitle] of [
+        ['general', openProjects, 'Mis proyectos'],
+        ['project', openOwnedProject, project.name],
       ]) {
         test(`keeps the initial ${context} skip readable before a manual replay`, {
           tag: [...(context === 'general' ? PLATFORM_GUIDED_TOUR_GENERAL : PLATFORM_GUIDED_TOUR_PROJECT), '@role:platform-client', '@outcome:display'],
@@ -632,9 +633,10 @@ for (const viewport of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) 
           await expect(popover).toHaveCount(0)
           await expect.poll(() => latestProgress(progress, current.id)?.body.status).toBe('skipped')
           await page.reload({ waitUntil: 'domcontentloaded' })
-          await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toBeVisible()
+          await waitForNuxtApp(page)
+          await expect(page.getByRole('heading', { name: pageTitle, exact: true })).toBeVisible()
           await expect(popover).toHaveCount(0)
-          await page.getByTestId('platform-help-trigger').filter({ visible: true }).click()
+          await openHelp(page)
           await page.getByTestId(`platform-help-tour-${current.slug}`).click()
           await expect(popover).toContainText(current.content.title_es)
           expect(await textContrast(skip)).toBeGreaterThanOrEqual(4.5)
