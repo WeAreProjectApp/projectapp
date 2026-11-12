@@ -63,7 +63,7 @@ describe('SecureLinkDetailModal title copy', () => {
   // Falla si el botón copia una etiqueta, un secreto o una versión truncada en lugar del título completo.
   it.each([
     ['normal title', 'Acceso de administración'],
-    ['accented title', 'Acceso ágil para María'],
+    ['accented title', 'Gestor  de Documentos (MCP) — María: acceso #2'],
     ['long title', `Título ${'de acceso '.repeat(14).trim()}`],
   ])('copies the exact %s without mutating the link', async (_label, title) => {
     const wrapper = mountDetail(detailFor(title));

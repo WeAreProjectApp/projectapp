@@ -57,3 +57,7 @@ Uno o varios ingresos se liquidan sin cuenta emitida desde el mismo modal.
 Ya no existe la transición Liquidación con ajustes ni un formulario que
 reinicie los datos. Al completarse, la fila conserva Cuenta pendiente de emitir
 y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
+
+
+**PA-251/253/257/261 · delta de interfaz:** Los importes fraccionarios conservan centavos en filas clásicas/agrupadas, menús y detalle de Participaciones, sin alterar reparto ni payload de liquidación.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.

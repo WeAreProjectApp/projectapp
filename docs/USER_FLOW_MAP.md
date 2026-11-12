@@ -5037,6 +5037,12 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-requirements-modal.spec.js` (includes nested-modal, executive-mode, and legacy-fallback tests)
 
+
+**PA-251/253/257/261 · delta de interfaz:** El modal conserva uno o varios requerimientos por elemento y muestra configuration y usageFlow con su formato cuando existen, manteniendo propuestas antiguas sin esos campos.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace del elemento y leer configuración/flujo. Error y failure propios del modal: no aplican, porque este modal de lectura usa datos ya cargados y no envía peticiones ni formularios; los fallos al cargar la propuesta pertenecen al flujo de entrada.
+
 ### FLOW: `proposal-negotiate`
 
 - **Module:** proposal
@@ -6465,7 +6471,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `proposal-engagement-tracking` | proposal | P2 | success | 1 |
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
-| `proposal-functional-requirements-modal` | proposal | P2 | display | 1 |
+| `proposal-functional-requirements-modal` | proposal | P2 | success,display | 1 |
 | `proposal-gateway-guide` | proposal | P2 | display,success | 1 |
 | `proposal-hosting-plan-terms` | proposal | P2 | display | 2 |
 | `proposal-kickoff-disclosure` | proposal | P2 | display | 1 |
@@ -6711,6 +6717,10 @@ Uno o varios ingresos se liquidan sin cuenta emitida desde el mismo modal.
 Ya no existe la transición Liquidación con ajustes ni un formulario que
 reinicie los datos. Al completarse, la fila conserva Cuenta pendiente de emitir
 y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
+
+
+**PA-251/253/257/261 · delta de interfaz:** Los importes fraccionarios conservan centavos en filas clásicas/agrupadas, menús y detalle de Participaciones, sin alterar reparto ni payload de liquidación.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-accounting-income-bulk-settle`
 
@@ -8196,6 +8206,10 @@ Configuración global y por cliente de recorridos y videos, con control de versi
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
+
+**PA-251/253/257/261 · delta de interfaz:** La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
 ### FLOW: `admin-platform-guided-tour-authoring`
 
 - **Módulo:** admin
@@ -9402,6 +9416,10 @@ acreditan persistencia real por sí solos; su resultado se registra en CI.
 - **API:** `GET /api/secure-links/` (filtro `lifecycle_status` y conteos), `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`, `POST .../mark-sent/`.
 - **Copiar página para clientes:** copia exactamente la URL pública informada por el servidor y conserva el texto «Enlace para clientes». Sólo tras éxito muestra check y «Copiado» flotante durante 2 segundos, con anuncio accesible; el encabezado, descripción, botones, pestañas y listado permanecen en su sitio en los cinco perfiles responsive. Un fallo mantiene el icono de copiar, muestra el error durante 3 segundos y permite reintentar; el teclado conserva el foco y el movimiento reducido conserva la confirmación.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js` y `e2e/admin/admin-secure-links-copy-public.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
+
+
+**PA-251/253/257/261 · delta de interfaz:** El detalle ofrece Copiar título junto al lápiz: copia el título completo vigente, preserva acentos y signos y permite reintentar ante rechazo de portapapeles sin revelar ni mutar el enlace.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-service-contract-settings`
 
