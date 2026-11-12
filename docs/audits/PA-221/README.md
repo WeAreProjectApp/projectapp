@@ -6,6 +6,7 @@ su acceso, no sustituye evidencias históricas y no acredita un dictamen nuevo.
 ## Corte y alcance
 
 - Base de implementación: `295b65efb77af8303ec28b269ae1935a995a6f0e`.
+- Implementación, SHA y resultados CI por corte: [PR #584](https://github.com/WeAreProjectApp/projectapp/pull/584).
 - Se conserva el módulo de integridad, programación y Radar incorporado por #553;
   no se desarrollan nuevas ampliaciones de esos frentes.
 - Corrección NM1, nombres/capacidades del catálogo, inventario Panel/Plataforma,
@@ -132,7 +133,6 @@ No se diseñan casos nuevos dedicados a teclado. No se cambia el estado del tick
 
 ## Pendientes operativos
 
-- Validación CI del SHA final, con enlaces y resultados.
 - Ronda DEV/Chrome y cotejo de datos, fusiones, reasignaciones y skill.
 - Completar evidencia funcional de toda la matriz y comprobar consumidores externos.
 - Aplicación de la migración aditiva 0308 por el deploy y evaluación del retiro en

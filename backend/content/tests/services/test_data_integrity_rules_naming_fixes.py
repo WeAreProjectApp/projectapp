@@ -236,7 +236,7 @@ def test_project_name_undo_blocks_when_its_root_composition_changes(make_client_
     secure_root.delete()
     impact = engine.preview_undo(operation_id)
 
-    assert impact['blockers'][0]['code'] == 'guard_changed'
+    assert {entry['code'] for entry in impact['blockers']} == {'changed_since', 'guard_changed'}
     with pytest.raises(IntegrityConflict) as rejected:
         engine.undo_operation(
             operation_id,

@@ -54,10 +54,10 @@ def _call(api_client, token, name, arguments=None):
     )
 
 
-def _credential(connector, token, allowed_tools=None):
+def _credential(connector, token, allowed_tools=None, *, label='Monitoring contract'):
     return McpCredential.objects.create(
         connector=connector,
-        label='Monitoring contract',
+        label=label,
         catalog='canonical',
         token_hash=McpCredential.hash_token(token),
         token_prefix=token[:8],
@@ -201,7 +201,12 @@ def test_monitoring_report_list_rejects_case_only_filters(
 
     rejected = _structured(response)
     assert response.status_code == 200
-    assert rejected['error']['code'] == 'VALIDATION_ERROR'
+    assert rejected['error']['code'] == 'unknown_field'
+    assert rejected['error']['details']['errors'] == [{
+        'field': forbidden_filter,
+        'code': 'unknown_field',
+        'message': 'Campo desconocido o de solo lectura.',
+    }]
 
 
 def test_monitoring_report_detail_returns_received_text(api_client, monitoring_mcp_case):
@@ -331,6 +336,7 @@ def test_monitoring_adapter_rejects_a_non_staff_actor(django_user_model, monitor
         monitoring_mcp_case.connector,
         'operations-non-staff',
         allowed_tools=['create_monitoring_case_note'],
+        label='Monitoring non-staff contract',
     )
     context = McpExecutionContext(
         connector=monitoring_mcp_case.connector,

@@ -4,7 +4,8 @@ El ticket conserva **TO DO por indicación de Carlos**. Este guion no acredita
 una nueva aprobación de QA ni autoriza cambios de estado o acceso. Expediente,
 inventario estático y matriz: [PA-221](audits/PA-221/README.md).
 
-1. En Integridad **1.2.1**, preparar un proyecto ficticio con NM1 activo y sus
+1. Con el catálogo de reglas **1.2.1** del Gestor de integridad (MCP **1.0.1**),
+   preparar un proyecto ficticio con NM1 activo y sus
    raíces documental, de conversación y de Enlaces seguros. Comparar todos los
    valores antes/después de la vista previa con el registro de aplicación;
    incluir asociaciones, archivado y descendientes afectados. La vista previa
