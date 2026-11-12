@@ -89,3 +89,21 @@ une sus dependencias con la unificación MCP. Las aplica el deploy,
 nunca esta sesión contra la base desplegada. Las pruebas utilizan
 `projectapp.settings_test`, SQLite y
 almacenamiento temporal. No se envían correos reales desde estas pruebas.
+
+## Corrección PA-215: correo y remanente (2026-11-06)
+
+La pasarela copia el contenido de los mensajes conservando la conexión SMTP por
+referencia: sus bloqueos y sockets no forman parte de la evidencia ni se clonan.
+Se conserva el límite de espera tanto en el envío principal como en las copias
+internas. Un fallo de copia no invalida el envío principal.
+
+Participaciones muestra también el remanente positivo de ProjectApp al estar
+contraída: recibido 119, Carlos 59, Gustavo 59 y ProjectApp 1. Se actualiza al
+editar el recibido o el reparto manual, conserva centavos y oculta cero. Esto
+no modifica la regla de reparto ni el destino del dinero.
+
+Los correos anteriores se recuperan desde Historial mediante reintento, sin
+volver a liquidar el ingreso. El intento enviado queda relacionado con el
+fallido; este último conserva su estado histórico. No se crean pagos ni avisos
+de negocio adicionales. La validación automática de esta corrección corresponde
+exclusivamente a CI y la comprobación manual a DevQA/QA sobre su SHA servido.
