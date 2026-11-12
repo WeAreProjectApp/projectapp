@@ -306,6 +306,7 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
 .editorial-body :deep(h3) { font-size: 1.25em; font-weight: 700; }
 .editorial-body :deep(blockquote) { border-left: 3px solid currentColor; padding-left: 1rem; margin: .75rem 0; }
 .editorial-body :deep(pre) { white-space: pre-wrap; padding: .75rem; border: 1px solid currentColor; border-radius: .5rem; }
+.editorial-body :deep(code:not(pre code)) { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .9em; padding: .125em .3em; border: 1px solid var(--color-border-default); border-radius: .25rem; background: var(--color-surface-muted); color: var(--color-text-default); }
 .editorial-body :deep(table) { border-collapse: collapse; width: 100%; table-layout: fixed; }
 .editorial-body :deep(td), .editorial-body :deep(th) { border: 1px solid currentColor; padding: .5rem; vertical-align: top; }
 .editorial-body :deep(.selectedCell) { outline: 2px solid var(--color-focus-ring, #059669); }

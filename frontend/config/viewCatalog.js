@@ -714,7 +714,7 @@ export const viewCatalogSections = [
         reference: 'vista principal del gestor documental',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Contratos y Anexos de cada proyecto comparten identidad con las propuestas y conservan sus revisiones aprobadas. ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Mantiene las tres plantillas contractuales en Contratos con contenido y ubicación de solo lectura y rechaza carpetas duplicadas en el mismo nivel. Las notas, borradores de correo y WhatsApp admiten formato y copia al canal correspondiente.',
+        notes: 'Contratos y Anexos de cada proyecto comparten identidad con las propuestas y conservan sus revisiones aprobadas. ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Mantiene las tres plantillas contractuales en Contratos con contenido y ubicación de solo lectura y rechaza carpetas duplicadas en el mismo nivel. Las notas, borradores de correo y WhatsApp admiten formato y copia al canal correspondiente. Nueva carpeta abre el formulario directo con destino visible y propone la carpeta abierta o la raíz del proyecto. Gestionar carpetas permite buscar destinos por fragmento y reconocer su rama en los resultados y el árbol.',
       },
       {
         label: 'Crear documento',
