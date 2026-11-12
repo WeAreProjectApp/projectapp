@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Max, OuterRef, Subquery
+from django.db.models import Max, OuterRef, Q, Subquery
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
@@ -111,8 +111,11 @@ def frozen_page(query, data, actor, reports=False):
 
 
 def current_samples(resources):
-    latest = TelemetrySample.objects.filter(resource_id=OuterRef('resource_id')).order_by('-observed_at', '-pk')
-    return TelemetrySample.objects.filter(resource_id__in=resources, pk=Subquery(latest.values('pk')[:1]))
+    latest = TelemetrySample.objects.filter(resource_id=OuterRef('pk')).order_by('-observed_at', '-pk')
+    # Resolve one indexed sample ID per resource, rather than evaluating a
+    # correlated latest-sample lookup against every historical sample.
+    ids = resources.order_by().annotate(sample_id=Subquery(latest.values('pk')[:1])).values('sample_id')
+    return TelemetrySample.objects.filter(pk__in=Subquery(ids))
 
 
 def host_status(data):
@@ -128,7 +131,11 @@ def host_status(data):
         resource = Resource.objects.filter(pk=data['resource']).first()
         resources = resources.filter(pk=resource.server_id if resource and resource.kind == 'project' else data['resource'])
     elif data.get('source'):
-        resources = resources.filter(pk__in=source_scope(data).values('resource_id'))
+        selected = Resource.objects.filter(sources__in=source_scope(data))
+        resources = resources.filter(
+            Q(pk__in=selected.filter(kind='server').values('pk'))
+            | Q(pk__in=selected.filter(kind='project').values('server_id'))
+        )
     samples = {sample.resource_id: sample for sample in current_samples(resources.values('pk'))}
     result = []
     now = timezone.now()
@@ -177,6 +184,7 @@ def series(resource, period):
                        'average': averages, 'max': bucket['max'] if bucket else {}})
     latest = rows.order_by('-observed_at', '-pk').first()
     return {'period': period, 'interval_seconds': interval, 'points': points,
+            'units': {'cpu_percent': '%', 'cpu_count': 'vCPU', 'load_1m': 'processes', **{key: 'bytes' for key in SAMPLE_FIELDS if key.endswith('_bytes')}},
             'last_observed_at': latest.observed_at if latest else None,
             'capacity': {key: getattr(latest, key) for key in SAMPLE_FIELDS if key.endswith('total_bytes') or key == 'cpu_count'} if latest else None}
 

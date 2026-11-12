@@ -41,10 +41,11 @@ class CaseSerializer(serializers.ModelSerializer):
 class ReportSerializer(serializers.ModelSerializer):
     resource = ResourceSerializer(source='source.resource', read_only=True)
     source_name = serializers.CharField(source='source.name')
+    source_key = serializers.CharField(source='source.key')
 
     class Meta:
         model = Report
-        fields = ['id', 'source', 'source_name', 'resource', 'resource_snapshot', 'title', 'observed_at']
+        fields = ['id', 'source', 'source_key', 'source_name', 'resource', 'resource_snapshot', 'title', 'observed_at']
 
 
 class ActivitySerializer(serializers.ModelSerializer):
@@ -148,6 +149,8 @@ class FilterSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=['project', 'server'], required=False)
     state = serializers.ChoiceField(choices=Case.STATES, required=False)
     severity = serializers.ChoiceField(choices=Case.SEVERITIES, required=False)
+    condition = serializers.ChoiceField(choices=['active', 'recovered'], required=False)
+    followup = serializers.BooleanField(required=False)
     search = serializers.CharField(max_length=200, required=False, allow_blank=True)
     since = serializers.DateField(required=False)
     until = serializers.DateField(required=False)

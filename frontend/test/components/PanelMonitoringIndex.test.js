@@ -20,6 +20,13 @@ const mockStore = reactive({
   saving: false,
   error: '',
   requestId: 0,
+  snapshot: '',
+  revision: '',
+  capturedAt: '',
+  summary: null,
+  attention: [],
+  currentPage: 1,
+  expired: false,
   list: jest.fn(),
   catalog: jest.fn(),
   close: jest.fn(),
@@ -40,9 +47,15 @@ jest.mock('../../stores/monitoring', () => ({
 const { mount, flushPromises } = require('@vue/test-utils')
 const PanelMonitoringIndex = require('../../pages/panel/monitoring/index.vue').default
 
-const BaseSelectStub = {
-  props: ['id', 'options'],
-  template: '<output :data-testid="`${id}-options`">{{ options.map(option => `${option.value}:${option.label}`).join("|") }}</output>',
+const MonitoringSelectStub = {
+  props: ['modelValue', 'options', 'testId'],
+  emits: ['update:modelValue'],
+  template: `<div>
+    <select :data-testid="testId" :value="modelValue" @change="$emit('update:modelValue', $event.target.value)">
+      <option value=""></option><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
+    </select>
+    <output :data-testid="\`${testId}-options\`">{{ options.map(option => \`${option.value}:${option.label}\`).join("|") }}</output>
+  </div>`,
 }
 
 const BaseButtonStub = {
@@ -54,10 +67,10 @@ function defaultStubs() {
   return {
     BaseButton: BaseButtonStub,
     BaseFormField: { template: '<div><slot /></div>' },
-    BaseInput: { template: '<input />' },
+    BaseInput: { props: ['id', 'modelValue'], emits: ['update:modelValue'], template: '<input :data-testid="id" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
     BaseModal: { template: '<div><slot /></div>' },
     BaseModalActions: { template: '<div><slot /></div>' },
-    BaseSelect: BaseSelectStub,
+    MonitoringSelect: MonitoringSelectStub,
     BaseTextarea: { template: '<textarea />' },
   }
 }
@@ -103,7 +116,14 @@ describe('panel/monitoring index page', () => {
     mockStore.saving = false
     mockStore.error = ''
     mockStore.requestId = 0
-    mockStore.list.mockReset().mockResolvedValue(undefined)
+    mockStore.currentPage = 1
+    mockStore.snapshot = ''
+    mockStore.revision = ''
+    mockStore.capturedAt = ''
+    mockStore.summary = null
+    mockStore.attention = []
+    mockStore.expired = false
+    mockStore.list.mockReset().mockResolvedValue(true)
     mockStore.catalog.mockReset().mockResolvedValue(undefined)
     mockStore.close.mockReset()
     mockStore.open.mockReset().mockResolvedValue(undefined)
@@ -179,7 +199,7 @@ describe('panel/monitoring index page', () => {
     await buttonWithLabel(wrapper, 'monitoring.reports').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe(':monitoring.any|1:Proyecto Uno|2:Servidor Uno')
+    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe(':monitoring.any|1:Proyecto Uno · monitoring.projectLabel|2:Servidor Uno · monitoring.serverLabel')
     expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe(':monitoring.any|11:Proyecto Uno · Inspector|12:Servidor Uno · Healthcheck|13:Huérfano · Archivo')
   })
 
@@ -260,5 +280,93 @@ describe('panel/monitoring index page', () => {
     const englishDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date('2026-09-24T10:00:00Z'))
     expect(localeReads).toBe(2)
     expect(wrapper.get('[data-testid="monitoring-page"]').text()).toContain(`Proyecto Uno · Inspector 1monitoring.current · ${englishDate}`)
+  })
+
+  it('waits 300 ms before applying a text search as a new first-page snapshot', async () => {
+    // Falla si cada letra dispara una consulta o si la búsqueda conserva una página e instantánea anteriores.
+    wrapper = mountPage()
+    await flushPromises()
+    mockStore.list.mockClear()
+
+    await wrapper.get('[data-testid="monitor-search"]').setValue('disco lleno')
+    jest.advanceTimersByTime(299)
+    await flushPromises()
+    expect(mockStore.list).toHaveBeenCalledTimes(0)
+
+    jest.advanceTimersByTime(1)
+    await flushPromises()
+    expect(mockStore.list).toHaveBeenCalledWith({ kind: 'project', page: 1, search: 'disco lleno', snapshot: 'new' }, false)
+  })
+
+  it('applies a selected project immediately from the monitoring dropdown', async () => {
+    // Falla si el dropdown nuevo deja la selección local sin recargar el conjunto filtrado.
+    mockStore.resources = [resource(1, 'Proyecto Uno', 'project')]
+    wrapper = mountPage()
+    await flushPromises()
+    mockStore.list.mockClear()
+
+    await wrapper.get('[data-testid="monitor-resource"]').setValue('1')
+    jest.advanceTimersByTime(0)
+    await flushPromises()
+
+    expect(mockStore.list).toHaveBeenCalledWith({ kind: 'project', page: 1, resource: '1', snapshot: 'new' }, false)
+  })
+
+  it('shows an invalid-date alert without listing records', async () => {
+    // Falla si un intervalo invertido se envía al servidor y presenta resultados engañosos.
+    wrapper = mountPage()
+    await flushPromises()
+    mockStore.list.mockClear()
+
+    await wrapper.get('[data-testid="monitor-since"]').setValue('2026-11-12')
+    await wrapper.get('[data-testid="monitor-until"]').setValue('2026-11-01')
+    jest.runOnlyPendingTimers()
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('monitoring.invalidDates')
+    expect(mockStore.list).toHaveBeenCalledTimes(0)
+  })
+
+  it('clears active filters and returns the listing to its first page', async () => {
+    // Falla si Limpiar filtros conserva una búsqueda, una fecha o la página anterior.
+    routeQuery = { page: '7', resource: '1', search: 'disco', since: '2026-11-01', until: '2026-11-10' }
+    mockStore.resources = [resource(1, 'Proyecto Uno', 'project')]
+    wrapper = mountPage()
+    await flushPromises()
+    mockStore.list.mockClear()
+
+    await buttonWithLabel(wrapper, 'monitoring.clearFilters').trigger('click')
+    jest.advanceTimersByTime(0)
+    await flushPromises()
+
+    expect(mockStore.list).toHaveBeenCalledWith({ kind: 'project', page: 1, snapshot: 'new' }, false)
+  })
+
+  it('drills into critical active cases from the severity indicator', async () => {
+    // Falla si el indicador crítico sólo parece interactivo y no limita el listado a alertas activas críticas.
+    mockStore.summary = { total: 10, active: { critical: 7, warning: 2, info: 1 }, followup: 4 }
+    wrapper = mountPage()
+    await flushPromises()
+    mockStore.list.mockClear()
+
+    await wrapper.get('[data-testid="monitoring-summary"]').findAll('button').find(button => button.text() === 'monitoring.activeSeverity7').trigger('click')
+    jest.advanceTimersByTime(0)
+    await flushPromises()
+
+    expect(mockStore.list).toHaveBeenCalledWith({ kind: 'project', page: 1, condition: 'active', severity: 'critical', snapshot: 'new' }, false)
+  })
+
+  it('drills into pending follow-ups from the summary indicator', async () => {
+    // Falla si el indicador de seguimiento no muestra sólo los casos que todavía requieren gestión humana.
+    mockStore.summary = { total: 10, active: { critical: 7, warning: 2, info: 1 }, followup: 4 }
+    wrapper = mountPage()
+    await flushPromises()
+    mockStore.list.mockClear()
+
+    await wrapper.get('[data-testid="monitoring-summary"]').findAll('button').find(button => button.text() === 'monitoring.followupTotal4').trigger('click')
+    jest.advanceTimersByTime(0)
+    await flushPromises()
+
+    expect(mockStore.list).toHaveBeenCalledWith({ kind: 'project', page: 1, followup: 'true', snapshot: 'new' }, false)
   })
 })

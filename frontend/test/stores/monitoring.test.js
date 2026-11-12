@@ -88,9 +88,10 @@ describe('useMonitoringStore', () => {
     create_request.mockResolvedValue({ data: { state: 'reviewing' } })
     get_request.mockResolvedValue({ data: { id: 7, version: 4, state: 'reviewing', title: 'Base lenta' } })
 
-    await store.transition('reviewing')
+    await store.transition('reviewing', { history_snapshot: true })
 
     expect(create_request).toHaveBeenCalledWith('monitoring/cases/7/state/', { state: 'reviewing', version: 3 })
+    expect(get_request).toHaveBeenCalledWith('monitoring/cases/7/', { params: { page: 1, history_snapshot: true } })
   })
 
   it('replaces the case detail after a state transition', async () => {
@@ -112,9 +113,10 @@ describe('useMonitoringStore', () => {
       data: { id: 9, version: 2, activities: [{ id: 31, text: 'Revisé los índices.' }] },
     })
 
-    await store.note('Revisé los índices.')
+    await store.note('Revisé los índices.', { history_snapshot: true })
 
     expect(create_request).toHaveBeenCalledWith('monitoring/cases/9/notes/', { text: 'Revisé los índices.' })
+    expect(get_request).toHaveBeenCalledWith('monitoring/cases/9/', { params: { page: 1, history_snapshot: true } })
   })
 
   it('replaces case activities after a note', async () => {

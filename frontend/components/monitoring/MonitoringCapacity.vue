@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { get_request, put_request } from '~/stores/services/request_http'
-const props = defineProps({ resourceId: { type: [String, Number], required: true } })
+const props = defineProps({ resourceId: { type: [String, Number], required: true }, refreshKey: { type: Number, default: 0 } })
 const { t, locale } = useI18n()
 const tr = (key, values) => t(`monitoring.${key}`, values || {})
 const data = ref(null)
@@ -16,7 +16,8 @@ const form = reactive({ version: 0, cpu_mode: 'unknown', ram_mode: 'unknown', st
 const dimensions = ['cpu', 'ram', 'storage']
 const units = { cpu: 'vCPU', ram: 'GiB', storage: 'GiB' }
 const modes = computed(() => ['unknown', 'shared', 'assigned'].map(value => ({ value, label: tr(`capacityModes.${value}`) })))
-let requestId = 0
+let requestId = 0, historyRequest = 0
+const formatDate = value => new Date(value).toLocaleString(locale.value)
 function fill(allocation) {
   form.version = allocation?.version || 0
   for (const dimension of dimensions) form[`${dimension}_mode`] = allocation?.[`${dimension}_mode`] || 'unknown'
@@ -29,6 +30,7 @@ async function load() {
   loading.value = true
   error.value = ''
   saved.value = false
+  historyRequest++
   history.value = null
   try {
     const response = await get_request(`monitoring/resources/${props.resourceId}/capacity/`)
@@ -60,10 +62,11 @@ async function save() {
 }
 async function loadHistory(page = 1) {
   const id = requestId
+  const historyId = ++historyRequest
   try {
     const response = await get_request(`monitoring/resources/${props.resourceId}/capacity/history/`, { params: { page } })
-    if (id === requestId) { history.value = response.data; historyPage.value = page }
-  } catch { if (id === requestId) error.value = tr('load') }
+    if (id === requestId && historyId === historyRequest) { history.value = response.data; historyPage.value = page }
+  } catch { if (id === requestId && historyId === historyRequest) error.value = tr('load') }
 }
 function describe(allocation, dimension) {
   const mode = allocation?.[`${dimension}_mode`] || 'unknown'
@@ -71,7 +74,7 @@ function describe(allocation, dimension) {
   const value = dimension === 'cpu' ? Number(allocation.cpu_vcpu) : allocation[`${dimension}_bytes`] / 1024 ** 3
   return `${value} ${units[dimension]}`
 }
-watch(() => props.resourceId, () => { saving.value = false; historyOpen.value = false; load() }, { immediate: true })
+watch(() => [props.resourceId, props.refreshKey], () => { saving.value = false; historyOpen.value = false; load() }, { immediate: true })
 watch(historyOpen, open => { if (open && data.value?.allocation) loadHistory() })
 onBeforeUnmount(() => { requestId++ })
 </script>
@@ -85,14 +88,14 @@ onBeforeUnmount(() => { requestId++ })
     <template v-if="data && !loading">
       <p class="text-sm text-text-subtle">{{ data.resource.name }} · {{ tr('serverLabel') }}: {{ data.server_name || tr('notConfigured') }}</p>
       <form class="space-y-4" @submit.prevent="save">
-        <div class="grid gap-4 md:grid-cols-3">
+        <fieldset :disabled="saving" class="grid gap-4 md:grid-cols-3">
           <div v-for="dimension in dimensions" :key="dimension" class="min-w-0 space-y-2">
             <MonitoringSelect v-model="form[`${dimension}_mode`]" :label="tr(dimension)" :options="modes" />
             <BaseFormField v-if="form[`${dimension}_mode`] === 'assigned'" :label="`${tr(dimension)} (${units[dimension]})`" :for="`capacity-${dimension}`">
               <BaseInput :id="`capacity-${dimension}`" v-model="form[dimension]" type="number" min="0.001" step="any" required :disabled="saving" />
             </BaseFormField>
           </div>
-        </div>
+        </fieldset>
         <div class="flex flex-wrap gap-2">
           <BaseButton type="submit" :disabled="saving" :disabled-reason="tr('busy')">{{ tr('saveCapacity') }}</BaseButton>
           <BaseButton variant="secondary" :disabled="saving" :disabled-reason="tr('busy')" @click="load">{{ tr('reloadCapacity') }}</BaseButton>
@@ -104,11 +107,11 @@ onBeforeUnmount(() => { requestId++ })
         <summary class="cursor-pointer text-sm text-text-default">{{ tr('capacityHistory') }}</summary>
         <ol class="mt-3 space-y-3">
           <li v-for="change in history?.results || []" :key="change.id" class="rounded-lg border border-border-default p-3 text-sm">
-            <p class="text-text-subtle">{{ change.actor_name }} · {{ new Date(change.created_at).toLocaleString(locale) }}</p>
+            <p class="text-text-subtle">{{ change.actor_name }} · {{ formatDate(change.created_at) }}</p>
             <p v-for="dimension in dimensions" :key="dimension" class="break-words text-text-default">{{ tr(dimension) }}: {{ describe(change.before, dimension) }} → {{ describe(change.after, dimension) }}</p>
           </li>
         </ol>
-        <BasePagination v-if="history" :current-page="historyPage" :total-pages="Math.ceil(history.count / history.page_size)" :total-items="history.count" :range-from="(historyPage - 1) * history.page_size + 1" :range-to="Math.min(historyPage * history.page_size, history.count)" @prev="loadHistory(historyPage - 1)" @next="loadHistory(historyPage + 1)" @go="loadHistory" />
+        <BasePagination v-if="history" :current-page="historyPage" :total-pages="Math.max(1, Math.ceil(history.count / history.page_size))" :total-items="history.count" :range-from="history.count ? (historyPage - 1) * history.page_size + 1 : 0" :range-to="Math.min(historyPage * history.page_size, history.count)" @prev="loadHistory(historyPage - 1)" @next="loadHistory(historyPage + 1)" @go="loadHistory" />
       </details>
     </template>
     <BaseButton v-else-if="!loading" variant="secondary" @click="load">{{ tr('refresh') }}</BaseButton>

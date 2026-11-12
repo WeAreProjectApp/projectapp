@@ -54,4 +54,8 @@ export default {
   sourceNames: { 'server-alerts': 'Server alerts', healthcheck: 'Availability', integrity: 'Integrity', silk: 'Application queries', telemetry: 'Server measurements', monitoring: 'Monitoring reception', weekly: 'Weekly summary', diagnostic: 'Diagnostics', traffic: 'Traffic', qa: 'Quality', restore: 'Restore', verify: 'Verification', email: 'Email', ssh: 'SSH access' },
   eventTitles: { 'failed-units': 'Failed services', integrity: 'Integrity finding' },
   fields: { metric: 'Metric', value: 'Value', unit: 'Unit', threshold: 'Threshold', service: 'Service', route: 'Route', query_count: 'Query count', duration_ms: 'Duration (ms)', rule: 'Rule', path: 'Location', result: 'Result', count: 'Count', sample_percent: 'Sample (%)', message: 'Observation' },
+  originalTitle: 'Original title',
+  condition: 'Technical condition', followup: 'Follow-up', followupOnly: 'Pending or under review',
+  sourcesWithoutData: 'Sources without data', staleSources: 'Stale sources', resourcesUnderPressure: 'Servers under pressure',
+  noSourcesInState: 'No sources in this state in the selected scope.', expectedInterval: 'Expected observation interval: {seconds} seconds.',
 }

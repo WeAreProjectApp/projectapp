@@ -62,9 +62,11 @@ def filtered(request, model):
         if parameter in data:
             query = query.filter(**{field: data[parameter]})
     if model is Case:
-        for parameter in ['state', 'severity']:
+        for parameter in ['state', 'severity', 'condition']:
             if parameter in data:
                 query = query.filter(**{parameter: data[parameter]})
+        if data.get('followup'):
+            query = query.filter(state__in=['pending', 'reviewing'])
     if data.get('search'):
         query = query.filter(title__icontains=data['search'])
     date_field = 'last_seen_at' if model is Case else 'observed_at'

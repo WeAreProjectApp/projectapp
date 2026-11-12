@@ -14,6 +14,8 @@ Los listados mantienen páginas de 25. `snapshot=new` en cases/reports crea una 
 
 El chequeo cada minuto consulta `/api/monitoring/status/`: avisa cambios sin reemplazar la consulta ni cerrar un detalle. Actualizar conserva filtros y crea otra consulta desde página 1. La capacidad y las gráficas indican su fecha y disponibilidad de forma independiente del listado congelado.
 
+Los indicadores de gravedad abren el listado con `condition=active` y la gravedad elegida. Seguimientos pendientes usa `followup=true` (pending/reviewing), sin cambiar el significado de los estados existentes. Ambos filtros quedan visibles y se limpian con los demás. Los indicadores de fuentes abren sus detalles, con recurso, última observación, intervalo esperado y error. Actualizar recarga también la asignación del proyecto seleccionado.
+
 El detalle permite `activities_page` y `deliveries_page`, con sus totales independientes; `page` sigue siendo compatible. `history_snapshot=true` devuelve `history_bounds.activities/deliveries`; reenviarlos como `activities_before/deliveries_before` conserva el límite superior durante la navegación. Los nuevos recibos no desplazan páginas anteriores. Las notas en preparación sobreviven a cambios de página. Tras guardar o actualizar se abre un corte nuevo del historial.
 
 La vista principal de observaciones omite null y cadenas vacías; mantiene cero y false. El desplegable Datos técnicos muestra el objeto original como texto, sin HTML ejecutable ni filtrado destructivo. Las reglas de retención preexistentes siguen vigentes: PA-249 no reconstruye observaciones podadas.

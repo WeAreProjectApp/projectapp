@@ -3038,3 +3038,9 @@ Validar listado/filtros/exportación, búsquedas con owner_id, alertas con desti
 ## Accesos autorizados — projects 4.5.0
 
 Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.
+
+## PA-249 — Monitoreo en MCP Proyectos 5.2.0
+
+El catálogo canónico incorpora 13 operaciones de consulta y gestión de Monitoreo. Contrato completo, unidades y activación: [tablero de Monitoreo](monitoring-dashboard.md). Consultar catálogo, casos con snapshot, detalle/historia, reportes, presión, series y asignación informativa; gestionar estado con versión, notas, vínculo de proyecto y capacidad con versión. Los identificadores son case_id/report_id/server_id/resource_id, según la herramienta.
+
+En DEV aislado y sobre el SHA servido: comprobar tools/list y describe_capabilities para una credencial permitida y otra explícitamente restringida; ejecutar consulta, nota, transición, lectura de serie y edición de capacidad; cotejar el mismo registro desde Panel. Repetir con ID de otro tipo o inexistente, actor sin staff, versión antigua y herramienta no permitida. Una denegación no modifica datos. No consultar ni imprimir tokens, credenciales de ingestión o configuración operativa. La existencia de las rutas REST y el test del adaptador no sustituyen esta comprobación del conector real.

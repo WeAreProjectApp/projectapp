@@ -54,4 +54,8 @@ export default {
   sourceNames: { 'server-alerts': 'Alertas del servidor', healthcheck: 'Disponibilidad', integrity: 'Integridad', silk: 'Consultas de la aplicación', telemetry: 'Mediciones del servidor', monitoring: 'Recepción del monitoreo', weekly: 'Resumen semanal', diagnostic: 'Diagnóstico', traffic: 'Tráfico', qa: 'Calidad', restore: 'Restauración', verify: 'Verificaciones', email: 'Correo', ssh: 'Accesos SSH' },
   eventTitles: { 'failed-units': 'Servicios con fallos', integrity: 'Hallazgo de integridad' },
   fields: { metric: 'Métrica', value: 'Valor', unit: 'Unidad', threshold: 'Umbral', service: 'Servicio', route: 'Ruta', query_count: 'Cantidad de consultas', duration_ms: 'Duración (ms)', rule: 'Regla', path: 'Ubicación', result: 'Resultado', count: 'Cantidad', sample_percent: 'Muestra (%)', message: 'Observación' },
+  originalTitle: 'Título original',
+  condition: 'Condición técnica', followup: 'Seguimiento', followupOnly: 'Pendiente o en revisión',
+  sourcesWithoutData: 'Fuentes sin datos', staleSources: 'Fuentes desactualizadas', resourcesUnderPressure: 'Servidores bajo presión',
+  noSourcesInState: 'No hay fuentes en este estado dentro del ámbito seleccionado.', expectedInterval: 'Intervalo esperado de observación: {seconds} segundos.',
 }
