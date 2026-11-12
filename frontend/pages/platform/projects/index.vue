@@ -6,7 +6,7 @@
         <h1 class="text-2xl font-bold text-text-default sm:text-3xl">
           {{ authStore.isAdmin ? 'Proyectos' : 'Mis proyectos' }}
         </h1>
-        <p class="mt-1 text-sm text-green-light">
+        <p class="mt-1 text-sm text-text-muted">
           {{ authStore.isAdmin ? 'Todos los proyectos de tus clientes.' : 'El estado actual de tus proyectos.' }}
         </p>
       </div>
@@ -25,7 +25,7 @@
         class="rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition"
         :class="activeFilter === filter.value
           ? 'bg-primary text-white dark:bg-accent dark:text-text-default'
-          : 'border border-border-default text-green-light hover:text-text-default dark:hover:text-white'"
+          : 'border border-border-default text-text-muted hover:text-text-default dark:hover:text-white'"
         @click="handleFilterChange(filter.value)"
       >
         {{ filter.label }}
@@ -35,7 +35,7 @@
     <!-- Loading state -->
     <div v-if="projectsStore.isLoading" class="py-20 text-center" data-enter>
       <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border-default border-t-esmerald dark:border-t-lemon" />
-      <p class="mt-4 text-sm text-green-light">Cargando proyectos...</p>
+      <p class="mt-4 text-sm text-text-muted">Cargando proyectos...</p>
     </div>
 
     <!-- Empty state -->
@@ -44,13 +44,13 @@
       class="rounded-3xl border border-dashed border-border-default py-20 text-center"
       data-enter
     >
-      <svg class="mx-auto h-12 w-12 text-green-light/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="mx-auto h-12 w-12 text-text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
       </svg>
       <p class="mt-4 text-sm font-medium text-text-default">
         {{ authStore.isAdmin ? 'No hay proyectos creados.' : 'Todavía no tienes proyectos asignados.' }}
       </p>
-      <p class="mt-1 text-xs text-green-light">
+      <p class="mt-1 text-xs text-text-muted">
         {{ authStore.isAdmin ? 'Crea el primer proyecto para un cliente.' : 'Tu administrador te asignará proyectos pronto.' }}
       </p>
     </div>

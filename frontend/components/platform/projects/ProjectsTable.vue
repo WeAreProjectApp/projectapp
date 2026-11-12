@@ -13,7 +13,7 @@
         <col />
         <col class="w-12" />
       </colgroup>
-      <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-green-light/70">
+      <thead class="bg-surface-muted/40 text-xs font-medium uppercase tracking-wider text-text-muted">
         <tr>
           <th class="px-4 py-3">Proyecto</th>
           <th v-if="isAdmin" class="px-4 py-3">Cliente</th>
@@ -37,9 +37,9 @@
             <div class="whitespace-normal font-medium text-text-default" :data-testid="`project-name-${p.id}`">{{ p.name }}</div>
             <span :class="statusChipClass(p.current_state)">{{ p.status_label }}</span>
           </td>
-          <td v-if="isAdmin" class="px-4 py-3 text-green-light">
+          <td v-if="isAdmin" class="px-4 py-3 text-text-muted">
             {{ p.client_name }}<br>
-            <span class="text-xs text-green-light/60">{{ p.client_email }}</span>
+            <span class="text-xs text-text-muted">{{ p.client_email }}</span>
           </td>
           <td class="px-4 py-3">
             <div class="flex min-w-0 items-center gap-2">
@@ -50,25 +50,25 @@
             </div>
           </td>
           <td class="px-4 py-3">
-            <span :class="(p.bugs_open_count || 0) > 0 ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700' : 'text-green-light/60'">
+            <span :data-testid="`project-bugs-${p.id}`" :class="(p.bugs_open_count || 0) > 0 ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700' : 'text-text-muted'">
               {{ p.bugs_open_count || 0 }}
             </span>
           </td>
           <td v-if="isAdmin" class="px-4 py-3">
-            <span :class="(p.changes_pending_count || 0) > 0 ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700' : 'text-green-light/60'">
+            <span :class="(p.changes_pending_count || 0) > 0 ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700' : 'text-text-muted'">
               {{ p.changes_pending_count || 0 }}
             </span>
           </td>
           <td class="px-4 py-3 text-sm">
-            <span :class="(Number(p.phases_total_amount) > 0) ? 'font-medium text-text-default' : 'text-green-light/60'">
+            <span :data-testid="`project-value-${p.id}`" :class="(Number(p.phases_total_amount) > 0) ? 'font-medium text-text-default' : 'text-text-muted'">
               {{ formatCurrency(p.phases_total_amount) }}
             </span>
           </td>
-          <td class="px-4 py-3 text-sm text-green-light/70">{{ relativeTime(p.last_activity_at) }}</td>
-          <td class="px-2 py-3 text-right text-green-light/40">›</td>
+          <td class="px-4 py-3 text-sm text-text-muted" :data-testid="`project-last-activity-${p.id}`">{{ relativeTime(p.last_activity_at) }}</td>
+          <td class="px-2 py-3 text-right text-text-muted">›</td>
         </tr>
         <tr v-if="!projects.length">
-          <td :colspan="isAdmin ? 8 : 6" class="px-4 py-12 text-center text-green-light/60">
+          <td :colspan="isAdmin ? 8 : 6" class="px-4 py-12 text-center text-text-muted">
             No hay proyectos para mostrar.
           </td>
         </tr>
@@ -92,46 +92,46 @@
             <div class="whitespace-normal font-medium text-text-default [overflow-wrap:anywhere]" :data-testid="`project-name-${p.id}`">{{ p.name }}</div>
             <span :class="statusChipClass(p.current_state)">{{ p.status_label }}</span>
           </div>
-          <span class="shrink-0 text-green-light/40">›</span>
+          <span class="shrink-0 text-text-muted">›</span>
         </div>
 
-        <div v-if="isAdmin" class="mt-3 text-sm text-green-light">
+        <div v-if="isAdmin" class="mt-3 text-sm text-text-muted">
           {{ p.client_name }}
-          <span class="block truncate text-xs text-green-light/60">{{ p.client_email }}</span>
+          <span class="block truncate text-xs text-text-muted">{{ p.client_email }}</span>
         </div>
 
         <div class="mt-3 flex items-center gap-2">
           <div class="h-1.5 w-full max-w-[8rem] overflow-hidden rounded-full bg-surface-muted">
             <div class="h-full bg-primary" :style="{ width: `${p.progress || 0}%` }"></div>
           </div>
-          <span class="text-xs text-green-light/70">{{ p.progress || 0 }}%</span>
+          <span class="text-xs text-text-muted">{{ p.progress || 0 }}%</span>
         </div>
 
         <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div class="flex items-center justify-between gap-2">
-            <dt class="text-xs uppercase tracking-wide text-green-light/60">Bugs</dt>
+            <dt class="text-xs uppercase tracking-wide text-text-muted">Bugs</dt>
             <dd>
-              <span :class="(p.bugs_open_count || 0) > 0 ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700' : 'text-green-light/60'">{{ p.bugs_open_count || 0 }}</span>
+              <span :data-testid="`project-bugs-${p.id}`" :class="(p.bugs_open_count || 0) > 0 ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700' : 'text-text-muted'">{{ p.bugs_open_count || 0 }}</span>
             </dd>
           </div>
           <div v-if="isAdmin" class="flex items-center justify-between gap-2">
-            <dt class="text-xs uppercase tracking-wide text-green-light/60">Solicitudes</dt>
+            <dt class="text-xs uppercase tracking-wide text-text-muted">Solicitudes</dt>
             <dd>
-              <span :class="(p.changes_pending_count || 0) > 0 ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700' : 'text-green-light/60'">{{ p.changes_pending_count || 0 }}</span>
+              <span :class="(p.changes_pending_count || 0) > 0 ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700' : 'text-text-muted'">{{ p.changes_pending_count || 0 }}</span>
             </dd>
           </div>
           <div class="flex items-center justify-between gap-2">
-            <dt class="text-xs uppercase tracking-wide text-green-light/60">Valor</dt>
-            <dd :class="(Number(p.phases_total_amount) > 0) ? 'font-medium text-text-default' : 'text-green-light/60'">{{ formatCurrency(p.phases_total_amount) }}</dd>
+            <dt class="text-xs uppercase tracking-wide text-text-muted">Valor</dt>
+            <dd :data-testid="`project-value-${p.id}`" :class="(Number(p.phases_total_amount) > 0) ? 'font-medium text-text-default' : 'text-text-muted'">{{ formatCurrency(p.phases_total_amount) }}</dd>
           </div>
           <div class="flex items-center justify-between gap-2">
-            <dt class="text-xs uppercase tracking-wide text-green-light/60">Actividad</dt>
-            <dd class="text-green-light/70">{{ relativeTime(p.last_activity_at) }}</dd>
+            <dt class="text-xs uppercase tracking-wide text-text-muted">Actividad</dt>
+            <dd class="text-text-muted" :data-testid="`project-last-activity-${p.id}`">{{ relativeTime(p.last_activity_at) }}</dd>
           </div>
         </dl>
       </button>
 
-      <div v-if="!projects.length" class="rounded-2xl border border-border-default bg-surface px-4 py-12 text-center text-green-light/60">
+      <div v-if="!projects.length" class="rounded-2xl border border-border-default bg-surface px-4 py-12 text-center text-text-muted">
         No hay proyectos para mostrar.
       </div>
     </div>

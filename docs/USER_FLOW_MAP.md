@@ -3896,6 +3896,7 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
   6. API call to `PATCH /api/proposals/:id/update/`.
   7. Success feedback displays.
 - **Branches:**
+  - [General — PA-226] Abrir o recargar una propuesta conserva su vencimiento sin activar el aviso de cambios pendientes, incluso si ya venció. Editar un dato o los días de vigencia activa el aviso; restituir el valor guardado lo retira. Guardar elimina el aviso y conserva los cambios al recargar; un fallo conserva el borrador y la confirmación de salida. La fecha escrita directamente, incluida una hora cercana a medianoche, no se recalcula a partir de los días mostrados.
   - [Datos del proyecto] Proyecto → Datos está disponible en todos los estados. Reúne el cliente y los contactos con guardado propio; una propuesta ya vinculada conserva su cliente. El proyecto actual se muestra allí y su cambio exige destino del mismo cliente, motivo, revisión y confirmación.
   - [Recursos y correos] Recursos pertenece a Propuesta. Los enlaces anteriores a Comunicación → Recursos abren la nueva ubicación. Firma, funcionalidades y fases del correo se guardan desde Comunicación → Correos sin sobrescribir cambios pendientes en General.
   - [Disponibilidad de Documentos] La pestaña está disponible en todos los estados y permanece seleccionada cuando la propuesta pasa a finalizada. General conserva los PDFs originales de propuestas en borrador, vencidas y finalizadas, distintos de los documentos formales.
@@ -3907,7 +3908,7 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
   - [Branch B] Admin updates individual section → `PATCH /api/proposals/sections/:id/update/`.
   - [Branch C — item traceability] In Propuesta → Detalle técnico, editor sections render collapsed by default (2026-08 perf round): the admin expands "Módulos del producto" (`technical-section-toggle-epics`), opens the requirement's "Vincular alcance/ítems (n)" disclosure (`technical-req-links-toggle`), and checks the commercial-item boxes (grouped by functional_requirements card, `technical-req-item-links`) that write `linked_item_ids`; saving (button always visible below the sections) persists them via the same section update endpoint. These links power the public nested requirements modal and the commercial PDF sub-rows. The JSON sub-tab mounts only when selected.
 - **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/admin/admin-proposal-edit.spec.js` (includes linked_item_ids save test), `e2e/admin/admin-proposal-navigation.spec.js` (grouped navigation and compatible links)
+- **E2E Spec:** `e2e/admin/admin-proposal-edit.spec.js` (includes linked_item_ids save test), `e2e/admin/admin-proposal-navigation.spec.js` (grouped navigation and compatible links), `e2e/admin/admin-proposal-general-dirty-guard.spec.js` (PA-226: carga, recarga, edición, reversión, guardado y protección ante fallo con vencimiento pasado y futuro)
 - **Known gaps:** The automations toggle now uses positive polarity (ON = automations running, 2026-07); no E2E asserts knob position / `aria-checked`, and the toggle has no `data-testid` (only `aria-label="Activar automatizaciones"`).
 
 ### FLOW: `admin-proposal-contract-terms-visibility`
@@ -5563,6 +5564,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Formato editorial:** El contenido admite modos Visual y Fuente Markdown, listas, tablas, colores y alineación; el guardado conserva la fuente única y su declaración de formato.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
 
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
+
 ### FLOW: `admin-document-edit`
 
 - **Module:** admin
@@ -5598,6 +5602,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 
 - **Formato editorial:** Visual y Fuente Markdown comparten contenido e historial. Alternar, guardar y reabrir conserva listas, tablas, color y alineación. Notas y borradores utilizan el mismo editor; WhatsApp sólo ofrece formato nativo. Un formato inválido mantiene la fuente para corregirla.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
+
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
 
 ### FLOW: `admin-document-thread`
 
@@ -8430,6 +8437,26 @@ Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, mot
   2. **display:** pulsar una referencia y llegar al Historial con esa fila cargada y expandida.
   3. **success/error/failure:** n/a; es navegación de evidencia. La protección 409 al eliminar se cubre en integración backend.
 - **E2E Spec:** `e2e/admin/admin-document-edit.spec.js`
+
+## Administración de carpetas de documentos
+
+**Rol:** administrador. Entrada: Panel → Gestor Documental.
+
+### PA-206 — creación contextual
+
+**Nueva carpeta** en el encabezado abre el formulario directo con destino visible: carpeta abierta o raíz definida del proyecto seleccionado. Guardar mantiene la ubicación del listado y muestra la nueva carpeta; cancelar no escribe. Sin raíz definida se conserva el proyecto y se propone una carpeta sin padre.
+
+### PA-207 — destinos buscables y jerarquía
+
+En **Gestionar carpetas**, **Dentro de** busca por fragmento de nombre y conserva la ruta de cada coincidencia. Admite **Ninguna (carpeta raíz)** y teclado; escribir sin elegir no cambia el destino confirmado. El árbol muestra los ancestros de cada subcarpeta. La edición y eliminación usan sus formularios compartidos; archivar y reordenar entre hermanas conservan su contrato.
+
+### Resultados y cobertura
+
+- Éxito: crear desde raíz/subcarpeta y elegir una subcarpeta entre nombres coincidentes; cancelar sin crear.
+- Error: nombre rechazado conserva formulario y destino.
+- Fallo del servidor: se conserva el manejo de errores de creación/reordenamiento existente.
+- Presentación: destino y rama visibles antes de confirmar.
+- Regresión CI: `admin-document-folder-create.spec.js`, `admin-document-folder-manage.spec.js` y `admin-document-folders.spec.js`. La aprobación manual Chrome sobre datos aislados se registra por separado.
 
 ### FLOW: `admin-document-gallery`
 

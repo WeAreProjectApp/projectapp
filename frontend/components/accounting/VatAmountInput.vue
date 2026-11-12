@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 import VatBreakdown from './VatBreakdown.vue'
 import { vatBreakdown } from '~/utils/accountingVat'
 const props = defineProps({
@@ -16,6 +16,7 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'update:rate', 'capture'])
+const rateId = useId()
 const mode = ref('vat_included')
 const modes = [
   { value: 'vat_included', label: 'Total con IVA' },
@@ -71,12 +72,14 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
       <BaseFormField :label="mode === 'before_vat' ? 'Valor antes de IVA' : 'Total con IVA incluido'" :required="required" :error="error" v-slot="{ errorId, invalid }">
         <BaseCurrencyInput :model-value="inputAmount" :decimals="2" :required="required" :data-testid="inputTestId" :disabled="disabled" :disabled-reason="disabledReason" :error="invalid" :aria-invalid="invalid ? 'true' : undefined" :aria-describedby="errorId" @update:model-value="capture($event)" />
       </BaseFormField>
-      <BaseFormField label="IVA (%)">
-        <BaseInput :model-value="rate" type="number" min="0" max="100" step="0.01" placeholder="Sin registrar" data-testid="vat-rate" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @update:model-value="changeRate($event)" />
+      <BaseFormField label="IVA (%)" :for="rateId">
+        <div class="flex flex-wrap items-start gap-2">
+          <BaseInput :id="rateId" class="min-w-0 flex-1 basis-20" :model-value="rate" type="number" min="0" max="100" step="0.01" placeholder="Sin registrar" data-testid="vat-rate" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @update:model-value="changeRate($event)" />
+          <BaseButton type="button" variant="secondary" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
+        </div>
       </BaseFormField>
       <template #help>
         Usa 0 para Sin IVA; vacío significa sin registrar.
-        <BaseButton type="button" variant="link" size="sm" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
       </template>
     </BaseFormRow>
     <p v-if="invalid" class="text-sm text-danger-strong" role="alert">Revisa el importe y el porcentaje de IVA.</p>
