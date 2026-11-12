@@ -9,7 +9,7 @@
 | error | Guardar un adjunto con una huella antigua y consultar la versión actual | El archivo elegido se conserva al actualizar los datos de la fuente; el reintento explícito envía el mismo archivo con la huella revisada |
 | failure | Falla la consulta de la versión actual | El archivo y la huella previa se conservan, con un mensaje que permite volver a consultar |
 | failure | El servidor falla al confirmar o guardar un adjunto | Mensaje visible; archivo y formulario conservados para reintentar |
-| display | Abrir el historial | Títulos, versión vigente y revisiones descargables del recurso |
+| display | Abrir el historial y recargar propuesta y gestor | Título descriptivo conservado al pasar a Histórico, misma identidad y revisiones descargables |
 
 Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública. Aprobar y revisar después conserva la decisión comercial sin crear cliente, proyecto ni paquete automáticamente.
 
