@@ -17,6 +17,10 @@ Nueva carpeta desde el encabezado abre el formulario existente con destino visib
 
 > **PA211-01 — combinación de color y resaltado, 2026-11-07:** Chrome detectó que un resaltado interior tomaba el negro del navegador aunque su fuente conservara el color explícito. La corrección en la rama de sesión aplica herencia sólo bajo spans editoriales con color, en editor, vista previa y lectores; conserva el resaltado sin color y el vocabulario guardado. Se preparan pruebas de color computado para CI. El entorno de QA sigue congelado en `1b7b761b` hasta acordar la reprueba; esta nota no acredita validación del arreglo.
 
+## 2026-11-06 — PA-226, aviso de cambios al cargar General
+
+Corrección en rama de sesión: General calcula los días de vigencia sin escribir el vencimiento al cargar o recargar el formulario. Sólo editar los días actualiza la fecha; se elimina el circuito de watchers que movía vencimientos pasados y podía producir actualizaciones recursivas cerca de medianoche. Regresiones de componente y E2E para carga asíncrona, edición, reversión y guardado exitoso/fallido. Las pruebas se ejecutan exclusivamente en CI. La aceptación visible de propuestas ficticias 10 y 11 requiere turno de DevQA y Chrome de Backlog ProjectApp; la aceptación para cierre requiere además el SHA integrado de main servido en DEV. Esta nota no acredita CI ni validación funcional aprobados.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
