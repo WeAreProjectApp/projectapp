@@ -119,6 +119,13 @@ Barrido y correcciones en `fix/06112026-pa227-dark-mode`, desde `b01448a2`. DEV 
 
 > **PA-201 / PA-202–205 / PA-208 / PA-214 — 2026-11-06/07:** implementación en `fix/06112026-panel-usability-email-retry`, PR #559. Radar compacto, anchos ajustables del menú y de Enlaces seguros, Consultoría en Programas y centro de Emails con Estado. El gateway conserva la conexión SMTP al clonar el mensaje; el reintento individual usa el destinatario fallido y evidencia exacta o el origen contable validado. El corte `4bedcbf6` obtuvo 91 verificaciones CI satisfactorias; QA2 aprobó PA-201/202/208 y rechazó PA-214 por el alias antiguo que termina en 500 y por la pérdida de cliente/audiencia al reintentar una dirección alternativa no registrada. Corrección: redirección en middleware antes de montar la página; el reenvío al destinatario original conserva su asociación histórica, mientras otra dirección se resuelve normalmente. Nuevas regresiones cubren el destino renderizado e interactivo, las variantes Para/CC, el fallo de transporte y el destinatario distinto. CI y reprueba del nuevo corte pendientes. Automatización exclusivamente en CI; DevQA opera DEV y QA2 recorre Chrome. El runtime DEVQA-002 fue cerrado con datos/evidencias preservados; esta sesión no lo modifica ni levanta otro servidor. Sin merge ni despliegue desde esta sesión.
 
+> **PA-230 — en implementación, 2026-11-06:** selección y alta de hosting desde
+> la cuenta de cobro, inventario con elegibilidad y bloqueos, conciliación con
+> resumen legible y borrador por pestaña para regresar. Rama de sesión
+> `feat/06112026-pa230-hosting-link`. Sin migraciones; no altera evidencias ni
+> finanzas. Pruebas automatizadas exclusivamente en CI y validación Chrome
+> coordinada por DevQA; pendiente de evidencia y entrega del PR.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

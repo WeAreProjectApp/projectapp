@@ -52,6 +52,8 @@ export default defineI18nLocale(async () => {
     documentPdf,
     documentFolders,
     procurement,
+
+    hostingBilling,
   ] = await Promise.all([
     import('../../locales/panelUsability/en.js').then(m => m.default),
     import('~/locales/global/en.js'),
@@ -105,6 +107,8 @@ export default defineI18nLocale(async () => {
     import('~/locales/documentPdf/en.js'),
     import('~/locales/documentFolders/en.js'),
     import('~/locales/procurement/en.js'),
+
+    import('~/locales/hostingBilling/en.js'),
   ])
 
   return {
@@ -160,5 +164,7 @@ export default defineI18nLocale(async () => {
     documentPdf: documentPdf.default,
     documentFolders: documentFolders.default,
     procurement: procurement.default,
+
+    hostingBilling: hostingBilling.default,
   }
 })
