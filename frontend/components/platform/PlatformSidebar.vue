@@ -215,6 +215,8 @@
 import PlatformHelpMenu from '~/components/platform/PlatformHelpMenu.vue'
 import { computed, inject, onMounted, onUnmounted } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
+import { watch } from 'vue'
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
 import { usePlatformNotificationsStore } from '~/stores/platform-notifications'
 import SidebarItem from '~/components/platform/SidebarItem.vue'
 import { usePlatformNav } from '~/composables/usePlatformNav'
@@ -237,7 +239,11 @@ const notifStore = usePlatformNotificationsStore()
 
 const { primaryItems, accountItems, adminItems, isActive } = usePlatformNav()
 
-onMounted(() => { notifStore.startPolling(30000) })
+const featureStore = usePlatformFeaturesStore()
+watch(() => featureStore.enabled('platform.notifications'), (available) => {
+  if (available) notifStore.startPolling(30000)
+  else { notifStore.stopPolling(); notifStore.unreadCount = 0 }
+}, { immediate: true })
 onUnmounted(() => { notifStore.stopPolling() })
 
 const userSubtitle = computed(() =>

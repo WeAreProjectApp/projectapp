@@ -1,0 +1,57 @@
+name: PA-263 — Feature flags
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'contracts/platform-features.json'
+      - 'scripts/check_platform_features.py'
+      - '.github/workflows/platform-feature-flags.yml'
+
+concurrency:
+  group: pa263-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq pkg-config default-libmysqlclient-dev ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Precedence and persistence
+        run: pytest accounts/tests/test_platform_feature_flags.py -v --no-cov --junitxml=feature-precedence.xml
+      - name: HTTP permissions and effects
+        run: pytest accounts/tests/test_platform_feature_api.py -v --no-cov --junitxml=feature-api.xml
+      - name: Mapping gaps and real MCP contract
+        run: pytest accounts/tests/test_platform_feature_inventory.py content/tests/test_mcp_platform_features.py -v --no-cov --junitxml=feature-mcp.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa263-backend-evidence
+          path: backend/feature-*.xml
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Identity isolation and failed evaluation
+        run: npm test -- test/stores/platform-features.test.js --runInBand --coverage=false

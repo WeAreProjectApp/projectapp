@@ -366,3 +366,6 @@ urlpatterns = [
     # Cover gallery
     path('cover-gallery/', cover_gallery_view, name='platform-cover-gallery'),
 ]
+
+from accounts.feature_permissions import bind_feature_permissions
+bind_feature_permissions(urlpatterns)

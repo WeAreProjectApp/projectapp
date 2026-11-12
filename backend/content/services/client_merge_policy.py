@@ -85,6 +85,7 @@ RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
 # Keep both account preferences and historical authorship on their original user.
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
+accounts.ClientPlatformFeatureSettings.user accounts.PlatformFeatureEvent.actor accounts.PlatformFeatureEvent.client
 accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor
 '''), NEVER))
 # Procurement decisions and saved searches belong to the original person, not

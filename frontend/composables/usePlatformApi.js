@@ -172,6 +172,10 @@ function getPlatformApiInstance() {
     platformApiInstance.interceptors.response.use(
       (response) => response,
       async (error) => {
+        if (error.response?.data?.code === 'feature_disabled') {
+          const { usePlatformFeaturesStore } = await import('~/stores/platform-features')
+          usePlatformFeaturesStore().markDisabled(error.response.data.feature)
+        }
         const originalRequest = error.config || {}
         const responseStatus = error.response?.status
 

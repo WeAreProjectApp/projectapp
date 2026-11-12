@@ -6251,7 +6251,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-panel-unsaved-guard` | admin | P2 | display,success,failure | 1 |
 | `admin-partnership-legacy-redirects` | admin | P2 | success,error | — |
 | `admin-platform-guided-tour-authoring` | admin | P2 | success,error,failure,display | 1 |
-| `admin-platform-help-settings` | admin | P1 | success,error,failure,display | 1 |
+| `admin-platform-help-settings` | admin | P1 | success,display | 1 |
 | `admin-platform-help-videos` | admin | P2 | display,success,error,failure | — |
 | `admin-portfolio-create` | admin | P2 | display,success,error | 1 |
 | `admin-portfolio-delete` | admin | P2 | display,success | 1 |
@@ -6396,6 +6396,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `layout-locale-switch` | layout | P2 | success | 1 |
 | `layout-navbar-navigation` | layout | P2 | success | 1 |
 | `panel-platform-ai-settings` | admin | P1 | success,error,failure,display | — |
+| `panel-platform-feature-flags` | admin | P1 | success,error,failure,display | — |
 | `platform-access-view` | platform | P2 | — | 0 |
 | `platform-admin-client-detail` | platform | P2 | success,error,failure,display | 1 |
 | `platform-admin-client-list` | platform | P2 | success,error,display | 1 |
@@ -6424,6 +6425,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `platform-delivery-reply-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-responses` | platform | P1 | success,error,failure | 1 |
 | `platform-delivery-review` | platform | P1 | display,success,error,failure | 1 |
+| `platform-feature-availability` | platform | P1 | success,error,failure,display | — |
 | `platform-guided-tour-general` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-project` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-voice` | platform | P2 | success,error,failure,display | 1 |
@@ -9415,6 +9417,17 @@ acreditan persistencia real por sí solos; su resultado se registra en CI.
 - **Error:** impide listas vacías, duplicados, números fuera de 1–999 o preselecciones fuera de las opciones; muestra errores junto al control.
 - **Failure:** la carga ofrece Reintentar; un guardado rechazado conserva los valores editados y permite otro intento.
 
+# panel-platform-feature-flags
+
+PA-263. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
+
+- success: guardado/persistencia/excepción/herencia o regreso a Proyectos.
+- error: conflicto administrativo o enlace directo deshabilitado.
+- failure: error de servidor o evaluación sin respuesta, con recuperación.
+- display: navegación desde el Panel con valores iniciales o navegación de cliente filtrada.
+
+Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servicios continúa; este registro no acredita aprobación.
+
 ### Platform: reportar y seguir bugs de proyecto
 
 El cliente puede reportar un bug general aunque no existan guías publicadas. Si
@@ -9638,6 +9651,17 @@ del cliente permanecen intactas.
 `delivery-reply-prompt.spec.js` cubre envío manual sin adjuntos, revisión del texto
 editado, rechazo de una clasificación fuera del alcance con fuentes incompletas y
 consulta de la conversación pública que originó el prompt.
+
+# platform-feature-availability
+
+PA-263. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
+
+- success: guardado/persistencia/excepción/herencia o regreso a Proyectos.
+- error: conflicto administrativo o enlace directo deshabilitado.
+- failure: error de servidor o evaluación sin respuesta, con recuperación.
+- display: navegación desde el Panel con valores iniciales o navegación de cliente filtrada.
+
+Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servicios continúa; este registro no acredita aprobación.
 
 ### FLOW: `platform-help-videos`
 

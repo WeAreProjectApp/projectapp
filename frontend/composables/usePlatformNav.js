@@ -1,3 +1,4 @@
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
 import { computed } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformNotificationsStore } from '~/stores/platform-notifications'
@@ -16,6 +17,7 @@ export function usePlatformNav() {
   const { t } = useI18n()
   const route = useRoute()
   const authStore = usePlatformAuthStore()
+  const featureStore = usePlatformFeaturesStore()
   const notifStore = usePlatformNotificationsStore()
   const lp = (path) => localePath(path)
 
@@ -33,7 +35,7 @@ export function usePlatformNav() {
     if (authStore.isAdmin) {
       items.push({ label: 'Clientes', href: lp('/platform/clients'), icon: 'users' })
     }
-    return items
+    return items.filter(item => featureStore.routeAllowed(item.href))
   })
 
   const accountItems = computed(() => [

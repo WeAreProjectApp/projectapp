@@ -195,3 +195,8 @@ reemplazar el ✅ correspondiente por ⚠️ o ❌, omitir la línea ✨ y agreg
 `## Next steps` con el comando exacto de verificación pendiente
 (p.ej. `<venv>/bin/python manage.py test <app>` o `npx playwright test <spec>`)
 y lo que no se pudo confirmar.
+
+
+## ProjectApp · PA-263 · mapeo prospectivo de funcionalidades
+
+En capacidades nuevas o modificadas de Plataforma, aplicar `docs/PLATFORM_FEATURE_FLAGS.md`: declarar clave estable o exclusión justificada en `contracts/platform-features.json`, comprobar módulo/vista real y puntos de aplicación (navegación, acceso directo, API y descargas), y probar global/herencia/excepción/retirada/aislamiento. Los flags no conceden permisos; IA y audio comienzan apagados. El control estático de CI no sustituye la comprobación funcional. QA entrega brechas a Backlog para deduplicar y registrar TO DO dentro de la ficha consolidada cuando corresponda; sync-knowledge coordina su publicación canónica. No reanudar rondas ni servicios pausados por esta regla.

@@ -96,35 +96,13 @@ test.describe('Platform help administration', () => {
     await expect(page.getByTestId('platform-help-admin')).toContainText('client@e2e-test.com')
   })
 
-  test('saving global availability sends the current version', {
+  test('availability management links to its central administrator', {
     tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    // Bug caught: turning off tours does not persist the global setting with its version.
-    const writes = await setupAdmin(page)
-
+    await setupAdmin(page)
     await openPlatformHelp(page)
-    const toggle = page.getByRole('switch', { name: 'Recorridos habilitados', exact: true })
-    await expect(toggle).toHaveAttribute('aria-checked', 'true')
-    await toggle.click()
-    await page.getByRole('heading', { name: 'Disponibilidad global', exact: true })
-      .locator('xpath=..').getByRole('button', { name: 'Guardar', exact: true }).click()
 
-    await expect(page.getByRole('status')).toHaveText('Cambios guardados.')
-    await expect.poll(() => writes.find((item) => item.type === 'settings')?.body).toMatchObject({ expected_version: 3, tour_enabled: false, video_enabled: true })
-  })
-
-  test('a stale global availability write reports the save failure', {
-    tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:failure'],
-  }, async ({ page }) => {
-    // Bug caught: a version conflict is acknowledged as saved even though the setting was rejected.
-    await setupAdmin(page, { settingsStatus: 409 })
-
-    await openPlatformHelp(page)
-    await page.getByRole('switch', { name: 'Recorridos habilitados', exact: true }).click()
-    await page.getByRole('heading', { name: 'Disponibilidad global', exact: true })
-      .locator('xpath=..').getByRole('button', { name: 'Guardar', exact: true }).click()
-
-    await expect(page.getByRole('alert')).toHaveText('No se pudo guardar. Actualiza los datos e inténtalo de nuevo.')
+    await expect(page.getByRole('link', { name: 'Gestionar disponibilidad en Feature flags', exact: true })).toHaveAttribute('href', '/es-co/panel/platform/feature-flags')
   })
 
   test('previewing a tour shows the saved draft in the active locale', {

@@ -73,7 +73,7 @@
       ]"
     >
       <div class="mx-auto max-w-screen-2xl">
-        <slot />
+        <slot v-if="featureStore.routeAllowed(route.path)" />
       </div>
     </main>
 
@@ -118,6 +118,7 @@
 </template>
 
 <script setup>
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
 import { provide, watch, onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformTheme } from '~/composables/usePlatformTheme'
@@ -132,6 +133,7 @@ import PlatformHelpHost from '~/components/platform/PlatformHelpHost.vue'
 import PlatformHelpVideoModal from '~/components/platform/PlatformHelpVideoModal.vue'
 import { usePlatformHelp } from '~/composables/usePlatformHelp'
 
+const featureStore = usePlatformFeaturesStore()
 const route = useRoute()
 const localePath = useLocalePath()
 const authStore = usePlatformAuthStore()
@@ -177,9 +179,11 @@ onMounted(() => {
   hydrateSidebar()
   hydrateCustomTheme()
   setupResizeListener()
+  window.addEventListener('focus', refreshFeatures)
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('focus', refreshFeatures)
   cleanupResizeListener()
   releaseCustomTheme()
   document.documentElement.classList.remove('dark')
@@ -204,6 +208,16 @@ provide('showThemePicker', showThemePicker)
 watch(() => route.fullPath, () => {
   closeMobile()
 })
+
+async function refreshFeatures() {
+  if (!authStore.isClient) return
+  const ready = await featureStore.refresh()
+  if (!ready || !featureStore.routeAllowed(route.path)) {
+    await navigateTo(localePath('/platform/unavailable') + (ready ? '' : '?reason=load'))
+  }
+}
+
+watch(() => authStore.user?.user_id, () => { featureStore.reset(); refreshFeatures() })
 
 async function handleLogout() {
   authStore.logout()

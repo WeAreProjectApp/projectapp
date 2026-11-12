@@ -3038,3 +3038,8 @@ Validar listado/filtros/exportación, búsquedas con owner_id, alertas con desti
 ## Accesos autorizados — projects 4.5.0
 
 Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.
+
+
+## PA-263 · Feature flags (Proyectos 6.0.0)
+
+Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento de las seis herramientas, consulta global y por cliente, actualización confirmada, retirada con null, persistencia, 409 con versión superada y denegación de una credencial/actor sin acceso administrativo. Contrastar con el mismo caso en Panel y una cuenta cliente; REST no acredita MCP. IA/audio parten apagados y la excepción del cliente prevalece. Los adaptadores anteriores de IA/Ayuda usan la fuente nueva. Automatizadas sólo en CI; DevQA cotejará herramientas, operaciones, rol, resultado y límites sobre el mismo SHA/entorno al levantarse la pausa.

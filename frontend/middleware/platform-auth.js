@@ -1,3 +1,5 @@
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
+
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -13,6 +15,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const authStore = usePlatformAuthStore()
   authStore.hydrate()
+  const landing = async () => {
+    if (!authStore.isClient) return '/platform/dashboard'
+    const features = usePlatformFeaturesStore()
+    if (!await features.refresh()) return '/platform/unavailable?reason=load'
+    return features.enabled('platform.documents') ? '/platform/documents' : '/platform/projects'
+  }
 
   const isLoginPage = rawPath === '/platform/login'
   const isVerifyPage = rawPath === '/platform/verify'
@@ -43,7 +51,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       if (authStore.needsProfileCompletion) {
         return navigateTo(lp('/platform/complete-profile'))
       }
-      return navigateTo(lp(authStore.isClient ? '/platform/documents' : '/platform/dashboard'))
+      return navigateTo(lp(await landing()))
     }
 
     if (authStore.hasVerificationToken && !authStore.isOnboarded) {
@@ -58,7 +66,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       if (authStore.needsProfileCompletion) {
         return navigateTo(lp('/platform/complete-profile'))
       }
-      return navigateTo(lp(authStore.isClient ? '/platform/documents' : '/platform/dashboard'))
+      return navigateTo(lp(await landing()))
     }
 
     if (!authStore.hasVerificationToken && !authStore.isAuthenticated) {
@@ -85,6 +93,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (authStore.needsProfileCompletion) {
     return navigateTo(lp('/platform/complete-profile'))
+  }
+
+  if (authStore.isClient && rawPath !== '/platform/unavailable') {
+    const features = usePlatformFeaturesStore()
+    const loaded = await features.refresh()
+    if (!loaded) return navigateTo(lp('/platform/unavailable?reason=load'))
+    if (!features.routeAllowed(rawPath)) return navigateTo(lp('/platform/unavailable'))
   }
 
   if (to.meta.platformRole === 'admin' && authStore.role !== 'admin') {

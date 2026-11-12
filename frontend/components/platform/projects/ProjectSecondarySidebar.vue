@@ -42,6 +42,7 @@
 </template>
 
 <script setup>
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
@@ -55,6 +56,8 @@ const route = useRoute()
 const authStore = usePlatformAuthStore()
 const projectStore = usePlatformProjectsStore()
 const { t } = useI18n()
+
+const featureStore = usePlatformFeaturesStore()
 
 const items = computed(() => {
   const base = `/platform/projects/${props.projectId}`
@@ -81,7 +84,7 @@ const items = computed(() => {
       href: localePath(`${base}/access`), tourTarget: 'project-access',
     })
   }
-  return navigationItems
+  return navigationItems.filter(item => !item.href || featureStore.routeAllowed(item.href))
 })
 
 function isActive(href) {

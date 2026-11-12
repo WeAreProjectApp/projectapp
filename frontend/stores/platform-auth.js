@@ -1,3 +1,4 @@
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
 import { defineStore } from 'pinia'
 import {
   clearPlatformSession,
@@ -547,6 +548,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     },
 
     logout() {
+      usePlatformFeaturesStore().reset()
       clearPlatformSession()
       this.resetState()
     },
