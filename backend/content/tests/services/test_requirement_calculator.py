@@ -238,25 +238,25 @@ def _client_document_copy(document):
 
 def _seed_project_lifecycle_catalog():
     from importlib import import_module
+    from content.models import DocumentState, DocumentStateGroup
 
-    from django.apps import apps
-
-    from content.models import DocumentState
-
-    import_module(
-        "content.migrations.0214_seed_project_lifecycle_states"
-    ).seed_project_states(apps, None)
-    active = DocumentState.objects.get(catalog="projects", system_key="active")
-    DocumentState.objects.create(
-        catalog="projects",
-        name="En evolución",
-        normalized_name="en evolucion",
-        slug="evolving",
-        color="blue",
-        group=active.group,
-        order=2,
-        system_key="evolving",
-        operational_effect="operating",
+    group, _ = DocumentStateGroup.objects.get_or_create(
+        catalog="projects", name="Ciclo del proyecto",
+        defaults={"selection_mode": "exclusive", "order": 0},
+    )
+    states = import_module("content.migrations.0214_seed_project_lifecycle_states").PROJECT_STATES
+    for name, key, color, effect, order in states:
+        DocumentState.objects.get_or_create(
+            catalog="projects", system_key=key,
+            defaults={"name": name, "normalized_name": name.casefold(),
+                      "slug": key.replace("_", "-"), "color": color,
+                      "group": group, "order": order, "operational_effect": effect},
+        )
+    DocumentState.objects.get_or_create(
+        catalog="projects", system_key="evolving",
+        defaults={"name": "En evolución", "normalized_name": "en evolucion",
+                  "slug": "evolving", "color": "blue", "group": group,
+                  "order": 2, "operational_effect": "operating"},
     )
 
 
@@ -409,6 +409,22 @@ def test_unassigned_project_context_warns(calculator_state, calculator_project):
 
     assert context["revision_id"] == calculator_state["revision_id"]
     assert "no tiene calculadora aprobada" in context["warning"]
+
+
+def test_explicit_project_draft_context_identifies_unapproved_rules(
+    calculator_project, project_draft,
+):
+    """Fails if context treats an explicit unapproved agreement as the general calculator."""
+    context = calculator.calculator_context(
+        project_id=calculator_project.pk,
+        project_version_id=project_draft["id"],
+    )
+
+    assert context["project_version_id"] == project_draft["id"]
+    assert context["definition"] == project_draft["definition"]
+    assert context["warning"] == (
+        "Borrador explícito: sus condiciones todavía no están aprobadas."
+    )
 
 
 def test_recorded_closure_uses_actual_cost(calculator_state, calculator_admin):

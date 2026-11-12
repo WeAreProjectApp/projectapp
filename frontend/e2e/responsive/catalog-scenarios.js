@@ -37,6 +37,7 @@ const REDIRECT_DESTINATIONS = Object.freeze({
   '/panel/financing': '/panel/partnership-program',
   '/panel/financing/new': '/panel/partnership-program/new',
   '/panel/financing/:id': '/panel/partnership-program/1',
+  '/panel/proposals/email-deliverability': '/panel/emails?tab=status',
   '/panel/proposals/email-templates': '/panel/defaults?mode=proposal&tab=emails',
   '/panel/proposals/defaults': '/panel/defaults?mode=proposal',
   '/panel/diagnostics/defaults': '/panel/defaults?mode=diagnostic',
@@ -61,6 +62,7 @@ const REDIRECT_FLOW_BY_URL = Object.freeze({
   '/panel/financing': 'admin-partnership-legacy-redirects',
   '/panel/financing/new': 'admin-partnership-legacy-redirects',
   '/panel/financing/:id': 'admin-partnership-legacy-redirects',
+  '/panel/proposals/email-deliverability': 'admin-email-deliverability',
   '/panel/proposals/email-templates': 'admin-defaults-unified',
   '/panel/proposals/defaults': 'admin-defaults-unified',
   '/panel/diagnostics/defaults': 'admin-defaults-unified',
@@ -106,6 +108,18 @@ function resolveCatalogUrl(url) {
 }
 
 function defaultCapabilities(view, owner) {
+  if (view.url.startsWith('/panel/procurement')) return {
+    panelShell: true, table: false, tabs: view.viewType === 'list', filters: view.viewType === 'list',
+    modal: view.viewType === 'list', selection: false, touch: true,
+  };
+  if (view.url === '/panel/data-integrity') return {
+    panelShell: true, table: false, tabs: true, filters: true,
+    modal: true, selection: true, touch: true,
+  };
+  if (view.url === '/panel/access') return {
+    panelShell: true, table: false, tabs: true, filters: true,
+    modal: true, selection: false, touch: true,
+  };
   if (view.url === '/panel/platform/ai') return {
     panelShell: true, table: false, tabs: true, filters: true,
     modal: false, selection: false, touch: true,
@@ -141,8 +155,11 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
     label: view.label,
     reference: view.reference,
     flowId: kind === 'redirect' ? REDIRECT_FLOW_BY_URL[view.url]
-      : PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
+      : (view.url === '/panel/procurement' ? 'admin-procurement-opportunity-list' : view.url === '/panel/procurement/:id' ? 'admin-procurement-classification' : null)
+        ?? PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
+        ?? (view.url === '/panel/access' ? 'admin-access-management' : null)
         ?? BILLING_FLOW_BY_URL[view.url]
+        ?? (view.url === '/panel/data-integrity' ? 'admin-data-integrity-findings' : null)
         ?? (view.url === '/platform/projects/:id/secure-links' ? 'platform-secure-link-manage' : null)
         ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review'
           : view.url === '/panel/platform/ai' ? 'panel-platform-ai-settings' : OWNER_FLOW[owner]),

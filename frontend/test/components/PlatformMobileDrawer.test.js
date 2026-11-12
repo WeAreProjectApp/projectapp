@@ -75,4 +75,18 @@ describe('PlatformMobileDrawer', () => {
 
     expect(wrapper.find('aside').exists()).toBe(false);
   });
+
+  it.each([
+    [false, 'global.theme.enableDark', 'global.theme.enableLight'],
+    [true, 'global.theme.enableLight', 'global.theme.enableDark'],
+  ])('switches the theme with dark=%s', async (isDark, action, nextAction) => {
+    const wrapper = mountPlatformMobileDrawer({ isDark });
+
+    await wrapper.get(`button[aria-label="${action}"]`).trigger('click');
+
+    expect(wrapper.emitted('toggleTheme')).toEqual([[]]);
+    expect(wrapper.emitted('close')).toBeUndefined();
+    await wrapper.setProps({ isDark: !isDark });
+    expect(wrapper.get(`button[aria-label="${nextAction}"]`).text()).toBe(nextAction);
+  });
 });

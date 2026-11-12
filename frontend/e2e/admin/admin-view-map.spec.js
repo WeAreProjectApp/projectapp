@@ -174,7 +174,7 @@ test.describe('Admin View Map', () => {
 
     await page.getByTestId('view-explorer-motion-toggle').click();
     await page.getByTestId('view-explorer-node-panel-internal').click();
-    await expect(page.locator('[data-testid^="view-explorer-node-panel-"]')).toHaveCount(10);
+    await expect(page.locator('[data-testid^="view-explorer-node-panel-"]')).toHaveCount(11);
 
     await page.getByTestId('view-explorer-node-panel-content').hover();
     await expect(page.getByTestId('view-explorer-detail')).toContainText('Vista previa');
@@ -184,11 +184,11 @@ test.describe('Admin View Map', () => {
     await page.getByTestId('view-explorer-start-tour').click();
     await expect(page).toHaveURL(/tour=panel-internal/);
     await expect(page).toHaveURL(/node=panel-overview-work/);
-    await expect(page.getByTestId('view-explorer-tour-controls')).toContainText('Paso 1 de 10');
+    await expect(page.getByTestId('view-explorer-tour-controls')).toContainText('Paso 1 de 11');
 
     await page.getByTestId('view-explorer-tour-next').click();
     await expect(page).toHaveURL(/node=panel-commercial/);
-    await expect(page.getByTestId('view-explorer-tour-controls')).toContainText('Paso 2 de 10');
+    await expect(page.getByTestId('view-explorer-tour-controls')).toContainText('Paso 2 de 11');
 
     await page.getByTestId('view-explorer-tour-stop').click();
     await expect(page).not.toHaveURL(/tour=/);

@@ -1,3 +1,167 @@
+## 2026-11-11 — Tren de integración de 25 PRs
+
+Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.
+Se preservan las migraciones publicadas y se unen las hojas mediante
+accounts.0092_merge_parallel_features y content.0307_merge_parallel_features.
+El contrato combinado publica Comercial 6.6.0 y Proyectos 5.1.0; conserva
+accesos, eliminación protegida y el módulo independiente de integridad.
+Las regresiones de retorno de hosting, resúmenes, historial y contratos se
+validan en CI. Esta nota no acredita CI verde, integración ni aprobación manual.
+
+## PA-231 — Contrato de fake data (2026-11-06)
+
+Trabajo backend en `fix/06112026-pa231-fake-data`: el comando canónico incorpora
+Monitoreo y Enlaces seguros con semilla/fecha, casos QA identificables, archivos
+locales válidos y limpieza diferida al commit. Se amplía el contrato a las cuatro
+apps de negocio; las credenciales y evidencias externas siguen exentas.
+Validación automatizada exclusivamente en CI; no se operan servidores DEV ni
+se ejecutan migraciones desde el worktree. Ver `docs/FAKE_DATA_COVERAGE.md`.
+
+
+## 2026-11-06 — PA-206 / PA-207 / PA-210 — en validación
+
+Nueva carpeta desde el encabezado abre el formulario existente con destino visible y contexto de carpeta/proyecto. Gestionar carpetas reutiliza el selector con búsqueda y rutas, y su árbol muestra ancestros. El editor Visual distingue el código en línea mediante tokens del tema, sin alterar su serialización. Sin cambios de esquema. Pruebas automatizadas exclusivamente en CI; DevQA recibió el preaviso para el recorrido Chrome sobre datos aislados. La aprobación visual y el CI se registrarán con SHA en el informe de la sesión.
+
+
+> **PA-211 — editor documental, 2026-11-06, en implementación:** se conserva Tiptap 3.32.0 y Markdown extendido. El cuerpo de Nuevo Documento y edición recibe una barra agrupada y contextual, con enlaces, tablas, avisos e índice. Comparación y alcance en `docs/document-editor-evaluation.md`. Pruebas automatizadas exclusivamente en CI y recorrido manual coordinado con dev-qa; el cierre queda pendiente de sus evidencias. No acredita despliegue.
+
+> **PA211-01 — combinación de color y resaltado, 2026-11-07:** Chrome detectó que un resaltado interior tomaba el negro del navegador aunque su fuente conservara el color explícito. La corrección en la rama de sesión aplica herencia sólo bajo spans editoriales con color, en editor, vista previa y lectores; conserva el resaltado sin color y el vocabulario guardado. Se preparan pruebas de color computado para CI. El entorno de QA sigue congelado en `1b7b761b` hasta acordar la reprueba; esta nota no acredita validación del arreglo.
+
+## 2026-11-06 — PA-226, aviso de cambios al cargar General
+
+Corrección en rama de sesión: General calcula los días de vigencia sin escribir el vencimiento al cargar o recargar el formulario. Sólo editar los días actualiza la fecha; se elimina el circuito de watchers que movía vencimientos pasados y podía producir actualizaciones recursivas cerca de medianoche. Regresiones de componente y E2E para carga asíncrona, edición, reversión y guardado exitoso/fallido. Las pruebas se ejecutan exclusivamente en CI. La aceptación visible de propuestas ficticias 10 y 11 requiere turno de DevQA y Chrome de Backlog ProjectApp; la aceptación para cierre requiere además el SHA integrado de main servido en DEV. Esta nota no acredita CI ni validación funcional aprobados.
+
+## 2026-11-06 — PA-228, desbordes responsive del Panel
+
+Implementación en rama `fix/06112026-pa228-responsive-overflow`: ocho casos de
+Dashboard, Recurrentes, Blog, Propuestas e Ingresos. Calendario horizontal móvil
+elegido por el operador; importes completos mediante ajuste optativo de las
+tarjetas. Sin cambios de datos o cálculos. Automatizadas sólo en CI y recorrido
+Chrome coordinado por DevQA; esta nota no acredita validación ni despliegue.
+Alcance y guion: `docs/audits/2026-11-06-pa228-responsive-overflow.md`.
+
+## PA-219 — Corrección de anclajes durante la ronda DEVQA-008 — 2026-11-07
+
+QA devuelve parcialmente el criterio de controles visibles sobre `d012f9e8`:
+la repetición del proyecto desde Ayuda móvil conserva el cajón por encima del
+destino; un resize deja la geometría antigua; la guía general conserva el nodo
+de escritorio oculto al pasar a móvil. Corrección en el mismo worktree/PR567:
+preparar el cajón según destino y observar la distribución mientras dura la guía,
+seleccionando el nodo visible al cruzar el breakpoint y liberando observadores
+al salir. Nuevas regresiones comprueban el recorte SVG y la tarjeta alrededor del
+control real, la reapertura y los acuses terminales. Pruebas sólo en CI.
+
+La ronda manual continúa en su copia `d012f9e8`; esta sesión no modifica runtime,
+datos, terminales ni prepara DEV. La nueva entrega necesita SHA/CI propios y
+acuerdo de reprueba. Detalle y límites (incluida pausa por mouse no acreditada):
+`docs/audits/2026-11-07-pa219-responsive-anchors.md`. Sin aprobación manual ni
+transferencia de verde entre SHAs por este registro.
+
+## PA-219 — Ayuda y recorridos con la identidad real de sesión — 2026-11-06
+
+Corrección en la rama de sesión `fix/06112026-pa219-platform-help`: Ayuda usa
+`user_id`, el identificador publicado por el perfil, para cargar recorridos,
+observar cambios de cuenta y sincronizar el progreso pendiente sin cruzar usuarios.
+Las pruebas del módulo reproducen el perfil sin el alias `id` que ocultaba el fallo.
+Pruebas automatizadas exclusivamente en CI; validación manual coordinada con
+dev-qa sobre el SHA servido. La entrada no acredita CI aprobado ni despliegue.
+
+# PA-215 — correos de liquidación y remanente (2026-11-06)
+
+Corrección en la rama de sesión: la copia del mensaje conserva por referencia su
+conexión SMTP y el timeout, evitando copiar el RLock. Participaciones muestra
+el remanente positivo de ProjectApp incluso contraída. Se preservan los pagos,
+los avisos únicos y los reintentos de Historial. Regresiones específicas y ficha
+en `docs/audits/2026-11-06-pa215-settlement-email.md`; automatizadas sólo en CI.
+PR, resultado de CI y aceptación DEV se verificarán por separado; esta entrada
+no acredita despliegue ni validación manual.
+
+## Seguimientos PA-235 / PA-238 / PA-239 / PA-240 — 2026-11-07
+
+Implementación en rama propia sobre main y PR #571. Los encabezados contienen nombres largos; Código y cabeceras HTML TH>P conservan contraste; Gestionar carpetas recibe semántica modal y foco coherente; las tarjetas interpretan escapes Markdown sin alterar la fuente; los historiales comparten estados en español. Vencimiento usa días calendario de la zona del navegador con hora conservada, carga sin escritura y conversión local al reabrir. Sin migraciones ni cambios de API. Automatizadas exclusivamente en CI; reprueba manual solicitada por buzón a Backlog para asignar una única dupla al PR. Este registro no acredita CI verde, aprobación de QA, integración ni deploy. Guion: docs/audits/PA-235-238-239-240-handoff.md.
+
+## 2026-11-07 — PA-232/233/234/236/237
+
+Implementación en el worktree propio `pa232-237-panel-platform`, base `main`
+b01448a2. Se corrigen la raíz del catálogo compartido para el retorno SPA,
+los mensajes vacíos del historial según filtros aplicados, el foco de tres
+diálogos, los rótulos de perfil y Tareas, el aviso de título de Solicitudes
+y los mínimos de las columnas del detalle del cliente. Sin migraciones.
+`isCustomized` y `clearAll` se conservan según el alcance aprobado.
+
+Regresiones automatizadas exclusivamente en CI; Chrome y datos aislados a
+cargo de la dupla que asigne Backlog. Se pidió asignación en el buzón compartido;
+no se reanuda DEVQA-000. Guion y límites en
+`docs/audits/2026-11-07-pa232-237-validation.md`. Este registro no acredita
+validación manual, integración ni despliegue.
+
+> **PA-247 — 2026-11-07:** formulario Panel con contenido y configuración visibles;
+> Asunto retirado del catálogo compartido, sin migración de datos ni cambio de tokens.
+> Validación automatizada exclusivamente en CI; revisión manual por coordinar.
+
+> **PA-248 — 2026-11-07:** eliminación forzada desde su modal, conservación
+> obligatoria del historial de facturación y permiso MCP explícito. Migración
+> accounts.0091 pendiente de deploy; automatización de pruebas sólo en CI.
+
+# Contratación estatal — implementación validada localmente (2026-11-05)
+
+Desarrollo independiente en `feat/05112026-procurement-module`. Referencia funcional GIM en GitHub `8ff8c12`; no se traslada código del cliente. App propia, panel, filtros únicos, alertas con destinatarios por alerta y MCP único. El análisis y la lectura del correo pertenecen al asistente externo. Sin IA interna ni recordatorios por cierre. Validación local: 43 casos backend, 12 unitarios, 20 funcionales y 10 de pantalla aprobados. Entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552); no acredita despliegue.
+
+# Integridad de datos — implementación 2026-11-05
+
+Conector propio, revisiones persistentes diarias y a demanda, panel administrativo con correcciones y deshacer. Alcance contable individual y tres correcciones documentales nuevas (DC9–DC11). Todos los administradores pueden operar integridad financiera; los demás permisos contables conservan su contrato. Trabajo en la rama de sesión; despliegue y consumidores se verifican por separado.
+
+## Accesos autorizados — implementado
+
+Rama de sesión: `feat/05112026-authorized-access`, [PR #554](https://github.com/WeAreProjectApp/projectapp/pull/554). Contraseña, código y Google para cuentas habilitadas; módulo Accesos y MCP. Los correos con credenciales dejan de copiarse y de exponer contenido en historial. Pruebas focales de autenticación, administración, privacidad y cinco tamaños de pantalla en verde. CI e integración se consultan en el PR; migración y configuración Google sólo mediante deploy.
+
+## PA-227 — RESP-R068 incorporado al alcance (2026-11-07 UTC)
+
+Ampliación autorizada de la reprueba: el selector de tema de `/panel/styleguide` cambia ahora la preferencia general del Panel mediante `useDarkMode`, con etiqueta, colores renderizados y persistencia compartidos. El antecedente de Chrome corresponde a main `b01448a2` y STAFF64; el candidato nuevo deberá validarse con STAFF16 a 412×915 y 1440×900, junto a R1/R2/R3. Se preparan cuatro regresiones E2E con teclado, recarga, control general, contraste y evidencia. Mapa de vistas y flujo `admin-styleguide` ampliados sin rutas ni nodos nuevos. Automatizadas sólo en CI; todavía sin aceptación Chrome ni nuevo turno concedido. Guion: `docs/audits/PA-227/DEVQA-001-retest.md`.
+
+## PA-227 — Correcciones tras DEVQA-001 (2026-11-06)
+
+Chrome de qa2 rechazó el corte `2b0de3a93e36cd71a52114104a5756edabdf9741` pese a sus 91 controles CI aprobados: faltaba un selector visible de tema en Plataforma, Quitar portada no persistía y el enlace Markdown en claro medía 3,77:1. Correcciones preparadas en la misma rama/PR #558: controles de tema de escritorio y móvil; retirada explícita del archivo personalizado en el perfil; enlace compartido entre las apariencias Amigable/Profesional con color de mayor contraste. Regresiones de interfaz, persistencia real del perfil y contraste incorporadas para CI, sin ejecución local. Nuevo SHA/CI y reprueba Chrome pendientes; no acredita aceptación. El entorno y la evidencia de DevQA se conservan. Detalles y guion: `docs/audits/PA-227/DEVQA-001-retest.md`.
+
+## PA-227 — Modo oscuro de Panel y Plataforma (2026-11-06)
+
+Barrido y correcciones en `fix/06112026-pa227-dark-mode`, desde `b01448a2`. DEV desechable con datos ficticios; suites automatizadas sólo en CI. Inventario, matriz y evidencia en `docs/audits/PA-227/`. PR #558 abierto. Herencia del tema, contraste de colores personalizados, portadas, paginación y textos secundarios corregidos. Los servidores propios se apagaron al centralizar QA en DevQA (2026-11-06); la revisión de estados y el contraste de Markdown continúan pendientes de ese turno. CI y evidencia final pendientes.
+
+> **PA-201 / PA-202–205 / PA-208 / PA-214 — 2026-11-06/07:** implementación en `fix/06112026-panel-usability-email-retry`, PR #559. Radar compacto, anchos ajustables del menú y de Enlaces seguros, Consultoría en Programas y centro de Emails con Estado. El gateway conserva la conexión SMTP al clonar el mensaje; el reintento individual usa el destinatario fallido y evidencia exacta o el origen contable validado. El corte `4bedcbf6` obtuvo 91 verificaciones CI satisfactorias; QA2 aprobó PA-201/202/208 y rechazó PA-214 por el alias antiguo que termina en 500 y por la pérdida de cliente/audiencia al reintentar una dirección alternativa no registrada. Corrección: redirección en middleware antes de montar la página; el reenvío al destinatario original conserva su asociación histórica, mientras otra dirección se resuelve normalmente. Nuevas regresiones cubren el destino renderizado e interactivo, las variantes Para/CC, el fallo de transporte y el destinatario distinto. CI y reprueba del nuevo corte pendientes. Automatización exclusivamente en CI; DevQA opera DEV y QA2 recorre Chrome. El runtime DEVQA-002 fue cerrado con datos/evidencias preservados; esta sesión no lo modifica ni levanta otro servidor. Sin merge ni despliegue desde esta sesión.
+
+> **PA-230 — en implementación, 2026-11-06:** selección y alta de hosting desde
+> la cuenta de cobro, inventario con elegibilidad y bloqueos, conciliación con
+> resumen legible y borrador por pestaña para regresar. Rama de sesión
+> `feat/06112026-pa230-hosting-link`. Sin migraciones; no altera evidencias ni
+> finanzas. Pruebas automatizadas exclusivamente en CI y validación Chrome
+> coordinada por DevQA; pendiente de evidencia y entrega del PR.
+
+## 2026-11-07 — PA-216, retención del PDF al revisar un conflicto
+
+QA confirmó PA216-G-RET como FAIL parcial del criterio 3 original sobre 4d960880: después de un 409 que protegió la fuente concurrente, Revisar versión actual perdió el archivo local y deshabilitó Guardar. La inferencia de código vincula el refresco completo del padre con el desmontaje del editor. La corrección aplica el resumen de fuente devuelto por el endpoint al documento actual, sin activar la carga de página; conserva el PDF para el reintento explícito y actualiza el estado del paquete. Cobertura de componente y recorrido de navegador preparada para CI, incluido fallo al consultar la fuente. C-DIR y PA225-03 se mantienen en el mismo PR; el runtime y la recuperación manual acordada quedan intactos. Nuevo SHA/CI y reprueba futura pendientes; firmas relacionadas aún bloqueadas.
+
+## 2026-11-07 — PA-216, dirección del cliente creado al aprobar
+
+El caso C de DEVQA-006 confirmó que el formulario enviaba la dirección, pero el serializer de aprobación no la admitía y el cliente nuevo la perdía. El contrato compartido Panel/MCP ahora acepta `address` opcional hasta 512 caracteres; el servicio existente la conserva. Comercial 6.5.0 y Propuestas 6.3.0 publican el campo. Regresiones de persistencia, vacío y rechazo sin efectos preparadas para CI. No cambia la activación ni se repara el cliente 27. El runtime 4d960880 y los casos de QA en curso quedan a cargo de DevQA; la entrega futura exige CI del nuevo SHA y reprueba coordinada, con firmas relacionadas aún bloqueadas.
+
+## 2026-11-07 — PA-225, referencia sin proyecto en Contabilidad
+
+QA devolvió PA225-03 del PR #569 sobre 4d960880: Ingresos mostraba «—» sin explicar la referencia nula. La corrección muestra «Sin proyecto» en clásico, agrupado y detalle, y aplica la misma etiqueta visible en Hosting y Cuentas de cobro; conserva la ausencia de enlace. Regresiones de navegador preparadas para CI. El runtime de DEVQA-006 conserva su corte durante el recorrido; la asociación ya realizada del ingreso 57 y su aviso interno registrado no se revierten. El nuevo corte exige CI propio y reprueba coordinada.
+
+## 2026-11-06 — PA-225 y PA-216, correcciones de QA
+
+Acceso al espacio por ID desde el detalle y disponibilidad visible en Proyectos; errores de acceso sin datos anteriores. Aprobación diferida sin aprovisionamiento y anexos opcionales con selección explícita, inicialmente vacía; revisiones conservan la selección previa y su historia. Estos criterios actualizan la política de cierre obligatorio y anexos automáticos registrada en octubre. No se rehabilita la aceptación pública. Sin migraciones ni cambios automáticos de históricos. Validación automatizada exclusivamente en CI y Chrome coordinado con dev-qa; resultados pendientes de la entrega de esta rama.
+
+# PA-241–PA-244 — navegación, ingresos agrupados y estado de clientes (2026-11-07)
+
+Implementación en PR #572, rama `fix/07112026-pa241-244-navigation-clients`, base `main`. El retorno comercial usa el idioma activo; Agrupado reserva espacio flexible legible para concepto/proyecto; el registro de clientes publica filas y contadores de la misma consulta y busca nombres completos; el editor sincroniza el cliente canónico tras aprobar y al recargar sin perder otros borradores. `draft_client.is_email_placeholder` es aditivo y sólo informa la vista; no cambia el manifiesto congelado ni su hash.
+
+Automatizadas exclusivamente en CI. La reprueba manual requiere dupla y SHA servido confirmados; solicitud de asignación enviada a Backlog. No acredita validación visual, cambios de datos, migraciones, merge ni despliegue. PA-225/PA-216 y la dirección persistida mantienen su alcance propio. Guion: `docs/audits/2026-11-07-pa241-244.md`.
+
+> **PA-246 — 2026-11-07:** el resumen compartido expone el título del documento
+> también fuera del paquete vigente. Propuestas, Gestor y MCP conservan identidad
+> y archivos; regresiones de transición y recarga preparadas para CI.
+
 > **Calculadora de requerimientos — implementación de sesión, 2026-11-05:** Comercial administra definición, señales, parámetros internos y documento sincronizado por panel/MCP. Los proyectos conservan variantes en Borrador/Aprobada con aprobación del equipo y PDF congelado; actualizar la general no altera acuerdos anteriores. El chat externo clasifica XS–XL/Proyecto, sin ejecutar un modelo en el panel. Los cierres preservan evidencia, correcciones y definición exacta; sus listados/detalles se paginan. Los precios XS/S/M se comparten con Paquetes y las ofertas emitidas quedan fijas. Valores provisionales hasta tener mediciones reales. QA local aprobado: 27 casos de navegador por lotes, incluidos cinco perfiles de pantalla, contratos MCP, componentes y servidor; evidencia y límites en `docs/audits/2026-11-05-requirement-calculator-qa.md`. Entrega y CI se verifican en PR #555; sin migraciones ni despliegue sobre el servicio.
 
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
@@ -3104,3 +3268,11 @@ filtra las mismas fuentes y conserva el enlace confirmado por el servicio actual
 Sin cambios de modelos, migraciones, reglas de pendiente ni emisión; esos cruces
 pertenecen a las otras sesiones. Validación focalizada y PR verde en curso; el
 merge pertenece a «Coordina las sesiones activas».
+# 2026-11-06 — PA-220: acceso al video de Ayuda
+
+La sesión `pa220-help-video` incorpora por merge la corrección común de identidad
+de PA-219 y conserva su autoría. Los casos de video usan el contrato real
+`user_id` sin `id`, verifican reapertura y disponibilidad efectiva por recurso.
+El modal invalida el catálogo anterior al cambiar de cliente. Pruebas sólo en CI;
+DevQA administra el turno manual de clientes 19/20 y la revisión editorial.
+Evidencia y pendientes: `docs/audits/2026-11-06-pa220-help-video.md`.

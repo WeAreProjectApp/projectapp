@@ -83,6 +83,23 @@ cinco columnas de resultado.
 | 11 | Historial | Los dos ámbitos —Cambios y Correos— siguen alcanzables junto con sus filtros guardados. Registro/Acción y Destinatario/Estado son las identidades; fecha, usuario, entidad, aviso y asunto se agrupan sin duplicar texto en el DOM. Expandir una fila conserva el contexto. En Correos, un envío con acciones empieza con una acción de 44 px cuyo menú ofrece ver el correo y reintentar (deshabilitado con su motivo); abrirla no expande la fila. |
 | 12 | Configuración | Destinatarios, plantillas y tarjetas apilan sus formularios sin cortar campos. Agregar email, guardar y restablecer filtros son acciones de ancho completo en Celular y vuelven a su ancho natural desde Tableta vertical. Cada destinatario empieza con su acción de 44 px (Detalle e historial, Ver nota, Quitar) y conserva el interruptor en la fila; cada tarjeta guardada abre con la suya (Detalle e historial, Ver nota, Eliminar). |
 
+## Acciones de cuentas de cobro y distribución de Bolsillo
+
+- En el menú lateral y el menú móvil, verificar el orden **Resumen → Bolsillo →
+  Ingresos**. Entrar por Bolsillo debe mostrar **Bolsillo ProjectApp**.
+- Comparar los mismos movimientos en los cinco perfiles, incluidos conceptos
+  largos e importes grandes. Desde Tableta horizontal, las seis columnas de
+  datos comparten el espacio: Concepto no absorbe todo el sobrante. Conservar
+  el menú inicial de 56 px y los importes completos. En angosto se mantienen
+  los datos agrupados o las tarjetas; las notas siguen en el menú de acciones.
+- Desde un ingreso esperado, abrir Nueva cuenta de cobro y elegir Trabajo de
+  un contrato / otrosí. **Vincular contrato existente** debe verse como botón
+  junto a los selectores y abrir el buscador de documentos del proyecto.
+- Junto a **IVA (%)**, pulsar **Sin IVA** y comprobar `0` y **IVA (0 %)**.
+  Vaciar el porcentaje debe mostrar **IVA sin registrar**. Un ingreso con pagos
+  conserva sus restricciones de edición. Revisar ambos botones en los cinco
+  perfiles y mediante teclado.
+
 ## Recorrido de modales largos
 
 Ejecutar los siguientes casos en los cinco perfiles oficiales. Portátil y

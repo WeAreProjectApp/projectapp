@@ -56,9 +56,10 @@ content.FinancingAgreement.archived_by content.FinancingAgreement.created_by con
 content.FinancingAgreementEvent.actor content.ProposalFormalization.created_by
 content.VideoResource.updated_by content.ProposalApprovalFile.created_by content.ProposalApprovalPackage.created_by
 content.ProjectRetentionContext.created_by content.ProjectRetentionOperation.actor
-content.ProposalProjectReassignment.actor content.DataIntegrityOperation.actor
+content.ProposalProjectReassignment.actor content.DataIntegrityOperation.actor content.DataIntegrityScan.actor content.DataIntegrityReview.actor
 content.DocumentOwnershipOperation.actor
 accounts.UserProfile.archived_by accounts.UserProfile.created_by
+accounts.AccessEvent.actor accounts.AccessEvent.user
 accounts.ProjectAdminAccess.updated_by accounts.ProjectAccessNote.created_by accounts.ProjectAccessNote.updated_by
 accounts.DeliveryPublication.published_by accounts.DeliveryDocumentLink.created_by
 accounts.ContractSignatureEvidence.attested_by accounts.RequirementReview.actor accounts.DeliveryMessage.actor
@@ -76,6 +77,7 @@ accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
 monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
 secure_links.SecureLinkFolder.created_by
 secure_links.SecureLinkEvent.actor
+procurement.Activity.actor procurement.Alert.created_by procurement.SyncRun.requested_by
 ''')
 
 RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
@@ -84,6 +86,11 @@ RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
 accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor
+'''), NEVER))
+# Procurement decisions and saved searches belong to the original person, not
+# the commercial client. Relinking could also collide with their per-user keys.
+RELATION_POLICIES.update(dict.fromkeys(_keys('''
+procurement.Classification.owner procurement.SavedSearch.owner
 '''), NEVER))
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 content.CommunicationFolder.client content.CommunicationThread.client
@@ -105,7 +112,7 @@ accounts.UserProfile.user content.Document.client_user
 '''), SPECIAL))
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 accounts.CommunicationPanelPreference.user accounts.SavedFilterTab.user
-accounts.VerificationCode.user accounts.Notification.user
+accounts.VerificationCode.user accounts.Notification.user accounts.LoginChallenge.user
 accounts.DeliveryEvidenceEmail.client accounts.DeliveryNotificationEvent.client
 accounts.DeliveryPromptContext.client accounts.ProjectClientAccessEvent.recipient
 content.ProposalContractChangeIntent.owner
@@ -113,7 +120,7 @@ content.ProposalContractChangeIntent.owner
 # ProposalContractChangeIntent.owner is the admin who reviewed a sensitive
 # confirmation, not the commercial owner (see views/proposal_contract_modality.py).
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
-content.ProjectRetentionContext.client accounts.ProjectClientAccessPolicy.recipient
+content.ProjectRetentionContext.client accounts.ProjectClientAccessPolicy.recipient accounts.GoogleIdentity.user
 content.McpCredential.actor content.Task.assignee auth.User.groups auth.User.user_permissions
 '''), BLOCK))
 # Number sequences are conditional: with two reserved billing codes D's

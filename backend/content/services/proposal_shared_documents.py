@@ -114,9 +114,16 @@ def summary(binding, *, package=None, current_hash=None):
     revisions = cache.get('revisions')
     if revisions is None:
         revisions = binding.revisions.select_related('package').order_by('-pk')
+    revisions = list(revisions)
+    latest_revision = max(revisions, key=lambda row: row.pk, default=None)
+    title = (binding.document.title
+             or (binding.current_file.title if binding.current_file_id else '')
+             or (latest_revision.title if latest_revision else '')
+             or f"{'Document' if binding.proposal.language == 'en' else 'Documento'} #{binding.document_id}")
     return {
         'can_replace_binary': can_replace_binary(binding),
         'proposal_id': binding.proposal_id, 'document_id': binding.document_id,
+        'title': title,
         'source_key': binding.source_key, 'is_current': binding.is_current,
         'package_number': package.number if package else None,
         'current_file_id': binding.current_file_id,
@@ -134,7 +141,7 @@ def summary(binding, *, package=None, current_hash=None):
 @transaction.atomic
 def reconfirm(proposal_id, payload, *, actor, files=()):
     from content.models import BusinessProposal, ProposalApprovalFile
-    from content.services.proposal_approval_service import ApprovalConflict, _packet, source_hash, _read_file
+    from content.services.proposal_approval_service import ApprovalConflict, _packet, source_hash, _read_file, selected_optional_ids
     from content.serializers.proposal_approval import ProposalApprovalSerializer
     from django.core.files.base import ContentFile
     import hashlib
@@ -164,6 +171,7 @@ def reconfirm(proposal_id, payload, *, actor, files=()):
     data = dict(payload, action='confirm', accept_proposal=False,
                 client_profile_id=proposal.client_id, project_id=proposal.deliverable.project_id)
     data.setdefault('use_proposal_contracts', previous.manifest.get('use_proposal_contracts', True))
+    data.setdefault('selected_document_ids', selected_optional_ids(proposal, previous))
     data.pop('new_client', None)
     data.pop('new_project', None)
     serializer = ProposalApprovalSerializer(data=data)
@@ -213,6 +221,7 @@ def reconfirm(proposal_id, payload, *, actor, files=()):
         section = proposal.sections.filter(section_type='technical_document', is_enabled=True).first()
         manifest = dict(previous.manifest, use_proposal_contracts=data['use_proposal_contracts'],
             service_contract_approved=proposal.service_contract_approved,
+            selected_document_ids=sorted(set(data['selected_document_ids'])),
             commercial_summary=_commercial_summary(proposal), client=_client_summary(proposal.client),
             technical_content=filtered_technical_doc_for_sync(proposal, section.content_json) if section else {})
         package, _root = create_package(proposal, actor=actor, request_id=data['request_id'],

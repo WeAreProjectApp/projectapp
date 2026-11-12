@@ -22,6 +22,8 @@ function clamp(value) {
 }
 
 function onPointerDown(event) {
+  // Native mouse dragging can cancel pointer capture after the first movement.
+  event.preventDefault()
   pointerActive.value = true
   event.currentTarget.setPointerCapture?.(event.pointerId)
   emit('pointer-start', event)

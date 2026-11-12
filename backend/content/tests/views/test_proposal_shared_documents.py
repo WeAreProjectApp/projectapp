@@ -33,6 +33,34 @@ from content.tests.views.test_proposal_approval import (
 pytestmark = pytest.mark.django_db
 
 
+def test_historical_annex_keeps_its_descriptive_title(admin_client, reviewed_proposal, approval_client, admin_user):
+    """Falla si retirar un anexo pierde el título compartido o sus bytes aprobados."""
+    annex = ProposalDocument.objects.create(proposal=reviewed_proposal,
+        document_type='legal_annex', title='Anexo descriptivo conservado')
+    annex.file.save('annex.pdf', ContentFile(b'%PDF-1.4 historical annex'))
+    confirm(reviewed_proposal, approval_client, admin_user, selected_document_ids=[annex.pk])
+    proposal = load_proposal(reviewed_proposal.pk)
+    binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
+    file_id = binding.current_file_id
+    document_id = binding.document_id
+    # Retiring a selected annex preserves its shared title and approved bytes.
+    annex.is_archived = True
+    annex.save(update_fields=['is_archived'])
+
+    package = reconfirm(proposal.pk, revision_payload(proposal, selected_document_ids=[]), actor=admin_user)
+    approval = admin_client.get(reverse('proposal-approval', args=[proposal.pk])).json()
+    document = admin_client.get(reverse('document-proposal-source', args=[document_id])).json()['document']
+
+    historical = next(item for item in approval['shared_documents'] if item['document_id'] == document_id)
+    assert historical['title'] == 'Anexo descriptivo conservado'
+    assert historical['is_current'] is False
+    assert document['title'] == historical['title']
+    assert document['current_file_id'] == file_id
+    assert not package.files.filter(pk=file_id).exists()
+    assert ProposalApprovalFile.objects.get(pk=file_id).file.read() == b'%PDF-1.4 historical annex'
+    assert Document.objects.get(pk=document_id).title == 'Anexo descriptivo conservado'
+
+
 @pytest.fixture
 def confirmed_proposal(reviewed_proposal, approval_client, admin_user):
     confirm(reviewed_proposal, approval_client, admin_user)
@@ -178,7 +206,7 @@ def test_reconciliation_restores_a_missing_annex_identity(admin_client, reviewed
         proposal=reviewed_proposal, document_type='legal_annex', title='Signed annex',
     )
     annex.file.save('annex.pdf', ContentFile(b'%PDF-1.4 annex'))
-    confirm(reviewed_proposal, approval_client, admin_user)
+    confirm(reviewed_proposal, approval_client, admin_user, selected_document_ids=[annex.pk])
     proposal = load_proposal(reviewed_proposal.pk)
     binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
     contract_document_id = proposal.document_bindings.get(source_key='custom-contract').document_id

@@ -55,6 +55,8 @@ const unlinkedTotal = computed(() => (
       </div>
     </div>
 
+    <p class="mt-2 text-xs text-text-muted">Espacio disponible en Plataforma</p>
+
     <dl class="mt-4 grid grid-cols-3 gap-2 rounded-lg bg-surface-muted p-3 text-center">
       <div>
         <dt class="text-2xs uppercase tracking-wide text-text-subtle">Creado</dt>

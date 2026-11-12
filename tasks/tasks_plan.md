@@ -1,3 +1,13 @@
+> **Contratación estatal interna — 2026-11-05:** desarrollo independiente en rama de sesión: panel/API/MCP, filtros OR palabras/UNSPSC más criterios AND, alertas inmediata/diaria/semanal con destinatarios editables y seguimiento con análisis externo. Pruebas locales por capas aprobadas; entrega y CI en el PR #552. Operación en `docs/PROCUREMENT.md`; sin lectura de buzones ni IA interna.
+
+> **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../docs/DATA_INTEGRITY.md).
+
+## Accesos autorizados — 2026-11-05
+
+Implementado Accesos autorizados: código, Google, cuentas administradas por panel/MCP, revocación y excepción de correos con credenciales. Validación focal de backend, frontend y navegador en verde, incluidos los cinco tamaños de pantalla. Rama feat/05112026-authorized-access; [PR #554](https://github.com/WeAreProjectApp/projectapp/pull/554) conserva el estado de CI e integración. Despliegue pendiente del operador.
+
+> **PA-201, PA-202/205, PA-208 y PA-214 — 2026-11-06:** compactar Radar y detalle, redimensionar menú y navegación de Enlaces seguros, reubicar Consultoría e integrar Estado de los emails con Historial y reintentos individuales. Criterio de entrega: cobertura del envío para dos cuentas distintas, reintento histórico y por destinatario, arrastres en las tres vistas y matriz responsiva validados en CI; PR abierto y verde. No se ejecutan tests locales.
+
 > **Calculadora por tallas — PR #555 (2026-11-05):** definición general administrable y versionada; variantes opcionales por proyecto con parámetros negociables, Borrador/Aprobada y documento/PDF congelados al aprobar. MCP Comercial consulta/clasifica desde el chat externo y registra estimaciones/cierres; MCP Proyectos ajusta y aprueba variantes. Calibración separa definiciones efectivas, conserva correcciones y propone revisión sin cambios automáticos. Horas/costos son internos; valores iniciales provisionales. Migraciones accounts.0091 y content.0305–0306 pendientes del deploy. QA local y CI se verifican en la rama de sesión; esta nota no acredita integración ni despliegue.
 
 > **Enlaces seguros — 2026-10-26:** jerarquía propia, navegación compartida,

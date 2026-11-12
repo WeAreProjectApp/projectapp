@@ -75,7 +75,7 @@ def test_canonical_catalog_enforces_unique_module_ownership():
         'overview': 'operations', 'commercial': 'commercial', 'platform': 'projects',
         'documents': 'documents', 'communications': 'communications', 'site': 'content',
         'accounting': 'accounting', 'tasks': 'tasks', 'offerings': 'offerings',
-        'programs': 'programs',
+        'programs': 'programs', 'procurement': 'procurement', 'data-integrity': 'data-integrity',
     }
     ownership = {
         name: slug

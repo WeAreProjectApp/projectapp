@@ -3,6 +3,7 @@
 from datetime import date, datetime, time, timedelta
 
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -12,7 +13,19 @@ from rest_framework.test import APIClient
 
 from monitoring.models import Case, CaseActivity, Report, Resource, Source
 
+# The existing ceiling includes the mandatory access-revocation profile read.
 MAX_CASE_LIST_QUERIES = 6
+
+
+def _table_selects(queries, model):
+    """Return SELECT queries that read the requested model table."""
+    table = model._meta.db_table
+    return [
+        query['sql']
+        for query in queries
+        if query['sql'].lstrip().upper().startswith('SELECT')
+        and table in query['sql']
+    ]
 
 
 def _endpoint(model):
@@ -74,6 +87,11 @@ def _list_select_sql(queries, model):
 def staff_client(db):
     """Return a staff session permitted to read monitoring administration lists."""
     user = get_user_model().objects.create_user(username='monitoring-query-staff', is_staff=True)
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
+    )
     client = APIClient()
     client.force_login(user)
     return client
@@ -123,16 +141,24 @@ def test_case_list_limits_results_to_page_size(staff_client, twenty_six_cases):
 
 
 @pytest.mark.django_db
-def test_case_list_query_budget_is_stable_for_single_source(staff_client, twenty_six_cases):
+def test_case_list_query_budget_is_stable_for_single_source(
+    staff_client,
+    twenty_six_cases,
+    record_property,
+):
     """Falla si filtrar un origen reduce el número de filas pero aumenta las consultas."""
     with CaptureQueriesContext(connection) as full_queries:
         staff_client.get('/api/monitoring/cases/')
     with CaptureQueriesContext(connection) as filtered_queries:
         filtered_response = staff_client.get(f'/api/monitoring/cases/?source={twenty_six_cases[0].source_id}')
 
+    record_property('query_count_full', len(full_queries))
+    record_property('query_count_filtered', len(filtered_queries))
     assert filtered_response.json()['count'] == 1
     assert len(full_queries) == len(filtered_queries)
     assert len(full_queries) <= MAX_CASE_LIST_QUERIES
+    assert len(_table_selects(full_queries, UserProfile)) == 1
+    assert len(_table_selects(filtered_queries, UserProfile)) == 1
 
 
 @pytest.mark.django_db

@@ -4,7 +4,7 @@
     class="flex flex-wrap items-center justify-between gap-3 mb-4"
     data-testid="folder-header"
   >
-    <div class="min-w-0">
+    <div class="min-w-0 max-w-full flex-1">
       <h2
         class="text-lg font-semibold text-text-default truncate"
         data-testid="folder-header-name"
@@ -20,7 +20,7 @@
         >{{ folder.client_display_name }}</span>
         <span
           v-if="folder.project_name"
-          class="text-xs px-2 py-0.5 rounded-full bg-surface-raised text-text-muted font-medium"
+          class="min-w-0 max-w-full text-xs px-2 py-0.5 rounded-full bg-surface-raised text-text-muted font-medium [overflow-wrap:anywhere]"
           data-testid="folder-header-project"
         >{{ folder.project_name }}</span>
       </div>

@@ -69,7 +69,7 @@
 ### E2E scope decisions (audit follow-up)
 
 - **TechnicalDocumentEditor (panel):** No dedicated flow ID. Scope remains within `admin-proposal-edit` and `admin-proposal-defaults-config`; client-facing technical reading is covered by `proposal-technical-view`.
-- **Panel sidebar (collapse / mobile drawer):** No dedicated flow ID. Exercised indirectly by specs that load `/panel` routes using the admin layout.
+- **Panel sidebar:** ancho ajustable, etiquetas completas y navegación cubiertos por `admin-panel-sidebar-resize`; el drawer conserva los mismos accesos.
 
 ### Backend-only and system-triggered flows (not browser E2E)
 
@@ -213,6 +213,8 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **E2E Spec:** `e2e/platform/platform-project-list.spec.js`
 
 #### FLOW: `platform-project-detail`
+
+PA-241: el retorno administrativo desde el encabezado o Cambiar estado abre la ficha comercial del mismo proyecto en otra pestaña y conserva el idioma es-co/en-us y el resaltado. El acceso sigue oculto para clientes.
 
 - **Module:** platform
 - **Role:** platform-admin / platform-client
@@ -1082,26 +1084,6 @@ La revisión sigue contrato → alcance → fases de ejecución → etapas → g
   - [Branch D — Empty state] No admins → empty state message with invite CTA.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-admin-management.spec.js`
-
-### 9.3 Email Deliverability Dashboard
-
-#### FLOW: `admin-email-deliverability`
-
-- **Module:** admin
-- **Role:** admin
-- **Priority:** P3
-- **Routes:** `/panel/proposals/email-deliverability`
-- **Description:** Dashboard tracking email send/delivery/bounce/open rates for all proposal-related automated emails. Admin monitors deliverability health.
-- **Steps:**
-  1. Admin navigates to `/panel/proposals/email-deliverability`.
-  2. Dashboard loads email delivery metrics from API.
-  3. Stats render: total sent, delivered, bounced, open rate.
-  4. Per-proposal email log table shows individual send events.
-- **Branches:**
-  - [Branch A — Empty state] No emails sent yet → "No hay datos de entregas." message.
-  - [Branch B — Date filter] Admin filters by date range → metrics update.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/admin/admin-email-deliverability.spec.js`
 
 ### 9.4 Public Landing Pages
 
@@ -3103,6 +3085,62 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/layout/layout-footer.spec.js`
 
+### FLOW: `admin-data-integrity-findings`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** Un administrador consulta resultados privados persistidos, inicia una revisión completa o acotada, filtra módulo/gravedad/estado y pagina. Una revisión fallida conserva el último resultado válido. El radar abre el fingerprint exacto y permite regresar a todos los hallazgos.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js` y `frontend/e2e/responsive/data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
+### FLOW: `admin-data-integrity-review`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** El administrador acepta como intencional o reabre un hallazgo presente con motivo y confirmación. La decisión conserva actor y fecha. Evidencia nueva vuelve a pendientes y un conflicto no cambia la decisión.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
+### FLOW: `admin-data-integrity-fix`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** El administrador selecciona hasta veinte hallazgos corregibles, elige parámetros y revisa antes/después y bloqueos. La aplicación requiere motivo y confirmación del impacto vigente. Un lote bloqueado o vencido no modifica registros.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js` y `frontend/e2e/responsive/data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
+### FLOW: `admin-data-integrity-history`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión, incluida integridad financiera.
+- **Prioridad:** P1
+- **Ruta:** `/panel/data-integrity`, desde Sistema o Radar de atención.
+- **Descripción:** El historial pagina operaciones y decisiones. El administrador revisa el deshacer exacto y confirma con motivo; cambios posteriores o una reversión previa bloquean la operación.
+- **Éxito:** interacción completa con vista previa y confirmación cuando hay una decisión o corrección.
+- **Error:** entrada inválida, bloqueo de negocio o impacto desactualizado muestra una alerta sin aplicar cambios.
+- **Fallo:** errores de red o del servidor conservan el último resultado válido y permiten reintentar.
+- **Visualización:** presenta resultados, fechas, motivo y estado observables; una consulta vacía explica su alcance.
+- **E2E Specs:** `frontend/e2e/admin/admin-data-integrity.spec.js`.
+- **Backend:** pruebas de observaciones, alcance contable, organización documental, permisos y compatibilidad MCP.
+
 
 ## 4. Guest Flows
 
@@ -3592,14 +3630,14 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 
 - **Módulo:** auth · **Rol:** admin · **Prioridad:** P1
 - **Rutas:** `/panel/login` → `/admin/login/` → destino interno de `next`.
-- **Recorrido:** abrir el enlace al Django Admin, completar credenciales y
+- **Recorrido:** elegir «Entrar con contraseña», completar credenciales y
   reCAPTCHA v2; enviar para crear la sesión y volver a la página solicitada.
 - **Success:** CAPTCHA aceptado y credenciales de staff válidas crean la sesión.
 - **Error:** token ausente, inválido o expirado bloquea el intento; se requiere
   una verificación nueva tras credenciales incorrectas.
-- **Failure:** Google no disponible o script bloqueado deja el acceso cerrado
+- **Failure:** reCAPTCHA no disponible o script bloqueado deja el acceso cerrado
   con mensaje y Reintentar. Las sesiones previamente abiertas siguen vigentes.
-- **Display:** la página de entrada conserva el enlace hacia Django Admin.
+- **Display:** «Entrar con contraseña» enlaza a `/admin/login/?next=%2Fpanel%2F`.
 - **E2E:** `e2e/auth/auth-admin-login.spec.js` mantiene el hand-off;
   `e2e/captcha/panel-login-captcha.spec.js` recorre el formulario Django real,
   con base temporal y simulación únicamente del proveedor externo.
@@ -3622,6 +3660,18 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
   5. [Branch] Signing in again on the Django login form returns the user to the originally requested `/panel/*` page via `next`.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/auth/auth-admin-login.spec.js` (describe "Admin Panel Session Guard": mocks `GET /api/auth/check/` → 401 and asserts the hard redirect to `/admin/login/?next=/en-us/panel/proposals`)
+
+### FLOW: `admin-panel-sidebar-resize`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Routes:** `/panel`
+- **Description:** Admin resizes the expanded desktop Panel menu from 200px to 400px with mouse or keyboard. Content follows its width; the 240px default and chosen width persist independently of collapse. Long labels wrap, including Paquetes de requerimientos. Consultoría y asesoría follows Células behind a divider in Programas, has a conversation icon and opens /panel/consulting.
+- **Selector:** `panel-sidebar-resize-handle`
+- **Outcomes:** display, success
+- **Pasos:** abrir la vista desde el menú, arrastrar el separador en ambos sentidos y comprobar cómo cambia el contenido contiguo. Redimensionar con teclado, recargar y comprobar persistencia; el doble clic restaura el ancho inicial. Comprobar que en móvil el drawer conserva los accesos.
+- **Error/failure:** n/a; el ajuste del ancho es local. Los fallos de carga pertenecen al flujo del listado.
 
 ### FLOW: `admin-impersonate-user`
 
@@ -3689,6 +3739,12 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 ## Documento vinculado pendiente
 
 El radar incluye cuentas con documento vinculado pendiente para superusuarios: borradores, emitidas y pagadas, excluyendo anuladas, archivadas y datos retenidos. Abre la cuenta exacta y permite completar el vínculo. La decisión resuelta desaparece en la siguiente lectura del radar; la autoría se conserva.
+
+- **Integridad de datos:** los hallazgos presentes no aceptados son visibles para administradores. El destino `/panel/data-integrity?finding=<fingerprint>` filtra el hallazgo exacto; «Ver todos los hallazgos» retira el foco. El radar no ejecuta barridos al consultar.
+
+## Disposición compacta
+
+En escritorio, desplegar la alerta de dos pagos recurrentes muestra dos tarjetas en paralelo. Ambas conservan nombre, valor, fecha y medio de pago y abren su detalle individual, limitado a 48rem. En móvil se apilan sin perder acciones.
 
 ### FLOW: `admin-dashboard-error-retry`
 
@@ -3896,6 +3952,8 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
   6. API call to `PATCH /api/proposals/:id/update/`.
   7. Success feedback displays.
 - **Branches:**
+  - [General — PA-226] Abrir o recargar una propuesta conserva su vencimiento sin activar el aviso de cambios pendientes, incluso si ya venció. Editar un dato o los días de vigencia activa el aviso; restituir el valor guardado lo retira. Guardar elimina el aviso y conserva los cambios al recargar; un fallo conserva el borrador y la confirmación de salida. La fecha escrita directamente, incluida una hora cercana a medianoche, no se recalcula a partir de los días mostrados.
+  - [Vencimiento] Días suma fechas calendario en la zona local del navegador y conserva la hora. La carga no escribe cambios; edición, reversión, guardado y reapertura conservan la correspondencia.
   - [Datos del proyecto] Proyecto → Datos está disponible en todos los estados. Reúne el cliente y los contactos con guardado propio; una propuesta ya vinculada conserva su cliente. El proyecto actual se muestra allí y su cambio exige destino del mismo cliente, motivo, revisión y confirmación.
   - [Recursos y correos] Recursos pertenece a Propuesta. Los enlaces anteriores a Comunicación → Recursos abren la nueva ubicación. Firma, funcionalidades y fases del correo se guardan desde Comunicación → Correos sin sobrescribir cambios pendientes en General.
   - [Disponibilidad de Documentos] La pestaña está disponible en todos los estados y permanece seleccionada cuando la propuesta pasa a finalizada. General conserva los PDFs originales de propuestas en borrador, vencidas y finalizadas, distintos de los documentos formales.
@@ -3907,7 +3965,7 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
   - [Branch B] Admin updates individual section → `PATCH /api/proposals/sections/:id/update/`.
   - [Branch C — item traceability] In Propuesta → Detalle técnico, editor sections render collapsed by default (2026-08 perf round): the admin expands "Módulos del producto" (`technical-section-toggle-epics`), opens the requirement's "Vincular alcance/ítems (n)" disclosure (`technical-req-links-toggle`), and checks the commercial-item boxes (grouped by functional_requirements card, `technical-req-item-links`) that write `linked_item_ids`; saving (button always visible below the sections) persists them via the same section update endpoint. These links power the public nested requirements modal and the commercial PDF sub-rows. The JSON sub-tab mounts only when selected.
 - **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/admin/admin-proposal-edit.spec.js` (includes linked_item_ids save test), `e2e/admin/admin-proposal-navigation.spec.js` (grouped navigation and compatible links)
+- **E2E Spec:** `e2e/admin/admin-proposal-edit.spec.js` (includes linked_item_ids save test), `e2e/admin/admin-proposal-navigation.spec.js` (grouped navigation and compatible links), `e2e/admin/admin-proposal-general-dirty-guard.spec.js` (PA-226: carga, recarga, edición, reversión, guardado y protección ante fallo con vencimiento pasado y futuro)
 - **Known gaps:** The automations toggle now uses positive polarity (ON = automations running, 2026-07); no E2E asserts knob position / `aria-checked`, and the toggle has no `data-testid` (only `aria-label="Activar automatizaciones"`).
 
 ### FLOW: `admin-proposal-contract-terms-visibility`
@@ -4376,6 +4434,18 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
 - **Formato editorial:** La redacción admite Visual y Fuente, con perfiles de correo y WhatsApp y copia adaptada al canal; conserva contenido y formato al guardar o ante un error. WhatsApp utiliza únicamente sus marcas nativas.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-communications.spec.js` (correo, WhatsApp y conservación ante rechazo).
 
+### FLOW: `admin-communication-panel-resize`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P3
+- **Routes:** `/panel/communications`
+- **Description:** Admin resizes the adjacent thread navigation by mouse or keyboard from 240px to 400px, starting at 288px. The thread list reflows during drag; the communications preference persists the width and double-click restores the default. Compact navigation uses the drawer.
+- **Selector:** `communications-navigation-resize-handle`
+- **Outcomes:** display, success
+- **Pasos:** abrir la vista desde el menú, arrastrar el separador en ambos sentidos y comprobar cómo cambia el contenido contiguo. Redimensionar con teclado, recargar y comprobar persistencia; el doble clic restaura el ancho inicial. Comprobar que en móvil el drawer conserva los accesos.
+- **Error/failure:** n/a; el ajuste del ancho es local. Los fallos de carga pertenecen al flujo del listado.
+
 ### FLOW: `admin-mini-crm-clients`
 
 - **Module:** admin
@@ -4388,7 +4458,7 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
   2. Client list loads from `GET /api/proposals/client-profiles/`, and the per-status counts from `GET /api/proposals/client-profiles/status-counts/`.
   3. Clients render with name, email, proposal count, and orphan/placeholder/inactive badges.
   4. Admin uses the status selector (data-testid: `clients-status-<id>`), labelled with each option's count — sends `?orphans=true/false` / `?inactive=true` and mirrors the choice in `?status=`.
-  5. Admin searches clients by name, email, or company.
+  5. Admin searches clients by full name, email, or company. Rows and status counts publish together for the latest query; obsolete responses are ignored. No matches clears the cards and pagination; a failed load shows a retry action instead of stale results.
   6. Admin expands a client row to view individual proposals (lazy-loaded via `GET /api/proposals/client-profiles/:id/`).
   7. Pressing the global panel refresh button invalidates the per-client detail cache and refetches expanded rows, so renamed/reassigned proposals show up.
 - **Coverage:** ⚠️ Partial
@@ -4496,6 +4566,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Coverage:** ✅ Covered — module grouping without narrowing, counts before applying (including `(0)`), narrowing + URL stamp, toggle-off, chip removal dropping the tab, rebuilding a predefined filter from the panel, shared-link restore, search composition, the transversal status, the pre-filtered handoff into Hostings, the Documentos subfilter counts and the pre-filtered handoff into Documents are all asserted (2026-08-16); los tres cortes de Diagnóstico, los cuatro de Emails, el pill de contacto de la fila y el modal con sus dos grupos también (2026-08-16). El display responsivo está cubierto en los cinco anchos reales (2026-08-22).
 - **E2E Specs:** `e2e/admin/admin-clients-filter-presets.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
 - **Backend Tests:** `content/tests/views/test_proposal_clients_views.py::TestPresetAnnotations`, `content/tests/views/test_proposal_clients_views.py::TestDocumentsModuleAnnotations`, `content/tests/views/test_proposal_clients_views.py::TestClientStatusCounts`, `accounts/tests/test_seed_filter_tabs.py::TestDropClientStatusTabsMigration`
+
+PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ninguna paginación anterior. Limpiar restaura el registro. Si falla la lectura de filas o de contadores, la vista muestra error y Reintentar recupera ambos resultados para la consulta vigente. Regresiones: `admin-clients-filter-presets.spec.js` (success/failure), con esperas a las dos fronteras HTTP.
 
 ### FLOW: `admin-clients-documents-section`
 
@@ -5563,6 +5635,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Formato editorial:** El contenido admite modos Visual y Fuente Markdown, listas, tablas, colores y alineación; el guardado conserva la fuente única y su declaración de formato.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
 
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
+
 ### FLOW: `admin-document-edit`
 
 - **Module:** admin
@@ -5598,6 +5673,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 
 - **Formato editorial:** Visual y Fuente Markdown comparten contenido e historial. Alternar, guardar y reabrir conserva listas, tablas, color y alineación. Notas y borradores utilizan el mismo editor; WhatsApp sólo ofrece formato nativo. Un formato inválido mantiene la fuente para corregirla.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).
+
+- **PA-211 — cuerpo documental:** El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano.
+- **Aceptación PA-211:** crear/editar con usuario staff, alternar Visual/Fuente, Vista previa, guardar/reabrir y conservar fuente/metadatos ante rechazo. Matriz 412×915, 835×1195, 1195×835, 1440×900 y 2560×1440. Pruebas automáticas sólo en CI; recorrido manual con dev-qa.
 
 ### FLOW: `admin-document-thread`
 
@@ -5932,11 +6010,44 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **E2E Spec:** `e2e/admin/admin-proposal-module-interests.spec.js`
 - **Components:** `ProposalGeneralTab.vue`, `ProposalActivityTab.vue`
 
+### FLOW: `admin-secure-link-folder-panel-resize`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P3
+- **Routes:** `/panel/secure-links`
+- **Description:** Admin resizes the adjacent secure-links folder navigation by mouse or keyboard from 240px to 480px, starting at 256px. The list reflows during drag; projectapp-secure-links-folder-width persists independently of Documents, and double-click restores the default. Below panel-landscape the drawer replaces the sidebar.
+- **Selector:** `secure-folders-resize-handle`
+- **Outcomes:** display, success
+- **Pasos:** abrir la vista desde el menú, arrastrar el separador en ambos sentidos y comprobar cómo cambia el contenido contiguo. Redimensionar con teclado, recargar y comprobar persistencia; el doble clic restaura el ancho inicial. Comprobar que en móvil el drawer conserva los accesos.
+- **Error/failure:** n/a; el ajuste del ancho es local. Los fallos de carga pertenecen al flujo del listado.
+
+### FLOW: `admin-outbound-email-history-retry`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Routes:** `/panel/emails?tab=history`
+- **Description:** Admin expands a failed recipient in universal Email History and confirms a retry naming its original address and subject. The retry accepts no replacement destination; exact snapshots or valid accounting origin facts create a linked attempt in History. Missing facts, reversed payments, invalid addresses and insufficient permissions explain why no retry is available. Failed retried sends remain recorded and show failure feedback.
+- **Selector:** `email-history-retry-<id>`
+- **Outcomes:** display, success, error, failure
+- **Pasos:** abrir Emails desde Comunicaciones, elegir Historial y desplegar el envío. Revisar el destinatario fallido y confirmar Reintentar envío. Consultar el nuevo intento vinculado; si falla, conservar su resultado en el historial. Un registro incompleto o sin permiso explica el bloqueo antes de enviar.
+
+### FLOW: `admin-email-deliverability`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P3
+- **Routes:** `/panel/emails?tab=status`
+- **Description:** Desde Comunicaciones > Emails, abrir Estado de los emails para consultar totales, tasa de éxito, desglose por plantilla, tendencia diaria y fallos recientes de treinta días.
+- **Outcomes:** display (estadísticas y fallos con datos), success (redirección del acceso anterior `/panel/proposals/email-deliverability`).
+
 
 ## 7. E2E Coverage Index
 
 | Flow | Module | Priority | Outcomes | expectedSpecs |
 |---|---|---|---|---|
+| `admin-access-management` | admin | P1 | success,error,failure,display | 3 |
 | `admin-accounting-ads` | admin | P3 | display,success,error | 4 |
 | `admin-accounting-card-catalog` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-cards` | admin | P2 | display,success,error | 10 |
@@ -5957,8 +6068,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-hosting-client` | admin | P1 | display,success,failure | 4 |
 | `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
+| `admin-accounting-hosting-link` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
-| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 18 |
+| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 20 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
 | `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 42 |
 | `admin-accounting-income-reminder-mute` | admin | P1 | display,success,error,failure | 6 |
@@ -6020,9 +6132,10 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-client-retained-data` | admin | P1 | display,error,failure | 5 |
 | `admin-clients-config-tab` | admin | P3 | — | 0 |
 | `admin-clients-documents-section` | admin | P2 | display,success | 2 |
-| `admin-clients-filter-presets` | admin | P2 | display,success | 17 |
+| `admin-clients-filter-presets` | admin | P2 | display,success,failure | 17 |
 | `admin-commercial-video-resources` | admin | P1 | display,success,error,failure | 4 |
 | `admin-communication-folders` | admin | P1 | display,success,error,failure | — |
+| `admin-communication-panel-resize` | admin | P3 | display,success | — |
 | `admin-consulting-distribution` | commercial | P1 | display,success,failure | — |
 | `admin-consulting-history` | commercial | P2 | display,success,failure | — |
 | `admin-consulting-preview` | commercial | P1 | display,success,failure | — |
@@ -6034,6 +6147,10 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-dashboard-pipeline-value` | admin | P2 | display | 2 |
 | `admin-dashboard-quick-create` | admin | P3 | display,success | 2 |
 | `admin-dashboard-stats-modals` | admin | P2 | display | 1 |
+| `admin-data-integrity-findings` | admin | P1 | display,success,error,failure | — |
+| `admin-data-integrity-fix` | admin | P1 | display,success,error,failure | — |
+| `admin-data-integrity-history` | admin | P1 | display,success,error,failure | — |
+| `admin-data-integrity-review` | admin | P1 | display,success,error,failure | — |
 | `admin-defaults-unified` | admin | P2 | success,display | 1 |
 | `admin-diagnostic-activity` | admin | P2 | success | 1 |
 | `admin-diagnostic-advanced-filters` | admin | P2 | display,success | 1 |
@@ -6092,7 +6209,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-document-thread` | admin | P1 | display,success,error,failure | 1 |
 | `admin-document-title-column-resize` | admin | P2 | display,success | 1 |
 | `admin-document-unsaved-guard` | admin | P2 | display,success,failure | 1 |
-| `admin-email-deliverability` | admin | P3 | display | 1 |
+| `admin-email-deliverability` | admin | P3 | display,success | 1 |
 | `admin-email-templates-config` | admin | P2 | display,success,error | 1 |
 | `admin-financing-agreement-create` | admin | P1 | display,success,error,failure | 4 |
 | `admin-financing-agreement-lifecycle` | admin | P1 | display,success,error,failure | 11 |
@@ -6127,8 +6244,10 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-outbound-email-history-body` | admin | P1 | display | 1 |
 | `admin-outbound-email-history-filter` | admin | P1 | display | 1 |
 | `admin-outbound-email-history-resend` | admin | P1 | success,failure | — |
+| `admin-outbound-email-history-retry` | admin | P1 | display,success,error,failure | — |
 | `admin-panel-projects` | admin | P1 | display,success,error | 17 |
 | `admin-panel-session-expired` | auth | P1 | error | 1 |
+| `admin-panel-sidebar-resize` | admin | P2 | display,success | — |
 | `admin-panel-unsaved-guard` | admin | P2 | display,success,failure | 1 |
 | `admin-partnership-legacy-redirects` | admin | P2 | success,error | — |
 | `admin-platform-guided-tour-authoring` | admin | P2 | success,error,failure,display | 1 |
@@ -6138,6 +6257,13 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-portfolio-delete` | admin | P2 | display,success | 1 |
 | `admin-portfolio-edit` | admin | P2 | display,success,error | 1 |
 | `admin-portfolio-list` | admin | P2 | display | 1 |
+| `admin-procurement-alerts` | procurement | P1 | display,success,error,failure | — |
+| `admin-procurement-classification` | procurement | P1 | display,success,error,failure | — |
+| `admin-procurement-deliveries` | procurement | P2 | display,success,error,failure | — |
+| `admin-procurement-filters-export` | procurement | P1 | display,success,error,failure | — |
+| `admin-procurement-opportunity-list` | procurement | P1 | display,success,failure | — |
+| `admin-procurement-saved-searches` | procurement | P2 | display,success,error,failure | — |
+| `admin-procurement-settings-sync` | procurement | P2 | display,success,error,failure | — |
 | `admin-project-access-detail` | admin | P1 | display,failure | — |
 | `admin-project-access-field-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-notes` | admin | P2 | display,success,error,failure | — |
@@ -6241,6 +6367,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-requirement-calculator-definition` | commercial | P1 | display,success,error,failure | — |
 | `admin-requirement-calculator-revision-restore` | commercial | P2 | display,success,failure | — |
 | `admin-secure-link-create` | admin | P1 | success,error,failure,display | — |
+| `admin-secure-link-folder-panel-resize` | admin | P3 | display,success | — |
 | `admin-secure-link-manage` | admin | P1 | success,error,failure,display | — |
 | `admin-seller-inactivity-escalation` | admin | P2 | — | 0 |
 | `admin-send-branded-email` | admin | P2 | display,success,failure | 1 |
@@ -6249,11 +6376,12 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-standalone-email-attachments` | admin | P2 | success,error | 1 |
 | `admin-standalone-email-composer` | admin | P2 | display,success,failure | 1 |
 | `admin-standalone-email-defaults` | admin | P2 | display,success,error | 1 |
-| `admin-styleguide` | admin | P3 | display | 1 |
+| `admin-styleguide` | admin | P3 | success,display | 1 |
 | `admin-task-alert-management` | admin | P1 | display,success,failure | 1 |
 | `admin-task-deadline-notification` | admin | P2 | — | 0 |
 | `admin-view-map` | admin | P4 | display,success,failure | 1 |
 | `admin-whatsapp-suggestion` | admin | P2 | — | 0 |
+| `authorized-login` | auth | P1 | success,error,failure,display | 3 |
 | `blog-detail` | blog | P2 | display,failure | 1 |
 | `blog-list` | blog | P2 | display | 1 |
 | `diagnostic-public-dark-mode` | diagnostic | P3 | success | 1 |
@@ -6315,7 +6443,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-project-client-access` | platform | P1 | success,error,failure,display | — |
 | `platform-project-collection-accounts` | platform | P1 | display,success,error | 1 |
 | `platform-project-data-model` | platform | P2 | success,error,display | 1 |
-| `platform-project-detail` | platform | P2 | success,display | 1 |
+| `platform-project-detail` | platform | P2 | success,display,error | 1 |
 | `platform-project-hosting-context` | platform | P1 | display,success,error | — |
 | `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
@@ -6594,13 +6722,15 @@ y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 - **Success:** Cobertura por antigüedad, reparto manual o automático, deducciones proporcionales, saldo pendiente o reprogramado con origen, cero recibido con ajustes y excedente como saldo a favor del mismo cliente. Una vista previa precede el registro; los correos elegibles se revisan dentro del modal.
 - **Error:** Bloquea distribuciones excesivas, valores negativos, líneas incompletas, períodos incompletos, participación excesiva y excedente con clientes mezclados. El IVA activado requiere porcentaje válido. Pagos, deducciones o cuentas emitidas bloquean su cambio de tasa, sin impedir registrar el pago. Explica por qué no puede enviar una confirmación.
 - **Failure:** Un rechazo de vista previa conserva el formulario. Un conflicto al registrar conserva los datos para volver a revisar. El fallo de correo no deshace el abono.
-- **Display:** Un único diálogo con lista, valor recibido, fecha, destino y resumen. Cada ingreso muestra un switch junto a IVA antes de expandir: apagar significa Sin IVA (0 %). La configuración permite capturar base o total incluido y ver base, IVA y total; distingue Sin registrar. Diferencia se abre al faltar dinero. El pie de acciones tiene padding propio. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
+- **Display:** Participaciones muestra Carlos, Gustavo y el remanente positivo de ProjectApp incluso contraída; recibido 119 equivale a 59 + 59 + 1. Actualiza el remanente al editar importe o reparto manual, conserva centavos y oculta cero. Un único diálogo con lista, valor recibido, fecha, destino y resumen. Cada ingreso muestra un switch junto a IVA antes de expandir: apagar significa Sin IVA (0 %). La configuración permite capturar base o total incluido y ver base, IVA y total; distingue Sin registrar. Diferencia se abre al faltar dinero. El pie de acciones tiene padding propio. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
 - **Coverage:** Las cuatro clases de resultado tienen recorridos focales; los cinco perfiles de pantalla verifican el modal con IVA expandido. La ruta individual comparte el mismo modal.
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
 
 El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
 
 Cambiar únicamente entre base y total incluido conserva los centavos recibidos y el reparto automático. Editar el porcentaje en modo total incluido permite seguir ajustando el valor recibido sin conservar una captura desactualizada.
+
+Cada ingreso seleccionado con destinatario válido genera su confirmación después de completar la liquidación y deja un envío principal en Historial de Emails. Un fallo conserva el dinero liquidado y puede reintentarse desde Historial cuando su evidencia permite reconstruir el mensaje original.
 
 ### FLOW: `admin-accounting-filters`
 
@@ -7129,13 +7259,13 @@ Also registered/updated in this audit and documented in their home sections:
 - **Role:** admin
 - **Priority:** P3
 - **Routes:** `/panel/styleguide`
-- **Description:** Admin browses the executable base-component/design-token catalog and verifies the canonical responsive behavior at compact, portrait, landscape, desktop and wide widths.
+- **Description:** El operador consulta el catálogo de componentes y tokens, cambia el tema desde la guía o el control general del Panel y comprueba su persistencia y comportamiento responsive.
 - **Interaction matrix:**
-  - `display` — the admin reaches the catalog, sees the matching responsive profile, navigation mode, tabs/filters, priority table and capped content shell.
-  - `success` — n/a: the page is a reference catalog and does not persist product data.
-  - `error` — n/a: component validation belongs to unit tests; there is no user-submitted payload.
-  - `failure` — n/a: the examples are local and make no product mutation request.
-- **Coverage:** ✅ Covered
+  - `display` — catálogo, perfil responsive, navegación, pestañas/filtros, tabla prioritaria y ancho limitado del contenido.
+  - `success` — STAFF sin superusuario cambia el tema con Enter/Espacio; se actualizan la etiqueta, las superficies, el título y los tokens. La recarga conserva la elección y el control general permite volver al estado original. Regresión en 412×915 y 1440×900 (PA-227 / RESP-R068).
+  - `error` — no aplica a elegir tema: son dos opciones válidas y no hay entrada libre. La validación de las muestras de formularios pertenece a sus componentes.
+  - `failure` — no hay petición de mutación al servidor para esta preferencia local. El control no presenta un resultado de fallo por almacenamiento bloqueado; no se declara cobertura E2E de ese estado.
+- **Coverage:** Regresiones existentes de visualización; selección persistente de tema pendiente de CI y de aceptación Chrome con STAFF16.
 - **E2E Spec:** `e2e/visual/styleguide.spec.js`
 
 ### FLOW: `admin-layout-title-mapping`
@@ -7241,6 +7371,8 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Coverage:** ✅ Covered, incluidas validación local/API junto al campo, footer limpio, ancho uniforme, estado inicial coherente, creación de cliente visible, orden del ciclo, aislamiento entre ayuda y filtro, contención geométrica de la ayuda, estados en cero dentro del detalle compacto, acciones de filtro/navegación y display responsivo en los cinco anchos reales.
 - **E2E Specs:** `e2e/admin/admin-panel-projects.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
 
+- **PA-225:** Listado y tarjetas indican la disponibilidad del espacio; acciones y detalle abren el mismo ID en una pestaña nueva.
+
 ### FLOW: `admin-project-delete`
 
 - **Módulo:** admin
@@ -7248,8 +7380,8 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Prioridad:** P1
 - **Ruta:** `/panel/projects`
 - **API:** `GET /api/projects/<id>/delete-preview/`, `POST /api/projects/<id>/delete-preview/` con `delete_keys`, `DELETE /api/projects/<id>/delete/`
-- **Descripción:** El menú de acciones abre Eliminar proyecto. Un proyecto vacío admite la confirmación normal; uno con información muestra sus dependencias. Desde Cambiar estado, un superusuario activa Forzar eliminación y elige los datos con interruptores apagados por defecto. Apagado conserva ese dato; sólo se eliminan las categorías elegidas junto con la ficha operativa. La restricción de una dependencia exige selección manual; no activa ningún interruptor. Escribir exactamente `DELETE` confirma la selección con su huella vigente. Lo conservado queda bajo el mismo cliente, sin proyecto, para consulta y descarga. Propuestas comerciales, catálogos y auditoría independiente se conservan. Los archivos exclusivos elegidos se limpian tras confirmar la transacción; los no elegidos y los aún referenciados se conservan. No se crean nuevos cobros ni avisos asociados al proyecto retirado.
-- **Éxito:** La confirmación válida retira el proyecto de la lista y muestra Proyecto eliminado. Cancelar conserva el proyecto y no envía una petición de borrado. Desactivar Forzar eliminación vuelve al formulario de estado y descarta la confirmación previa.
+- **Descripción:** El menú de acciones abre Eliminar proyecto. Un proyecto vacío admite la confirmación normal; uno con información muestra sus dependencias. Desde el encabezado de Eliminar proyecto, un superusuario activa Forzar eliminación y elige los datos con interruptores apagados por defecto. Apagado conserva ese dato; sólo se eliminan las categorías elegidas junto con la ficha operativa. La restricción de una dependencia exige selección manual; no activa ningún interruptor. Escribir exactamente `DELETE` confirma la selección con su huella vigente. Lo conservado queda bajo el mismo cliente, sin proyecto, para consulta y descarga. Propuestas comerciales, catálogos y auditoría independiente se conservan. Los archivos exclusivos elegidos se limpian tras confirmar la transacción; los no elegidos y los aún referenciados se conservan. No se crean nuevos cobros ni avisos asociados al proyecto retirado.
+- **Éxito:** La confirmación válida retira el proyecto de la lista y muestra Proyecto eliminado. Cancelar conserva el proyecto y no envía una petición de borrado. Desactivar Forzar eliminación vuelve a la revisión de eliminación normal y descarta la confirmación previa.
 - **Error:** `delete`, espacios u otro texto no habilitan la confirmación. La opción no aparece para un administrador ordinario ni al abrir Cambiar estado directamente. Un abono, hilo o dependencia compartida, o evidencia legal protegida, impide el borrado. Elegir un padre sin su dependencia obligatoria muestra la restricción y mantiene la confirmación desactivada. Cambiar una opción o recibir una revisión obsoleta limpia `DELETE` y exige confirmar de nuevo.
 - **Fallo:** Una vista previa fallida muestra el error y permite reintentar. Un fallo al eliminar conserva el proyecto y el modal abierto. La transacción evita borrados parciales.
 - **Visualización:** La revisión muestra proyecto, advertencia, tipos de registros y cantidades. Se verifica como parte del recorrido de eliminación; no declara una prueba de visualización independiente.
@@ -7286,6 +7418,8 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Failure outcome:** A failed detail request renders a retry action in the modal; retry replaces the error with the project data.
 - **Success / error:** n/a — opening the modal is a read/display action with no user input.
 - **Coverage:** `e2e/admin/admin-project-access-detail.spec.js` plus the five responsive project profiles.
+
+- **PA-225:** El detalle ofrece Abrir espacio en la plataforma por ID en nueva pestaña.
 
 ### FLOW: `admin-project-access-field-edit`
 
@@ -7411,6 +7545,7 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
   - [Failure] Un fallo del servidor conserva el borrador de edición para reintentar.
 - **Cobertura:** ✅ display/success/error/failure.
 - **E2E:** `e2e/admin/admin-document-states-manage.spec.js`
+- **Regresión PA-232:** volver desde el catálogo debe recuperar encabezado, acciones y registros en el Gestor sin recarga. Comparar con la entrada desde el menú a 412×915, 1440×900 y 2560×1440; las nuevas pruebas comprueban también el título del navegador y errores de transición. Ejecución y dictamen manual se registran por SHA, por separado.
 
 ### FLOW: `admin-document-state-workflow`
 
@@ -8004,11 +8139,11 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible.
+Orientación general por usuario, descarte persistente, finalización y repetición desde Ayuda. Se omiten destinos sin disponibilidad o sin control visible. Al cambiar de tamaño conserva el paso y selecciona el enlace visible de escritorio o del cajón móvil. El anclaje se conserva en mediciones posteriores sobre el destino visible, tras asentarse la distribución y la tarjeta. La tarjeta queda junto al control al concluir la transición del resaltado.
 
 | Resultado | Interacción y evidencia |
 |---|---|
-| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| display | Entrar por Documentos y navegar a Proyectos, abrir la guía desde Ayuda y avanzar hasta Proyectos/Documentos. Redimensionar escritorio→móvil→tableta; comprobar texto, control visible, hueco SVG y tarjeta junto al destino. |
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
@@ -8020,11 +8155,11 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-guided-tour.spec.js`
 
-Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas.
+Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirla en cualquier proyecto. No comparte vistos entre cuentas. Los controles explicados quedan visibles al cerrar el cajón global y el recorte sigue su geometría al cambiar entre móvil, tableta y escritorio. La entrada usa fila o tarjeta según el tamaño y conserva el destino tras posteriores mediciones de layout. La tarjeta queda junto al control al concluir la transición del resaltado.
 
 | Resultado | Interacción y evidencia |
 |---|---|
-| display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
+| display | Entrar por Documentos, navegar a Proyectos, al proyecto propio y a Bugs; repetir desde Ayuda. En móvil el cajón global se cierra antes de explicar Resumen. Conservar el mismo paso al redimensionar entre las cinco medidas; comprobar hueco SVG y tarjeta junto al control, sin borrar el acuse terminal al recargar. |
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
@@ -8210,7 +8345,80 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 | failure | Fallar transcripción, envío o sondeo; se conserva la posibilidad de editar o descartar la grabación y un reintento con el mismo identificador no consume una segunda unidad. |
 
 
-## Section 39 — Requirement Calculator (Nov 5, 2026)
+## Section 39 — Contratación estatal (Nov 5, 2026)
+
+### FLOW: `admin-procurement-opportunity-list`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff navigates from the panel to the paginated SECOP II list, reads source status, opens a process and retries a failed load.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-filters-export`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff applies keyword OR UNSPSC filters with other criteria, uses URL state, clears and exports the same query. Invalid ranges and request failures remain visible.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-classification`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-saved-searches`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P2
+- **Routes:** `/panel/procurement`
+- **Description:** Staff creates, edits, applies, favorites and confirms deletion of named searches. Alert creation copies criteria. Invalid names and failed requests preserve the form.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-alerts`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P1
+- **Routes:** `/panel/procurement`
+- **Description:** Staff administers independent filters, one to ten recipients, immediate/daily/weekly frequency, activation and matching-process preview. Recipient validation and failed saves remain visible.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-settings-sync`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P2
+- **Routes:** `/panel/procurement`
+- **Description:** Staff requests public synchronization and configures Bogotá schedules, lookback, automatic updates and global email activation. Invalid settings and failures are explicit.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+### FLOW: `admin-procurement-deliveries`
+
+- **Module:** procurement
+- **Role:** staff admin
+- **Priority:** P2
+- **Routes:** `/panel/procurement`
+- **Description:** Staff reviews paginated deliveries, attempts, errors and sent snapshots, then confirms retries. Uncertain sends warn to inspect the mailbox; rejected retries retain their dialog.
+- **Coverage:** ✅ Covered
+- **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
+
+
+## Section 40 — Requirement Calculator (Nov 5, 2026)
 
 ### FLOW: `admin-requirement-calculator-definition`
 
@@ -8295,6 +8503,16 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 
 Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, motivo y versión. Retira el ícono del listado/detalle, filtro y radar sin borrar autor/fecha originales, ni modificar PDF, importes o pagos. Los conflictos conservan la marca. La protección de respuestas tardías del enlace se compone con la sesión de búsqueda de contratos.
 
+### FLOW: `admin-accounting-hosting-link`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+- **Descripción:** Desde Ingresos o Cuentas de cobro, elegir y confirmar hosting reconocible por dominio y periodicidad, vincular un registro elegible o crear uno del mismo cliente y proyecto sin perder el formulario. Si faltan decisiones, explicar las referencias pendientes y volver de conciliación recuperando el borrador.
+- **Resultados:** display, success, error, failure.
+- **Permisos:** superusuario con sesión y CSRF. La lectura de opciones no escribe asociaciones ni concede acceso adicional.
+- **Invariantes:** el vínculo es explícito, conserva pagos, cobros, ciclos y PDF históricos; la obligación de suscripción sigue seleccionándose explícitamente. Los cambios concurrentes exigen volver a revisar.
+- **Validación:** automatizadas exclusivamente en CI, con URL y SHA; Chrome y cotejo técnico en el turno acordado con DevQA.
+
 ### FLOW: `admin-accounting-income-reminder-mute`
 
 - **Module:** admin
@@ -8312,11 +8530,13 @@ Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, mot
 
 - **Módulo:** admin
 - **Prioridad:** P1
-- **Descripción:** Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con preview, motivo y versión. No registra dinero ni elige por texto o importe.
+- **Descripción:** Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con resumen legible, motivo y versión. Explica las referencias pendientes y ofrece volver a la cuenta recuperando el formulario; separa asociación, conciliación histórica y trazabilidad. No registra dinero ni elige por texto o importe.
 - **Resultados:** display, success, error, failure.
 - **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+- **Integración 2026-11-11:** El retorno conserva la ruta e idioma originales sin duplicar su prefijo.
 
 ### FLOW: `admin-accounting-record-history`
 
@@ -8505,6 +8725,28 @@ Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, mot
   2. **display:** pulsar una referencia y llegar al Historial con esa fila cargada y expandida.
   3. **success/error/failure:** n/a; es navegación de evidencia. La protección 409 al eliminar se cubre en integración backend.
 - **E2E Spec:** `e2e/admin/admin-document-edit.spec.js`
+
+## Administración de carpetas de documentos
+
+**Rol:** administrador. Entrada: Panel → Gestor Documental.
+
+### PA-206 — creación contextual
+
+**Nueva carpeta** en el encabezado abre el formulario directo con destino visible: carpeta abierta o raíz definida del proyecto seleccionado. Guardar mantiene la ubicación del listado y muestra la nueva carpeta; cancelar no escribe. Sin raíz definida se conserva el proyecto y se propone una carpeta sin padre.
+
+### PA-207 — destinos buscables y jerarquía
+
+En **Gestionar carpetas**, **Dentro de** busca por fragmento de nombre y conserva la ruta de cada coincidencia. Admite **Ninguna (carpeta raíz)** y teclado; escribir sin elegir no cambia el destino confirmado. El árbol muestra los ancestros de cada subcarpeta. La edición y eliminación usan sus formularios compartidos; archivar y reordenar entre hermanas conservan su contrato.
+
+### Resultados y cobertura
+
+- Éxito: crear desde raíz/subcarpeta y elegir una subcarpeta entre nombres coincidentes; cancelar sin crear.
+- Error: nombre rechazado conserva formulario y destino.
+- Fallo del servidor: se conserva el manejo de errores de creación/reordenamiento existente.
+- Presentación: destino y rama visibles antes de confirmar.
+- Regresión CI: `admin-document-folder-create.spec.js`, `admin-document-folder-manage.spec.js` y `admin-document-folders.spec.js`. La aprobación manual Chrome sobre datos aislados se registra por separado.
+
+- **Integración 2026-11-11:** El cierre del formulario secundario devuelve el foco al botón que abrió la edición.
 
 ### FLOW: `admin-document-gallery`
 
@@ -8733,6 +8975,8 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   4. **failure:** la falla de carga se cubre en la frontera del store; esta interacción sólo registra la consulta exitosa con datos.
 - **E2E Spec:** `e2e/admin/admin-client-email-copy-settings.spec.js`
 
+Los siete filtros muestran sus etiquetas, se distribuyen según el ancho real y dejan Limpiar y Aplicar filtros en una fila propia. La validación incluye móvil, tableta vertical, tableta horizontal, escritorio y monitor grande.
+
 ### FLOW: `admin-outbound-email-history-resend`
 
 - **Module:** admin
@@ -8855,6 +9099,7 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 | Intentar fusionar sin destino | error | Confirmar fusión → mensaje junto al selector; elegir destino lo limpia |
 | Retirar un estado usado | error | Confirmar retiro → explicación de proyectos activos → estado permanece |
 | Guardar durante una falla del servidor | failure | Editar nombre → HTTP 5xx visible → borrador permanece para reintentar |
+| Volver a proyectos desde el catálogo | success | Catálogo → listado con encabezado, acciones y registros, título actualizado y sin recarga en móvil, escritorio y monitor amplio (PA-232) |
 
 - **Coverage:** ✅ Las cuatro clases están cubiertas.
 - **E2E Specs:** `e2e/admin/admin-project-lifecycle-states.spec.js`
@@ -8870,7 +9115,7 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 |---|---|---|
 | success | Aprobar desde una propuesta expandida en Clientes | Modal compartido antes de guardar; al completar se refresca la ficha correspondiente |
 | success | Confirmar cliente y proyecto existentes | Propuesta vinculada al proyecto elegido, sin crear otro |
-| success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental |
+| success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental; Proyecto > Datos muestra inmediatamente el cliente confirmado y conserva borradores de otras áreas |
 | success | Desactivar contratos de la propuesta y adjuntar varios archivos | El nuevo paquete usa los personalizados y conserva detalle comercial/técnico |
 | success | Volver a aprobar después de una corrección administrativa de estado | Revisar condiciones del borrador y confirmar otro paquete sin alterar los archivos previos |
 | success | Cancelar antes de confirmar | Estado previo conservado sin crear proyecto ni documentos |
@@ -8880,9 +9125,13 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 | display | Reabrir propuesta vinculada | Cliente/proyecto y archivos confirmados del mismo vínculo |
 | success | Cancelar o pulsar Escape | Se conserva el estado previo y vuelve el foco al disparador |
 
-La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora todos los anexos activos. Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
+La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora sólo los anexos activos seleccionados explícitamente (ninguno marcado en el primer cierre). Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
 
 Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresión desde Clientes.
+
+- **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
+
+PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
 
 ### FLOW: `admin-proposal-change-history`
 
@@ -9072,15 +9321,16 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 
 | Clase | Interacción | Resultado |
 |---|---|---|
-| success | Confirmar otra revisión con servicio apagado o aprobado | El paquete incluye sólo producto o producto y servicio respectivamente, junto a los anexos activos |
+| success | Confirmar otra revisión con servicio apagado o aprobado | El paquete incluye sólo producto o producto y servicio respectivamente, junto a los anexos elegidos explícitamente |
 | success | Revisar y confirmar un nuevo paquete | Ambos módulos muestran la nueva versión y conservan el historial |
 | success | Guardar un adjunto habilitado en borrador | Misma identidad; archivo aprobado conservado hasta reconfirmar |
 | error | Confirmar con una versión desactualizada | Conflicto visible; formulario y archivo conservados |
-| error | Guardar un adjunto con una huella antigua y consultar la versión actual | El archivo elegido se conserva; la versión solo cambia tras una revisión explícita |
+| error | Guardar un adjunto con una huella antigua y consultar la versión actual | El archivo elegido se conserva al actualizar los datos de la fuente; el reintento explícito envía el mismo archivo con la huella revisada |
+| failure | Falla la consulta de la versión actual | El archivo y la huella previa se conservan, con un mensaje que permite volver a consultar |
 | failure | El servidor falla al confirmar o guardar un adjunto | Mensaje visible; archivo y formulario conservados para reintentar |
-| display | Abrir el historial | Títulos, versión vigente y revisiones descargables del recurso |
+| display | Abrir el historial y recargar propuesta y gestor | Título descriptivo conservado al pasar a Histórico, misma identidad y revisiones descargables |
 
-Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
+Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública. Aprobar y revisar después conserva la decisión comercial sin crear cliente, proyecto ni paquete automáticamente.
 
 Las garantías de bytes e identidad se verifican además con pruebas de servicios reales y operaciones MCP autenticadas: consulta del recurso, sustitución de borrador, validación del archivo subido y confirmación de otra revisión. Los mocks del navegador cubren interacción y presentación.
 
@@ -9090,6 +9340,13 @@ La vista previa exige sólo los contratos aprobados; un conflicto o fallo conser
 el switch, formulario, adjuntos y evidencia vigente. Las operaciones MCP/CLI de
 recuperación no son flujos de navegador: sus pruebas de integración verifican los
 archivos y vínculos reales sin regeneración.
+
+La recuperación del adjunto se recorre además por Panel → Propuestas →
+Documentos → recurso compartido en `admin-proposal-shared-binary.spec.js`.
+El navegador usa la página y el store reales, con HTTP simulado: reproduce 409,
+consulta de la versión actual y guardado del mismo PDF sin reseleccionarlo.
+Otro caso cubre el fallo de esa consulta. No son ejecuciones sobre DEV ni
+acreditan persistencia real por sí solos; su resultado se registra en CI.
 
 # admin-pwa-install — Instalación del panel interno
 
@@ -9130,7 +9387,7 @@ archivos y vínculos reales sin regeneración.
 - **Success:** escribir título y mensaje en la plantilla inicial Mensaje confidencial o elegir otro tipo desde el dropdown; Personalizado muestra nombre y contenido. Generar crea la URL automáticamente y ofrece copiar enlace o mensaje. Compartir es manual, sin borradores ni envío automático.
 - **Error:** si falta un campo obligatorio (por ejemplo, la contraseña) el formulario valida antes de enviar y muestra los errores del servidor junto a sus campos y no crea nada.
 - **Failure:** catálogo no disponible bloquea el envío y permite reintentar; errores HTML/servidor se convierten en avisos breves, conservando el contenido para reintentar.
-- **Display:** campos esenciales visibles; opcionales bajo Más detalles y cliente/proyecto/idioma/vigencia bajo Configuración. Al cancelar y volver a Nuevo enlace, empieza otra vez en Mensaje confidencial sin contenido anterior; las contraseñas se ocultan al elegir Credenciales.
+- **Display:** contenido y configuración visibles desde el inicio, incluidos cliente/proyecto/idioma/vigencia, sin Asunto ni desplegables. Al cancelar y volver a Nuevo enlace, empieza otra vez en Mensaje confidencial sin contenido anterior; las contraseñas se ocultan al elegir Credenciales.
 - **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/create/`.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
 
@@ -9168,9 +9425,15 @@ resultado esperado/real, entorno, pantallazo y comentarios permanecen en el tick
 Entrada después de iniciar sesión: `/es-co/platform/projects`; abrir el proyecto,
 la pestaña Bugs y el ticket mediante la interfaz.
 
+Para PA-229, DevQA identificó el requerimiento publicado 80 del proyecto 1:
+título sin espacios de 300 caracteres. Los requerimientos 1 y 2 comparten
+su contrato y etapa. La reprueba debe identificar el título completo con el
+selector cerrado en móvil y escritorio; ver sólo su inicio no acredita el caso.
+
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |
+| display | Elegir una entrega y cerrar el selector, incluso entre opciones de la misma etapa. | Nombre completo del requerimiento visible debajo del selector, seguido del contrato y la etapa. Cambiar o limpiar la selección actualiza el resumen. |
 | success | Reportar con título, sin guía seleccionada. | Bug general reportado; no se exige contrato ni etapa. |
 | success | Reportar desde una entrega publicada. | La guía autocompleta los datos vacíos; queda congelada la publicación seleccionada. |
 | success | El equipo responde y marca «Resuelto por equipo». | Respuesta y documentos opcionales quedan en la historia; no cambia ninguna aprobación. |
@@ -9382,11 +9645,11 @@ consulta de la conversación pública que originó el prompt.
 - **Role:** client
 - **Priority:** P2
 - **Route:** `/:locale/platform/projects`
-- **Interaction:** Abrir Ayuda desde el menú y elegir un tutorial disponible en un modal con subtítulos. Al completar un recorrido ofrece una invitación sin abrir el video automáticamente. La reproducción empieza sólo a petición; cerrar devuelve el foco a Ayuda. Permite reintentar un fallo de reproducción e identifica el contenido español también en la interfaz inglesa.
+- **Interaction:** Abrir Ayuda desde el menú y elegir un tutorial disponible en un modal con subtítulos. Al completar un recorrido ofrece una invitación sin abrir el video automáticamente. La reproducción empieza sólo a petición; cerrar devuelve el foco a Ayuda y permite volver a consultarlo. Revalida la disponibilidad al recuperar foco, conserva los recorridos si sólo se desactiva el video y ofrece los clips autorizados por separado. Permite reintentar un fallo de reproducción e identifica el contenido español también en la interfaz inglesa.
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidence:** frontend/components/platform/PlatformHelpVideoModal.vue; frontend/components/platform/PlatformVideoResourcesManager.vue.
-- **Scope:** El catálogo filtra las capacidades efectivas; controles de acceso, concurrencia y MCP se prueban en backend. El modo cliente no tiene formulario de datos ni validación de entrada propia.
-- **Validation:** Los diez casos de navegador de esta pieza verifican el acceso por controles visibles, las fuentes de video, la invitación después del recorrido, reproducción explícita, cierre, recuperación de reproducción, idioma y cinco anchos. La invitación se prueba con el host completo: el video permanece cerrado hasta elegir verlo y abre pausado. La recuperación del catálogo y las respuestas tardías se comprueban en pruebas de store/componente.
+- **Scope:** El catálogo filtra las capacidades efectivas; controles de acceso, concurrencia y MCP se prueban en backend. El modo cliente no tiene formulario de datos ni validación de entrada propia. La sesión de navegador reproduce el contrato real de cuenta: `user_id`, sin un alias `id`.
+- **Validation:** La suite de navegador cubre el acceso por controles visibles, las fuentes de video, la invitación después del recorrido, reproducción explícita, cierre y reapertura, recuperación de reproducción, idioma y cinco anchos. Incluye apagado y reactivación efectivos, retirada del último recurso, conservación de recorridos y clips independientes. La invitación se prueba con el host completo: el video permanece cerrado hasta elegir verlo y abre pausado. La recuperación del catálogo, el cambio de cliente y las respuestas tardías se comprueban en pruebas de store/componente. La ejecución automatizada de PA-220 corresponde exclusivamente a CI; audio, subtítulos y correspondencia editorial se revisan en Chrome con DevQA y QA frontend.
 
 ### FLOW: `platform-hosting-project-list`
 
@@ -9421,6 +9684,14 @@ consulta de la conversación pública que originó el prompt.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
 
+### platform-project-detail — Detalle de proyecto
+
+- **Rol:** administrador o cliente autorizado.
+- **Ruta:** `/platform/projects/:id`.
+- **Interacción:** abrir un espacio por ID. Un administrador puede volver a su ficha comercial del Panel en otra pestaña.
+- **Error:** 403 o 404 muestra una explicación sin datos ni navegación interna del proyecto; un error recuperable ofrece reintentar. Una sesión sin autenticación se dirige al inicio de sesión.
+- **Validación:** automatizada exclusivamente en CI; acceso real por roles en Chrome coordinado con dev-qa.
+
 ### FLOW: `platform-project-hosting-context`
 
 - **Módulo:** platform
@@ -9443,6 +9714,28 @@ consulta de la conversación pública que originó el prompt.
 - **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
 - **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
 - **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
+### Platform: consultar los proyectos asignados
+
+Entrada autenticada: `/es-co/platform/projects`. El cliente ve sus proyectos;
+el administrador conserva las columnas de cliente y solicitudes.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| display | Consultar nombres de 175 caracteres, con y sin espacios, junto a otro corto. | Nombre completo en varias líneas; progreso, bugs, importe, actividad y acceso al detalle alcanzables. A 1440 × 900 todas las columnas caben desde la posición inicial. |
+| success | Abrir un proyecto desde su tarjeta o fila. | El detalle corresponde al proyecto seleccionado; su nombre completo se ajusta en la ruta de navegación superior sin ensanchar la página. |
+| display | Consultar el listado sin registros. | Se muestra el estado vacío correspondiente al rol. |
+
+PA-229 se prueba en los cinco perfiles canónicos del proyecto. Las tarjetas de
+412 × 915 y 835 × 1195 conservan los mismos datos; las tablas de 1195 × 835,
+1440 × 900 y 2560 × 1440 no crecen por el nombre. Las pruebas automatizadas se
+ejecutan exclusivamente en CI; la reprueba en Chrome corresponde al turno de
+dev-qa sobre un SHA declarado.
+
+DevQA confirmó en el dataset del corte `b01448a2` un nombre sin espacios de
+177 caracteres (proyecto 77) y otro con espacios de 165 (proyecto 1). Se
+conservan para la reprueba; CI añade esas longitudes a las dos variantes de
+175 caracteres. No se requiere renombrar los proyectos del DEV activo.
 
 ### FLOW: `platform-secure-link-create`
 

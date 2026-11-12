@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin follows the panel hand-off to Django Admin and authenticates with mandatory reCAPTCHA v2. Invalid or unavailable verification blocks session creation.",
+  "description": "El panel conserva acceso con contraseña mediante Django Admin y ofrece acceso alternativo por código o Google. Captcha obligatorio y cuenta habilitada antes de crear sesión.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

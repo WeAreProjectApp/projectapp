@@ -1,8 +1,9 @@
 from datetime import timedelta
 
-from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
+from django.core.management.base import BaseCommand
+from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
+from content.fake_data_files import fake_data_transaction
+from secure_links.fake_data import PANEL_PREFIX, stamp_link
 
 from secure_links import services
 from secure_links.models import SecureLink
@@ -11,7 +12,7 @@ from secure_links.folder_services import archive_folder
 from secure_links.platform_seed import create_platform_samples
 
 SAMPLES = [
-    ('credentials', 'Admin Django producción — demo', {'service': 'Django admin', 'url': 'https://demo.projectapp.co/admin/', 'username': 'admin', 'password': 'demo-Pa55-no-real'}),
+    ('credentials', 'Admin Django producción — demo', {'service': 'Django admin', 'url': 'https://demo.example.test/admin/', 'username': 'admin', 'password': 'demo-Pa55-no-real'}),
     ('api_key', 'Llaves Wompi sandbox — demo', {'service': 'Wompi', 'environment': 'sandbox', 'public_key': 'pub_test_demo', 'secret_key': 'prv_test_demo'}),
     ('server_access', 'SSH staging — demo', {'host': '203.0.113.10', 'port': '22', 'username': 'deploy', 'credential': 'demo-no-real'}),
     ('database', 'MySQL staging — demo', {'engine': 'MySQL', 'host': 'localhost', 'port': '3306', 'name': 'demo', 'username': 'demo', 'password': 'demo-no-real'}),
@@ -19,37 +20,52 @@ SAMPLES = [
     ('bank_account', 'Cuenta para pagos — demo', {'bank': 'Banco Demo', 'account_type': 'Ahorros', 'account_number': '000-000000-00', 'holder': 'Project App SAS'}),
     ('recovery_codes', 'Códigos 2FA GoDaddy — demo', {'service': 'GoDaddy', 'codes': 'AAAA-1111\nBBBB-2222'}),
     ('custom', 'Instrucciones de entrega — demo', {'custom_name': 'Instrucciones privadas', 'content': 'Ejemplo ficticio de información personalizada.'}),
-    ('confidential_message', 'Comunicado confidencial — demo', {'subject': 'Cambio de dominio', 'message': 'Texto de ejemplo sin información real.'}),
+    ('confidential_message', 'Comunicado confidencial — demo', {'message': 'Texto de ejemplo sin información real.'}),
 ]
 
 
 class Command(BaseCommand):
     help = 'Crear enlaces seguros de ejemplo exclusivamente en desarrollo.'
 
+    def add_arguments(self, parser):
+        add_seed_arguments(parser)
+        parser.add_argument('--skip-platform', action='store_true')
+
+    @fake_data_transaction()
     def handle(self, *args, **options):
-        if not getattr(settings, 'FAKE_DATA_ALLOWED', False) or getattr(settings, 'IS_PRODUCTION', False):
-            raise CommandError('Los datos ficticios no están permitidos en este entorno.')
-        now = timezone.now()
+        ensure_fake_data_allowed('create_fake_secure_links')
+        context = seed_context(options, 'secure-links')
+        now = context.anchor_now
         states = ['ready', 'sent', 'opened', 'expired', 'revoked']
-        create_platform_samples()
+        if not options['skip_platform']:
+            create_platform_samples(context)
         contexts, archive = create_folder_samples()
         for index, (secret_type, title, fields) in enumerate(SAMPLES * 3):
+            fixture_title = f'{PANEL_PREFIX}{index + 1:02d} — {title}'
+            if SecureLink.objects.filter(title=fixture_title).exists():
+                continue
             origin = [SecureLink.Origin.PANEL, SecureLink.Origin.MCP, SecureLink.Origin.PUBLIC][index % 3]
-            context = {} if origin == SecureLink.Origin.PUBLIC else contexts[(index // 3) % len(contexts)]
+            location = {} if origin == SecureLink.Origin.PUBLIC else contexts[(index // 3) % len(contexts)]
             link, _url = services.create_link(
-                secret_type=secret_type, title=f'{title} #{index + 1}', fields=fields, origin=origin,
+                secret_type=secret_type, title=fixture_title, fields=fields, origin=origin,
                 validity_days=7, creator_name='Cliente demo' if origin == SecureLink.Origin.PUBLIC else '',
-                **context,
+                **location,
             )
             state = states[index % len(states)]
             if state == 'sent' and not link.team_only:
                 link = services.mark_sent(link, actor=None)
             elif state == 'opened':
-                link.consumed_at = now - timedelta(hours=index)
+                services.reveal(_url.split('#', 1)[1], staff=True)
+                link.refresh_from_db()
             elif state == 'expired':
                 link.expires_at = now - timedelta(days=1)
             elif state == 'revoked':
-                link.revoked_at = now - timedelta(hours=index)
+                link = services.revoke(link, actor=None)
             link.save()
+            stamp_link(link, context, state)
         archive_folder(archive)
+        from secure_links.models import SecureLinkFolder
+        SecureLinkFolder.objects.filter(name__startswith='[Demo]').update(created_at=now, updated_at=now)
+        SecureLinkFolder.objects.filter(name__startswith='[Demo]', is_archived=True).update(archived_at=now)
+        SecureLink.objects.filter(title__startswith=PANEL_PREFIX, is_archived=True).update(archived_at=now)
         self.stdout.write('Enlaces seguros de ejemplo disponibles.')

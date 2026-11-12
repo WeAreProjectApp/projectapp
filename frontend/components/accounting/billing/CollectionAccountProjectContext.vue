@@ -1,23 +1,27 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, useId, watch } from 'vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BillingContextFields from './BillingContextFields.vue'
 import ContractSourcePicker from './ContractSourcePicker.vue'
+import HostingBillingPicker from './HostingBillingPicker.vue'
 import { get_request, create_request } from '~/stores/services/request_http'
 const props = defineProps({
   projectId: { type: [String, Number], default: null },
   modelValue: { type: Object, required: true },
   validationError: { type: String, default: '' },
+  client: { type: Object, default: null },
 })
-const emit = defineEmits(['update:modelValue', 'valid', 'validation-message'])
-const localePath = useLocalePath()
+const emit = defineEmits(['update:modelValue', 'valid', 'validation-message', 'reconcile', 'nested-open'])
 const options = ref(null)
 const payments = ref([])
+const hostingData = ref(null)
+const hostingValidation = ref('')
 const error = ref('')
 const loading = ref(false)
 const sourceValue = ref('')
 const linking = ref(false)
 const showLinkForm = ref(false)
+const linkFormId = useId()
 const linkError = ref('')
 const sourceOptions = computed(() => options.value?.contract_sources || [])
 let sequence = 0
@@ -37,6 +41,8 @@ const validationMessage = computed(() => {
     return ''
   }
   if (context.billing_nature === 'hosting') {
+    if (hostingData.value?.selection?.blockers?.length) return hostingData.value.selection.blockers[0].message
+    if (hostingValidation.value) return hostingValidation.value
     if (!options.value?.hosting_id) return 'Asocia el hosting al proyecto desde «Conciliar hosting del proyecto» antes de emitir esta cuenta.'
     if (Number(context.project_hosting_id) !== Number(options.value.hosting_id)) return 'Selecciona el hosting del proyecto para esta cuenta de cobro.'
     if (payments.value.length && !payments.value.some(row => Number(row.id) === Number(context.hosting_payment_id))) return 'Selecciona el período de hosting que estás cobrando.'
@@ -50,6 +56,7 @@ watch(validationMessage, value => emit('validation-message', value), { immediate
 async function load(id, previousId) {
   const request = ++sequence
   options.value = null; payments.value = []; error.value = ''; loading.value = true
+  hostingData.value = null; hostingValidation.value = ''
   sourceValue.value = ''; showLinkForm.value = false; linkError.value = ''; linking.value = false
   // Clear links when changing project, but preserve the reviewed choice when
   // this component remounts on returning from the preview.
@@ -62,6 +69,7 @@ async function load(id, previousId) {
     ])
     if (sequence !== request) return
     options.value = a.data
+    hostingData.value = b.data
     const sub = b.data.overview?.subscription
     payments.value = sub?.associated ? sub.payments : []
   } catch (err) {
@@ -69,6 +77,11 @@ async function load(id, previousId) {
   } finally {
     if (sequence === request) loading.value = false
   }
+}
+function refreshHosting(data) {
+  hostingData.value = data
+  options.value = { ...options.value, hosting_id: data.overview.hosting_id }
+  payments.value = data.overview.subscription?.associated ? data.overview.subscription.payments || [] : []
 }
 async function linkContract() {
   if (!sourceValue.value || linking.value || !options.value) return
@@ -104,10 +117,16 @@ watch(() => props.projectId, load, { immediate: true, flush: 'sync' })
     <p class="text-xs text-text-muted">Selecciona el tipo y el vínculo del cobro, o deja explícitamente el documento pendiente para completarlo después.</p>
     <p v-if="loading" role="status" class="text-sm text-text-muted">Consultando vínculos del proyecto…</p>
     <div v-else-if="error" role="alert" class="text-sm text-danger-strong"><p>{{ error }}</p><button type="button" @click="load(projectId)">Reintentar</button></div>
-    <BillingContextFields :model-value="modelValue" :options="options" :payments="payments" @update:model-value="emit('update:modelValue', $event)" />
+    <BillingContextFields :model-value="modelValue" :options="options" :payments="payments" @update:model-value="emit('update:modelValue', $event)">
+      <template #hosting>
+        <HostingBillingPicker :project-id="projectId" :client="client" :model-value="modelValue" :data="hostingData"
+          @update:model-value="emit('update:modelValue', $event)" @refreshed="refreshHosting"
+          @validation-message="hostingValidation = $event" @reconcile="emit('reconcile')" @nested-open="emit('nested-open', $event)" />
+      </template>
+    </BillingContextFields>
     <div v-if="!loading && !error && !modelValue.document_pending && modelValue.billing_nature === 'contract'" class="space-y-3">
-      <BaseButton variant="link" size="sm" data-testid="billing-link-contract-open" @click="showLinkForm = !showLinkForm">Vincular contrato existente</BaseButton>
-      <section v-if="showLinkForm" class="rounded-xl border border-border-muted p-3 space-y-3" data-testid="billing-link-contract-form">
+      <BaseButton variant="secondary" :aria-expanded="showLinkForm" :aria-controls="linkFormId" data-testid="billing-link-contract-open" @click="showLinkForm = !showLinkForm">Vincular contrato existente</BaseButton>
+      <section v-if="showLinkForm" :id="linkFormId" class="rounded-xl border border-border-muted p-3 space-y-3" data-testid="billing-link-contract-form">
         <p class="text-xs text-text-muted">Elige el documento que corresponde al contrato. Se registrará en el seguimiento del proyecto sin copiarlo ni cambiar su contenido.</p>
         <BaseFormField v-if="sourceOptions.length" label="Contrato existente del proyecto" label-policy="wrap">
           <ContractSourcePicker v-model="sourceValue" :sources="sourceOptions" :disabled="linking" />
@@ -121,6 +140,5 @@ watch(() => props.projectId, load, { immediate: true, flush: 'sync' })
       </section>
     </div>
     <p v-if="validationError && !error" role="alert" class="text-sm text-danger-strong" data-testid="collection-form-project-context-error">{{ validationError }}</p>
-    <NuxtLink :to="localePath(`/panel/accounting/project-hosting/${projectId}`)" class="text-sm text-text-brand">Conciliar hosting del proyecto</NuxtLink>
   </section>
 </template>

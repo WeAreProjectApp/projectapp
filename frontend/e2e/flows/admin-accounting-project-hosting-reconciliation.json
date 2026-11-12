@@ -6,7 +6,7 @@
     "superuser"
   ],
   "priority": "P1",
-  "description": "Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con preview, motivo y versión. No registra dinero ni elige por texto o importe.",
+  "description": "Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con resumen legible, motivo y versión. Explica bloqueos y permite volver a la cuenta con el formulario recuperado; separa asociación, conciliación histórica y trazabilidad. No registra dinero ni elige por texto o importe. El retorno conserva la ruta e idioma originales sin duplicar su prefijo.",
   "outcomes": [
     "display",
     "success",

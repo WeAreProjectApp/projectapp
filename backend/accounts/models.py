@@ -83,6 +83,7 @@ class UserProfile(HistoryTrackedModel):
         related_name='profile',
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=ROLE_CLIENT)
+    access_version = models.PositiveIntegerField(default=0)
     chatbot_enabled = models.BooleanField(default=False)
     voice_reporting_enabled = models.BooleanField(default=False)
     ai_request_limit = models.PositiveIntegerField(null=True, blank=True)
@@ -95,7 +96,7 @@ class UserProfile(HistoryTrackedModel):
     )
     is_onboarded = models.BooleanField(
         default=False,
-        help_text='True after the client sets their own password.',
+        help_text='True after the client completes authentication with password, code or Google.',
     )
     email_verified = models.BooleanField(
         default=False,
@@ -1806,6 +1807,7 @@ class SavedFilterTab(models.Model):
     VIEW_ACCOUNTING_COLLECTIONS = 'accounting_collections'
     VIEW_COMMUNICATION = 'communication'
     VIEW_CHOICES = [
+        ('access', 'Accesos'),
         (VIEW_PROPOSAL, 'Proposal'),
         (VIEW_CLIENT, 'Client'),
         (VIEW_DIAGNOSTIC, 'Diagnostic'),
@@ -1920,3 +1922,6 @@ from accounts.models_ai import (  # noqa: E402,F401
     PlatformAITemplateRevision, PlatformAIJob, PlatformAIUsage, PlatformAIEvent,
     PlatformAIQuotaReservation,
 )
+
+
+from accounts.access_models import AccessEvent, AccessRateBucket, GoogleIdentity, LoginChallenge  # noqa: E402, F401

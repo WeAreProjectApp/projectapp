@@ -1,4 +1,9 @@
 export default {
+  commercialRecord: {
+    label: 'Ficha comercial',
+    title: 'Abrir la ficha comercial en el panel (pestaña nueva)',
+    changeState: 'Cambiar estado en la ficha comercial',
+  },
   retention: {
   "title": "Datos sin proyecto",
   "hint": "Consulta y descarga de datos conservados. No se pueden editar desde aquí.",

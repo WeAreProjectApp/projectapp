@@ -1834,7 +1834,7 @@ test.describe('Admin Accounting Collections', () => {
     await expect(page.getByTestId('accounting-row-2')).toContainText('Mimittos');
     await expect(
       page.getByTestId('collection-no-project-3').filter({ visible: true }),
-    ).toHaveText('—');
+    ).toHaveText('Sin proyecto');
 
     // The filter keys off the same live FK the cell shows: picking the
     // project keeps the linked cuenta and drops the blank sibling.
@@ -1851,7 +1851,7 @@ test.describe('Admin Accounting Collections', () => {
     await expect(page.getByTestId('accounting-row-2')).toContainText('Mimittos');
     await expect(
       page.getByTestId('collection-no-project-3').filter({ visible: true }),
-    ).toHaveText('—');
+    ).toHaveText('Sin proyecto');
   });
 
   test('opening the detail shows the linked income and its settlement history', {

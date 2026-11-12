@@ -296,7 +296,7 @@ MCP_MODEL_CONTRACTS = {
                     'custom_cover_image profile_completed document_navigation_mode',
                 )
                 | _excluded('Controles IA administrados mediante el conector projects y sus servicios.', 'chatbot_enabled voice_reporting_enabled ai_request_limit ai_window_minutes')
-                | _excluded(_AUDIT_INTERNAL, 'created_by archived_by')
+                | _excluded(_AUDIT_INTERNAL, 'created_by archived_by access_version')
             ),
         ),
     ),
@@ -1579,7 +1579,7 @@ PROJECT_BILLING_CONTRACTS = (
     _contract('accounts.CollectionAccountContext', read_only='id document version updated_at pending_by pending_at', read_write='nature contract amendment hosting document_pending'),
     _contract('accounts.HostingEvidenceGroup', read_only='id hosting created_at', read_write='label'),
     _contract('accounts.HostingEvidence', read_only='id', read_write='group payment cycle document'),
-    _contract('accounts.BillingContextEvent', read_only='id project document actor operation reason before after created_at'),
+    _contract('accounts.BillingContextEvent', read_only='id project retention_context document actor operation reason before after created_at'),
 )
 
 # Lifecycle fields change only through change_hosting_subscription in projects.
@@ -1655,6 +1655,31 @@ MCP_MODEL_CONTRACTS['offerings'] = tuple(
 )
 MCP_MODEL_CONTRACTS['programs'] = ()
 
+MCP_MODEL_CONTRACTS['procurement'] = (
+    _contract('procurement.Settings', read_only='id updated_at', read_write='sync_enabled email_enabled sync_time daily_time weekly_time weekly_day lookback_days'),
+    _contract('procurement.Opportunity', read_only='id source_id reference title description entity_name entity_nit department city method contract_type source_status budget unspsc_code published_at source_updated_at closing_at source_url first_seen_at synced_at', excluded={'source_data': 'Respuesta pública original interna; el MCP recibe campos normalizados.'}),
+    _contract('procurement.Classification', read_only='id opportunity owner previous_state updated_at', read_write='state notes'),
+    _contract('procurement.Activity', read_only='id classification actor action snapshot created_at', excluded={'credential': 'Atribución interna de la credencial, nunca su secreto.'}),
+    _contract('procurement.SavedSearch', read_only='id owner updated_at', read_write='name filters is_favorite'),
+    _contract('procurement.Alert', read_only='id version created_by updated_at', read_write='name filters recipients frequency is_active'),
+    _contract('procurement.SyncRun', read_only='id status processed created errors message requested_by started_at finished_at created_at', excluded={'cursor': 'Cursor interno reanudable; no es editable.'}),
+    _contract('procurement.Delivery', read_only='id opportunity_count recipient frequency status attempts error snapshot created_at attempted_at sent_at'),
+    _contract('procurement.Notification', excluded=_excluded('Elegibilidad y vinculación de outbox administradas sólo por servicios; consultar entregas para la evidencia enviada.', 'id alert opportunity recipient delivery filters_snapshot status created_at')),
+    _contract('procurement.ScheduleSlot', excluded=_excluded('Reserva interna para evitar ejecuciones duplicadas del reloj.', 'id kind day created_at')),
+)
+
+MCP_MODEL_CONTRACTS['data-integrity'] = (
+    next(item for item in MCP_MODEL_CONTRACTS['projects'] if item.model_label == 'content.DataIntegrityOperation'),
+    _contract('content.DataIntegrityScan', read_only='id request_id scope filters source actor catalog_version status error_code coverage created_at started_at finished_at',
+              excluded={'results': 'Resultado privado consultable mediante el listado paginado de hallazgos.'}),
+    _contract('content.DataIntegrityFinding', read_only='id fingerprint rule_id domain severity payload is_present is_accepted first_seen_at last_seen_at resolved_at last_scan'),
+    _contract('content.DataIntegrityReview', read_only='id finding action reason actor source request_id created_at',
+              excluded={'payload_hash': 'Huella interna de idempotencia.'}),
+    _contract('content.DataIntegrityScanLease', excluded=_excluded('Coordinación interna y fencing del worker; no accesible por MCP.', 'key scan expires_at')),
+)
+MCP_MODEL_CONTRACTS['projects'] = tuple(item for item in MCP_MODEL_CONTRACTS['projects']
+    if item.model_label != 'content.DataIntegrityOperation')
+
 for canonical, (_, sources) in MODULE_CONNECTORS.items():
     grouped = {}
     for source in sources:
@@ -1674,3 +1699,12 @@ for canonical, (_, sources) in MODULE_CONNECTORS.items():
 
 # Platform tutorial resource administration shares the validated video lifecycle.
 MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)
+
+
+# Authentication secrets are never part of the administrative MCP surface.
+MCP_MODEL_CONTRACTS['projects'] += (
+    _contract('accounts.LoginChallenge', excluded=_excluded('Estado efímero de autenticación; nunca se expone por MCP.', 'id user surface browser_digest identity_digest code_digest access_version expires_at attempts closed device created_at')),
+    _contract('accounts.AccessRateBucket', excluded=_excluded('Contadores internos contra abuso; nunca se exponen por MCP.', 'key requests updated_at')),
+    _contract('accounts.GoogleIdentity', read_only='user created_at', excluded=_excluded('Identidad del proveedor privada; sólo se expone si está vinculado.', 'id subject')),
+    _contract('accounts.AccessEvent', read_only='id user actor action method surface ip device created_at'),
+)

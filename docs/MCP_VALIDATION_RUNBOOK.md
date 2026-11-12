@@ -1,3 +1,25 @@
+## Integridad de datos — validación 2026-11-05
+
+Verificar `mcp_inventory --check`, paridad de esquemas, 13 herramientas en Integridad (10 de negocio + 3 de control), permisos administrativos, confirmación de aplicar/deshacer/revisar y ausencia de integridad en nuevas credenciales de Proyectos. Los accesos legacy/pre_split deben seguir operando con aviso; migrar conserva actor, permisos y vencimiento. Tras deploy: activar destino, configurar consumidores sin exponer sus credenciales, comprobar una revisión real de lectura y el barrido de Bogotá. Nada de esto se acredita por tests locales. Contrato completo en `DATA_INTEGRITY.md`.
+
+## PA-216 — dirección del cliente creado durante el cierre (2026-11-07)
+
+Comercial 6.5.0 y Propuestas 6.3.0 incluyen `new_client.address` en el contrato
+compartido con Panel: opcional, vacío permitido y máximo 512 caracteres. La
+confirmación debe conservar la dirección en el perfil vinculado a la propuesta;
+una dirección demasiado larga o nula se rechaza antes de crear cliente, proyecto
+o intención MCP. Los contratos por modelo de `clients` no cambian: este dato se
+recibe mediante la creación explícita del servicio de aprobación. No hay migración,
+activación, invitación ni reparación automática de clientes anteriores. Las huellas
+se regeneran sólo para ambos catálogos. Regresiones de Panel/MCP para CI; este texto
+no acredita ejecución. En DEVQA-006, el caso C y el cliente 27 se conservan como
+evidencia del corte anterior; la reprueba requiere un corte y datos futuros acordados.
+Cambio compatible documentado en el [changelog](changelog/2026-11-07-proposal-approval-client-address.md).
+
+## PA-216 — aprobación diferida y selección documental (2026-11-06)
+
+Comercial 6.4.0 y Propuestas 6.2.0 conservan el servicio compartido con Panel. `review_proposal_approval` con `action=defer` y `accept_proposal=true` acepta sin cliente/proyecto nuevo ni paquete; `false` conserva el estado. Repetir no duplica cambios. Confirmar el cierre inicial usa sólo `selected_document_ids`, por defecto `[]`. `confirm_proposal_document_revision` admite esa lista: omitir conserva la selección elegible del paquete previo, `[]` la retira del vigente. Las lecturas exponen selección e identidad; los históricos, firmas y originales se conservan. Validar en CI confirmación sensible, defer, selección parcial/vacía/ajena/archivada, conflictos y nueva revisión; manual en DEV coordinado con dev-qa. No se acredita validación por escribir estos escenarios.
+
 ## Calculadora por talla — commercial 6.5.0 / projects 4.5.1 (2026-11-05)
 
 La clasificación se aplica desde Claude/ChatGPT con la definición que devuelve MCP.
@@ -932,7 +954,8 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 4.0.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 4.0.0 | 159 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, integridad de datos y ciclo de vida de hosting |
+| `projects` | 5.0.0 | 187 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial y ciclo de vida de hosting |
+| `data-integrity` | 1.0.1 | 13 | Integridad transversal: catálogo, revisiones persistentes, hallazgos, correcciones con motivo, decisiones y deshacer |
 | `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 3.0.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
@@ -946,9 +969,11 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `diagnostics` | 2.0.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 2.0.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
-Los 20 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
+Los conteos de `projects` y `data-integrity` se verificaron contra `TOOLS_BY_SLUG`
+y `connector_version` el 2026-11-05, sin acceder a datos reales. Los 20 conteos
+del inventario anterior procedían de `CONNECTORS` / `TOOLS_BY_SLUG` y de
 `mcp_schema_report` local con `projectapp.settings_test` el 2026-10-11, sin
-consultar datos reales: 1063 herramientas sumadas entre catálogos, incluidas las
+consultar datos reales: entonces eran 1063 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
 esperados, y `accounting-cards` incorporó `get_statement`. Los dos conectores
@@ -1493,13 +1518,18 @@ Los adaptadores resuelven la misma ruta DRF del Panel mediante
 serializer y servicio existentes decidan permisos, validación y transacción.
 No se implementa un segundo CRUD con escrituras ORM paralelas.
 
-### Proyectos: integridad de datos (2026-10-09)
+### Integridad de datos: correcciones auditadas (2026-11-05)
+
+El procedimiento canónico usa `data-integrity`. Los consumidores legacy/pre_split
+de Proyectos conservan sus siete herramientas anteriores durante la transición;
+en ese caso el registro conserva `source=mcp:projects`. Las credenciales nuevas
+de Proyectos no publican herramientas de integridad.
 
 1. `describe_integrity_rules` devuelve `catalog_version` y cada regla con
    dominio, gravedad, `fix_kinds` y `fixable_kinds` (las correcciones que el
    motor sabe aplicar).
-2. `list_integrity_findings` con `query.scope_kind=client` y
-   `query.scope_query` de un nombre ambiguo devuelve `scope_candidates` y ningún
+2. `list_integrity_findings` con `scope_kind=client` y
+   `scope_query` de un nombre ambiguo devuelve `scope_candidates` y ningún
    hallazgo; con un `scope_id` devuelve hallazgos con `fingerprint`, `inputs`,
    `suggestion` y, si aplica, `tool`. Repetir la búsqueda devuelve los mismos
    fingerprints, también en `scope_kind=all`.
@@ -1511,7 +1541,7 @@ No se implementa un segundo CRUD con escrituras ORM paralelas.
    hash vigente pide confirmación y no escribe hasta `confirm_action`. Repetir la
    confirmación devuelve el mismo resultado sin aplicar dos veces.
 5. Tras confirmar, el hallazgo desaparece de `list_integrity_findings` y
-   `list_integrity_operations` muestra la operación con `source=mcp:projects` y
+   `list_integrity_operations` muestra la operación con `source=mcp:data-integrity` y
    el actor técnico del conector.
 6. Editar a mano uno de los registros corregidos y pedir
    `preview_integrity_operation_undo`: informa `changed_since`. Sin esa edición,
@@ -3000,3 +3030,11 @@ Pruebas focalizadas (por archivo, máximo 20 tests por lote): `test_uploaded_pdf
 - Crear y completar mantienen la confirmación sensible MCP y los permisos del panel. `document_pending` no habilita acceder a otro proyecto/cliente ni cambiar una asociación completa a pendiente.
 - La lectura pública conserva las cuentas propias emitidas con documento pendiente y su estado público `pending`, sin exponer la marca ni su autoría. El filtro público `nature=pending` incluye también los históricos sin asociación; los filtros administrativos de documento pendiente siguen contando sólo decisiones explícitas. Se conservan los bloqueos de borradores y de relaciones incoherentes entre cliente, proyecto e ingreso.
 - Verificar: creación sin marca rechaza vacíos; con marca crea/emite/envía; list/read distinguen históricos; campos de auditoría falsificados y vínculos parciales son rechazados; completar con versión antigua falla; completar correctamente retira el filtro y el radar. Pruebas focales: `accounts/tests/billing/test_pending_document_mcp.py`.
+
+## Contratación estatal — procurement
+
+Validar listado/filtros/exportación, búsquedas con owner_id, alertas con destinatarios y frecuencias, vista previa sin correo, configuración sensible con confirmación, sincronización única, seguimiento con motivo e historial, detalle de entrega y reintento. Rechazar campos desconocidos, owner no-staff y mutaciones sensibles sin confirmar. Una credencial de staff sin superusuario no puede leer ni cambiar búsquedas de otro dueño ni escribir sus clasificaciones; confirmar una acción tampoco amplía ese permiso. No se exponen source_data ni claves de buzones. El análisis externo se registra en notes. Operación y evidencia de validación: `docs/PROCUREMENT.md`.
+
+## Accesos autorizados — projects 4.5.0
+
+Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.

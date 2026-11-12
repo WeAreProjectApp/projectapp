@@ -9,6 +9,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PLATFORM_ADMIN_CLIENT_LIST } from '../helpers/flow-tags.js';
+import { PANEL_VIEWPORTS } from '../helpers/viewports.js';
 import {
   setPlatformAuth,
   mockPlatformAdmin,
@@ -95,6 +96,29 @@ test.describe('Platform Admin Client List', () => {
   test.beforeEach(async ({ page }) => {
     await setPlatformAuth(page, { user: mockPlatformAdmin });
   });
+
+  for (const profile of ['compact', 'desktop']) {
+    for (const theme of ['light', 'dark']) {
+      test(`returns focus to the invitation trigger at ${profile} in ${theme} mode`, {
+        tag: [...PLATFORM_ADMIN_CLIENT_LIST, '@role:platform-admin', '@outcome:success'],
+      }, async ({ page }) => {
+        await page.setViewportSize(PANEL_VIEWPORTS[profile]);
+        await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme);
+        await setupClientMocks(page);
+        await page.goto('/es-co/platform/clients', { waitUntil: 'domcontentloaded' });
+        const trigger = page.getByRole('button', { name: 'Invitar cliente', exact: true });
+
+        await trigger.click();
+
+        const dialog = page.getByRole('dialog', { name: 'Invitar cliente', exact: true });
+        await expect(dialog).toHaveAttribute('aria-modal', 'true');
+        await expect(dialog).toBeFocused();
+        await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+        await expect(dialog).not.toBeVisible();
+        await expect(trigger).toBeFocused();
+      });
+    }
+  }
 
   test('renders client table with columns and data', {
     tag: ['@outcome:display', ...PLATFORM_ADMIN_CLIENT_LIST, '@role:platform-admin'],

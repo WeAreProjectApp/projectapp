@@ -74,9 +74,9 @@ class HostingEvidence(models.Model):
         )]
 
 
-class BillingContextEvent(models.Model):
+class BillingContextEvent(RetainedProjectModel, models.Model):
     """Append-only administrative context decisions, separate from money."""
-    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='billing_context_events')
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='billing_context_events', null=True, blank=True)
     document = models.ForeignKey('content.Document', on_delete=models.SET_NULL, null=True, blank=True, related_name='billing_context_events')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name='+')
     operation = models.CharField(max_length=64)
@@ -87,3 +87,8 @@ class BillingContextEvent(models.Model):
 
     class Meta:
         ordering = ['id']
+        constraints = [models.CheckConstraint(
+            condition=(models.Q(project__isnull=False, retention_context__isnull=True)
+                       | models.Q(project__isnull=True, retention_context__isnull=False)),
+            name='billing_event_has_owner',
+        )]

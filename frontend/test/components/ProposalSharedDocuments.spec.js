@@ -68,6 +68,43 @@ afterEach(() => {
 });
 
 describe('ProposalSharedDocuments', () => {
+  it('keeps a historical document title outside the current package', async () => {
+    packet.confirmed_files = [];
+    packet.shared_documents[0] = {
+      ...packet.shared_documents[0], is_current: false, title: 'Anexo descriptivo', source_key: 'original-6',
+    };
+    await open();
+
+    expect(wrapper.get('a[href="/panel/documents/91/edit"]').text()).toBe('Anexo descriptivo');
+    expect(wrapper.text()).toContain('Histórico');
+    expect(wrapper.get('a[href="/api/proposals/3/approval/files/6/"]').text()).toBe('Contrato Atlas · v1');
+  });
+
+  it('uses the historical revision title with an older API response', async () => {
+    packet.confirmed_files = [];
+    packet.shared_documents[0].is_current = false;
+    packet.shared_documents[0].source_key = 'original-6';
+    await open();
+
+    expect(wrapper.get('a[href="/panel/documents/91/edit"]').text()).toBe('Contrato Atlas');
+    expect(wrapper.text()).toContain('Histórico');
+  });
+
+  it('respects a real document title that matches a source key', async () => {
+    packet.shared_documents[0].title = 'original-6';
+    await open();
+
+    expect(wrapper.get('a[href="/panel/documents/91/edit"]').text()).toBe('original-6');
+  });
+
+  it('labels an untitled document without exposing a source key', async () => {
+    packet.confirmed_files = [];
+    packet.shared_documents[0].history = [];
+    await open();
+
+    expect(wrapper.get('a[href="/panel/documents/91/edit"]').text()).toBe('Documento #91');
+  });
+
   // Falla si el gestor abre otro documento en lugar de la identidad compartida vigente.
   it('links the current package to its document identity', async () => {
     await open();

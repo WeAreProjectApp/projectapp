@@ -1,0 +1,16 @@
+{
+  "id": "admin-procurement-deliveries",
+  "name": "Admin Procurement Email Delivery History",
+  "module": "procurement",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Staff reviews paginated deliveries, attempts, errors and sent snapshots, then confirms retries. Uncertain sends warn to inspect the mailbox; rejected retries retain their dialog.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

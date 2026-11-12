@@ -6,7 +6,7 @@ for real: the serializers and services that keep these invariants never run.
 import pytest
 
 from content.models import CommunicationAttachment, Document
-from content.services.data_integrity.types import REPORT_ONLY
+from content.services.data_integrity.types import RELINK, REPORT_ONLY
 from content.tests.data_integrity_accounting_factories import make_cuenta
 from content.tests.data_integrity_documents_factories import make_document, make_folder, make_message, make_thread
 from content.tests.data_integrity_helpers import make_project, scan
@@ -32,7 +32,7 @@ def test_document_moved_into_another_clients_folder_is_reported(make_client_prof
 
     assert finding.evidence == {'document': document.pk, 'folder': foreign.pk,
                                 'client_user': [owner.user_id, other.user_id]}
-    assert finding.fix_kinds == (REPORT_ONLY,)
+    assert finding.fix_kinds == (RELINK, REPORT_ONLY)
     assert 'no es dueña' in finding.message
 
 
@@ -59,7 +59,7 @@ def test_document_moved_into_another_projects_folder_is_reported(make_client_pro
     [finding] = _found('DC10')
 
     assert finding.evidence == {'document': document.pk, 'folder': foreign.pk, 'project': [project.pk, other.pk]}
-    assert finding.fix_kinds == (REPORT_ONLY,)
+    assert finding.fix_kinds == (RELINK, REPORT_ONLY)
 
 
 def test_document_filed_with_its_own_project_is_quiet(make_client_profile):

@@ -7,7 +7,7 @@ from content.mcp import registry
 from content.mcp.canonical_schemas import complete_canonical_schema
 from content.mcp.income_tools import build_income_tools
 from content.mcp.module_catalog import (
-    ACCOUNTING_SUPERSEDED, CANONICAL_FOR, FINANCIAL_PROJECT_TOOLS, MODULE_CONNECTORS,
+    ACCOUNTING_SUPERSEDED, CANONICAL_FOR, FINANCIAL_PROJECT_TOOLS, INTEGRITY_TOOLS, MODULE_CONNECTORS,
     canonical_name, catalog_problems,
     COMMERCIAL_MEMBERS, SHARED_VIDEO_REPLACEMENTS, INFRASTRUCTURE_TOOLS, tool_owner,
 )
@@ -19,13 +19,13 @@ REPLACED_INCOME_NAMES = frozenset({
     'update_expected_income', 'duplicate_expected_income',
 })
 CATALOG_VERSIONS = {
-    'commercial': '6.5.0', 'accounting': '2.2.0', 'accounting-ledger': '3.1.0',
+    'commercial': '6.6.0', 'accounting': '2.2.0', 'accounting-ledger': '3.1.0',
     'accounting-billing': '3.1.0',
     'blog': '2.1.1', 'documents': '8.2.0', 'communications': '3.2.0',
-    'diagnostics': '2.1.1', 'proposals': '6.1.1', 'content': '3.1.1',
+    'diagnostics': '2.1.1', 'proposals': '6.3.0', 'content': '3.1.1',
     'building-with-us': '3.1.1', 'building-on-demand': '4.1.1',
     'additional-modules': '4.1.2', 'offerings': '2.1.1', 'programs': '3.1.0',
-    'projects': '4.5.1',
+    'projects': '5.1.0', 'data-integrity': '1.0.1',
     'accounting-billing': '3.1.0',
 
 
@@ -85,7 +85,7 @@ def build_catalogs(sources, replace, common, *, pre_split=None):
             if slug == 'commercial':
                 tools.extend(deepcopy(COMMERCIAL_SECTION_TOOLS))
         if slug == 'projects':
-            tools = [tool for tool in tools if tool['name'] not in FINANCIAL_PROJECT_TOOLS]
+            tools = [tool for tool in tools if tool['name'] not in FINANCIAL_PROJECT_TOOLS | INTEGRITY_TOOLS]
         if slug == 'accounting':
             tools = [tool for tool in tools if tool['name'] not in REPLACED_INCOME_NAMES | ACCOUNTING_SUPERSEDED]
             tools = _unique([*tools, *HOSTING_SUBSCRIPTION_TOOLS, *build_income_tools()])
@@ -145,6 +145,16 @@ def build_catalogs(sources, replace, common, *, pre_split=None):
             tool['name'] = canonical_name(tool['name'], 'commercial')
             complete_canonical_schema(tool, 'commercial')
         finish(connectors['commercial'], tools, pre_split)
+        frozen_projects = set(json.loads(Path(__file__).with_name('pre_split_projects_names.json').read_text()))
+        project_tools = [tool for tool in raw['projects'] if tool['name'] in frozen_projects]
+        missing = frozen_projects - INFRASTRUCTURE_TOOLS - {tool['name'] for tool in project_tools}
+        if missing:
+            raise RuntimeError(f'Missing pre-split projects tools: {sorted(missing)}')
+        for tool in project_tools:
+            tool['operation_id'] = operation_id(tool)
+            tool['name'] = canonical_name(tool['name'], 'projects')
+            complete_canonical_schema(tool, 'projects')
+        finish(connectors['projects'], project_tools, pre_split)
     for slug, spec in connectors.items():
         finish(spec, canonical_raw.get(slug, raw[slug]), public)
         finish(spec, raw[slug], legacy)

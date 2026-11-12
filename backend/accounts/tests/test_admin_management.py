@@ -29,10 +29,10 @@ def api_client():
 
 @pytest.fixture
 def staff_admin(db):
-    """Platform admin with Django is_staff=True (required for admin management views)."""
+    """Superuser authorized to manage the team's platform accounts."""
     user = User.objects.create_user(
         username='staff@test.com', email='staff@test.com', password='staffpass1!',
-        first_name='Staff', last_name='Admin', is_staff=True,
+        first_name='Staff', last_name='Admin', is_staff=True, is_superuser=True,
     )
     UserProfile.objects.create(user=user, role=UserProfile.ROLE_ADMIN, is_onboarded=True)
     return user
@@ -47,18 +47,19 @@ def staff_headers(api_client, staff_admin):
     return {'HTTP_AUTHORIZATION': f'Bearer {token}'}
 
 
-@pytest.fixture
-def non_staff_admin(db):
-    """Platform admin WITHOUT Django is_staff (blocked by _require_staff)."""
+@pytest.fixture(params=[False, True], ids=['platform-admin', 'panel-staff'])
+def non_superuser_admin(db, request):
+    """An administrator without permission to manage team accounts."""
     user = User.objects.create_user(
         username='nostaff@test.com', email='nostaff@test.com', password='pass12345!',
+        is_staff=request.param,
     )
     UserProfile.objects.create(user=user, role=UserProfile.ROLE_ADMIN, is_onboarded=True)
     return user
 
 
 @pytest.fixture
-def non_staff_headers(api_client, non_staff_admin):
+def non_superuser_headers(api_client, non_superuser_admin):
     resp = api_client.post('/api/accounts/login/', {
         'email': 'nostaff@test.com', 'password': 'pass12345!',
     }, format='json')
@@ -89,12 +90,13 @@ def client_headers(api_client, client_user):
 
 
 # ---------------------------------------------------------------------------
-# _require_staff: non-staff user blocked
+# Team management: non-superusers are blocked, including panel staff
 # ---------------------------------------------------------------------------
 
-class TestRequireStaff:
-    def test_non_staff_user_gets_403_on_admin_list(self, api_client, non_staff_headers):
-        resp = api_client.get('/api/accounts/admins/', **non_staff_headers)
+class TestRequireSuperuser:
+    def test_non_superuser_gets_403_on_admin_list(self, api_client, non_superuser_headers):
+        """Fails if a panel operator can list team accounts without owner authority."""
+        resp = api_client.get('/api/accounts/admins/', **non_superuser_headers)
         assert resp.status_code == 403
 
 

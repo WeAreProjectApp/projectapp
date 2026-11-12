@@ -15,6 +15,7 @@ import {
   mockPlatformClient,
 } from '../helpers/platform-auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
+import { PANEL_VIEWPORTS } from '../helpers/viewports.js';
 
 const meResponse = (user) => ({
   status: 200,
@@ -63,8 +64,8 @@ function setupDetailMocks(page, { user, project = mockProject }) {
   });
 }
 
-async function gotoProjectDetail(page) {
-  await page.goto('/platform/projects/1', { waitUntil: 'domcontentloaded' });
+async function gotoProjectDetail(page, locale = '') {
+  await page.goto(`${locale}/platform/projects/1`, { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
   await expect(
     page.getByRole('heading', { name: 'E-commerce Platform', exact: true }),
@@ -78,6 +79,32 @@ test.describe('Platform Project Detail — Admin', () => {
   test.beforeEach(async ({ page }) => {
     await setPlatformAuth(page, { user: mockPlatformAdmin });
   });
+
+  for (const theme of ['light', 'dark']) {
+    for (const { triggerName, dialogName, closeName } of [
+      { triggerName: '+ Agregar fase desde propuesta del cliente', dialogName: 'Agregar fases', closeName: 'Cerrar' },
+      { triggerName: 'Editar', dialogName: 'Editar proyecto', closeName: 'Cancelar' },
+    ]) {
+      test(`restores focus after closing ${dialogName} with the mouse in ${theme} mode`, {
+        tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-admin', '@outcome:success'],
+      }, async ({ page }) => {
+        await page.setViewportSize(PANEL_VIEWPORTS.desktop);
+        await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme);
+        await setupDetailMocks(page, { user: mockPlatformAdmin });
+        await gotoProjectDetail(page);
+        const trigger = page.getByRole('button', { name: triggerName, exact: true });
+
+        await trigger.click();
+
+        const dialog = page.getByRole('dialog', { name: dialogName, exact: true });
+        await expect(dialog).toHaveAttribute('aria-modal', 'true');
+        await expect(dialog).toBeFocused();
+        await dialog.getByRole('button', { name: closeName, exact: true }).click();
+        await expect(dialog).not.toBeVisible();
+        await expect(trigger).toBeFocused();
+      });
+    }
+  }
 
   test('renders project detail with name, status badge, and stats', {
     tag: ['@outcome:display', ...PLATFORM_PROJECT_DETAIL, '@role:platform-admin'],
@@ -121,22 +148,29 @@ test.describe('Platform Project Detail — Admin', () => {
     await expect(deliveryLink).toHaveAttribute('href', /\/platform\/projects\/1\/delivery$/);
   });
 
-  test('admin jumps back to the commercial record in a new tab (PA-50)', {
-    tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-admin', '@outcome:success'],
-  }, async ({ page }) => {
-    await setupDetailMocks(page, { user: mockPlatformAdmin });
-    await gotoProjectDetail(page);
+  for (const { locale, entry, label } of [
+    { locale: '/es-co', entry: 'header', label: 'Ficha comercial' },
+    { locale: '/es-co', entry: 'lifecycle', label: 'Cambiar estado en la ficha comercial' },
+    { locale: '/en-us', entry: 'header', label: 'Commercial record' },
+    { locale: '/en-us', entry: 'lifecycle', label: 'Change status in the commercial record' },
+  ]) {
+    test(`admin preserves ${locale} in the ${entry} commercial-record popup (PA-241)`, {
+      tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-admin', '@outcome:success'],
+    }, async ({ page }) => {
+      // quality: allow-duplicate (per-locale entry point: both commercial links preserve their route context)
+      await setupDetailMocks(page, { user: mockPlatformAdmin });
+      await gotoProjectDetail(page, locale);
+      const action = page.getByRole('button', { name: label, exact: true });
+      await expect(action).toHaveText(label);
 
-    const backLink = page.getByTestId('project-back-to-panel');
-    await expect(backLink).toBeVisible();
+      const popupPromise = page.context().waitForEvent('page');
+      await action.click();
+      const popup = await popupPromise;
 
-    const popupPromise = page.context().waitForEvent('page');
-    await backLink.click();
-    const popup = await popupPromise;
-
-    await popup.waitForURL(/\/panel\/projects\?highlight=1/, { timeout: 25_000 });
-    await expect(popup).toHaveURL(/\/panel\/projects\?highlight=1/);
-  });
+      await expect(popup).toHaveURL(`${locale}/panel/projects?highlight=1`);
+      await popup.close();
+    });
+  }
 
   test('admin sees Editar button', {
     tag: ['@outcome:display', ...PLATFORM_PROJECT_DETAIL, '@role:platform-admin'],
@@ -166,6 +200,6 @@ test.describe('Platform Project Detail — Client', () => {
     ).toBeVisible();
     await expect(page.getByRole('button', { name: /editar/i })).not.toBeVisible();
     // PA-50: the panel is admin territory; the back-link must not exist here.
-    await expect(page.getByTestId('project-back-to-panel')).not.toBeVisible();
+    await expect(page.getByTestId('project-back-to-panel')).toHaveCount(0);
   });
 });

@@ -47,7 +47,12 @@ const isEmpty = computed(() =>
 
 const options = computed(() => ({
   ...baseOptions.value,
-  chart: { ...baseOptions.value.chart, stacked: true },
+  chart: {
+    ...baseOptions.value.chart,
+    stacked: true,
+    redrawOnParentResize: true,
+    redrawOnWindowResize: true,
+  },
   // Accepted=emerald, rejected=red, in-progress=blue from the validated ramp.
   colors: [palette.value.measures[1], palette.value.measures[2], palette.value.measures[0]],
   plotOptions: { bar: { columnWidth: '45%', borderRadius: 3 } },
@@ -65,7 +70,7 @@ const options = computed(() => ({
 </script>
 
 <template>
-  <div data-testid="dashboard-trend-chart">
+  <div class="w-full min-w-0 max-w-full" data-testid="dashboard-trend-chart">
     <BaseEmptyState
       v-if="isEmpty"
       title="Sin propuestas en los últimos meses"
@@ -74,6 +79,7 @@ const options = computed(() => ({
     <ClientOnly v-else>
       <LazyApexChart
         type="bar"
+        width="100%"
         height="220"
         :options="options"
         :series="series"
