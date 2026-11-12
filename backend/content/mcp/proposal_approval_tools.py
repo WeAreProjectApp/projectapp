@@ -38,12 +38,16 @@ CONTENT_TYPES = {
 REVISION_SCHEMA = deepcopy(APPROVAL_SCHEMA)
 REVISION_SCHEMA['properties'] = {
     key: value for key, value in REVISION_SCHEMA['properties'].items()
-    if key in {'source_hash', 'request_id', 'accept_proposal', 'use_proposal_contracts', 'custom_documents'}
+    if key in {'source_hash', 'request_id', 'accept_proposal', 'use_proposal_contracts', 'custom_documents', 'selected_document_ids'}
 }
 REVISION_SCHEMA['required'] = ['source_hash', 'request_id']
 REVISION_SCHEMA['properties']['accept_proposal'].update(
     default=False,
     description='true vuelve a aprobar una propuesta cuyo estado fue corregido; false conserva el estado actual.',
+)
+REVISION_SCHEMA['properties']['selected_document_ids'].pop('default', None)
+REVISION_SCHEMA['properties']['selected_document_ids']['description'] = (
+    'IDs de anexos activos elegidos; [] excluye todos. Omitir conserva la selección del paquete anterior.'
 )
 REVISION_SCHEMA['properties']['use_proposal_contracts'].pop('default', None)
 REVISION_SCHEMA['properties']['use_proposal_contracts']['description'] = (
@@ -198,7 +202,7 @@ PROPOSAL_APPROVAL_TOOLS = [
         assets={'custom_asset_ids': {'field': 'custom_files[]', 'many': True, 'content_types': sorted(CONTENT_TYPES)}}),
     _mutation('review_proposal_approval',
               'Revisa y confirma cliente, proyecto y documentos usando source_hash de get_proposal_approval y request_id estable. '
-              'action=defer nunca aprueba; retry conserva el paquete. confirm_action aplica la selección exacta.'),
+              'action=defer acepta sin crear proyecto ni paquete cuando accept_proposal=true; false conserva el estado. retry conserva el paquete. confirm_action aplica la selección exacta.'),
     _mutation('launch_proposal_to_platform',
               'Vincula explícitamente cliente y proyecto o reintenta el mismo paquete; nunca recrea ni purga un proyecto operativo.',
               launch=True),

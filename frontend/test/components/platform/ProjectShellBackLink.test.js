@@ -35,6 +35,7 @@ jest.mock('../../../stores/platform-projects', () => ({
 
 function mountShell() {
   global.useRoute = () => ({ params: { id: '5' }, query: {}, path: '/' });
+  global.useLocalePath = () => (path) => path;
   return mount(ProjectShell, {
     global: {
       stubs: {
@@ -55,6 +56,8 @@ describe('ProjectShell back link', () => {
 
   afterEach(() => {
     openSpy.mockRestore();
+    delete global.useRoute;
+    delete global.useLocalePath;
   });
 
   it('an admin jumps to the commercial record in a new tab', async () => {
@@ -66,6 +69,7 @@ describe('ProjectShell back link', () => {
     await link.trigger('click');
 
     expect(openSpy).toHaveBeenCalledWith('/panel/projects?highlight=5', '_blank');
+    wrapper.unmount();
   });
 
   it('a client never sees the panel link', () => {
@@ -73,5 +77,6 @@ describe('ProjectShell back link', () => {
     const wrapper = mountShell();
 
     expect(wrapper.find('[data-testid="project-back-to-panel"]').exists()).toBe(false);
+    wrapper.unmount();
   });
 });

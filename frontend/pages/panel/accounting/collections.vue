@@ -209,7 +209,7 @@
             class="text-text-subtle"
             title="Sin proyecto — típico de un cobro por diagnóstico"
             :data-testid="`collection-no-project-${row.id}`"
-          >—</span>
+          >Sin proyecto</span>
         </template>
         <template #cell-commercial_status="{ row }">
           <BaseBadge

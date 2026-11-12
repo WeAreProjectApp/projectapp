@@ -256,7 +256,7 @@
     <section v-else-if="documentStore.currentDocument?.proposal_source" class="space-y-4" data-testid="document-shared-source">
       <p class="text-sm text-text-muted">{{ $i18n.locale.startsWith('en') ? 'This resource is shared with the proposal. Edit its source to prepare a draft; approved revisions remain unchanged.' : 'Este recurso se comparte con la propuesta. Editar su fuente prepara un borrador y conserva las revisiones aprobadas.' }}</p>
       <BaseButton as="NuxtLink" :to="localePath(documentStore.currentDocument.proposal_source.source_editor_url)" variant="secondary" data-testid="document-edit-source">{{ $i18n.locale.startsWith('en') ? 'Edit shared source' : 'Editar fuente compartida' }}</BaseButton>
-      <ProposalSharedBinary :source="documentStore.currentDocument.proposal_source" @updated="reloadDocument" />
+      <ProposalSharedBinary :source="documentStore.currentDocument.proposal_source" @updated="handleSharedSourceUpdated" />
       <ProposalSharedDocuments :proposal-id="documentStore.currentDocument.proposal_source.proposal_id" :refresh-key="documentStore.currentDocument.proposal_source.source_hash" />
     </section>
     <EntityHistoryTabs v-else-if="documentStore.currentDocument" entity-type="document" :object-id="route.params.id">
@@ -1260,6 +1260,14 @@ function handleThreadSaved({ thread }) {
       }
       : null,
   };
+}
+
+function handleSharedSourceUpdated(source) {
+  const document = documentStore.currentDocument;
+  if (!document || source?.document_id !== document.id) return;
+  // The source endpoint returns the same summary used by the detail serializer.
+  // A full reload would unmount the editor and discard its selected File.
+  documentStore.currentDocument = { ...document, proposal_source: source };
 }
 
 async function reloadDocument() {

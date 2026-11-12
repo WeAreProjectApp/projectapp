@@ -22,7 +22,7 @@
         </h3>
         <p class="text-sm text-text-muted mt-1">
           {{ income?.client_name || 'Sin cliente' }}
-          <span v-if="income?.project_name"> · {{ income.project_name }}</span>
+          <span v-if="income" data-testid="income-detail-project"> · Proyecto: {{ income.project_name || 'Sin proyecto' }}</span>
           · {{ income?.period_label }}
         </p>
       </div>

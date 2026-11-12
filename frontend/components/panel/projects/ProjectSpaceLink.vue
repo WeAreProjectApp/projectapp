@@ -1,6 +1,20 @@
 <template>
+  <BaseButton
+    v-if="projectId != null && showLabel"
+    variant="secondary"
+    size="sm"
+    class="max-w-full"
+    aria-label="Abrir espacio en la plataforma (pestaña nueva)"
+    :disabled="isBridging"
+    disabled-reason="Abriendo el espacio del proyecto. Espera un momento."
+    :data-testid="dataTestid"
+    @click.stop="openSpace"
+  >
+    <BaseActionIcon action="open-platform" />
+    <span class="whitespace-normal text-left">Abrir espacio en la plataforma</span>
+  </BaseButton>
   <BaseActionButton
-    v-if="projectId != null"
+    v-else-if="projectId != null"
     action="open-platform"
     variant="ghost"
     size="sm"
@@ -26,6 +40,7 @@ import { usePanelToPlatformBridge } from '~/composables/usePanelToPlatformBridge
  * cells stay exactly as they are.
  */
 const props = defineProps({
+  showLabel: { type: Boolean, default: false },
   projectId: { type: [Number, String], default: null },
   dataTestid: { type: String, default: 'project-space-link' },
 });

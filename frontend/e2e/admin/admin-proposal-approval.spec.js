@@ -15,7 +15,13 @@ test.setTimeout(60_000);
 const SOURCE_HASH = 'a'.repeat(64);
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
-function buildFixture({ status = 'negotiating', confirmed = false } = {}) {
+function buildFixture({
+  status = 'negotiating',
+  confirmed = false,
+  linkedProject = confirmed,
+  optionalDocuments = [],
+  selectedDocumentIds = [],
+} = {}) {
   const client = { id: 101, name: 'Cliente Atlas', email: 'atlas@example.test', phone: '+573001234567', company: 'Atlas', nit: '900123456', billing_code: 'ATLAS' };
   const project = { id: 41, name: 'Portal Atlas', client_profile_id: client.id, client_name: client.name, client: { id: 701, profile_id: client.id } };
   const proposal = {
@@ -26,10 +32,19 @@ function buildFixture({ status = 'negotiating', confirmed = false } = {}) {
     created_at: '2026-09-01T12:00:00Z', expires_at: '2099-01-01T12:00:00Z',
     available_transitions: status === 'accepted' ? ['finished'] : ['accepted', 'rejected'],
     project_review_required: status === 'accepted' && !confirmed,
-    linked_project: confirmed ? project : null,
+    linked_project: linkedProject ? project : null,
     platform_onboarding_status: confirmed ? 'completed' : null,
   };
-  return { client, project, proposal, confirmed, submissions: [], otherMutations: [] };
+  return {
+    client,
+    project,
+    proposal,
+    confirmed,
+    optionalDocuments,
+    selectedDocumentIds,
+    submissions: [],
+    otherMutations: [],
+  };
 }
 
 function preview(state) {
@@ -46,7 +61,8 @@ function preview(state) {
       modality: 'single', available: true, error: null,
       documents: [{ id: 601, title: 'Contrato de producto y servicio Atlas', document_type: 'contract' }],
     },
-    optional_documents: [],
+    optional_documents: state.optionalDocuments,
+    selected_document_ids: state.selectedDocumentIds,
     confirmed: state.confirmed,
     confirmed_files: state.confirmed ? [
       { id: 801, title: 'Detalle comercial', document_type: 'commercial', filename: 'comercial.pdf' },
@@ -96,7 +112,15 @@ async function mockApproval(page, state, { rejectFirst = null } = {}) {
       const submission = readSubmission(route.request());
       state.submissions.push(submission);
       if (rejectFirst && state.submissions.length === 1) return json(rejectFirst.body, rejectFirst.status);
+      if (submission.payload.action === 'defer') {
+        Object.assign(state.proposal, {
+          status: 'accepted', project_review_required: true, linked_project: null,
+          platform_onboarding_status: 'pending', available_transitions: ['finished'],
+        });
+        return json({ ...preview(state), action: 'defer', idempotent: false });
+      }
       state.confirmed = true;
+      state.selectedDocumentIds = submission.payload.selected_document_ids || [];
       if (submission.payload.new_client) state.client = { ...submission.payload.new_client, id: 102 };
       if (submission.payload.new_project) state.project = { id: 42, name: submission.payload.new_project.name, client_profile_id: state.client.id };
       Object.assign(state.proposal, {
@@ -157,6 +181,16 @@ async function expectAccepted(page) {
   await expect(row.getByRole('combobox')).toHaveValue('accepted');
 }
 
+async function openApprovalFromEditor(page) {
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('link', { name: 'Propuestas', exact: true }).click();
+  await page.getByTestId('proposal-open-71').click();
+  await expect(page).toHaveURL(/\/panel\/proposals\/71\/edit$/);
+  await page.getByTestId('proposal-actions-menu').click();
+  await page.getByTestId('proposal-action-approve').click();
+  await expect(page.getByTestId('approval-defer')).toBeEnabled();
+}
+
 test('inline approval links the selected project only after confirmation', {
   tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
 }, async ({ page }) => {
@@ -202,6 +236,88 @@ test('cancelled approval preserves the proposal status', {
   expect(state.proposal.linked_project).toBeNull();
   await row.getByRole('combobox').selectOption('accepted');
   await expect(page.getByTestId('approval-confirm')).toBeEnabled();
+});
+
+test('deferring from the list accepts without creating a project', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  // Catches the deferred acceptance path provisioning a client or project before review.
+  const state = buildFixture();
+  await mockApproval(page, state);
+  await openList(page);
+  await openInlineApproval(page);
+  await page.getByTestId('approval-defer').click();
+
+  await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
+  await expectAccepted(page);
+  await expect(page.getByTestId('approval-review-71')).toHaveCount(1);
+  expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0].payload).toEqual({ action: 'defer', accept_proposal: true });
+  expect(state.proposal.linked_project).toBeNull();
+});
+
+test('deferring from the editor accepts without an implicit project', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  // Catches the editor's Approve action bypassing the review-later choice.
+  const state = buildFixture();
+  await mockApproval(page, state);
+  await openApprovalFromEditor(page);
+  await page.getByTestId('approval-defer').click();
+
+  await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
+  expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0].payload).toEqual({ action: 'defer', accept_proposal: true });
+  expect(state.proposal.linked_project).toBeNull();
+});
+
+test('only the checked optional annex enters the packet', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  // Catches every active annex being silently included when the operator selected one.
+  const selected = { id: 701, title: 'Anexo de alcance Atlas' };
+  const excluded = { id: 702, title: 'Anexo de soporte Atlas' };
+  const state = buildFixture({ optionalDocuments: [selected, excluded] });
+  await mockApproval(page, state);
+  await openList(page);
+  await openInlineApproval(page);
+  await selectExistingProject(page);
+
+  const modal = page.getByTestId('proposal-approval-modal');
+  await expect(modal.getByTestId('approval-optional-701')).not.toBeChecked();
+  await expect(modal.getByTestId('approval-optional-702')).not.toBeChecked();
+  await modal.getByTestId('approval-optional-701').check();
+  await expect(modal.getByTestId('approval-packet-preview')).toContainText(selected.title);
+  await expect(modal.getByTestId('approval-packet-preview')).not.toContainText(excluded.title);
+  await page.getByTestId('approval-confirm').click();
+
+  await expect(modal).toHaveCount(0);
+  expect(state.submissions[0].payload.selected_document_ids).toEqual([701]);
+});
+
+test('a revision restores only its previously selected annexes', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:display'],
+}, async ({ page }) => {
+  // Catches reopening a pending review with no record of the previously selected annex subset.
+  const restored = { id: 701, title: 'Anexo de alcance Atlas' };
+  const unselected = { id: 702, title: 'Anexo de soporte Atlas' };
+  const state = buildFixture({
+    status: 'negotiating',
+    confirmed: true,
+    optionalDocuments: [restored, unselected],
+    selectedDocumentIds: [701],
+  });
+  await mockApproval(page, state);
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('link', { name: 'Propuestas', exact: true }).click();
+  await openInlineApproval(page);
+
+  const modal = page.getByTestId('proposal-approval-modal');
+  await expect(modal.getByTestId('approval-optional-701')).toBeChecked();
+  await expect(modal.getByTestId('approval-optional-702')).not.toBeChecked();
+  await expect(modal.getByTestId('approval-packet-preview')).toContainText(restored.title);
+  await expect(modal.getByTestId('approval-packet-preview')).not.toContainText(unselected.title);
+  expect(state.submissions).toEqual([]);
 });
 
 test('custom closure creates the staged client with both uploaded documents', {
