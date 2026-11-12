@@ -1,3 +1,26 @@
+## PA-231 — Contrato de fake data (2026-11-06)
+
+Trabajo backend en `fix/06112026-pa231-fake-data`: el comando canónico incorpora
+Monitoreo y Enlaces seguros con semilla/fecha, casos QA identificables, archivos
+locales válidos y limpieza diferida al commit. Se amplía el contrato a las cuatro
+apps de negocio; las credenciales y evidencias externas siguen exentas.
+Validación automatizada exclusivamente en CI; no se operan servidores DEV ni
+se ejecutan migraciones desde el worktree. Ver `docs/FAKE_DATA_COVERAGE.md`.
+
+
+## 2026-11-06 — PA-206 / PA-207 / PA-210 — en validación
+
+Nueva carpeta desde el encabezado abre el formulario existente con destino visible y contexto de carpeta/proyecto. Gestionar carpetas reutiliza el selector con búsqueda y rutas, y su árbol muestra ancestros. El editor Visual distingue el código en línea mediante tokens del tema, sin alterar su serialización. Sin cambios de esquema. Pruebas automatizadas exclusivamente en CI; DevQA recibió el preaviso para el recorrido Chrome sobre datos aislados. La aprobación visual y el CI se registrarán con SHA en el informe de la sesión.
+
+
+> **PA-211 — editor documental, 2026-11-06, en implementación:** se conserva Tiptap 3.32.0 y Markdown extendido. El cuerpo de Nuevo Documento y edición recibe una barra agrupada y contextual, con enlaces, tablas, avisos e índice. Comparación y alcance en `docs/document-editor-evaluation.md`. Pruebas automatizadas exclusivamente en CI y recorrido manual coordinado con dev-qa; el cierre queda pendiente de sus evidencias. No acredita despliegue.
+
+> **PA211-01 — combinación de color y resaltado, 2026-11-07:** Chrome detectó que un resaltado interior tomaba el negro del navegador aunque su fuente conservara el color explícito. La corrección en la rama de sesión aplica herencia sólo bajo spans editoriales con color, en editor, vista previa y lectores; conserva el resaltado sin color y el vocabulario guardado. Se preparan pruebas de color computado para CI. El entorno de QA sigue congelado en `1b7b761b` hasta acordar la reprueba; esta nota no acredita validación del arreglo.
+
+## 2026-11-06 — PA-226, aviso de cambios al cargar General
+
+Corrección en rama de sesión: General calcula los días de vigencia sin escribir el vencimiento al cargar o recargar el formulario. Sólo editar los días actualiza la fecha; se elimina el circuito de watchers que movía vencimientos pasados y podía producir actualizaciones recursivas cerca de medianoche. Regresiones de componente y E2E para carga asíncrona, edición, reversión y guardado exitoso/fallido. Las pruebas se ejecutan exclusivamente en CI. La aceptación visible de propuestas ficticias 10 y 11 requiere turno de DevQA y Chrome de Backlog ProjectApp; la aceptación para cierre requiere además el SHA integrado de main servido en DEV. Esta nota no acredita CI ni validación funcional aprobados.
+
 ## 2026-11-06 — PA-228, desbordes responsive del Panel
 
 Implementación en rama `fix/06112026-pa228-responsive-overflow`: ocho casos de

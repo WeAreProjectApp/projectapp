@@ -2282,7 +2282,7 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
   for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
     test(`linking an existing project contract unlocks its collection preview (${profile})`, {
       tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
-    }, async ({ page }) => {
+    }, async ({ page }, testInfo) => {
       await page.setViewportSize(viewportUse(profile).viewport);
       const calls = [];
       const project = { id: 10, name: 'Litigio' };
@@ -2315,7 +2315,11 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
       await page.getByTestId('income-actions-1').click();
       await page.getByTestId('income-action-generate-collection-1').click();
       await page.getByTestId('billing-nature').selectOption('contract');
-      await page.getByTestId('billing-link-contract-open').click();
+      const linkAction = page.getByRole('button', { name: 'Vincular contrato existente', exact: true });
+      await expect(linkAction).toHaveAttribute('aria-expanded', 'false');
+      await linkAction.click();
+      await expect(linkAction).toHaveAttribute('aria-expanded', 'true');
+      await page.screenshot({ path: testInfo.outputPath('collection-contract.png'), fullPage: true });
       const search = page.getByRole('combobox', { name: 'Contrato existente del proyecto' });
       await search.click();
       const options = page.getByRole('listbox', { name: 'Documentos del proyecto' });

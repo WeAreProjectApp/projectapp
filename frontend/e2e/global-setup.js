@@ -71,6 +71,12 @@ const RESPONSIVE_SPECIAL_WARMUP_ROUTES = Object.freeze({
     '/es-co/platform/projects/1',
     '/es-co/platform/projects/1/access',
   ],
+  'clients-special-3': [
+    '/es-co/platform/projects',
+    '/es-co/platform/projects/1',
+    '/es-co/platform/projects/1/bugs',
+    '/es-co/platform/projects/1/changes',
+  ],
   'commercial-special': ['/en-us/panel/proposals'],
   'commercial-special-2': [
     '/es-co/panel/proposals/1/edit?tab=proposal&section=sections',
