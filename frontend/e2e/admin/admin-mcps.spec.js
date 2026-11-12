@@ -27,7 +27,7 @@ const CONNECTOR = {
   capabilities: [
     {
       label: 'Blog y calendario editorial',
-      actions: ['Consultar y previsualizar', 'Crear'],
+      actions: ['Consultar', 'Crear'],
       tools: ['get_blog_template', 'create_blog_post'],
       requires_confirmation: true,
     },
@@ -339,7 +339,7 @@ test.describe('Panel MCPs', () => {
     await expect(page.getByText('sin generar')).toBeVisible();
     await expect(page.getByTestId('mcp-capabilities-content')).toContainText('Qué puedes gestionar');
     await expect(page.getByTestId('mcp-capabilities-content')).toContainText(
-      'Blog y calendario editorial: Consultar y previsualizar · Crear.',
+      'Blog y calendario editorial: Consultar · Crear.',
     );
     await expect(page.getByTestId('mcp-capabilities-content')).toContainText(
       'Las acciones sensibles requieren confirmación.',

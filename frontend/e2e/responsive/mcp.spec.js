@@ -25,7 +25,7 @@ const connector = {
   is_legacy: false,
   capabilities: [{
     label: LONG_CAPABILITY_LABEL.slice(0, -1),
-    actions: ['Consultar y previsualizar', 'Crear'],
+    actions: ['Consultar', 'Crear'],
     tools: ['get_blog_template', 'create_blog_post'],
     requires_confirmation: true,
   }],
@@ -144,7 +144,7 @@ for (const profile of MCP_DISPLAY_PROFILES) {
       await expectInsideViewport(page, actor, `Actor: ${LONG_ACTOR}`);
       await expectInsideViewport(page, requestId, `Request ${LONG_REQUEST_ID}`);
       await expectInsideViewport(page, capability, LONG_CAPABILITY_LABEL);
-      await expect(page.getByTestId('mcp-capabilities-content')).toContainText('Consultar y previsualizar · Crear.');
+      await expect(page.getByTestId('mcp-capabilities-content')).toContainText('Consultar · Crear.');
       await expect(page.getByTestId('mcp-capabilities-content')).toContainText('Las acciones sensibles requieren confirmación.');
       await expect(priorityLocator).toBeVisible();
       await expect(priorityLocator).toHaveText('create_blog_post');

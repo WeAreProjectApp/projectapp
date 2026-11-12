@@ -158,7 +158,7 @@ def test_operations_capability_groups_publish_their_confirmation_contract(super_
 
     assert groups == {
         'Casos, reportes y recursos observados': {
-            'actions': ['Consultar y previsualizar', 'Editar y configurar', 'Crear'],
+            'actions': ['Consultar', 'Actualizar', 'Crear', 'Vincular'],
             'requires_confirmation': True,
             'tools': [
                 'create_monitoring_case_note', 'get_monitoring_case', 'get_monitoring_catalog',
@@ -167,7 +167,7 @@ def test_operations_capability_groups_publish_their_confirmation_contract(super_
             ],
         },
         'Indicadores y Radar de atención': {
-            'actions': ['Consultar y previsualizar'],
+            'actions': ['Consultar'],
             'requires_confirmation': False,
             'tools': ['get_operations_dashboard'],
         },
@@ -200,6 +200,38 @@ def test_canonical_business_tools_list_appear_once_in_catalog_capabilities(
     assert listed.status_code == 200
     assert len(capability_names) == len(set(capability_names))
     assert set(capability_names) == listed_business
+    assert all(
+        'Otras acciones del módulo' not in group['actions'] for group in payload['capabilities']
+    )
+
+
+@pytest.mark.parametrize(
+    ('slug', 'tool_name', 'expected_group'),
+    [
+        ('commercial', 'create_share_link', 'Propuestas y documentos comerciales'),
+        ('commercial', 'send_initial', 'Diagnósticos'),
+        ('commercial', 'send_final', 'Diagnósticos'),
+        ('commercial', 'mark_in_analysis', 'Diagnósticos'),
+        ('commercial', 'record_requirement_estimate', 'Calculadora de requerimientos'),
+        ('commercial', 'record_requirement_actual', 'Calculadora de requerimientos'),
+        ('commercial', 'get_requirement_calibration', 'Calculadora de requerimientos'),
+        ('content', 'get_connection_status', 'LinkedIn'),
+    ],
+)
+def test_catalog_assigns_misgrouped_tools_to_their_literal_capability_group(
+    super_client, slug, tool_name, expected_group,
+):
+    """Fails if an MCP tool is listed under a neighboring module group instead of its real task."""
+    McpConnector.objects.update_or_create(
+        slug=slug,
+        defaults={'name': slug, 'is_active': True, 'retired_at': None, 'aliases_retired_at': None},
+    )
+
+    response = super_client.get('/api/mcp-connectors/')
+    payload = {item['slug']: item for item in response.data}[slug]
+    actual_group = next(group['label'] for group in payload['capabilities'] if tool_name in group['tools'])
+
+    assert actual_group == expected_group
 
 
 def test_catalog_hides_retired_connectors_but_keeps_pending_retirement_visible(super_client):
