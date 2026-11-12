@@ -476,7 +476,7 @@ class Command(BaseCommand):
                 category=recurring_category,
                 is_active=is_active,
                 is_archived=is_archived,
-                archived_at=timezone.now() if is_archived else None,
+                archived_at=context.anchor_now if is_archived else None,
                 reminders_muted=reminders_muted,
                 source_ref=FAKE_REF,
             )

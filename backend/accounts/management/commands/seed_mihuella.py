@@ -33,6 +33,7 @@ from accounts.models import (
     Deliverable, DeliverableVersion, HostingSubscription, Payment,
     Project, ProjectPhase, Requirement, UserProfile,
 )
+from content.fake_data_files import fake_data_transaction, sample_file
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 from content.models import BusinessProposal, ProposalSection
 from content.services.proposal_service import ProposalService
@@ -133,7 +134,7 @@ class Command(BaseCommand):
         )
         add_seed_arguments(parser)
 
-    @transaction.atomic
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('seed_mihuella')
         self.seed_context = seed_context(options, 'mihuella')
@@ -1111,7 +1112,7 @@ class Command(BaseCommand):
         ]
 
         for d_data in deliverables:
-            placeholder = ContentFile(b'placeholder content', name=d_data['filename'])
+            placeholder = sample_file(d_data['filename'])
             epic_key = d_data.get('epic_key', '')
             d = Deliverable.objects.create(
                 project=project,
@@ -1126,7 +1127,7 @@ class Command(BaseCommand):
             )
             DeliverableVersion.objects.create(
                 deliverable=d,
-                file=placeholder,
+                file=sample_file(d_data['filename']),
                 version_number=1,
                 uploaded_by=admin,
             )
