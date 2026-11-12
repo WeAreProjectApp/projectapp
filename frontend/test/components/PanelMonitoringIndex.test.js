@@ -57,7 +57,7 @@ const MonitoringSelectStub = {
     <select :data-testid="testId" :value="modelValue" @change="$emit('update:modelValue', $event.target.value)">
       <option value=""></option><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
     </select>
-    <output :data-testid="\`${testId}-options\`">{{ options.map(option => \`${option.value}:${option.label}\`).join("|") }}</output>
+    <output :data-testid="testId + '-options'">{{ options.map(option => option.value + ':' + option.label).join('|') }}</output>
   </div>`,
 }
 
