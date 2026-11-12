@@ -3555,7 +3555,7 @@ def wompi_webhook_view(request):
         try:
             apply_transaction(package_order.project_id, package_order.recorded_by, package_order.pk,
                 {'request_id': uuid5(NAMESPACE_URL, f'package:{transaction_id}:{transaction.get("status")}'),
-                 'transaction_id': transaction_id}, transaction)
+                 'transaction_id': transaction_id}, transaction, trusted_webhook=True)
         except APIException:
             return Response({'status': 'invalid package transaction'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'status': 'ok'})

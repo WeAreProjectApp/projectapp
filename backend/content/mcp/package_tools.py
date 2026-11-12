@@ -38,6 +38,11 @@ PACKAGE_GENERAL_TOOLS = [
 ]
 
 PACKAGE_PROJECT_TOOLS = [
+    operation('list_package_request_queue', 'Consulta la bandeja administrativa de solicitudes por talla con búsqueda, estado y paginación.',
+              'package-admin-queue', fields={**PAGE,
+                'search': field('string', 'Texto del proyecto o solicitud que se desea buscar.', maxLength=200),
+                'status': field('string', 'Estado de la solicitud; omitir para consultar todos.',
+                    enum=['pending', 'evaluating', 'offered', 'objected', 'accepted', 'cancelled'])}),
     operation('get_project_requirement_packages', 'Consulta catálogo público, compras, saldos, movimientos y solicitudes del proyecto.',
               'package-overview', path=('project_id',), fields={'language': LANG,
                 **{key: field('integer', 'Desplazamiento de esta colección paginada.', minimum=0)

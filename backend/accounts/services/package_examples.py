@@ -3,8 +3,6 @@ import json
 from pathlib import Path
 
 from django.db import transaction
-from rest_framework.exceptions import ValidationError
-
 from django.contrib.auth import get_user_model
 from accounts.models_requirement_packages import PackageExampleRevision, PackageOperation
 from accounts.services.delivery_access import DeliveryConflict, project_for_actor, require_admin
@@ -18,6 +16,14 @@ ENGLISH = {
     'XL': ['Build a complex integration with a clearly defined outcome and acceptance criteria.'],
     'PROJECT': ['Build a new product combining independent capabilities, such as payments, inventory and delivery.'],
 }
+ENGLISH_DEFINITIONS = {
+    'XS': 'A focused adjustment to an existing capability.',
+    'S': 'A small extension to an existing screen or capability.',
+    'M': 'A bounded capability involving business logic or several existing components.',
+    'L': 'A complete, self-contained new capability with its own server and interface work.',
+    'XL': 'A complex, bounded capability with one outcome and verifiable acceptance criteria.',
+    'PROJECT': 'Several independent capabilities requiring their own agreed scope.',
+}
 
 
 def latest(project_id, language):
@@ -30,6 +36,9 @@ def example_catalog(project_id=None, *, language='es'):
     from content.models import RequirementCalculator
     calculator = RequirementCalculator.objects.select_related('current_revision').first()
     config = calculator.current_revision.definition if calculator else json.loads(config_path.read_text())
+    definitions = ({row['id']: row['definition'] for row in config['sizes']}
+                   if language == 'es' else ENGLISH_DEFINITIONS.copy())
+    definitions.setdefault('PROJECT', 'Varias capacidades independientes que requieren un alcance propio acordado.')
     generic = ({row['id']: row['examples'] for row in config['sizes']} if language == 'es' else ENGLISH.copy())
     generic.setdefault('PROJECT', ['Crear un producto que combina capacidades independientes y requiere su propio alcance.'])
     general = latest(None, language)
@@ -40,7 +49,7 @@ def example_catalog(project_id=None, *, language='es'):
     return {'language': language, 'generic_revision': general.pk if general else 0,
             'project_revision': project.pk if project else 0,
             'custom_examples': custom, 'generic_examples': generic,
-            'sizes': [{'size': size, 'examples': custom.get(size, generic[size]),
+            'sizes': [{'size': size, 'definition': definitions[size], 'examples': custom.get(size, generic[size]),
                        'source': 'project' if size in custom else 'generic'} for size in OUTCOMES]}
 
 

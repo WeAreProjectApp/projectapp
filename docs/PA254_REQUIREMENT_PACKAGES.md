@@ -17,6 +17,7 @@ La aprobación interna ni una sesión suplantada sustituyen ese consentimiento.
 
 ## Ejemplos y clasificación
 
+Cada talla muestra una definición pública corta, sin bandas de horas ni costos.
 Hay ejemplos genéricos ES/EN y revisiones por proyecto. La personalización
 prevalece **por talla**; al retirar una talla particular reaparece su ejemplo
 genérico. Un proyecto no tiene que personalizarlas todas. El editor presenta
@@ -46,6 +47,10 @@ esa acreditación con la verificación posterior al retorno del navegador.
 Regresar a Plataforma por sí solo no activa cupos. En otras monedas se ofrece
 pago externo, que el administrador confirma con fecha real y referencia.
 Confirmar un pago acredita una sola vez, aunque se repita la notificación.
+Si el proyecto o cliente se suspende o archiva mientras se procesa el pago,
+el webhook firmado sigue registrando el resultado canónico de esa compra.
+Eso no habilita compras, evaluaciones ni consentimientos nuevos; el actor
+histórico se conserva incluso si su cuenta ya está inactiva.
 
 Contrato externo contrastado con [Links de pago de Wompi](https://docs.wompi.co/docs/colombia/links-de-pago/):
 monto fijo, moneda COP, uso único y URL de retorno. El proveedor sólo se
@@ -85,8 +90,12 @@ Las escrituras incluyen un UUID estable `request_id`; reutilizarlo con otro
 contenido produce conflicto. Las propuestas/decisiones/configuración requieren
 la versión consultada, y ejemplos la revisión vigente. Las colecciones de
 compras, solicitudes y movimientos usan desplazamientos de 20 registros.
+Los listados de solicitudes contienen resúmenes; el detalle conserva descripción,
+propuestas y decisiones completas. El catálogo carga los parámetros de precio
+una vez por consulta, independientemente de la cantidad de paquetes.
 
-MCP Comercial administra ejemplos genéricos. MCP Proyectos consulta saldos y
+MCP Comercial administra ejemplos genéricos. MCP Proyectos consulta la bandeja,
+saldos y
 solicitudes y administra ejemplos particulares, compras, pagos externos,
 evaluaciones, configuración y reversiones. Las operaciones sensibles requieren
 su confirmación MCP. Ninguna credencial administrativa puede aceptar por el

@@ -108,6 +108,14 @@ function resolveCatalogUrl(url) {
 }
 
 function defaultCapabilities(view, owner) {
+  if (view.url === '/panel/requirement-packages') return {
+    panelShell: true, table: false, tabs: false, filters: true,
+    modal: false, selection: false, touch: true,
+  };
+  if (view.url === '/platform/projects/:id/packages') return {
+    panelShell: false, table: false, tabs: false, filters: false,
+    modal: false, selection: false, touch: true,
+  };
   if (view.url.startsWith('/panel/procurement')) return {
     panelShell: true, table: false, tabs: view.viewType === 'list', filters: view.viewType === 'list',
     modal: view.viewType === 'list', selection: false, touch: true,
@@ -160,6 +168,8 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
         ?? (view.url === '/panel/access' ? 'admin-access-management' : null)
         ?? BILLING_FLOW_BY_URL[view.url]
         ?? (view.url === '/panel/data-integrity' ? 'admin-data-integrity-findings' : null)
+        ?? (view.url === '/panel/requirement-packages' ? 'admin-requirement-packages-queue' : null)
+        ?? (view.url === '/platform/projects/:id/packages' ? 'platform-requirement-packages-purchase' : null)
         ?? (view.url === '/platform/projects/:id/secure-links' ? 'platform-secure-link-manage' : null)
         ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review'
           : view.url === '/panel/platform/ai' ? 'panel-platform-ai-settings' : OWNER_FLOW[owner]),

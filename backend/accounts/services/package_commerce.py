@@ -5,14 +5,13 @@ from decimal import Decimal, ROUND_HALF_UP
 
 import requests
 from django.conf import settings
-from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from accounts.models_requirement_packages import PackageMovement, PackageOrder, PackageProjectSettings
 from accounts.services.package_common import check_version, mutate, notify_client, notify_team, owned
-from content.models import HourPackage
+from content.models import HourPackage, HourPackageSettings
 from content.services.requirement_package_service import package_terms, price_context, priced_package
 
 SIZES = ('XS', 'S', 'M')
@@ -38,10 +37,11 @@ def update_settings(project_id, actor, data):
     return mutate(project_id, actor, 'settings', data, change, admin=True)
 
 
-def quote(package, project, *, language='es', config=None, context=None):
+def quote(package, project, *, language='es', config=None, context=None, pricing_settings=None):
     config = config or settings_payload(project)
-    context = context or price_context(config['nationality'])
-    price = priced_package(package, context=context)
+    pricing_settings = pricing_settings or HourPackageSettings.load()
+    context = context or price_context(config['nationality'], pricing_settings)
+    price = priced_package(package, settings=pricing_settings, context=context)
     subtotal = Decimal(price['total_price'])
     tax_rate = Decimal(config['tax_rate'])
     quantum = Decimal('1') if context[2] == 'COP' else Decimal('.01')
@@ -61,8 +61,10 @@ def quote(package, project, *, language='es', config=None, context=None):
 def catalog(project, *, language='es'):
     config = settings_payload(project)
     rows = HourPackage.objects.filter(is_active=True, pricing_model='requirements', nationality=config['nationality'])
-    context = price_context(config['nationality'])
-    return [quote(row, project, language=language, config=config, context=context) for row in rows]
+    pricing_settings = HourPackageSettings.load()
+    context = price_context(config['nationality'], pricing_settings)
+    return [quote(row, project, language=language, config=config, context=context,
+                  pricing_settings=pricing_settings) for row in rows]
 
 
 def order_payload(order):
@@ -178,7 +180,12 @@ def checkout(project_id, actor, order_id, data):
     return mutate(project_id, actor, f'checkout:{order_id}', data, change)
 
 
-def apply_transaction(project_id, actor, order_id, data, transaction_data):
+def apply_transaction(project_id, actor, order_id, data, transaction_data, *, trusted_webhook=False):
+    if trusted_webhook and not PackageOrder.objects.filter(
+        pk=order_id, project_id=project_id, recorded_by=actor,
+    ).exists():
+        raise PermissionDenied('El actor del pago no corresponde a la compra registrada.')
+
     def change(project):
         order = owned(PackageOrder.objects.select_for_update(), project, pk=order_id)
         tx = transaction_data
@@ -206,7 +213,8 @@ def apply_transaction(project_id, actor, order_id, data, transaction_data):
             order.status = 'failed'
             order.save(update_fields=['status'])
         return order_payload(order)
-    return mutate(project_id, actor, f'transaction:{order_id}', data, change)
+    return mutate(project_id, actor, f'transaction:{order_id}', data, change,
+                  allow_inactive_settlement=trusted_webhook, trusted_settlement=trusted_webhook)
 
 
 def reverse_movement(project_id, actor, movement_id, data):

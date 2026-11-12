@@ -53,6 +53,7 @@ const orderState = (state) =>
 const dateText = (date) =>
   date ? new Date(date).toLocaleDateString(locale.value) : "—";
 let loadSequence = 0;
+let selectionSequence = 0;
 
 async function load() {
   const seq = ++loadSequence;
@@ -75,7 +76,7 @@ async function load() {
         };
     const requestId =
       selected.value?.id || props.initialRequest || route.query.request;
-    if (requestId) selected.value = await props.api.request(Number(requestId));
+    if (requestId) await openRequest({ id: Number(requestId) });
   } catch (err) {
     if (seq === loadSequence) error.value = packageError(err);
   } finally {
@@ -109,8 +110,13 @@ async function buy(pkg, method) {
       quote_digest: pkg.quote_digest,
     });
     if (method === "online") {
-      const checkout = await props.api.checkout(order.id);
-      window.location.assign(checkout.checkout_url);
+      try {
+        const checkout = await props.api.checkout(order.id);
+        window.location.assign(checkout.checkout_url);
+      } catch (err) {
+        await load();
+        throw err;
+      }
     }
   });
 }
@@ -123,16 +129,18 @@ async function resumePayment(order) {
 async function sendRequest() {
   await perform(async () => {
     const created = await props.api.createRequest(newRequest.value);
-    selected.value = await props.api.request(created.id);
+    await openRequest(created);
     newRequest.value = { title: "", description: "" };
     pages.value.request_offset = 0;
   });
 }
 async function openRequest(row) {
+  const current = ++selectionSequence;
   try {
-    selected.value = await props.api.request(row.id);
+    const result = await props.api.request(row.id);
+    if (current === selectionSequence) selected.value = result;
   } catch (err) {
-    error.value = packageError(err);
+    if (current === selectionSequence) error.value = packageError(err);
   }
 }
 async function confirmExternal(order) {
@@ -163,6 +171,13 @@ async function changePage(key, amount) {
   await load();
 }
 watch(language, load);
+watch(
+  [() => route.query.request, () => props.initialRequest],
+  ([requestId, initialRequest]) => {
+    const id = Number(initialRequest || requestId);
+    if (Number.isInteger(id) && id > 0) openRequest({ id });
+  },
+);
 onMounted(async () => {
   await load();
   await verifyReturn();
@@ -239,6 +254,7 @@ onMounted(async () => {
             :data-testid="`package-size-${row.size}`"
           >
             <h3 class="font-semibold text-text-default">{{ row.size }}</h3>
+            <p class="text-sm text-text-default">{{ row.definition }}</p>
             <p class="text-xs text-text-muted">
               {{
                 row.source === "project"

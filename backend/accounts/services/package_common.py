@@ -6,12 +6,9 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
+from accounts.models import Project
 from accounts.models_requirement_packages import PackageOperation
 from accounts.services.delivery_access import DeliveryConflict, project_for_actor, require_admin
-
-
-def page(queryset, *, offset=0, limit=20):
-    return {'count': queryset.count(), 'results': list(queryset[offset:offset + limit])}
 
 
 def check_version(record, expected):
@@ -26,19 +23,26 @@ def owned(queryset, project, **lookup):
     return row
 
 
-def mutate(project_id, actor, action, data, change, *, admin=False):
+def mutate(project_id, actor, action, data, change, *, admin=False,
+           allow_inactive_settlement=False, trusted_settlement=False):
     """A project serializes balance writes, including requests against different orders."""
     if admin:
         require_admin(actor)
     normalized = json.loads(json.dumps(data, default=str))
     fingerprint = hashlib.sha256(json.dumps([project_id, action, normalized], sort_keys=True).encode()).hexdigest()
     with transaction.atomic():
-        project = project_for_actor(project_id, actor, lock=True)
-        if project.status in ('archived', 'decommissioned', 'suspended'):
-            raise ValidationError('El proyecto no permite nuevas operaciones de paquetes.')
-        profile = getattr(project.client, 'profile', None)
-        if profile and profile.archived_at:
-            raise ValidationError('El cliente está archivado.')
+        if trusted_settlement and allow_inactive_settlement:
+            project = Project.objects.select_for_update().select_related('client').filter(pk=project_id).first()
+            if project is None:
+                raise NotFound('Proyecto no encontrado.')
+        else:
+            project = project_for_actor(project_id, actor, lock=True)
+        if not allow_inactive_settlement:
+            if project.status in ('archived', 'decommissioned', 'suspended'):
+                raise ValidationError('El proyecto no permite nuevas operaciones de paquetes.')
+            profile = getattr(project.client, 'profile', None)
+            if profile and profile.archived_at:
+                raise ValidationError('El cliente está archivado.')
         # Actor lock covers request_id collisions across two different projects.
         get_user_model().objects.select_for_update().get(pk=actor.pk)
         previous = PackageOperation.objects.filter(actor=actor, request_id=data['request_id']).first()

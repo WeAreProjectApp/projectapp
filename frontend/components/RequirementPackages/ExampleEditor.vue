@@ -17,6 +17,7 @@ const note = ref("");
 const error = ref("");
 const busy = ref(false);
 const history = ref(null);
+const historyOffset = ref(0);
 const sizes = ["XS", "S", "M", "L", "XL", "PROJECT"];
 const fieldClass =
   "w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm text-input-text";
@@ -32,6 +33,7 @@ async function load() {
   busy.value = true;
   error.value = "";
   history.value = null;
+  historyOffset.value = 0;
   try {
     const result = await props.api.examples(props.language, globalScope.value);
     if (current !== sequence) return;
@@ -83,12 +85,15 @@ async function save() {
     busy.value = false;
   }
 }
-async function showHistory() {
+async function showHistory(offset = 0) {
   try {
-    history.value = await props.api.exampleHistory(
+    const result = await props.api.exampleHistory(
       props.language,
       globalScope.value,
+      offset,
     );
+    history.value = result;
+    historyOffset.value = offset;
   } catch (err) {
     error.value = packageError(err);
   }
@@ -170,15 +175,38 @@ onMounted(load);
           variant="secondary"
           :disabled="busy"
           :disabled-reason="tr('busy')"
-          @click="showHistory"
+          @click="showHistory()"
           >{{ tr("revisions") }}</BaseButton
         >
       </div>
     </form>
-    <ol v-if="history" class="space-y-2 text-sm text-text-muted">
-      <li v-for="row in history.results" :key="row.id">
-        #{{ row.id }} · {{ row.created_at }} · {{ row.note }}
-      </li>
-    </ol>
+    <div v-if="history" class="space-y-3 text-sm text-text-muted">
+      <p v-if="!history.count">{{ tr("none") }}</p>
+      <details v-for="row in history.results" :key="row.id" class="space-y-2">
+        <summary class="cursor-pointer">
+          #{{ row.id }} · {{ row.created_at }} · {{ row.note }}
+        </summary>
+        <div v-for="(examples, size) in row.examples" :key="size">
+          <p class="font-semibold">{{ size }}</p>
+          <ul class="list-inside list-disc">
+            <li v-for="example in examples" :key="example">{{ example }}</li>
+          </ul>
+        </div>
+      </details>
+      <div class="flex flex-wrap gap-3">
+        <BaseButton
+          v-if="historyOffset"
+          variant="secondary"
+          @click="showHistory(historyOffset - 20)"
+          >{{ tr("previous") }}</BaseButton
+        >
+        <BaseButton
+          v-if="history.count > historyOffset + 20"
+          variant="secondary"
+          @click="showHistory(historyOffset + 20)"
+          >{{ tr("more") }}</BaseButton
+        >
+      </div>
+    </div>
   </section>
 </template>

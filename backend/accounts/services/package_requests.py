@@ -1,18 +1,16 @@
 """Manual sizing, versioned offers and client-only atomic allowance consent."""
-from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.models import ChangeRequest
 from accounts.models_requirement_packages import (
-    PackageDecision, PackageMovement, PackageOrder, PackageRequest, PackageSizingProposal,
+    PackageDecision, PackageMovement, PackageRequest, PackageSizingProposal,
 )
 from accounts.services.delivery_access import is_admin
 from accounts.services.issue_context import save_context
 from accounts.services.package_common import check_version, mutate, notify_client, notify_team, owned
 from accounts.services.package_commerce import SIZES, balances, eligible_order
 from accounts.services.package_examples import example_catalog
-from content.models import CalculatorEstimate
 from content.services import calculator_calibration, requirement_calculator
 
 
@@ -27,10 +25,10 @@ def proposal_payload(row):
                          'created_at': decision.created_at.isoformat()} if decision else None}
 
 
-def request_payload(row, *, detail=False, include_balance=True):
+def request_payload(row, *, detail=False):
     current = row.current_proposal
     available = None
-    if include_balance and current and current.public_snapshot['size'] in SIZES:
+    if current and current.public_snapshot['size'] in SIZES:
         size = current.public_snapshot['size']
         available = eligible_order(row.project, size)
         # Include the allowance a replacement would restore, without writing.
@@ -51,9 +49,16 @@ def request_payload(row, *, detail=False, include_balance=True):
     return result
 
 
-def request_queryset(project):
-    return (PackageRequest.objects.filter(project=project, client_id=project.client_id,
-            ticket__is_archived=False).select_related('ticket', 'project', 'current_proposal__decision'))
+def request_summary(row):
+    return {'id': row.pk, 'ticket_id': row.ticket_id, 'project_id': row.project_id,
+            'project_name': row.project.name, 'title': row.ticket.title,
+            'status': row.status, 'version': row.version, 'created_at': row.created_at.isoformat()}
+
+
+def request_queryset(project, *, detail=True):
+    rows = PackageRequest.objects.filter(project=project, client_id=project.client_id,
+                                         ticket__is_archived=False).select_related('ticket', 'project')
+    return rows.select_related('current_proposal__decision') if detail else rows.defer('ticket__description')
 
 
 def create_request(project_id, actor, data):

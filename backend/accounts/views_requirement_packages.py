@@ -2,7 +2,7 @@
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound, ValidationError
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import Project
@@ -50,7 +50,7 @@ def package_overview(request, project_id):
     language_code = language(request)
     orders = PackageOrder.objects.filter(project=project, client_id=project.client_id)
     movements = PackageMovement.objects.filter(order__project=project, order__client_id=project.client_id).select_related('order')
-    rows = requests_service.request_queryset(project)
+    rows = requests_service.request_queryset(project, detail=False)
     first = offset(request, 'order_offset')
     movement_offset = offset(request, 'movement_offset')
     request_offset = offset(request, 'request_offset')
@@ -59,7 +59,7 @@ def package_overview(request, project_id):
               'examples': examples.example_catalog(project.pk, language=language_code),
               'balances': commerce.balances(project),
               'orders': {'count': orders.count(), 'results': [commerce.order_payload(row) for row in orders[first:first + 20]]},
-              'requests': {'count': rows.count(), 'results': [requests_service.request_payload(row, include_balance=False) for row in rows[request_offset:request_offset + 20]]},
+              'requests': {'count': rows.count(), 'results': [requests_service.request_summary(row) for row in rows[request_offset:request_offset + 20]]},
               'movements': {'count': movements.count(), 'results': [{'id': row.pk, 'order_id': str(row.order_id),
                   'size': row.size, 'quantity': row.quantity, 'kind': row.kind, 'reason': row.reason,
                   'reverses_id': row.reverses_id, 'created_at': row.created_at.isoformat()} for row in movements[movement_offset:movement_offset + 20]]}}
@@ -184,7 +184,7 @@ def package_settings(request, project_id):
 @platform_role_boundary
 def package_admin_queue(request):
     require_admin(request.user)
-    rows = PackageRequest.objects.filter(ticket__is_archived=False).select_related('ticket', 'project', 'current_proposal__decision')
+    rows = PackageRequest.objects.filter(ticket__is_archived=False).select_related('ticket', 'project').defer('ticket__description')
     state = request.query_params.get('status', '')
     if state:
         if state not in dict(PackageRequest._meta.get_field('status').choices):
@@ -195,7 +195,7 @@ def package_admin_queue(request):
         rows = rows.filter(Q(ticket__title__icontains=search) | Q(project__name__icontains=search))
     start = offset(request)
     return Response({'count': rows.count(), 'pending_count': rows.filter(status__in=['pending', 'evaluating', 'objected']).count(),
-                     'results': [requests_service.request_payload(row, include_balance=False) for row in rows[start:start + 20]]})
+                     'results': [requests_service.request_summary(row) for row in rows[start:start + 20]]})
 
 
 @api_view(['GET'])
