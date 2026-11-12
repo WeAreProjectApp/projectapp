@@ -1,0 +1,51 @@
+asgiref==3.12.1
+Django==6.1.2
+django-cors-headers==4.9.0
+django-dbbackup>=4.0.0
+django-silk>=5.5.2
+djangorestframework==3.18.3
+djangorestframework-simplejwt>=5.5.1,<6.0
+Faker==40.37.0
+huey>=3.3.4
+pillow==13.0.0
+python-dateutil
+python-decouple>=3.8,<3.9
+redis>=8.1.0
+requests==2.34.2
+certifi>=2026.10.19  # GHSA-6q48-6c7w-9gw2: drop the compromised emSign roots
+dnspython>=2.6.1,<3.0
+cryptography>=50.0.1,<51.0
+six==1.17.0
+sqlparse==0.6.0
+tzdata==2026.3
+
+# Testing
+pytest==9.1.1
+pytest-cov==7.1.0
+pytest-django==4.14.0
+coverage==7.15.4
+freezegun==1.5.5
+
+# PDF generation
+reportlab>=5.0,<6.0
+pypdf>=6.21.2,<7.0
+num2words>=0.5,<0.6
+
+# Spreadsheet export
+openpyxl>=3.1,<4.0
+
+# Production server
+gunicorn>=26.2,<27.0
+mysqlclient>=2.2,<3.0
+
+# Untrusted Linktree packages and isolated browser validation
+html5lib==1.1
+tinycss2>=1.4,<2
+defusedxml>=0.7.1,<0.8
+playwright==1.63.0
+
+# Versioned editorial Markdown grammar
+markdown-it-py==4.2.0
+
+# Google ID-token signature/audience verification
+google-auth==2.40.3
