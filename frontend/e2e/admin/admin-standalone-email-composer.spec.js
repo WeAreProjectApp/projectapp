@@ -117,7 +117,7 @@ async function openEmailsFromMenu(page) {
   if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
     await page.getByRole('button', { name: 'Abrir menú' }).click();
   }
-  await page.getByRole('link', { name: 'Enviar emails', exact: true }).click();
+  await page.getByRole('link', { name: 'Emails', exact: true }).click();
 }
 
 test.describe('Admin Standalone Email Composer', () => {

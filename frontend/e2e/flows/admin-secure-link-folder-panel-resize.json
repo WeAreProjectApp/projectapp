@@ -1,0 +1,14 @@
+{
+  "id": "admin-secure-link-folder-panel-resize",
+  "name": "Admin Secure Links Folder Panel Resize",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P3",
+  "description": "Admin resizes the adjacent secure-links folder navigation by mouse or keyboard from 240px to 480px, starting at 256px. The list reflows during drag; projectapp-secure-links-folder-width persists independently of Documents, and double-click restores the default. Below panel-landscape the drawer replaces the sidebar.",
+  "outcomes": [
+    "display",
+    "success"
+  ]
+}

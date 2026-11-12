@@ -12,6 +12,7 @@ import { setPlatformAuth } from '../helpers/platform-auth.js';
 import { viewportUse } from '../helpers/viewports.js';
 import {
   ADMIN_DEFAULTS_UNIFIED,
+  ADMIN_EMAIL_DELIVERABILITY,
   ADMIN_IMPERSONATE_USER,
   PLATFORM_DELIVERABLE_DETAIL,
   PLATFORM_LEGACY_ROUTE_REDIRECTS,
@@ -45,6 +46,7 @@ const legacyPlatformRedirects = Object.freeze([
   redirectScenario('/platform/access'),
 ]);
 const proposalEmailTemplatesRedirect = redirectScenario('/panel/proposals/email-templates');
+const emailDeliverabilityRedirect = redirectScenario('/panel/proposals/email-deliverability');
 const proposalDefaultsRedirect = redirectScenario('/panel/proposals/defaults');
 const diagnosticDefaultsRedirect = redirectScenario('/panel/diagnostics/defaults');
 const deliverableRedirect = redirectScenario('/platform/projects/:id/deliverables/:deliverableId');
@@ -196,6 +198,13 @@ for (const profile of RESPONSIVE_PROFILES) {
     });
 
     test.describe('unified defaults aliases', () => {
+      if (belongsToRequestedBatch(emailDeliverabilityRedirect)) {
+        test('former email deliverability opens the Email status tab', { tag: [...ADMIN_EMAIL_DELIVERABILITY, '@outcome:success', ...redirectTags(emailDeliverabilityRedirect, profile)] }, async ({ page }) => {
+          // quality: allow-no-interaction (opening a legacy bookmark invokes a route-only compatibility redirect)
+          await navigateCompatibilityRedirect(page, emailDeliverabilityRedirect);
+          await expect(page).toHaveURL(redirectUrlPattern(emailDeliverabilityRedirect));
+        });
+      }
       if (belongsToRequestedBatch(proposalEmailTemplatesRedirect)) {
         test('proposal email templates retains its defaults query', { tag: [...ADMIN_DEFAULTS_UNIFIED, '@outcome:success', ...redirectTags(proposalEmailTemplatesRedirect, profile)] }, async ({ page }) => {
           // quality: allow-no-interaction (a legacy bookmark invokes a route-only compatibility redirect)

@@ -1,7 +1,8 @@
 """Global outbound email history API coverage."""
 
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -19,8 +20,10 @@ from content.models import (
     EmailCopyRecipient,
     EmailDeliverySnapshot,
     EmailLog,
+    IncomeRecord,
 )
 from content.services.email_snapshot_service import EmailSnapshotCaptureError
+from content.services.email_retry_service import prepare_retry_sources, retry_payload
 
 pytestmark = pytest.mark.django_db
 
@@ -46,6 +49,7 @@ def make_log(
     delivery_id=None,
     delivery_role=EmailLog.DeliveryRole.PRIMARY,
     recipient_kind=EmailLog.RecipientKind.TO,
+    metadata=None,
 ):
     return EmailLog.objects.create(
         template_key=template_key,
@@ -57,6 +61,7 @@ def make_log(
         delivery_id=delivery_id,
         delivery_role=delivery_role,
         recipient_kind=recipient_kind,
+        metadata=metadata or {},
     )
 
 
@@ -122,6 +127,49 @@ def make_snapshot_log(
         snapshot=snapshot,
         delivery_id=delivery_id,
     )
+
+
+def make_failed_payment_confirmation_logs(count):
+    logs = []
+    for number in range(1, count + 1):
+        income = IncomeRecord.objects.create(
+            concept=f'Pago archivado {number}',
+            kind=IncomeRecord.Kind.EXPECTED,
+            period_date=date(2026, 7, number),
+            total_amount=Decimal('100.00'),
+            gustavo_amount=Decimal('50.00'),
+            carlos_amount=Decimal('50.00'),
+        )
+        liquid = IncomeRecord.objects.create(
+            concept=f'Abono archivado {number}',
+            kind=IncomeRecord.Kind.LIQUID,
+            period_date=date(2026, 7, number),
+            total_amount=Decimal('50.00'),
+            gustavo_amount=Decimal('25.00'),
+            carlos_amount=Decimal('25.00'),
+            expected_income=income,
+        )
+        logs.append(make_log(
+            'income_payment_received_client',
+            recipient=f'client-{number}@example.com',
+            status=EmailLog.Status.FAILED,
+            audience=EmailLog.Audience.CLIENT,
+            body=EmailBody.objects.create(text='Confirmación', html='<p>Confirmación</p>'),
+            metadata={
+                'income_id': income.pk,
+                'liquid_id': liquid.pk,
+                'document_id': None,
+                'public_number': f'PA-{number:03d}',
+                'greeting_name': 'Ana',
+                'concept': liquid.concept,
+                'project_name': '',
+                'amount': '50.00',
+                'payment_date': f'2026-07-{number:02d}',
+                'payment_date_precision': 'day',
+                'pending_after': '50.00',
+            },
+        ))
+    return logs
 
 
 def test_global_scope_includes_every_audience(admin_client):
@@ -556,6 +604,264 @@ def test_resend_records_failed_log_when_gateway_returns_zero(admin_client):
     assert response.status_code == 502
     failed = EmailLog.objects.exclude(pk=log.pk).get(status=EmailLog.Status.FAILED)
     assert failed.error_message == 'El backend de correo no aceptó el reenvío.'
+
+
+def test_retry_sends_only_the_failed_cc_recipient_from_its_snapshot(admin_client):
+    """Falla si reintentar un CC fallido vuelve a enviar al destinatario que sí recibió."""
+    representative = make_snapshot_log()
+    failed_cc = EmailLog.objects.create(
+        template_key=representative.template_key,
+        recipient='failed-copy@example.com',
+        subject=representative.subject,
+        status=EmailLog.Status.FAILED,
+        audience=representative.audience,
+        body=representative.body,
+        snapshot=representative.snapshot,
+        delivery_id=representative.delivery_id,
+        recipient_kind=EmailLog.RecipientKind.CC,
+    )
+
+    response = admin_client.post(reverse(
+        'retry-standalone-email', kwargs={'log_id': failed_cc.pk},
+    ), {}, format='json')
+
+    retry = EmailLog.objects.get(pk=response.data['id'])
+    assert response.status_code == 201
+    assert response.data == {
+        'id': retry.pk,
+        'status': EmailLog.Status.SENT,
+        'recipient': 'failed-copy@example.com',
+        'retry_of': failed_cc.pk,
+    }
+    assert mail.outbox[0].to == ['failed-copy@example.com']
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].cc == []
+    assert mail.outbox[0].bcc == []
+    assert retry.retry_of_id == failed_cc.pk
+
+
+def test_history_exposes_retry_state_for_each_visible_recipient(admin_client):
+    """Falla si Historial oculta que sólo el CC fallido puede reintentarse."""
+    representative = make_snapshot_log()
+    failed_cc = EmailLog.objects.create(
+        template_key=representative.template_key,
+        recipient='failed-copy@example.com',
+        subject=representative.subject,
+        status=EmailLog.Status.FAILED,
+        audience=representative.audience,
+        body=representative.body,
+        snapshot=representative.snapshot,
+        delivery_id=representative.delivery_id,
+        recipient_kind=EmailLog.RecipientKind.CC,
+    )
+
+    response = global_history(admin_client)
+
+    row = response.data['results'][0]
+    assert response.status_code == 200
+    assert row['is_retryable'] is False
+    assert row['retry_blocked_reason'] == 'Solo se reintentan los envíos que fallaron.'
+    assert row['cc_recipients'] == [{
+        'email': 'failed-copy@example.com',
+        'status': EmailLog.Status.FAILED,
+        'status_label': 'Failed',
+        'error_message': '',
+        'client_id': None,
+        'client_name': '',
+        'id': failed_cc.pk,
+        'is_retryable': True,
+        'retry_blocked_reason': '',
+        'retry_of': None,
+    }]
+
+
+def test_retry_rejects_a_replacement_recipient_without_sending(admin_client):
+    """Falla si el reintento permite cambiar el destinatario archivado."""
+    log = make_snapshot_log()
+    log.status = EmailLog.Status.FAILED
+    log.save(update_fields=['status'])
+
+    response = admin_client.post(reverse(
+        'retry-standalone-email', kwargs={'log_id': log.pk},
+    ), {'recipient': 'replacement@example.com'}, format='json')
+
+    assert response.status_code == 400
+    assert response.data['detail'] == (
+        'El reintento usa el destinatario del fallo y no admite cambios.'
+    )
+    assert mail.outbox == []
+    assert EmailLog.objects.count() == 1
+
+
+@pytest.mark.parametrize('recipient_kind', (
+    EmailLog.RecipientKind.TO, EmailLog.RecipientKind.CC,
+))
+def test_exact_retry_retains_original_client_for_unregistered_alias(
+    admin_client, make_client_profile, recipient_kind,
+):
+    """Falla si un alias válido pierde la asociación del fallo original."""
+    client = make_client_profile(email='registered@example.com')
+    original = make_snapshot_log()
+    original.recipient = 'client-alias@example.com'
+    original.client = client
+    original.status = EmailLog.Status.FAILED
+    original.recipient_kind = recipient_kind
+    original.save(update_fields=['recipient', 'client', 'status', 'recipient_kind'])
+
+    response = admin_client.post(reverse(
+        'retry-standalone-email', kwargs={'log_id': original.pk},
+    ), {}, format='json')
+
+    assert response.status_code == 201
+    retry = EmailLog.objects.get(pk=response.data['id'])
+    assert retry.client_id == client.pk
+    assert retry.audience == EmailLog.Audience.CLIENT
+    assert retry.recipient == original.recipient
+    assert retry.retry_of_id == original.pk
+    assert mail.outbox[0].to == [original.recipient]
+    history = global_history(admin_client)
+    assert history.data['results'][0]['to_recipients'][0]['client_id'] == client.pk
+    assert history.data['results'][0]['audience'] == EmailLog.Audience.CLIENT
+
+
+def test_failed_exact_retry_retains_original_client_for_unregistered_alias(
+    admin_client, make_client_profile,
+):
+    """Falla si otro error de transporte desvincula el intento de su cliente."""
+    client = make_client_profile(email='registered@example.com')
+    original = make_snapshot_log()
+    original.recipient = 'client-alias@example.com'
+    original.client = client
+    original.status = EmailLog.Status.FAILED
+    original.save(update_fields=['recipient', 'client', 'status'])
+
+    with patch(
+        'content.services.email_delivery_service.EmailMessage.send',
+        side_effect=OSError('SMTP unavailable'),
+    ):
+        response = admin_client.post(reverse(
+            'retry-standalone-email', kwargs={'log_id': original.pk},
+        ), {}, format='json')
+
+    assert response.status_code == 502
+    retry = EmailLog.objects.get(pk=response.data['id'])
+    assert retry.status == EmailLog.Status.FAILED
+    assert retry.client_id == client.pk
+    assert retry.audience == EmailLog.Audience.CLIENT
+    assert retry.recipient == original.recipient
+    assert retry.retry_of_id == original.pk
+
+
+def test_exact_resend_attributes_replacement_address_to_its_registered_client(
+    admin_client, make_client_profile,
+):
+    """Falla si reenviar a otra dirección hereda un cliente que no le corresponde."""
+    original_client = make_client_profile(email='registered@example.com')
+    replacement_client = make_client_profile(email='replacement@example.com')
+    original = make_snapshot_log()
+    original.recipient = 'client-alias@example.com'
+    original.client = original_client
+    original.save(update_fields=['recipient', 'client'])
+
+    response = admin_client.post(
+        reverse('resend-standalone-email', kwargs={'log_id': original.pk}),
+        {'recipient': replacement_client.user.email},
+        format='json',
+    )
+
+    assert response.status_code == 200
+    resent = EmailLog.objects.get(pk=response.data['email_log_id'])
+    assert resent.client_id == replacement_client.pk
+    assert resent.audience == EmailLog.Audience.CLIENT
+    assert mail.outbox[0].to == [replacement_client.user.email]
+
+
+def test_failed_snapshot_retry_keeps_a_linked_failed_history_attempt(admin_client):
+    """Falla si un segundo fallo SMTP desaparece del historial o pierde su origen."""
+    log = make_snapshot_log()
+    log.status = EmailLog.Status.FAILED
+    log.save(update_fields=['status'])
+
+    with patch(
+        'content.services.email_delivery_service.EmailMessage.send',
+        side_effect=OSError('SMTP unavailable'),
+    ):
+        response = admin_client.post(reverse(
+            'retry-standalone-email', kwargs={'log_id': log.pk},
+        ), {}, format='json')
+
+    retry = EmailLog.objects.get(retry_of=log)
+    assert response.status_code == 502
+    assert response.data['id'] == retry.pk
+    assert retry.status == EmailLog.Status.FAILED
+    assert retry.recipient == 'recipient@example.com'
+    assert retry.error_message == 'No se pudo completar el envío de correo.'
+
+
+def test_superuser_rebuilds_payment_confirmation_from_saved_facts(super_client):
+    """Falla si un reintento legado consulta el destinatario o saldo actuales."""
+    original = make_failed_payment_confirmation_logs(1)[0]
+    original.recipient = 'original-address@example.com'
+    original.save(update_fields=['recipient'])
+    IncomeRecord.objects.filter(pk=original.metadata['income_id']).update(total_amount=Decimal('900.00'))
+
+    response = super_client.post(reverse(
+        'retry-standalone-email', kwargs={'log_id': original.pk},
+    ), {}, format='json')
+
+    retry = EmailLog.objects.get(pk=response.data['id'])
+    assert response.status_code == 201
+    assert response.data['recipient'] == 'original-address@example.com'
+    assert retry.retry_of_id == original.pk
+    assert mail.outbox[0].to == ['original-address@example.com']
+    assert 'Saldo pendiente: $50 COP' in mail.outbox[0].body
+
+
+def test_admin_cannot_rebuild_a_legacy_payment_confirmation(admin_client):
+    """Falla si un administrador común puede reconstruir un cobro legado."""
+    original = make_failed_payment_confirmation_logs(1)[0]
+
+    response = admin_client.post(reverse(
+        'retry-standalone-email', kwargs={'log_id': original.pk},
+    ), {}, format='json')
+
+    assert response.status_code == 403
+    assert response.data['detail'] == (
+        'Solo un superusuario puede reconstruir este envío contable.'
+    )
+    assert mail.outbox == []
+
+
+def test_retry_blocks_payment_confirmation_with_incomplete_saved_facts(super_client):
+    """Falla si un reintento inventa los datos que el correo legado no guardó."""
+    original = make_failed_payment_confirmation_logs(1)[0]
+    original.metadata = {'income_id': 1, 'liquid_id': 2}
+    original.save(update_fields=['metadata'])
+
+    response = super_client.post(reverse(
+        'retry-standalone-email', kwargs={'log_id': original.pk},
+    ), {}, format='json')
+
+    assert response.status_code == 409
+    assert response.data['detail'] == (
+        'Este envío no conservó todos los datos del pago para reconstruir la confirmación.'
+    )
+    assert mail.outbox == []
+
+
+@pytest.mark.parametrize('log_count', (2, 10))
+def test_prepare_retry_sources_batches_payment_confirmation_pairs(
+    django_assert_num_queries, log_count, superuser,
+):
+    """Falla si Historial vuelve a consultar un pago por cada confirmación fallida."""
+    logs = make_failed_payment_confirmation_logs(log_count)
+
+    with django_assert_num_queries(1):
+        prepare_retry_sources(logs)
+        payloads = [retry_payload(log, superuser) for log in logs]
+
+    assert payloads[0] == {'is_retryable': True, 'retry_blocked_reason': '', 'retry_of': None}
+    assert payloads[-1] == {'is_retryable': True, 'retry_blocked_reason': '', 'retry_of': None}
 
 
 def _document_with_email_usage():

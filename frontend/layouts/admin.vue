@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-layout min-h-screen bg-surface-muted transition-colors duration-200 dark:bg-primary-strong">
+  <div class="admin-layout min-h-screen bg-surface-muted transition-colors duration-200 dark:bg-primary-strong" :style="layoutStyle">
     <div class="hidden panel-landscape:block">
       <PanelSidebar
         :is-collapsed="isCollapsed"
@@ -58,7 +58,8 @@
         // the last row of a table that just overflows the viewport ends up
         // under the FAB, which swallows its action clicks.
         'px-4 pt-6 pb-24 panel-portrait:px-6 panel-desktop:px-8',
-        isCollapsed ? 'panel-landscape:ml-[64px]' : 'panel-landscape:ml-[240px]',
+        'panel-landscape:ml-[var(--panel-sidebar-width,240px)]',
+        isResizing ? 'transition-none select-none' : '',
         'text-base text-text-default',
       ]"
     >
@@ -117,6 +118,8 @@ const { isDark, toggle } = useDarkMode()
 const {
   isCollapsed,
   isMobileOpen,
+  isResizing,
+  layoutStyle,
   hydrate: hydratePanelSidebar,
   toggle: togglePanelSidebar,
   openMobile,

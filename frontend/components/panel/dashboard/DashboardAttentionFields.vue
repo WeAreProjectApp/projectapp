@@ -1,5 +1,5 @@
 <template>
-  <dl class="grid min-w-0 gap-2 text-xs" :class="compact ? '' : 'panel-portrait:grid-cols-2'">
+  <dl class="grid min-w-0 gap-2 text-xs panel-portrait:grid-cols-2">
     <div v-for="field in fields" :key="field" class="min-w-0">
       <dt class="text-text-muted">{{ text[field] }}</dt>
       <dd class="break-words text-text-default" :class="compact ? 'line-clamp-2' : 'whitespace-pre-wrap'">{{ value(field) }}</dd>

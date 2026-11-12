@@ -6,6 +6,8 @@
 
 Implementado Accesos autorizados: código, Google, cuentas administradas por panel/MCP, revocación y excepción de correos con credenciales. Validación focal de backend, frontend y navegador en verde, incluidos los cinco tamaños de pantalla. Rama feat/05112026-authorized-access; [PR #554](https://github.com/WeAreProjectApp/projectapp/pull/554) conserva el estado de CI e integración. Despliegue pendiente del operador.
 
+> **PA-201, PA-202/205, PA-208 y PA-214 — 2026-11-06:** compactar Radar y detalle, redimensionar menú y navegación de Enlaces seguros, reubicar Consultoría e integrar Estado de los emails con Historial y reintentos individuales. Criterio de entrega: cobertura del envío para dos cuentas distintas, reintento histórico y por destinatario, arrastres en las tres vistas y matriz responsiva validados en CI; PR abierto y verde. No se ejecutan tests locales.
+
 > **Enlaces seguros — 2026-10-26:** jerarquía propia, navegación compartida,
 > clasificación inicial por proyecto y MCP de administración completo.
 > Migraciones mediante deploy; entrega y validación se verifican en el PR.

@@ -49,6 +49,7 @@
                 class="my-2 mx-3 h-px bg-border-muted"
               />
               <SidebarItem
+                wrap-label
                 v-else
                 :item="item"
                 :is-collapsed="false"

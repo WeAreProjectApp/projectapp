@@ -69,7 +69,7 @@
 ### E2E scope decisions (audit follow-up)
 
 - **TechnicalDocumentEditor (panel):** No dedicated flow ID. Scope remains within `admin-proposal-edit` and `admin-proposal-defaults-config`; client-facing technical reading is covered by `proposal-technical-view`.
-- **Panel sidebar (collapse / mobile drawer):** No dedicated flow ID. Exercised indirectly by specs that load `/panel` routes using the admin layout.
+- **Panel sidebar:** ancho ajustable, etiquetas completas y navegación cubiertos por `admin-panel-sidebar-resize`; el drawer conserva los mismos accesos.
 
 ### Backend-only and system-triggered flows (not browser E2E)
 
@@ -1082,26 +1082,6 @@ La revisión sigue contrato → alcance → fases de ejecución → etapas → g
   - [Branch D — Empty state] No admins → empty state message with invite CTA.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-admin-management.spec.js`
-
-### 9.3 Email Deliverability Dashboard
-
-#### FLOW: `admin-email-deliverability`
-
-- **Module:** admin
-- **Role:** admin
-- **Priority:** P3
-- **Routes:** `/panel/proposals/email-deliverability`
-- **Description:** Dashboard tracking email send/delivery/bounce/open rates for all proposal-related automated emails. Admin monitors deliverability health.
-- **Steps:**
-  1. Admin navigates to `/panel/proposals/email-deliverability`.
-  2. Dashboard loads email delivery metrics from API.
-  3. Stats render: total sent, delivered, bounced, open rate.
-  4. Per-proposal email log table shows individual send events.
-- **Branches:**
-  - [Branch A — Empty state] No emails sent yet → "No hay datos de entregas." message.
-  - [Branch B — Date filter] Admin filters by date range → metrics update.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/admin/admin-email-deliverability.spec.js`
 
 ### 9.4 Public Landing Pages
 
@@ -3648,14 +3628,14 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 
 - **Módulo:** auth · **Rol:** admin · **Prioridad:** P1
 - **Rutas:** `/panel/login` → `/admin/login/` → destino interno de `next`.
-- **Recorrido:** abrir el enlace al Django Admin, completar credenciales y
+- **Recorrido:** elegir «Entrar con contraseña», completar credenciales y
   reCAPTCHA v2; enviar para crear la sesión y volver a la página solicitada.
 - **Success:** CAPTCHA aceptado y credenciales de staff válidas crean la sesión.
 - **Error:** token ausente, inválido o expirado bloquea el intento; se requiere
   una verificación nueva tras credenciales incorrectas.
-- **Failure:** Google no disponible o script bloqueado deja el acceso cerrado
+- **Failure:** reCAPTCHA no disponible o script bloqueado deja el acceso cerrado
   con mensaje y Reintentar. Las sesiones previamente abiertas siguen vigentes.
-- **Display:** la página de entrada conserva el enlace hacia Django Admin.
+- **Display:** «Entrar con contraseña» enlaza a `/admin/login/?next=%2Fpanel%2F`.
 - **E2E:** `e2e/auth/auth-admin-login.spec.js` mantiene el hand-off;
   `e2e/captcha/panel-login-captcha.spec.js` recorre el formulario Django real,
   con base temporal y simulación únicamente del proveedor externo.
@@ -3678,6 +3658,18 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
   5. [Branch] Signing in again on the Django login form returns the user to the originally requested `/panel/*` page via `next`.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/auth/auth-admin-login.spec.js` (describe "Admin Panel Session Guard": mocks `GET /api/auth/check/` → 401 and asserts the hard redirect to `/admin/login/?next=/en-us/panel/proposals`)
+
+### FLOW: `admin-panel-sidebar-resize`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Routes:** `/panel`
+- **Description:** Admin resizes the expanded desktop Panel menu from 200px to 400px with mouse or keyboard. Content follows its width; the 240px default and chosen width persist independently of collapse. Long labels wrap, including Paquetes de requerimientos. Consultoría y asesoría follows Células behind a divider in Programas, has a conversation icon and opens /panel/consulting.
+- **Selector:** `panel-sidebar-resize-handle`
+- **Outcomes:** display, success
+- **Pasos:** abrir la vista desde el menú, arrastrar el separador en ambos sentidos y comprobar cómo cambia el contenido contiguo. Redimensionar con teclado, recargar y comprobar persistencia; el doble clic restaura el ancho inicial. Comprobar que en móvil el drawer conserva los accesos.
+- **Error/failure:** n/a; el ajuste del ancho es local. Los fallos de carga pertenecen al flujo del listado.
 
 ### FLOW: `admin-impersonate-user`
 
@@ -3747,6 +3739,10 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 El radar incluye cuentas con documento vinculado pendiente para superusuarios: borradores, emitidas y pagadas, excluyendo anuladas, archivadas y datos retenidos. Abre la cuenta exacta y permite completar el vínculo. La decisión resuelta desaparece en la siguiente lectura del radar; la autoría se conserva.
 
 - **Integridad de datos:** los hallazgos presentes no aceptados son visibles para administradores. El destino `/panel/data-integrity?finding=<fingerprint>` filtra el hallazgo exacto; «Ver todos los hallazgos» retira el foco. El radar no ejecuta barridos al consultar.
+
+## Disposición compacta
+
+En escritorio, desplegar la alerta de dos pagos recurrentes muestra dos tarjetas en paralelo. Ambas conservan nombre, valor, fecha y medio de pago y abren su detalle individual, limitado a 48rem. En móvil se apilan sin perder acciones.
 
 ### FLOW: `admin-dashboard-error-retry`
 
@@ -4435,6 +4431,18 @@ El radar incluye cuentas con documento vinculado pendiente para superusuarios: b
 
 - **Formato editorial:** La redacción admite Visual y Fuente, con perfiles de correo y WhatsApp y copia adaptada al canal; conserva contenido y formato al guardar o ante un error. WhatsApp utiliza únicamente sus marcas nativas.
 - **E2E editorial:** `e2e/admin/editorial-rich-text-communications.spec.js` (correo, WhatsApp y conservación ante rechazo).
+
+### FLOW: `admin-communication-panel-resize`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P3
+- **Routes:** `/panel/communications`
+- **Description:** Admin resizes the adjacent thread navigation by mouse or keyboard from 240px to 400px, starting at 288px. The thread list reflows during drag; the communications preference persists the width and double-click restores the default. Compact navigation uses the drawer.
+- **Selector:** `communications-navigation-resize-handle`
+- **Outcomes:** display, success
+- **Pasos:** abrir la vista desde el menú, arrastrar el separador en ambos sentidos y comprobar cómo cambia el contenido contiguo. Redimensionar con teclado, recargar y comprobar persistencia; el doble clic restaura el ancho inicial. Comprobar que en móvil el drawer conserva los accesos.
+- **Error/failure:** n/a; el ajuste del ancho es local. Los fallos de carga pertenecen al flujo del listado.
 
 ### FLOW: `admin-mini-crm-clients`
 
@@ -5998,6 +6006,38 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **E2E Spec:** `e2e/admin/admin-proposal-module-interests.spec.js`
 - **Components:** `ProposalGeneralTab.vue`, `ProposalActivityTab.vue`
 
+### FLOW: `admin-secure-link-folder-panel-resize`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P3
+- **Routes:** `/panel/secure-links`
+- **Description:** Admin resizes the adjacent secure-links folder navigation by mouse or keyboard from 240px to 480px, starting at 256px. The list reflows during drag; projectapp-secure-links-folder-width persists independently of Documents, and double-click restores the default. Below panel-landscape the drawer replaces the sidebar.
+- **Selector:** `secure-folders-resize-handle`
+- **Outcomes:** display, success
+- **Pasos:** abrir la vista desde el menú, arrastrar el separador en ambos sentidos y comprobar cómo cambia el contenido contiguo. Redimensionar con teclado, recargar y comprobar persistencia; el doble clic restaura el ancho inicial. Comprobar que en móvil el drawer conserva los accesos.
+- **Error/failure:** n/a; el ajuste del ancho es local. Los fallos de carga pertenecen al flujo del listado.
+
+### FLOW: `admin-outbound-email-history-retry`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Routes:** `/panel/emails?tab=history`
+- **Description:** Admin expands a failed recipient in universal Email History and confirms a retry naming its original address and subject. The retry accepts no replacement destination; exact snapshots or valid accounting origin facts create a linked attempt in History. Missing facts, reversed payments, invalid addresses and insufficient permissions explain why no retry is available. Failed retried sends remain recorded and show failure feedback.
+- **Selector:** `email-history-retry-<id>`
+- **Outcomes:** display, success, error, failure
+- **Pasos:** abrir Emails desde Comunicaciones, elegir Historial y desplegar el envío. Revisar el destinatario fallido y confirmar Reintentar envío. Consultar el nuevo intento vinculado; si falla, conservar su resultado en el historial. Un registro incompleto o sin permiso explica el bloqueo antes de enviar.
+
+### FLOW: `admin-email-deliverability`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P3
+- **Routes:** `/panel/emails?tab=status`
+- **Description:** Desde Comunicaciones > Emails, abrir Estado de los emails para consultar totales, tasa de éxito, desglose por plantilla, tendencia diaria y fallos recientes de treinta días.
+- **Outcomes:** display (estadísticas y fallos con datos), success (redirección del acceso anterior `/panel/proposals/email-deliverability`).
+
 
 ## 7. E2E Coverage Index
 
@@ -6090,6 +6130,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-clients-filter-presets` | admin | P2 | display,success | 17 |
 | `admin-commercial-video-resources` | admin | P1 | display,success,error,failure | 4 |
 | `admin-communication-folders` | admin | P1 | display,success,error,failure | — |
+| `admin-communication-panel-resize` | admin | P3 | display,success | — |
 | `admin-consulting-distribution` | commercial | P1 | display,success,failure | — |
 | `admin-consulting-history` | commercial | P2 | display,success,failure | — |
 | `admin-consulting-preview` | commercial | P1 | display,success,failure | — |
@@ -6163,7 +6204,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-document-thread` | admin | P1 | display,success,error,failure | 1 |
 | `admin-document-title-column-resize` | admin | P2 | display,success | 1 |
 | `admin-document-unsaved-guard` | admin | P2 | display,success,failure | 1 |
-| `admin-email-deliverability` | admin | P3 | display | 1 |
+| `admin-email-deliverability` | admin | P3 | display,success | 1 |
 | `admin-email-templates-config` | admin | P2 | display,success,error | 1 |
 | `admin-financing-agreement-create` | admin | P1 | display,success,error,failure | 4 |
 | `admin-financing-agreement-lifecycle` | admin | P1 | display,success,error,failure | 11 |
@@ -6197,8 +6238,10 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-outbound-email-history-body` | admin | P1 | display | 1 |
 | `admin-outbound-email-history-filter` | admin | P1 | display | 1 |
 | `admin-outbound-email-history-resend` | admin | P1 | success,failure | — |
+| `admin-outbound-email-history-retry` | admin | P1 | display,success,error,failure | — |
 | `admin-panel-projects` | admin | P1 | display,success,error | 17 |
 | `admin-panel-session-expired` | auth | P1 | error | 1 |
+| `admin-panel-sidebar-resize` | admin | P2 | display,success | — |
 | `admin-panel-unsaved-guard` | admin | P2 | display,success,failure | 1 |
 | `admin-partnership-legacy-redirects` | admin | P2 | success,error | — |
 | `admin-platform-guided-tour-authoring` | admin | P2 | success,error,failure,display | 1 |
@@ -6313,6 +6356,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-pwa-offline` | admin | P2 | success,failure | — |
 | `admin-qr-cards` | admin | P2 | success | 1 |
 | `admin-secure-link-create` | admin | P1 | success,error,failure,display | — |
+| `admin-secure-link-folder-panel-resize` | admin | P3 | display,success | — |
 | `admin-secure-link-manage` | admin | P1 | success,error,failure,display | — |
 | `admin-seller-inactivity-escalation` | admin | P2 | — | 0 |
 | `admin-send-branded-email` | admin | P2 | display,success,failure | 1 |
@@ -6674,6 +6718,8 @@ y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
 
 Cambiar únicamente entre base y total incluido conserva los centavos recibidos y el reparto automático. Editar el porcentaje en modo total incluido permite seguir ajustando el valor recibido sin conservar una captura desactualizada.
+
+Cada ingreso seleccionado con destinatario válido genera su confirmación después de completar la liquidación y deja un envío principal en Historial de Emails. Un fallo conserva el dinero liquidado y puede reintentarse desde Historial cuando su evidencia permite reconstruir el mensaje original.
 
 ### FLOW: `admin-accounting-filters`
 
@@ -8830,6 +8876,8 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   3. **error:** n/a; los valores pertenecen a catálogos o controles de fecha y no existe una validación editable independiente.
   4. **failure:** la falla de carga se cubre en la frontera del store; esta interacción sólo registra la consulta exitosa con datos.
 - **E2E Spec:** `e2e/admin/admin-client-email-copy-settings.spec.js`
+
+Los siete filtros muestran sus etiquetas, se distribuyen según el ancho real y dejan Limpiar y Aplicar filtros en una fila propia. La validación incluye móvil, tableta vertical, tableta horizontal, escritorio y monitor grande.
 
 ### FLOW: `admin-outbound-email-history-resend`
 

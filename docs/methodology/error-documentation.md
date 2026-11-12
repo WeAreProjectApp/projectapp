@@ -1,3 +1,5 @@
+> **PA-214 — clonación de conexión SMTP, 2026-11-06:** la confirmación de pago suministra una conexión con timeout. Copiarla mediante `deepcopy(message)` intenta copiar su `RLock` antes del archivo y del envío, dejando un fallo sin snapshot exacto. El gateway conserva la referencia de conexión mientras copia el contenido y limpia su contexto si falla la preparación. La regresión usa en CI un backend SMTP con transporte simulado; el historial ofrece reconstrucción de confirmaciones completas sin recalcular saldos actuales.
+
 > **Formato editorial — 2026-10-23:** compactar con `>\s+<` quitaba espacios entre marcas inline; devolver la versión HTML normalizada al editor de listas reiniciaba su historial. Las entradas conservan un borrador local y sólo codifican saltos físicos al almacenar; las pruebas de continuidad reproducen ambos fallos. Las familias de fuentes PDF registran variantes reales para que negrita/cursiva no se dibujen como regular. Ver `frontend/test/components/editorialListContinuity.spec.js` y `backend/content/tests/services/test_editorial_pdf_integration.py`.
 
 ## PA-226 — General muestra cambios pendientes sin editar (2026-11-06)

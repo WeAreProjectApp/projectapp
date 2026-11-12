@@ -11,6 +11,8 @@
 
 Autenticación comparte `accounts.services.access` entre sesión Django, JWT y MCP projects. Desafíos de código separados de recuperación; identidad Google por sub; revocación por versión. El gateway conserva sólo recibos neutros de canales con credenciales.
 
+> **Centro de Emails y disposición del Panel — 2026-11-06:** `/panel/emails?tab=status` reúne la consulta de entregabilidad; la ruta comercial anterior es un redirect de compatibilidad. `email_retry_service` decide la elegibilidad por destinatario y comparte el servicio de copias exactas o los reconstructores contables; éstos conservan el destinatario original y las confirmaciones conservan los hechos históricos del pago. El gateway copia el mensaje manteniendo la conexión SMTP, cuyos candados no son copiables. El menú y el contenido comparten un ancho persistido; Enlaces seguros reutiliza el splitter documental con preferencia independiente.
+
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 
 `CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.
