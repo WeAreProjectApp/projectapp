@@ -1,9 +1,19 @@
 """Plain-language descriptions shown when a connector is expanded in the Panel."""
-from content.mcp.module_catalog import CANONICAL_FOR, SECTION_NOTES
+from content.mcp.module_catalog import CANONICAL_FOR, INFRASTRUCTURE_TOOLS, SECTION_NOTES
+
+NAMES = {
+    'operations': 'Gestor de operaciones', 'commercial': 'Gestor de clientes y ventas',
+    'offerings': 'Gestor de nuestra oferta', 'programs': 'Gestor de programas',
+    'projects': 'Gestor de proyectos', 'data-integrity': 'Gestor de integridad de datos',
+    'documents': 'Gestor de documentos', 'communications': 'Gestor de comunicaciones',
+    'content': 'Gestor de contenido', 'accounting': 'Gestor de contabilidad',
+    'tasks': 'Gestor de tareas', 'procurement': 'Gestor de contratación pública',
+}
 
 DESCRIPTIONS = {
+    'procurement': 'Busca y revisa oportunidades de contratación pública de SECOP. Administra búsquedas guardadas, clasificaciones, alertas y su seguimiento; consulta sincronizaciones y exporta resultados. Las búsquedas y alertas conservan su propietario. No presenta ofertas ni modifica procesos en SECOP.',
     'data-integrity': 'Revisa inconsistencias entre clientes, proyectos, documentos, comunicaciones, contabilidad y propuestas. Consulta hallazgos, ejecuta revisiones, acepta casos intencionales y corrige por lotes con vista previa, motivo, historial y deshacer. No reescribe evidencia emitida.',
-    'operations': 'Consulta el panorama general del negocio: indicadores, alertas y prioridades del dashboard. Sirve para decidir qué atender; las acciones sobre un registro se realizan en el conector de su sección.',
+    'operations': 'Consulta indicadores, alertas y prioridades del dashboard. Gestiona el seguimiento operativo: casos, estados, notas, reportes y asociación de recursos observados a proyectos. Conserva evidencia e historial; no configura credenciales ni ingiere observaciones en nombre de una fuente. Las acciones de negocio se realizan en el gestor de su sección.',
     'commercial': 'Gestiona la relación con clientes y el proceso de venta: fichas, propuestas, diagnósticos, documentos contractuales, seguimiento, correos y valores predeterminados. Organiza sus funciones en Clientes, Propuestas y Diagnósticos, y Configuración. Para paquetes de requerimientos y módulos adicionales usa Nuestra oferta; para alianzas y células usa Programas.',
     'offerings': 'Administra lo que ofrecemos al cliente: paquetes de requerimientos, precios y configuración; y módulos adicionales, categorías, orden, enlaces compartidos, PDFs y videos. Las propuestas y los diagnósticos se gestionan en Comercial. Las condiciones, contratos y versiones de las alianzas y células se gestionan en Programas.',
     'programs': 'Administra nuestros programas y sus condiciones. Reúne las alianzas —Programa de Alianza y Building with Us— y las Células de Building on Demand, con sus acuerdos, contratos, economía interna, documentos y versiones. Para preparar una propuesta usa Comercial; para paquetes de requerimientos y módulos adicionales usa Nuestra oferta.',
@@ -14,6 +24,80 @@ DESCRIPTIONS = {
     'accounting': 'Administra las finanzas: ingresos por cobrar o recibidos, gastos, bolsillo, participaciones, recurrentes, cuentas de cobro, tarjetas y extractos. Incluye hosting, suscripciones y conciliación. Los recurrentes representan gastos que pagamos; los cobros a clientes se registran como ingresos.',
     'tasks': 'Organiza el trabajo interno del equipo mediante el Kanban: tareas, responsables, prioridades, orden, comentarios y recordatorios. Permite consultar pendientes y archivados y mantener el seguimiento diario. Los entregables de clientes se gestionan desde Proyectos.',
 }
+
+# First matching resource wins. Every remaining domain tool is still represented
+# by its module group; infrastructure is described separately from business work.
+CAPABILITY_GROUPS = {
+    'operations': (('Casos, reportes y recursos observados', ('monitoring',)), ('Indicadores y Radar de atención', ())),
+    'commercial': (
+        ('Clientes y contactos', ('client',)), ('Propuestas y documentos comerciales', ('proposal',)),
+        ('Diagnósticos', ('diagnostic',)), ('Consultoría y asesoría', ('consulting',)),
+        ('Calculadora de requerimientos', ('calculator',)), ('Configuración comercial', ()),
+    ),
+    'offerings': (('Paquetes de requerimientos', ('hour_package',)), ('Módulos adicionales y recursos', ())),
+    'programs': (('Programa de Alianza', ('partnership', 'financing')),
+                 ('Building with Us', ('building_with_us',)), ('Células de Building on Demand', ())),
+    'projects': (
+        ('Acceso autorizado', ('access',)), ('Ayuda y tutoriales', ('help', 'guided_tour', 'tour_progress')),
+        ('IA de Plataforma', ('platform_ai',)), ('Entregas, etapas y requisitos', ('delivery',)),
+        ('Recursos de Plataforma', ('resource',)), ('Incidencias y solicitudes', ('issue', 'bug', 'change_request')),
+        ('Proyectos, estados y seguimiento', ()),
+    ),
+    'data-integrity': (('Hallazgos, revisiones y correcciones de integridad', ()),),
+    'documents': (('Carpetas y organización', ('folder',)), ('Hilos documentales', ('thread',)),
+                  ('Documentos, versiones y archivos', ())),
+    'communications': (('Enlaces seguros', ('secure_link',)), ('Carpetas de comunicaciones', ('folder',)),
+                       ('Conversaciones, mensajes y correos', ())),
+    'content': (('Blog y calendario editorial', ('blog',)), ('LinkedIn', ('post', 'linkedin')),
+                ('Portafolio', ('portfolio',)), ('Tarjetas QR y Linktrees', ())),
+    'accounting': (('Ingresos y liquidaciones', ('income', 'settlement', 'abono')),
+                   ('Gastos y recurrentes', ('expense', 'recurring')),
+                   ('Hosting y suscripciones', ('hosting', 'subscription')),
+                   ('Cuentas de cobro', ('collection_account', 'billing')),
+                   ('Tarjetas y extractos', ('card', 'statement', 'transaction')),
+                   ('Bolsillo, participaciones y configuración', ())),
+    'tasks': (('Tareas, responsables y seguimiento', ()),),
+    'procurement': (('Oportunidades y clasificación', ('opportunit', 'classification', 'filters')),
+                    ('Búsquedas guardadas', ('search',)), ('Alertas, envíos y sincronización', ())),
+}
+
+ACTION_LABELS = (
+    ('Consultar y previsualizar', ('get_', 'list_', 'describe_', 'preview_', 'search_', 'read_')),
+    ('Crear', ('create_', 'add_', 'duplicate_', 'prepare_')),
+    ('Editar y configurar', ('update_', 'set_', 'configure_', 'link_', 'associate_')),
+    ('Ordenar y mover', ('reorder_', 'move_', 'assign_')),
+    ('Archivar y restaurar', ('archive_', 'unarchive_', 'restore_', 'reopen_')),
+    ('Enviar y publicar', ('send_', 'resend_', 'publish_', 'retry_')),
+    ('Descargar y exportar', ('download_', 'export_')),
+    ('Cargar y sustituir archivos', ('upload_', 'replace_')),
+    ('Eliminar o retirar según las reglas', ('delete_', 'remove_', 'retire_', 'void_', 'cancel_')),
+    ('Aplicar acciones del módulo', ()),
+)
+
+
+def connector_name(slug, fallback=''):
+    return NAMES.get(slug, fallback)
+
+
+def connector_capabilities(slug, tools):
+    """Derive actions only from tools actually published by this connector."""
+    groups = CAPABILITY_GROUPS.get(CANONICAL_FOR.get(slug, slug), ())
+    result = []
+    remaining = [tool for tool in tools if tool['name'] not in INFRASTRUCTURE_TOOLS and not tool.get('_hidden')]
+    for label, fragments in groups:
+        selected = [tool for tool in remaining if not fragments or any(part in tool['name'] for part in fragments)]
+        if not selected:
+            continue
+        names = {tool['name'] for tool in selected}
+        remaining = [tool for tool in remaining if tool['name'] not in names]
+        actions = []
+        for tool in selected:
+            action = next(label for label, prefixes in ACTION_LABELS if not prefixes or tool['name'].startswith(prefixes))
+            if action not in actions:
+                actions.append(action)
+        result.append({'label': label, 'actions': actions, 'tools': sorted(names),
+                       'requires_confirmation': any(tool.get('requires_confirmation') for tool in selected)})
+    return result
 LEGACY_DESCRIPTIONS = {
     'clients': 'Conserva la consulta y edición de fichas de clientes del catálogo anterior.',
     'proposals': 'Conserva las herramientas anteriores de propuestas, contratos, documentos, seguimiento y envíos.',

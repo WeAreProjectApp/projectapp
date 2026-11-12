@@ -15,6 +15,7 @@ from content.models.web_app_diagnostic import WebAppDiagnostic
 from content.services import diagnostic_service
 from content.services.data_integrity import engine
 from content.services.data_integrity.scope import resolve_scope
+from content.services.data_integrity.types import IntegrityConflict
 from content.tests.data_integrity_helpers import (
     apply,
     make_project,
@@ -46,6 +47,20 @@ def recorded(operation_id):
     """(model, pk, field) of every non-guard value the operation changed."""
     [step] = DataIntegrityOperation.objects.get(pk=operation_id).steps
     return {(item['model'], item['pk'], item['field']) for item in step['items'] if not item['guard']}
+
+
+def planned_changes(impact):
+    """The values the confirmation screen promises to mutate."""
+    [step] = impact['steps']
+    return {(item['model'], item['id'], item['field'], item['before'], item['after'])
+            for item in step['changes']}
+
+
+def recorded_changes(operation_id):
+    """The non-guard values durably recorded after an integrity correction."""
+    [step] = DataIntegrityOperation.objects.get(pk=operation_id).steps
+    return {(item['model'], item['pk'], item['field'], item['before'], item['after'])
+            for item in step['items'] if not item['guard']}
 
 
 def test_document_title_cleanup_restores_a_missing_slug_on_undo(superuser):
@@ -140,14 +155,16 @@ def _project_names(project, root, thread):
             CommunicationThread.objects.get(pk=thread.pk).title]
 
 
-def test_project_name_cleanup_restores_managed_names_on_undo(make_client_profile, superuser):
-    """Fails if the managed root folder or thread keeps the old name, goes unrecorded, or stays renamed after undo."""
+def test_project_name_preview_matches_the_applied_managed_names(make_client_profile, superuser):
+    """Fails if confirmation omits a managed root value that the project rename records and changes."""
     project = make_project(make_client_profile(), ' Kore  App')
     root = DocumentFolder.objects.get(managed_project=project)
     thread = CommunicationThread.objects.get(managed_project=project)
     secure_root = SecureLinkFolder.objects.get(managed_project=project)
+    finding = nm1_finding('accounts.project', project.pk)
+    preview = engine.preview_fixes(resolve_scope('all'), [selection(finding)], actor=superuser)
 
-    operation_id = fix(superuser, nm1_finding('accounts.project', project.pk))
+    operation_id = fix(superuser, finding)
 
     assert _project_names(project, root, thread) == ['Kore App'] * 3
     assert SecureLinkFolder.objects.get(pk=secure_root.pk).name == 'Kore App'
@@ -155,11 +172,79 @@ def test_project_name_cleanup_restores_managed_names_on_undo(make_client_profile
                                       ('content.documentfolder', root.pk, 'name'),
                                       ('content.communicationthread', thread.pk, 'title'),
                                       ('secure_links.securelinkfolder', secure_root.pk, 'name')}
+    assert planned_changes(preview) == recorded_changes(operation_id)
 
     undo(superuser, operation_id)
 
     assert _project_names(project, root, thread) == [' Kore  App'] * 3
     assert SecureLinkFolder.objects.get(pk=secure_root.pk).name == ' Kore  App'
+
+
+def test_project_name_preview_includes_stale_managed_root_relations(make_client_profile, superuser):
+    """Fails if a preview hides root client links that the project writer realigns on rename."""
+    profile, other = make_client_profile(), make_client_profile()
+    project = make_project(profile, ' Kore  App')
+    root = DocumentFolder.objects.get(managed_project=project)
+    thread = CommunicationThread.objects.get(managed_project=project)
+    secure_root = SecureLinkFolder.objects.get(managed_project=project)
+    DocumentFolder.objects.filter(pk=root.pk).update(client_user=other.user)
+    CommunicationThread.objects.filter(pk=thread.pk).update(client=other)
+    SecureLinkFolder.objects.filter(pk=secure_root.pk).update(client=other)
+
+    preview = engine.preview_fixes(
+        resolve_scope('all'), [selection(nm1_finding('accounts.project', project.pk))], actor=superuser,
+    )
+
+    assert {
+        ('content.documentfolder', root.pk, 'client_user_id', other.user_id, profile.user_id),
+        ('content.communicationthread', thread.pk, 'client_id', other.pk, profile.pk),
+        ('secure_links.securelinkfolder', secure_root.pk, 'client_id', other.pk, profile.pk),
+    } <= planned_changes(preview)
+    assert (
+        DocumentFolder.objects.get(pk=root.pk).client_user_id,
+        CommunicationThread.objects.get(pk=thread.pk).client_id,
+        SecureLinkFolder.objects.get(pk=secure_root.pk).client_id,
+    ) == (other.user_id, other.pk, other.pk)
+
+
+def test_project_name_preview_blocks_when_the_secure_root_is_missing(make_client_profile, superuser):
+    """Fails if NM1 creates or renames data when the secure-link root cannot be included in its preview."""
+    project = make_project(make_client_profile(), ' Kore  App')
+    root = DocumentFolder.objects.get(managed_project=project)
+    thread = CommunicationThread.objects.get(managed_project=project)
+    SecureLinkFolder.objects.get(managed_project=project).delete()
+
+    preview = engine.preview_fixes(
+        resolve_scope('all'), [selection(nm1_finding('accounts.project', project.pk))], actor=superuser,
+    )
+
+    assert preview['blocked'] is True
+    assert [entry['code'] for entry in preview['steps'][0]['blockers']] == ['managed_root_missing']
+    assert _project_names(project, root, thread) == [' Kore  App'] * 3
+    assert SecureLinkFolder.objects.filter(managed_project=project).count() == 0
+
+
+def test_project_name_undo_blocks_when_its_root_composition_changes(make_client_profile, superuser):
+    """Fails if undo restores a name after its recorded managed-root set has changed."""
+    project = make_project(make_client_profile(), ' Kore  App')
+    secure_root = SecureLinkFolder.objects.get(managed_project=project)
+
+    operation_id = fix(superuser, nm1_finding('accounts.project', project.pk))
+    secure_root.delete()
+    impact = engine.preview_undo(operation_id)
+
+    assert impact['blockers'][0]['code'] == 'guard_changed'
+    with pytest.raises(IntegrityConflict) as rejected:
+        engine.undo_operation(
+            operation_id,
+            actor=superuser,
+            reason='El conjunto de raíces cambió.',
+            request_id='nm1-root-composition-undo',
+            expected_impact_hash=impact['impact_hash'],
+        )
+
+    assert rejected.value.detail['code'] == 'undo_blocked'
+    assert Project.objects.get(pk=project.pk).name == 'Kore App'
 
 
 def test_project_rename_records_subfolders_the_root_resync_realigns(make_client_profile, superuser):

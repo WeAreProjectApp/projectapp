@@ -4,7 +4,39 @@ El registro añade el módulo transversal `data-integrity`, dueño único de las
 
 # MCP por módulo: contrato y migración
 
-Esta entrega consolida el registro en diez conectores: `operations`,
+## PA-221 · inventario y retiro comprobable
+
+El registro actual añade Integridad de datos y Contratación pública a los diez
+módulos descritos en la entrega anterior. Los nombres visibles siguen «Gestor de …»
+y el catálogo del Panel publica `capabilities` (etiqueta, acciones, herramientas y
+confirmación) derivadas del registro servido. Los slugs y el alcance de cada
+credencial se conservan. Operations 3.1.0 suma seguimiento de Monitoring; no expone
+ingestión ni credenciales de fuentes.
+
+`mcp_surface_matrix --check --output <archivo.json>` genera el inventario desde el
+Mapa de vistas y las herramientas canónicas actuales. `--format csv` facilita su
+revisión. Las filas son `mapped_unverified`: asignar un gestor o encontrar un endpoint
+no prueba una operación. Las vistas candidatas del módulo no son una equivalencia
+funcional; QA registra las vistas y acciones que realmente comprobó, con rol,
+resultado, permisos y confirmaciones. Las excepciones de identidad y bootstrap
+permanecen explícitas. El CI conserva la matriz de cada SHA como artefacto.
+
+El retiro requiere además `--coverage-report <reporte-qa.json>`. El comando comprueba
+la integridad y vigencia del reporte y rechaza filas o funcionalidades pendientes,
+datos de otra revisión, cambios del catálogo y permisos/confirmaciones sin referencias.
+Es la aceptación de un reporte revisado por QA y el operador; no autentica una corrida
+CI ni prueba por sí mismo la veracidad de lo que alguien escribió. No existe una API
+MCP que pueda aprobar su propio acceso. La evidencia aceptada se anexa por catálogo
+en `McpConnector.retirement_evidence`, con hash, ruta y revisión, sólo al retirar
+exitosamente. No sustituye las ventanas de 30/14 días ni la migración de consumidores.
+
+Después del retiro, la compatibilidad queda inactiva, sin herramientas operativas
+ni tarjeta en el Panel. La ruta conserva sólo el rechazo autenticado `410`; los
+accesos inválidos siguen sin revelar existencia. No se borran credenciales ni
+auditoría. Los adaptadores pendientes permanecen utilizables con su alcance acotado
+hasta cumplir las condiciones. [Expediente y pendientes PA-221](audits/PA-221/README.md).
+
+El registro actual contiene doce conectores: `procurement`, `data-integrity`, `operations`,
 `commercial`, `offerings`, `programs`, `projects`, `documents`, `communications`, `content`, `accounting`
 y `tasks`. Los otros doce slugs son adaptadores en retirada, no módulos nuevos.
 La revalidación de PA-91 queda incorporada en los contratos de modelos y en los
