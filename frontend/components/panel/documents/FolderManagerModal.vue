@@ -3,6 +3,13 @@
     <Transition name="fade-modal">
       <div
         v-if="modelValue"
+        ref="dialogRef"
+        role="dialog"
+        :aria-modal="childOpen ? undefined : 'true'"
+        :aria-labelledby="titleId"
+        :aria-hidden="childOpen ? 'true' : undefined"
+        :inert="childOpen"
+        tabindex="-1"
         class="fixed inset-0 z-[9990] flex items-stretch justify-stretch bg-black/50 p-0 backdrop-blur-sm panel-portrait:items-center panel-portrait:justify-center panel-portrait:p-4"
         @click.self="close"
       >
@@ -18,7 +25,7 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-base font-semibold text-text-default">Gestionar carpetas</h3>
+                  <h3 :id="titleId" class="text-base font-semibold text-text-default">Gestionar carpetas</h3>
                   <p class="text-xs text-text-muted mt-0.5">Las raíces de proyecto son automáticas; sus subcarpetas y las propias se gestionan aquí</p>
                 </div>
               </div>
@@ -41,14 +48,13 @@
                       @update:model-value="newNameError = ''"
                     />
                   </BaseFormField>
-                  <BaseFormField label="Dentro de">
-                    <BaseSelect v-model="newParent" data-testid="folder-manager-parent">
-                      <option value="">Ninguna (carpeta raíz)</option>
-                      <option v-for="opt in createOptions" :key="opt.id" :value="String(opt.id)">
-                        {{ opt.label }}
-                      </option>
-                    </BaseSelect>
-                  </BaseFormField>
+                  <DocumentFolderSelect
+                    v-model="newParent"
+                    label="Dentro de"
+                    testid="folder-manager-parent"
+                    :show-hint="false"
+                    :root-option-label="t('documentFolders.root')"
+                  />
                 </BaseFormRow>
                 <div class="flex justify-end">
                   <BaseButton
@@ -125,7 +131,7 @@
       Un solo contrato de borrado de carpeta en toda la app: este modal delega
       en DeleteFolderModal en vez de repetir un panel inline sin reja de
       confirmación. Anidado sin conflicto: este Teleport va a z-[9990] y
-      BaseModal a z-[9999], y el focus trap vive sólo en BaseModal.
+      BaseModal a z-[9999]; el gestor pausa su captura mientras el hijo está abierto.
     -->
     <DeleteFolderModal
       v-model="showDeleteFolder"
@@ -149,7 +155,9 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, toRef, useId, watch } from 'vue';
+import { useFocusTrap } from '~/composables/useFocusTrap';
+import DocumentFolderSelect from '~/components/panel/documents/DocumentFolderSelect.vue';
 import FolderManagerTree from '~/components/panel/documents/FolderManagerTree.vue';
 import DeleteFolderModal from '~/components/panel/documents/DeleteFolderModal.vue';
 import FolderFormModal from '~/components/panel/documents/FolderFormModal.vue';
@@ -163,14 +171,56 @@ const emit = defineEmits([
 ]);
 
 const folderStore = useDocumentFolderStore();
+const { t } = useI18n();
 const newName = ref('');
-const newParent = ref('');
+const newParent = ref(null);
 const editingFolder = ref(null);
 const showFolderForm = ref(false);
 const deletingFolder = ref(null);
 const showDeleteFolder = ref(false);
 const errorMsg = ref('');
 const newNameError = ref('');
+const dialogRef = ref(null);
+const titleId = `${useId()}-folder-manager-title`;
+const childOpen = computed(() => showFolderForm.value || showDeleteFolder.value);
+
+useFocusTrap(dialogRef, {
+  active: toRef(props, 'modelValue'),
+  paused: childOpen,
+  initialFocus: () => dialogRef.value?.querySelector('[data-testid="folder-manager-new-name"]'),
+});
+
+// BaseModal closes before this parent's inert attribute is removed. Restore
+// the nested opener after the DOM update, when it can receive focus again.
+let childOpener = null;
+watch(childOpen, async (open, wasOpen) => {
+  if (typeof document === 'undefined') return;
+  if (open) {
+    childOpener = document.activeElement;
+  } else if (wasOpen) {
+    const opener = childOpener;
+    childOpener = null;
+    await nextTick();
+    if (props.modelValue && !childOpen.value && opener && document.contains(opener)) {
+      opener.focus();
+    }
+  }
+});
+
+let previousOverflow = null;
+watch([() => props.modelValue, childOpen], ([open]) => {
+  if (typeof document === 'undefined') return;
+  if (open) {
+    if (previousOverflow === null) previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  } else if (previousOverflow !== null) {
+    document.body.style.overflow = previousOverflow;
+    previousOverflow = null;
+  }
+}, { flush: 'post', immediate: true });
+onBeforeUnmount(() => {
+  if (previousOverflow !== null) document.body.style.overflow = previousOverflow;
+});
 
 watch(() => props.modelValue, async (open) => {
   if (open) {
@@ -181,32 +231,10 @@ watch(() => props.modelValue, async (open) => {
     editingFolder.value = null;
     showFolderForm.value = false;
     newName.value = '';
-    newParent.value = props.initialParent == null ? '' : String(props.initialParent);
+    newParent.value = props.initialParent;
     await folderStore.fetchFolders();
   }
 });
-
-// Lista plana e indentada de carpetas para los <select> de carpeta padre.
-function buildFolderOptions(excludeId) {
-  const exclude = new Set();
-  if (excludeId != null) {
-    exclude.add(excludeId);
-    folderStore.descendantIdsOf(excludeId).forEach((id) => exclude.add(id));
-  }
-  const options = [];
-  const walk = (parentId, depth) => {
-    folderStore.childrenOf(parentId)
-      .filter((f) => !exclude.has(f.id))
-      .forEach((f) => {
-        options.push({ id: f.id, label: `${'   '.repeat(depth)}${f.name}` });
-        walk(f.id, depth + 1);
-      });
-  };
-  walk(null, 0);
-  return options;
-}
-
-const createOptions = computed(() => buildFolderOptions(null));
 
 function close() {
   emit('update:modelValue', false);
@@ -221,7 +249,7 @@ async function handleCreate() {
   errorMsg.value = '';
   // Crear dentro de una carpeta con dueño hereda su asociación: es el mismo
   // default que propone el formulario completo, no una atadura.
-  const parentId = newParent.value === '' ? null : Number(newParent.value);
+  const parentId = newParent.value;
   const parent = parentId == null ? null : folderStore.folderById(parentId);
   const result = await folderStore.createFolder({
     name,
@@ -231,7 +259,7 @@ async function handleCreate() {
   });
   if (result.success) {
     newName.value = '';
-    newParent.value = props.initialParent == null ? '' : String(props.initialParent);
+    newParent.value = props.initialParent;
     emit('changed');
   } else {
     newNameError.value = Array.isArray(result.errors?.name)
@@ -244,6 +272,7 @@ async function handleCreate() {
 }
 
 function startEdit(folder) {
+  dialogRef.value?.querySelector(`[data-testid="folder-manager-row-${folder.id}"] [aria-label="Editar carpeta"]`)?.focus();
   editingFolder.value = folder;
   deletingFolder.value = null;
   showFolderForm.value = true;

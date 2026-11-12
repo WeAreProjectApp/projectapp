@@ -103,7 +103,8 @@ def ensure_fake_data_allowed(command_name: str) -> None:
     enable it.  Environment naming or ``DEBUG`` alone is not accepted as proof.
     """
 
-    if getattr(settings, 'FAKE_DATA_ALLOWED', False) is not True:
+    if (getattr(settings, 'FAKE_DATA_ALLOWED', False) is not True
+            or getattr(settings, 'IS_PRODUCTION', False)):
         raise CommandError(
             f'{command_name} is disabled for this settings module. '
             'Fake data requires FAKE_DATA_ALLOWED=True in a dedicated '
@@ -115,6 +116,8 @@ def ensure_fake_data_allowed(command_name: str) -> None:
 # contract test compares this set with Django's app registry, turning the
 # maintenance rule into an executable check for every future model delivery.
 SEEDED_MODELS = {
+    'monitoring.Resource', 'monitoring.Source', 'monitoring.Case', 'monitoring.Report',
+    'secure_links.SecureLink', 'secure_links.SecureLinkFolder',
     'accounts.BugReport', 'accounts.ChangeRequest', 'accounts.DataModelEntity',
     'accounts.CommunicationPanelPreference',
     'accounts.Deliverable', 'accounts.HostingSubscription',
@@ -149,6 +152,7 @@ SEEDED_MODELS = {
 }
 
 DERIVED_MODELS = {
+    'monitoring.CaseActivity', 'secure_links.SecureLinkEvent',
     'content.ConsultingProgramRevision',
     'content.BuildingOnDemandProgramRevision',
     'content.BuildingOnDemandContractRevision', 'content.BuildingOnDemandContractMirror',
@@ -199,6 +203,7 @@ DERIVED_MODELS = {
 }
 
 CATALOG_MODELS = {
+    'secure_links.SecureLinkFolderLock',
     'accounts.PlatformAISettings', 'accounts.PlatformAITemplate', 'accounts.PlatformAITemplateRevision',
     # Help defaults and published revisions belong to the global catalog;
     # migrations and administrators maintain them, not demo-data generation.
@@ -218,6 +223,9 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Provider ingestion receipts and real authentication material are not
+    # evidence that a fake monitoring source actually delivered an event.
+    'monitoring.Credential', 'monitoring.Delivery',
     # Private client conversations and expiring replies reflect real requests;
     # demo seeds must not fabricate their content or quota provenance.
     'accounts.AppiConversation', 'accounts.AppiTurn',
@@ -227,6 +235,8 @@ EXEMPT_MODELS = {
     # Seen steps and audit events require real user or administrator actions;
     # demo generation must not suppress onboarding or fabricate its history.
     'accounts.PlatformTourProgress', 'accounts.PlatformHelpEvent',
+    # Login and access-control events are security evidence from real actions.
+    'accounts.AccessEvent',
     # Real provider secrets, paid activity and private expiring jobs are never fabricated.
     'accounts.PlatformAICredential', 'accounts.PlatformAIJob',
     'accounts.PlatformAIUsage', 'accounts.PlatformAIEvent',
@@ -239,9 +249,11 @@ EXEMPT_MODELS = {
     # Adoption, undo and discard receipts exist only after an explicit operator
     # action on retained data; demo generation never fabricates that history.
     'content.ProjectRetentionOperation',
-    # Data-integrity fixes and undos exist only after an operator approves a
-    # reviewed preview; demo generation never fabricates that log.
+    # Integrity scans, findings and decisions require real executions;
+    # demo seeds never fabricate audit history or runtime publication leases.
     'content.DataIntegrityOperation',
+    'content.DataIntegrityScan', 'content.DataIntegrityFinding',
+    'content.DataIntegrityReview', 'content.DataIntegrityScanLease',
     # Retained authoring proof is created only by explicit administrative
     # source selection, never fabricated by automatic demo-data generation.
     # Authorized fake resets dissolve its protected graph in dependency order.
@@ -269,6 +281,7 @@ EXEMPT_MODELS = {
     'accounts.DeliveryOperation',
     'content.IncomeSettlement',
     'accounts.VerificationCode', 'content.LinkedInToken',
+    'accounts.LoginChallenge', 'accounts.AccessRateBucket', 'accounts.GoogleIdentity',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',
     'content.ProposalContractChangeIntent',
     'content.ProposalProjectReassignment',

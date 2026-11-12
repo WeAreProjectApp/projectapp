@@ -15,6 +15,7 @@ import {
   mockPlatformClient,
 } from '../helpers/platform-auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
+import { PANEL_VIEWPORTS } from '../helpers/viewports.js';
 
 const meResponse = (user) => ({
   status: 200,
@@ -78,6 +79,32 @@ test.describe('Platform Project Detail — Admin', () => {
   test.beforeEach(async ({ page }) => {
     await setPlatformAuth(page, { user: mockPlatformAdmin });
   });
+
+  for (const theme of ['light', 'dark']) {
+    for (const { triggerName, dialogName, closeName } of [
+      { triggerName: '+ Agregar fase desde propuesta del cliente', dialogName: 'Agregar fases', closeName: 'Cerrar' },
+      { triggerName: 'Editar', dialogName: 'Editar proyecto', closeName: 'Cancelar' },
+    ]) {
+      test(`restores focus after closing ${dialogName} with the mouse in ${theme} mode`, {
+        tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-admin', '@outcome:success'],
+      }, async ({ page }) => {
+        await page.setViewportSize(PANEL_VIEWPORTS.desktop);
+        await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme);
+        await setupDetailMocks(page, { user: mockPlatformAdmin });
+        await gotoProjectDetail(page);
+        const trigger = page.getByRole('button', { name: triggerName, exact: true });
+
+        await trigger.click();
+
+        const dialog = page.getByRole('dialog', { name: dialogName, exact: true });
+        await expect(dialog).toHaveAttribute('aria-modal', 'true');
+        await expect(dialog).toBeFocused();
+        await dialog.getByRole('button', { name: closeName, exact: true }).click();
+        await expect(dialog).not.toBeVisible();
+        await expect(trigger).toBeFocused();
+      });
+    }
+  }
 
   test('renders project detail with name, status badge, and stats', {
     tag: ['@outcome:display', ...PLATFORM_PROJECT_DETAIL, '@role:platform-admin'],

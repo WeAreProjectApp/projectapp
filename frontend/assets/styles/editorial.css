@@ -11,3 +11,9 @@
 .editorial-rendered table { border-collapse: collapse; width: 100%; }
 .editorial-rendered td, .editorial-rendered th { border: 1px solid currentColor; padding: .5rem; vertical-align: top; }
 .editorial-rendered a { text-decoration: underline; }
+
+/* Sanitized editorial spans carry only an explicit foreground color. Keep it
+   through nested highlights without changing the foreground of plain marks. */
+:is(.editorial-body, .markdown-preview, .editorial-rendered) span[style] mark {
+  color: inherit;
+}

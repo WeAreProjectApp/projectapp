@@ -12,8 +12,9 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PANEL_PROJECTS } from '../helpers/flow-tags.js';
-import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
+import { PANEL_BREAKPOINTS, PANEL_VIEWPORTS } from '../../config/responsive.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { textContrast } from '../helpers/text-contrast.js';
 
 test.setTimeout(60_000);
 
@@ -295,6 +296,30 @@ test.describe('Admin Panel Projects', () => {
       userAuth: { id: 9001, role: 'admin', is_staff: true },
     });
   });
+
+  for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS).filter(([, viewport]) => viewport.width >= PANEL_BREAKPOINTS.landscape)) {
+    test.describe(`theme contrast ${profile}`, () => {
+      test.use({ viewport });
+      for (const theme of ['dark', 'light']) {
+        test(`keeps the project breadcrumb readable in ${theme}`, {
+          tag: [...ADMIN_PANEL_PROJECTS, '@role:admin', '@outcome:display'],
+        }, async ({ page }, testInfo) => {
+          await page.addInitScript((dark) => localStorage.setItem('projectapp-dark-mode', JSON.stringify(dark)), theme === 'dark');
+          await mockApi(page, buildHandler({ calls: [] }));
+
+          await gotoProjects(page);
+
+          await expect(getProjectResult(page, 1)).toContainText(PROJECT_ROWS[0].name);
+          const section = page.getByTestId('panel-breadcrumb').getByText('Plataforma', { exact: true });
+          expect(await textContrast(section)).toBeGreaterThanOrEqual(4.5);
+          await testInfo.attach('project-breadcrumb', {
+            body: await page.screenshot({ fullPage: true, animations: 'disabled' }),
+            contentType: 'image/png',
+          });
+        });
+      }
+    });
+  }
 
   test.describe('compact indicator header', () => {
     test.use(viewportUse('compact'));

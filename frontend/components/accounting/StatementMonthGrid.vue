@@ -12,7 +12,7 @@
           v-if="month.statements.length === 0"
           class="text-[10px] px-2 py-0.5 rounded-full font-medium"
           :class="month.applies === false
-            ? 'bg-surface-raised text-text-subtle/60'
+            ? 'bg-surface-raised text-text-subtle'
             : 'bg-surface-raised text-text-subtle'"
         >
           {{ month.applies === false ? 'No aplica' : 'Pendiente' }}
@@ -42,7 +42,7 @@
           </span>
         </button>
       </div>
-      <p v-else-if="month.applies === false" class="text-xs text-text-subtle/60">
+      <p v-else-if="month.applies === false" class="text-xs text-text-subtle">
         Antes del inicio de extractos.
       </p>
       <p v-else class="text-xs text-text-subtle">Sin extracto procesado.</p>

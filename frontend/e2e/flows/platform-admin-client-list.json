@@ -6,7 +6,7 @@
     "platform-admin"
   ],
   "priority": "P2",
-  "description": "Admin-only client management table with invite modal (create + send credentials), status filters (Todos/Onboarded/Pendientes/Inactivos), search, resend invite, and deactivate actions.",
+  "description": "Admin-only client management table with invite modal (create + send credentials), status filters (Todos/Onboarded/Pendientes/Inactivos), search, resend invite, and deactivate actions. Invitar cliente exposes a named modal dialog and transfers/restores mouse focus on open/cancel at compact and desktop sizes without sending an invitation (PA-234).",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

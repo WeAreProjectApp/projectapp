@@ -26,7 +26,7 @@
             type="button"
             class="inline-flex items-center justify-center min-w-[36px] h-9 px-2 rounded-lg text-sm font-medium transition-colors"
             :class="p === currentPage
-              ? 'bg-primary text-white dark:bg-accent-soft dark:text-text-brand'
+              ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent'
               : 'border border-border-default bg-surface text-text-muted hover:bg-surface-raised hover:text-text-default'"
             :aria-current="p === currentPage ? 'page' : undefined"
             @click="$emit('go', p)"

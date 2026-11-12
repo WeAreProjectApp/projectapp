@@ -807,9 +807,8 @@ def _split_problems(row):
 def detect_partner_split_violations(scope):
     from content.models import ExpenseRecord, IncomeRecord
     sources = [(INCOME, scope.limit(_split_violations(IncomeRecord), INCOME))]
-    if scope.is_all:
-        # Expenses belong to no client or project, so only a full sweep sees them.
-        sources.append((EXPENSE, _split_violations(ExpenseRecord)))
+    if scope.is_all or not scope.skips(EXPENSE):
+        sources.append((EXPENSE, scope.limit(_split_violations(ExpenseRecord), EXPENSE)))
     for label, rows in sources:
         for row in rows.order_by('pk'):
             yield Finding(
@@ -873,7 +872,7 @@ def _pocket_problems(movement):
     return problems
 
 
-@rule(id='AC13', domain='accounting', severity='medium', fix_kinds=(REPORT_ONLY,), full_sweep_only=True,
+@rule(id='AC13', domain='accounting', severity='medium', fix_kinds=(REPORT_ONLY,), version=2,
       title='Movimiento del bolsillo que no cuadra con su registro',
       description='Un movimiento del bolsillo no vale lo mismo que los ingresos o el gasto que refleja, o va en la '
                   'dirección contraria. Contabilidad los mantiene iguales al guardar; una escritura directa los '
@@ -890,7 +889,7 @@ def detect_pocket_mirror_drift(scope):
                       incomes_total=_sum_of(incomes, 'pocket_movement'),
                       expense_total=Subquery(expense.values('total_amount')[:1]))
             .filter(Q(has_incomes=True) | Q(has_expense=True)))
-    for movement in rows.order_by('pk'):
+    for movement in scope.limit(rows, POCKET).order_by('pk'):
         problems = _pocket_problems(movement)
         if not problems:
             continue

@@ -1,0 +1,18 @@
+{
+  "id": "authorized-login",
+  "name": "Acceso autorizado con código y Google",
+  "module": "auth",
+  "roles": [
+    "admin",
+    "client"
+  ],
+  "priority": "P1",
+  "description": "Panel y plataforma ofrecen código por correo y Google para cuentas habilitadas. Captcha y desafíos ligados al navegador, sin registro automático. Contraseña sigue disponible.",
+  "expectedSpecs": 3,
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

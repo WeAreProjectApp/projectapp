@@ -1,3 +1,11 @@
+> **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
+
+> **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).
+
+## Accesos autorizados — 2026-11-05
+
+Panel y plataforma admiten contraseña, código de un uso y Google (Gmail/Workspace) exclusivamente para cuentas habilitadas. Accesos centraliza altas de clientes, habilitación explícita y auditoría; todo staff gestiona clientes y sólo superusuarios gestionan equipo.
+
 > **PA-225/PA-216 — 2026-11-06:** aprobación interna diferida sin crear entidades y anexos opcionales por selección explícita (vacía inicialmente). Revisiones conservan la selección y la historia; los cierres antiguos no se modifican. Este acuerdo reemplaza la política de aprobación obligatoria con todos los anexos descrita en las entradas de octubre. Panel/Plataforma mantienen Project único por ID, con acceso desde el detalle y errores sin datos. Contratos y validación: `docs/PROPOSAL_SHARED_DOCUMENTS.md` y `docs/PA225_PA216_VALIDATION.md`; pruebas en CI y Chrome por dev-qa, pendientes de entrega de esta rama.
 
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y

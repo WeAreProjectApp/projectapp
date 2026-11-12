@@ -472,9 +472,10 @@
     />
     <ProjectDeleteModal
       :project="deleteProjectTarget"
+      :is-superuser="isSuperuser"
       @close="deleteProjectTarget = null"
       @deleted="onProjectDeleted"
-      @change-state="deleteProjectTarget = null; openStateTransition($event, true)"
+      @change-state="deleteProjectTarget = null; openStateTransition($event)"
     />
 
     <!-- Create/edit modal -->
@@ -502,11 +503,8 @@
     <ProjectStateTransitionModal
       :open="stateTransitionOpen"
       :project="stateProject"
-      :allow-force-delete="stateFromDeletion"
-      :is-superuser="isSuperuser"
       @close="closeStateTransition"
       @changed="onStateChanged"
-      @deleted="onProjectDeleted"
     />
 
     <ProjectStateHistoryModal
@@ -615,6 +613,7 @@ import { stateBadgeVariant } from '~/utils/documentState';
 import { formatDate } from '~/utils/formatDate';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
+useHead({ title: 'Proyectos | ProjectApp' });
 
 const store = usePanelProjectsStore();
 const notify = usePanelNotify();
@@ -908,21 +907,18 @@ function closeAccessDetail() {
 // ── Lifecycle transition + immutable history ──
 
 const stateTransitionOpen = ref(false);
-const stateFromDeletion = ref(false);
 const stateProject = ref(null);
 const stateHistoryOpen = ref(false);
 const historyProject = ref(null);
 
-function openStateTransition(project, fromDeletion = false) {
+function openStateTransition(project) {
   stateProject.value = project;
-  stateFromDeletion.value = fromDeletion === true;
   stateTransitionOpen.value = true;
 }
 
 function closeStateTransition() {
   stateTransitionOpen.value = false;
   stateProject.value = null;
-  stateFromDeletion.value = false;
 }
 
 async function onStateChanged(project) {

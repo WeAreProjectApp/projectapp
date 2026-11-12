@@ -1,4 +1,4 @@
-"""Test-only schema policy for the documents/projects explicitness sweep.
+"""Test-only schema policy for document, project and data-integrity MCP contracts.
 
 The structural rules extend the canonical ``schema_policy.schema_problems``.
 This sweep additionally forbids published root data/query envelopes and keeps
@@ -13,7 +13,7 @@ from content.mcp.schema_policy import schema_problems as canonical_schema_proble
 
 OPEN_REASON_KEY = 'x-mcp-open-reason'
 COMBINATORS = ('anyOf', 'oneOf', 'allOf')
-CONNECTORS = ('documents', 'projects')
+CONNECTORS = ('documents', 'projects', 'data-integrity')
 
 
 def _nonempty_text(value):
@@ -175,6 +175,9 @@ ALIAS_BACKLOG = frozenset()
 DRIFT_BACKLOG = frozenset()
 
 EXCLUDED_TOOLS = {
+    ('data-integrity', 'cancel_action'): 'owned by PR #503',
+    ('data-integrity', 'confirm_action'): 'owned by PR #503',
+    ('data-integrity', 'describe_capabilities'): 'owned by PR #503',
     ('documents', 'cancel_action'): 'owned by PR #503',
     ('documents', 'compare_document_history'): 'owned by PR #503',
     ('documents', 'confirm_action'): 'owned by PR #503',
@@ -193,11 +196,11 @@ EXCLUDED_TOOLS = {
 # Evidence names a scenario, not just a file containing unrelated preview and
 # apply tests. The scanner follows its same-file helpers without importing tests.
 PARITY_PAIRS = {
-    ('projects', 'preview_integrity_fixes'): (
+    ('data-integrity', 'preview_integrity_fixes'): (
         'content/tests/views/test_mcp_data_integrity.py', 'test_confirmation_applies_once_and_replays_after',
         ('apply_integrity_fixes', 'confirm_action'),
     ),
-    ('projects', 'preview_integrity_operation_undo'): (
+    ('data-integrity', 'preview_integrity_operation_undo'): (
         'content/tests/views/test_mcp_data_integrity.py', 'test_undo_goes_through_its_own_preview_and_confirmation',
         ('undo_integrity_operation', 'confirm_action'),
     ),
@@ -221,6 +224,11 @@ PARITY_PAIRS = {
     ('projects', 'preview_project_client_change'): (
         'content/tests/views/test_mcp_project_client_change.py', 'test_confirmed_transfer_matches_the_selected_plan',
         ('change_project_client', 'confirm_action'),
+    ),
+    ('projects', 'preview_project_force_delete'): (
+        'content/tests/views/test_mcp_project_force_delete.py',
+        'test_confirmed_forced_deletion_preserves_billing_history',
+        ('force_delete_project', 'confirm_action'),
     ),
     ('projects', 'preview_delivery_notification_retry'): (
         'content/tests/views/test_mcp_delivery_notifications.py', 'test_notice_confirmation_records_the_credential_owner',

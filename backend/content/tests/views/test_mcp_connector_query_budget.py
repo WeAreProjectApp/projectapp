@@ -1,5 +1,6 @@
 """Panel MCP list query, hydration and payload contracts."""
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.models.signals import post_init
@@ -22,6 +23,12 @@ def isolate_connector_catalog(db):
 
 
 def _panel_client(user):
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            'role': UserProfile.ROLE_ADMIN if user.is_staff else UserProfile.ROLE_CLIENT,
+        },
+    )
     client = APIClient()
     client.force_login(user)
     return client
@@ -45,25 +52,34 @@ def _create_connectors(total, *, identity_prefix='fixture', logs_per_connector=0
 def _count_panel_queries(client):
     with CaptureQueriesContext(connection) as queries:
         response = client.get(PANEL_URL)
-    return response, len(queries)
+    profile_from = f'from "{UserProfile._meta.db_table}"'
+    profile_selects = sum(
+        query['sql'].lstrip().lower().startswith('select')
+        and profile_from in query['sql'].lower()
+        for query in queries
+    )
+    return response, len(queries), profile_selects
 
 
 def test_connector_list_query_budget_does_not_grow_with_twenty_connectors(record_property):
     """Falla si el panel consulta logs, credenciales o actores por cada conector."""
     superuser = get_user_model().objects.create_superuser(username='connector-budget-admin', email='connector-budget@example.com', password='testpass123')
     _create_connectors(1, identity_prefix='single', logs_per_connector=11)
-    single_response, single_queries = _count_panel_queries(_panel_client(superuser))
+    single_response, single_queries, single_profile_selects = _count_panel_queries(_panel_client(superuser))
     McpConnector.objects.all().delete()
     _create_connectors(20, identity_prefix='many', logs_per_connector=11)
-    many_response, many_queries = _count_panel_queries(_panel_client(superuser))
+    many_response, many_queries, many_profile_selects = _count_panel_queries(_panel_client(superuser))
 
     record_property('mcp_connector_queries_one', single_queries)
     record_property('mcp_connector_queries_twenty', many_queries)
+    record_property('mcp_connector_profile_selects_one', single_profile_selects)
+    record_property('mcp_connector_profile_selects_twenty', many_profile_selects)
     assert single_response.status_code == 200
     assert many_response.status_code == 200
     assert len(single_response.data) == 1
     assert len(many_response.data) == 20
     assert single_queries == many_queries
+    assert single_profile_selects == many_profile_selects == 1
     assert many_queries <= MAX_MCP_CONNECTOR_LIST_QUERIES
 
 

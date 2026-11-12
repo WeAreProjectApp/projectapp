@@ -10,7 +10,7 @@
         <!-- PA-50 return path: the same record's commercial face. Admin-only —
              a client never sees the panel. Plain link on the Django session
              (PhaseList precedent), NOT the JWT bridge: wrong direction. -->
-        <button
+        <BaseButton unstyled
           v-if="isAdminUser && project"
           type="button"
           class="inline-flex items-center gap-1.5 text-sm text-text-brand hover:underline whitespace-nowrap"
@@ -20,9 +20,9 @@
         >
           <ArrowTopRightOnSquareIcon class="w-4 h-4" />
           Ficha comercial
-        </button>
+        </BaseButton>
       </div>
-      <p v-if="project" class="mt-1 text-sm text-green-light">
+      <p v-if="project" class="mt-1 text-sm text-text-muted">
         <template v-if="project.client_name">Cliente: {{ project.client_name }}</template>
         <template v-if="project.start_date"> · Inició: {{ formatDate(project.start_date) }}</template>
         <template v-if="project.next_deliverable"> · Próx. entrega: {{ formatDate(project.next_deliverable.due_date) }}</template>

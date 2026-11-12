@@ -1,9 +1,13 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import HostingDecisionSummary from './HostingDecisionSummary.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import { get_request, create_request } from '~/stores/services/request_http'
 import { INPUT_FIELD_BASE, INPUT_FIELD_SIZE } from '~/components/base/inputClasses'
-const props = defineProps({ projectId: { type: [String, Number], required: true } })
+const props = defineProps({ projectId: { type: [String, Number], required: true }, returnTo: { type: Object, default: null }, returnMissing: { type: Boolean, default: false } })
+const { t } = useI18n()
+const selection = ref(null), applied = ref(false)
 const localePath = useLocalePath()
 const inventory = ref(null), overview = ref(null), error = ref(''), loading = ref(false), saving = ref(false)
 const identity = ref({ subscription_id: null, hosting_record_ids: [], operational_record_id: null, reason: '' })
@@ -12,6 +16,7 @@ const preview = ref(null), previewType = ref('')
 const fieldClass = `${INPUT_FIELD_BASE} ${INPUT_FIELD_SIZE.md || ''}`
 const cycles = computed(() => (overview.value?.accounting_sources || []).flatMap(row => row.cycles))
 let sequence = 0, mutationSequence = 0
+onBeforeUnmount(() => { sequence += 1; mutationSequence += 1 })
 async function load() {
   const request = ++sequence
   mutationSequence += 1
@@ -19,7 +24,7 @@ async function load() {
   try {
     const result = await get_request(`admin/billing-context/projects/${props.projectId}/hosting/`)
     if (request !== sequence) return
-    inventory.value = result.data.inventory; overview.value = result.data.overview
+    inventory.value = result.data.inventory; overview.value = result.data.overview; selection.value = result.data.selection
     const current = inventory.value.hosting
     identity.value = { subscription_id: current?.subscription_id || null, hosting_record_ids: current?.hosting_record_ids || [], operational_record_id: current?.operational_record_id || null, reason: '' }
     evidence.value = { group_id: null, label: '', payment_ids: [], cycle_ids: [], document_ids: [], reason: '' }
@@ -55,15 +60,19 @@ async function apply() {
   saving.value = true; error.value = ''
   try {
     await create_request(`admin/billing-context/projects/${projectId}/${previewType.value === 'identity' ? 'hosting' : 'evidence'}/`, current.payload)
-    if (request === mutationSequence) await load()
+    if (request === mutationSequence) { await load(); applied.value = true }
   } catch (err) { if (request === mutationSequence) error.value = err.response?.data?.detail || 'No se pudo aplicar. Actualiza el inventario si cambió.' }
   finally { if (request === mutationSequence) saving.value = false }
 }
-watch([identity, evidence], () => { preview.value = null; mutationSequence += 1; saving.value = false }, { deep: true })
+watch([identity, evidence], () => { preview.value = null; mutationSequence += 1; saving.value = false }, { deep: true, flush: 'sync' })
 watch(() => props.projectId, load, { immediate: true })
 </script>
 <template>
   <section class="space-y-5" data-testid="hosting-reconciliation">
+    <NuxtLink v-if="returnTo" :to="returnTo" class="inline-block text-sm text-text-brand" data-testid="hosting-return-account">{{ t('hostingBilling.back') }}</NuxtLink>
+    <p v-if="returnMissing" role="alert" class="text-sm text-warning-strong">{{ t('hostingBilling.draftMissing') }}</p>
+    <p v-if="applied" role="status" class="text-sm text-success-strong">{{ t('hostingBilling.applied') }}</p>
+    <ul v-if="selection?.blockers?.length" class="space-y-1 text-sm text-warning-strong" data-testid="hosting-reconciliation-blockers"><li v-for="(blocker, index) in selection.blockers" :key="index">{{ blocker.message }}</li></ul>
     <h1 class="text-2xl font-semibold text-text-default">Conciliación del hosting del proyecto</h1>
     <p class="text-sm text-text-muted">Las asociaciones conservan cobros, pagos, ciclos y PDF. No registran pagos ni confirman equivalencias por texto, fechas o importes.</p>
     <p v-if="loading" role="status">Cargando inventario…</p>
@@ -84,6 +93,9 @@ watch(() => props.projectId, load, { immediate: true })
         <label class="block text-sm">Razón<textarea v-model="identity.reason" required :class="fieldClass" /></label>
         <BaseButton type="submit" :loading="saving" textPolicy="wrap">Previsualizar asociación</BaseButton>
       </form>
+      <details class="space-y-3 rounded-xl border border-border-default p-4" data-testid="hosting-reconciliation-history">
+        <summary class="cursor-pointer font-semibold text-text-default">{{ t('hostingBilling.advanced') }}</summary>
+        <p class="text-sm text-text-muted">{{ t('hostingBilling.advancedHelp') }}</p>
       <section v-if="inventory.pending_account_ids.length" class="space-y-2 rounded-xl border border-border-default p-4">
         <h3 class="font-semibold">Cuentas históricas pendientes de asociar</h3>
         <NuxtLink v-for="id in inventory.pending_account_ids" :key="id" :to="localePath(`/panel/accounting/collection-context/${id}`)" class="mr-4 inline-block text-text-brand">Cuenta #{{ id }}</NuxtLink>
@@ -98,17 +110,18 @@ watch(() => props.projectId, load, { immediate: true })
         <label class="block text-sm">Razón y evidencia de equivalencia<textarea v-model="evidence.reason" required :class="fieldClass" /></label>
         <BaseButton type="submit" :loading="saving" textPolicy="wrap">Previsualizar conciliación de evidencias</BaseButton>
       </form>
+      </details>
       <section v-if="preview" class="space-y-3 rounded-xl border border-border-default bg-surface-muted p-4" data-testid="hosting-reconciliation-preview">
         <h3 class="font-semibold">Revisión de la decisión</h3>
-        <pre class="overflow-x-auto whitespace-pre-wrap text-xs">{{ JSON.stringify(preview.result, null, 2) }}</pre>
-        <p class="text-sm">Se guardará únicamente la asociación explícita de estas referencias.</p>
+        <HostingDecisionSummary :decision="preview" :type="previewType" :inventory="inventory" />
+        <p class="text-sm text-text-muted">{{ t('hostingBilling.preserved') }}</p>
         <BaseButton :loading="saving" @click="apply">Aplicar conciliación</BaseButton>
       </section>
-      <section class="space-y-2">
-        <h3 class="font-semibold">Trazabilidad administrativa</h3>
+      <details class="space-y-2">
+        <summary class="cursor-pointer font-semibold text-text-default">{{ t('hostingBilling.history') }}</summary>
         <p v-if="!inventory.events.length" class="text-sm text-text-muted">Sin decisiones administrativas registradas.</p>
         <p v-for="event in inventory.events" :key="event.id" class="text-sm">{{ event.created_at }} · {{ event.reason }} · responsable #{{ event.actor_id || 'Sistema' }}</p>
-      </section>
+      </details>
     </template>
   </section>
 </template>

@@ -48,7 +48,7 @@ def target_project(make_client_profile):
 
 def full_preview(project, actor):
     initial = forced_deletion_preview(project, actor=actor)
-    delete_keys = [dependency['key'] for dependency in initial['dependencies']]
+    delete_keys = [dependency['key'] for dependency in initial['dependencies'] if dependency.get('selectable', True)]
     return forced_deletion_preview(project, actor=actor, delete_keys=delete_keys)
 
 
@@ -402,20 +402,30 @@ def test_force_delete_preserves_billing_context_event(superuser, target_project)
     )
     preview = full_preview(target_project, superuser)
 
-    with pytest.raises(ProjectForceDeleteError) as error:
-        force_delete_project(
-            target_project.pk,
-            actor=superuser,
-            confirmation='DELETE',
-            impact_token=preview['impact_token'],
-            delete_keys=preview['delete_keys'],
-        )
+    force_delete_project(
+        target_project.pk, actor=superuser, confirmation='DELETE',
+        impact_token=preview['impact_token'], delete_keys=preview['delete_keys'],
+    )
 
     event.refresh_from_db()
-    assert error.value.code == 'project_force_delete_blocked'
-    assert event.project_id == target_project.pk
+    assert not Project.objects.filter(pk=target_project.pk).exists()
+    assert event.project_id is None
+    assert event.retention_context.original_project_id == target_project.pk
+    assert event.retention_context.client_id == target_project.client_id
     assert event.before == {'project': target_project.pk, 'scope': 'previous'}
     assert event.after == {'project': target_project.pk, 'scope': 'current'}
+
+
+def test_force_delete_refuses_selecting_billing_history(superuser, target_project):
+    """Falla si un payload manual logra seleccionar el historial protegido."""
+    event = BillingContextEvent.objects.create(project=target_project, actor=superuser,
+        operation='assign_billing_context', reason='Conservar', before={}, after={})
+
+    preview = forced_deletion_preview(target_project, actor=superuser, delete_keys=['billing_context_events'])
+
+    assert preview['can_delete'] is False
+    assert any('se conserva siempre' in blocker['message'] for blocker in preview['blockers'])
+    assert BillingContextEvent.objects.filter(pk=event.pk, project=target_project).exists()
 
 
 def test_force_delete_preserves_private_prompt_source(superuser, target_project):

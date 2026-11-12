@@ -271,7 +271,7 @@ async function setupMocks(page, options = {}) {
 async function navigateToEmails(page) {
   await page.goto('/panel', { waitUntil: 'domcontentloaded' });
   const navigation = page.getByRole('navigation', { name: 'Navegación del panel' });
-  const emailLink = navigation.getByRole('link', { name: 'Enviar emails', exact: true });
+  const emailLink = navigation.getByRole('link', { name: 'Emails', exact: true });
   await expect(emailLink).toBeVisible({ timeout: 20_000 });
   await Promise.all([
     page.waitForURL(/\/panel\/emails(?:\?|$)/, { waitUntil: 'domcontentloaded' }),
@@ -409,6 +409,27 @@ test('shows a failed BCC attempt under its primary history row', {
   await expect(copies).toContainText('SMTP timeout interno');
   await expect(copies).toContainText('Omitida');
   await expect(copies).toContainText('Ya era destinatario');
+});
+
+test('translates raw send states in the global Historial', {
+  // Bug caught: shared email rows exposed Sent and Failed despite the Spanish panel locale.
+  tag: [...ADMIN_OUTBOUND_EMAIL_HISTORY_FILTER, '@role:admin', '@outcome:display'],
+}, async ({ page }) => {
+  const localizedHistory = {
+    ...history,
+    results: [{ ...history.results[0], status_label: 'Sent' }, {
+      ...history.results[0], id: 44, recipient: 'fallido@example.com', status: 'failed', status_label: 'Failed', error_message: 'SMTP down',
+    }],
+  };
+  await setupMocks(page, { history: localizedHistory });
+  await navigateToEmails(page);
+  await page.getByRole('tab', { name: 'Historial' }).click();
+
+  const historyRows = page.locator('[data-testid^="email-history-record-"]');
+  await expect(historyRows.getByText('Enviado', { exact: true })).toBeVisible();
+  await expect(historyRows.getByText('Fallido', { exact: true })).toBeVisible();
+  await expect(historyRows.getByText('Sent', { exact: true })).toHaveCount(0);
+  await expect(historyRows.getByText('Failed', { exact: true })).toHaveCount(0);
 });
 
 test('filters the universal outbound history by recipient, family, status and dates', {

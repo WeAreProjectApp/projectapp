@@ -166,3 +166,5 @@ from .income_completion_notice import IncomeCompletionNotice
 from .proposal_shared_document import ProposalApprovalPackage, ProposalDocumentBinding
 
 from .consulting import ConsultingProgram, ConsultingProgramRevision
+
+from .data_integrity_scan import DataIntegrityScan, DataIntegrityFinding, DataIntegrityReview, DataIntegrityScanLease

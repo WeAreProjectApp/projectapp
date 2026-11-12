@@ -327,5 +327,6 @@ def test_mcp_billing_registry_and_model_contract_expose_the_explicit_context_sur
         'id', 'project', 'version', 'created_at', 'updated_at',
     })
     assert contracts['accounts.BillingContextEvent'].read_only == frozenset({
-        'id', 'project', 'document', 'actor', 'operation', 'reason', 'before', 'after', 'created_at',
+        'id', 'project', 'retention_context', 'document', 'actor', 'operation', 'reason',
+        'before', 'after', 'created_at',
     })

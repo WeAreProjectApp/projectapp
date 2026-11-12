@@ -87,11 +87,12 @@ def finding_payload(item, finding):
         'subjects': [subject.payload() for subject in finding.subjects],
         'evidence': finding.evidence, 'fix_kinds': list(finding.fix_kinds),
         'fixable_kinds': fixable, 'inputs': finding.inputs, 'suggestion': finding.suggestion,
-        'tool': finding.tool,
+        'tool': finding.tool, 'resolution': catalog.resolution(item.id),
     }
 
 
 def findings_payload(scope, *, page=1, **filters):
+    from content.services.data_integrity.observations import coverage
     found = [finding_payload(item, finding) for item, finding in scan(scope, **filters)]
     by_domain, by_rule = {}, {}
     for row in found:
@@ -100,7 +101,7 @@ def findings_payload(scope, *, page=1, **filters):
     pages = max(1, -(-len(found) // PAGE_SIZE))
     return {
         'catalog_version': catalog.CATALOG_VERSION, 'scope': scope.payload(),
-        'count': len(found), 'page': page, 'pages': pages,
+        'count': len(found), 'page': page, 'pages': pages, 'coverage': coverage(scope, **filters),
         'summary': {
             'by_domain': [{'domain': key, 'label': DOMAIN_LABELS[key], 'count': value}
                           for key, value in by_domain.items()],
@@ -130,7 +131,7 @@ def _plan_step(selection, entry, *, actor):
     params = selection.get('params') or {}
     step = {'fingerprint': selection['fingerprint'], 'rule_id': selection['rule_id'], 'rule_version': None,
             'fix_kind': selection.get('fix_kind'), 'params': params, 'subjects': [], 'changes': [],
-            'closure': [], 'guards': {}, 'warnings': [], 'blockers': []}
+            'closure': [], 'dependencies': [], 'guards': {}, 'warnings': [], 'blockers': []}
     if entry is None or entry[0].id != selection['rule_id']:
         step['blockers'].append(blocker('finding_resolved', 'Este hallazgo ya no aparece: '
                                         'alguien lo corrigió o cambió. Vuelve a revisar.'))
@@ -154,7 +155,7 @@ def _plan_step(selection, entry, *, actor):
         return step, None
     plan = fixer.plan(finding, params, actor=actor)
     step.update(changes=plan.changes, closure=sorted({(label, pk) for label, pk in plan.closure}),
-                guards=plan.guards, warnings=plan.warnings, blockers=list(plan.blockers))
+                dependencies=sorted(set(plan.dependencies)), guards=plan.guards, warnings=plan.warnings, blockers=list(plan.blockers))
     return step, (item, finding, fixer, plan)
 
 
@@ -173,10 +174,11 @@ def _batch_blockers(steps, plans):
                              'aplícalas en lotes separados.',
                              [{'model': label, 'id': pk} for label, pk in sorted(overlaps)]))
     cap = (exclusive[0].max_closure or MAX_CLOSURE) if exclusive else MAX_CLOSURE
-    if len(owners) > cap:
+    all_keys = set(owners) | {tuple(key) for step in steps for key in step['dependencies']}
+    if len(all_keys) > cap:
         found.append(blocker('batch_too_large', f'El lote toca {len(owners)} registros; el máximo es {cap}. '
                              'Elige menos correcciones.'))
-    return found, sorted(owners)
+    return found, sorted(all_keys)
 
 
 def _build(scope, fixes, *, actor):
@@ -190,12 +192,13 @@ def _build(scope, fixes, *, actor):
     before = snapshot_many(keys)
     basis = {
         'catalog_version': catalog.CATALOG_VERSION, 'scope': scope.payload(), 'blockers': batch,
-        'steps': [{**step, 'closure': [[label, pk, before[(label, pk)]] for label, pk in step['closure']]}
+        'steps': [{**step, 'closure': [[label, pk, before[(label, pk)]] for label, pk in step['closure']],
+                   'dependencies': [[label, pk, before[(label, pk)]] for label, pk in step['dependencies']]}
                   for step in steps],
     }
     impact = {
         'catalog_version': catalog.CATALOG_VERSION, 'scope': scope.payload(), 'blockers': batch,
-        'steps': [{**step, 'closure': len(step['closure'])} for step in steps],
+        'steps': [{**step, 'closure': len(step['closure']), 'dependencies': len(step['dependencies'])} for step in steps],
         'records': len(keys), 'impact_hash': digest(basis),
     }
     impact['blocked'] = bool(batch or any(step['blockers'] for step in steps))
@@ -279,7 +282,7 @@ def apply_fixes(scope, fixes, *, actor, reason, request_id, expected_impact_hash
         recorded.append({
             'fingerprint': finding.fingerprint, 'rule_id': item.id, 'rule_version': item.version,
             'fix_kind': plan.fix_kind, 'params': plan.params, 'subjects': step['subjects'],
-            'guards': plan.guards, 'items': diff_items(before, after),
+            'guards': plan.guards, 'dependencies': plan.dependencies, 'items': diff_items(before, after),
         })
     try:
         with transaction.atomic():
@@ -294,13 +297,16 @@ def apply_fixes(scope, fixes, *, actor, reason, request_id, expected_impact_hash
         if replay:
             return replay
         raise
+    from content.services.data_integrity.observations import refresh_observed
+    refresh_observed(scope, [step['rule_id'] for step in recorded])
     return operation_summary(operation)
 
 
 # ── Undo ─────────────────────────────────────────────────────────────────────
 
 def _item_keys(operation):
-    return sorted({(item['model'], item['pk']) for step in operation.steps for item in step['items']})
+    return sorted({(item['model'], item['pk']) for step in operation.steps for item in step['items']}
+                  | {tuple(key) for step in operation.steps for key in step.get('dependencies', [])})
 
 
 def _guard_blockers(operation):
@@ -341,7 +347,10 @@ def preview_undo(operation_id):
         'operation_id': operation.pk, 'created_at': operation.created_at.isoformat(),
         'reason': operation.reason, 'scope': operation.scope,
         'steps': [{'rule_id': step['rule_id'], 'fix_kind': step['fix_kind'], 'subjects': step['subjects'],
-                   'items': len([item for item in step['items'] if not item['guard']])}
+                   'items': len([item for item in step['items'] if not item['guard']]),
+                   'changes': [{'label': next((ref['label'] for ref in step['subjects'] if ref['model'] == item['model'] and ref['id'] == item['pk']), 'Registro'),
+                                'field': item['field'], 'before': item['after'], 'after': item['before']}
+                               for item in step['items'] if not item['guard']]}
                   for step in operation.steps],
         'blockers': blockers,
     }
@@ -411,6 +420,8 @@ def undo_operation(operation_id, *, actor, reason, request_id, expected_impact_h
         reason=reason, steps=recorded, history_operation_id=current_history_operation_id(),
         reverts=operation, actor=actor,
     )
+    from content.services.data_integrity.observations import refresh_observed
+    refresh_observed(resolve_observation_scope(operation.scope), [step['rule_id'] for step in recorded])
     return operation_summary(undo)
 
 
@@ -439,3 +450,8 @@ def operations_payload(*, page=1, rule_id=None):
     start = (page - 1) * OPERATIONS_PAGE_SIZE
     return {'count': total, 'page': page, 'pages': max(1, -(-total // OPERATIONS_PAGE_SIZE)),
             'results': [operation_summary(row) for row in rows[start:start + OPERATIONS_PAGE_SIZE]]}
+
+
+def resolve_observation_scope(scope):
+    from content.services.data_integrity.scope import resolve_scope
+    return resolve_scope(scope['kind'], scope.get('id'))
