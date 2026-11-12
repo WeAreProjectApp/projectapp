@@ -167,13 +167,18 @@ async function openList(page) {
   await expect(page.getByTestId('proposal-actions-71')).toBeVisible({ timeout: 25_000 });
 }
 
+async function chooseProposalStatus(page, control, label) {
+  await control.click();
+  await page.getByRole('option', { name: label, exact: true }).click();
+}
+
 test.beforeEach(async ({ page }) => {
   await setAuthLocalStorage(page, { token: 'approval-e2e-token', userAuth: { id: 8000, role: 'admin', is_staff: true, is_superuser: true } });
 });
 
 async function openInlineApproval(page) {
   const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });
-  await row.getByRole('combobox').selectOption('accepted');
+  await chooseProposalStatus(page, row.getByRole('combobox'), 'Aceptada');
   await expect(page.getByTestId('approval-confirm')).toBeEnabled();
 }
 
@@ -206,7 +211,7 @@ async function stageCustomDocuments(page) {
 
 async function expectAccepted(page) {
   const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });
-  await expect(row.getByRole('combobox')).toHaveValue('accepted');
+  await expect(row.getByRole('combobox')).toHaveText('Aceptada');
 }
 
 async function openApprovalFromEditor(page) {
@@ -257,7 +262,7 @@ async function openEditorApproval(page) {
   await expect(page.getByTestId('proposal-record-header')).toContainText('Propuesta Portal Atlas');
   await selectProposalDestination(page, 'general', 'general');
   await page.getByTestId('general-finance-general-discount').fill('17');
-  await page.getByRole('combobox', { name: 'Cambiar estado de la propuesta' }).selectOption('accepted');
+  await chooseProposalStatus(page, page.getByRole('combobox', { name: 'Cambiar estado de la propuesta' }), 'Aceptada');
   return page.getByTestId('proposal-approval-modal');
 }
 
@@ -326,11 +331,11 @@ test('cancelled approval preserves the proposal status', {
 
   await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
   const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });
-  await expect(row.getByRole('combobox')).toHaveValue('negotiating');
+  await expect(row.getByRole('combobox')).toHaveText('En negociación');
   expect(state.submissions).toEqual([]);
   expect(state.otherMutations).toEqual([]);
   expect(state.proposal.linked_project).toBeNull();
-  await row.getByRole('combobox').selectOption('accepted');
+  await chooseProposalStatus(page, row.getByRole('combobox'), 'Aceptada');
   await expect(page.getByTestId('approval-confirm')).toBeEnabled();
 });
 
