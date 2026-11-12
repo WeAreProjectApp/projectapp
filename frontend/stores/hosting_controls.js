@@ -34,7 +34,7 @@ export const useHostingControlsStore = defineStore('hosting_controls', {
       if (!this.selected) return
       const id = this.selected.id
       const { data } = await get_request(`hosting-controls/${id}/`)
-      if (this.selected?.id === id) this.selected = data
+      if (this.selected?.id === id && data.version >= this.selected.version) this.selected = data
     },
     async history() {
       if (!this.selected) return

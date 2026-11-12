@@ -68,3 +68,20 @@ def test_foreign_environment_is_ignored(local_state):
     result = render(local_state(environment='staging'), local_state)
     assert result.status_code == 200
     assert b'/__hosting/notice.js' not in result.content
+
+
+def test_nuxt_document_consumes_banner(local_state, tmp_path, monkeypatch):
+    from projectapp import views
+    path = local_state(mode='banner')
+    directory = tmp_path / 'frontend' / 'es-co'
+    directory.mkdir(parents=True)
+    (directory / 'index.html').write_text('<html><head></head><body>Nuxt prerenderizado</body></html>')
+    monkeypatch.setattr(views, 'FRONTEND_DIR', str(tmp_path / 'frontend'))
+    with override_settings(DEBUG=False, HOSTING_CONTROL_ENABLED=True, HOSTING_CONTROL_TARGET='fixture', HOSTING_CONTROL_STATE_FILE=path,
+                           ALLOWED_HOSTS=['fixture.example']):
+        adapter = HostingControlMiddleware(lambda request: views.serve_nuxt(request, path='es-co'))
+        result = adapter(RequestFactory().get('/es-co', HTTP_HOST='fixture.example', HTTP_ACCEPT='text/html'))
+    assert not result.streaming
+    assert b'Nuxt prerenderizado' in result.content
+    assert b'/__hosting/notice.js' in result.content
+    assert result['X-Hosting-Version'] == '1'
