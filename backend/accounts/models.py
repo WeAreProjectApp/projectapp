@@ -419,6 +419,11 @@ class Project(HistoryTrackedModel):
         (STATUS_ARCHIVED, 'Archivado'),
     ]
 
+    calculator_document = models.ForeignKey(
+        'content.Document', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='calculator_projects', help_text='Optional approved requirement calculator for this project.',
+    )
+
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default='')
     client = models.ForeignKey(

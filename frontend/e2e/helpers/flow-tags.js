@@ -343,6 +343,9 @@ export const BLOG_LIST = ['@flow:blog-list', '@module:blog', '@priority:P2'];
 export const ADMIN_CONSULTING_DISTRIBUTION = ['@flow:admin-consulting-distribution', '@module:commercial', '@priority:P1'];
 export const ADMIN_CONSULTING_HISTORY = ['@flow:admin-consulting-history', '@module:commercial', '@priority:P2'];
 export const ADMIN_CONSULTING_PREVIEW = ['@flow:admin-consulting-preview', '@module:commercial', '@priority:P1'];
+export const ADMIN_REQUIREMENT_CALCULATOR_CALIBRATION = ['@flow:admin-requirement-calculator-calibration', '@module:commercial', '@priority:P2'];
+export const ADMIN_REQUIREMENT_CALCULATOR_DEFINITION = ['@flow:admin-requirement-calculator-definition', '@module:commercial', '@priority:P1'];
+export const ADMIN_REQUIREMENT_CALCULATOR_REVISION_RESTORE = ['@flow:admin-requirement-calculator-revision-restore', '@module:commercial', '@priority:P2'];
 
 // ── diagnostic ──
 export const DIAGNOSTIC_PUBLIC_DARK_MODE = ['@flow:diagnostic-public-dark-mode', '@module:diagnostic', '@priority:P3'];
@@ -352,6 +355,9 @@ export const DIAGNOSTIC_PUBLIC_PHASE_VISIBILITY = ['@flow:diagnostic-public-phas
 export const DIAGNOSTIC_PUBLIC_RESPOND = ['@flow:diagnostic-public-respond', '@module:diagnostic', '@priority:P1'];
 export const DIAGNOSTIC_PUBLIC_SHARE = ['@flow:diagnostic-public-share', '@module:diagnostic', '@priority:P2'];
 export const DIAGNOSTIC_PUBLIC_VIEW = ['@flow:diagnostic-public-view', '@module:diagnostic', '@priority:P1'];
+
+// ── documents ──
+export const ADMIN_MANAGED_CALCULATOR_DOCUMENT = ['@flow:admin-managed-calculator-document', '@module:documents', '@priority:P2'];
 
 // ── layout ──
 export const LAYOUT_FOOTER_NAVIGATION = ['@flow:layout-footer-navigation', '@module:layout', '@priority:P3'];
@@ -433,6 +439,10 @@ export const ADMIN_PROCUREMENT_FILTERS_EXPORT = ['@flow:admin-procurement-filter
 export const ADMIN_PROCUREMENT_OPPORTUNITY_LIST = ['@flow:admin-procurement-opportunity-list', '@module:procurement', '@priority:P1'];
 export const ADMIN_PROCUREMENT_SAVED_SEARCHES = ['@flow:admin-procurement-saved-searches', '@module:procurement', '@priority:P2'];
 export const ADMIN_PROCUREMENT_SETTINGS_SYNC = ['@flow:admin-procurement-settings-sync', '@module:procurement', '@priority:P2'];
+
+// ── projects ──
+export const ADMIN_PROJECT_REQUIREMENT_CALCULATOR_APPROVE = ['@flow:admin-project-requirement-calculator-approve', '@module:projects', '@priority:P1'];
+export const ADMIN_PROJECT_REQUIREMENT_CALCULATOR_DRAFT = ['@flow:admin-project-requirement-calculator-draft', '@module:projects', '@priority:P1'];
 
 // ── proposal ──
 export const PROPOSAL_CLOSING_CONTACT = ['@flow:proposal-closing-contact', '@module:proposal', '@priority:P2'];

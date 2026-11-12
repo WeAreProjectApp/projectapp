@@ -2395,3 +2395,33 @@ Contrato completo: [Appi](../APPI.md).
 ## Documentos PDF subidos
 
 `Document.content_format` separa Markdown de PDF manual sin alterar la identidad ni el tipo comercial. El original y sus versiones usan `uploaded_pdf` en storage privado; los snapshots del sistema conservan `generated_file`. Panel y MCP comparten el servicio `uploaded_pdf_service`, serializers, compensación del historial y locks Project → Document. La búsqueda usa sólo texto derivado vigente y el historial conserva referencias binarias, con acceso interno. Contrato operativo y deploy pendiente en [Documentos PDF subidos](../uploaded-pdf-documents.md); evidencia focal en [QA PDF](../audits/2026-10-29-uploaded-pdf-qa.md).
+
+## Calculadora de requerimientos versionada (2026-11-05)
+
+La definición general estructurada vive en revisiones inmutables de `content`.
+El servicio transaccional `requirement_calculator` es el único escritor de reglas,
+documentos generados y precios XS/S/M compartidos con Paquetes. Un documento
+administrado conserva identidad y refleja la revisión vigente. El exportador de
+skills reconoce su metadata y deja de sobrescribirlo desde Markdown histórico.
+
+Cada proyecto puede tener versiones particulares (un borrador a la vez) basadas
+siempre en una revisión general explícita. Sólo cambian parámetros existentes.
+La aprobación congela definición, documento y bytes PDF y actualiza la relación
+opcional `Project.calculator_document`; una revisión general futura no los toca.
+Los ajustes y aprobaciones conservan eventos con actor y motivo. La visibilidad
+documental es independiente de la aprobación interna; la general es privada.
+
+Panel session/CSRF y MCP usan las mismas vistas FBV/serializers/servicios staff.
+Claude/ChatGPT clasifica fuera de ProjectApp con el contexto versionado. Los
+registros de estimación preservan los parámetros efectivos y UUID idempotente;
+los cierres reales se corrigen por eventos. La calibración agrupa por huella y
+talla y propone revisión sin recotización automática. El historial entrega resúmenes
+con tres cierres recientes; los detalles y la evidencia completa tienen consultas
+paginadas para conservar el acceso sin cargar todos los registros. Horas, costos y precios
+unitarios permanecen internos; el documento particular muestra clasificación.
+
+La definición general, sus revisiones y su documento son catálogo persistente
+para la renovación de datos de desarrollo. Los generadores no fabrican acuerdos
+ni evidencia de esfuerzo. El reinicio confirmado limpia su grafo de proyectos
+mediante un contexto de borrado separado, habilitado sólo cuando
+`FAKE_DATA_ALLOWED=True`; la protección documental ordinaria sigue vigente.

@@ -1,0 +1,16 @@
+{
+  "id": "admin-requirement-calculator-calibration",
+  "name": "Consultar calibración y corregir cierres de estimaciones",
+  "module": "commercial",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "El administrador consulta cohortes paginadas, muestras insuficientes y resúmenes de estimaciones; abre el registro completo y pagina la evidencia de todos sus cierres. Registra horas reales, evidencia y causa; un cierre posterior corrige explícitamente el último cierre. Datos inválidos, una corrección no válida y fallas de servidor quedan visibles.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

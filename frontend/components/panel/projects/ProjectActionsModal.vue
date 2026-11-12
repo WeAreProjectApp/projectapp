@@ -10,6 +10,7 @@ const actions = [
   { id: 'brand', icon: 'folders', label: 'projectBrand.title' },
   { id: 'detail', icon: 'view', label: 'projectAccess.projectActions.detail' },
   { id: 'space', icon: 'open-platform', label: 'projectAccess.projectActions.space' },
+  { id: 'calculator', icon: 'edit', label: 'requirementCalculator.title' },
   { id: 'edit', icon: 'edit', label: 'projectAccess.projectActions.edit' },
   { id: 'communications', icon: 'communications', label: 'projectAccess.projectActions.communications' },
   { id: 'state', icon: 'change-status', label: 'projectAccess.projectActions.state' },

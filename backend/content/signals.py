@@ -4,7 +4,7 @@ Prevents orphaned public images after hard deletes. Document and statement
 PDFs are retained for immutable history.
 """
 
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 from content.models.blog_post import BlogPost
@@ -51,3 +51,9 @@ def initialize_document_workflow(sender, instance, created, raw=False, **kwargs)
     actor = instance.created_by
     ensure_initial_state(instance, actor=actor)
     sync_legacy_notes(instance, actor=actor)
+
+
+@receiver(pre_delete, sender=Document)
+def preserve_calculator_document(sender, instance, **kwargs):
+    from content.services.calculator_documents import protect_delete
+    protect_delete(instance)

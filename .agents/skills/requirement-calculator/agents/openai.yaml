@@ -1,3 +1,3 @@
 interface:
   display_name: "Requirement Calculator"
-  short_description: "Estimate effort and price for a requirement and save it as a panel document"
+  short_description: "Classify requirements using the versioned calculator and project agreements"

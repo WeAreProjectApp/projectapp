@@ -1,3 +1,13 @@
+## 2026-11-11 — Tren de integración de 25 PRs
+
+Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.
+Se preservan las migraciones publicadas y se unen las hojas mediante
+accounts.0092_merge_parallel_features y content.0307_merge_parallel_features.
+El contrato combinado publica Comercial 6.6.0 y Proyectos 5.1.0; conserva
+accesos, eliminación protegida y el módulo independiente de integridad.
+Las regresiones de retorno de hosting, resúmenes, historial y contratos se
+validan en CI. Esta nota no acredita CI verde, integración ni aprobación manual.
+
 ## PA-231 — Contrato de fake data (2026-11-06)
 
 Trabajo backend en `fix/06112026-pa231-fake-data`: el comando canónico incorpora
@@ -151,6 +161,8 @@ Automatizadas exclusivamente en CI. La reprueba manual requiere dupla y SHA serv
 > **PA-246 — 2026-11-07:** el resumen compartido expone el título del documento
 > también fuera del paquete vigente. Propuestas, Gestor y MCP conservan identidad
 > y archivos; regresiones de transición y recarga preparadas para CI.
+
+> **Calculadora de requerimientos — implementación de sesión, 2026-11-05:** Comercial administra definición, señales, parámetros internos y documento sincronizado por panel/MCP. Los proyectos conservan variantes en Borrador/Aprobada con aprobación del equipo y PDF congelado; actualizar la general no altera acuerdos anteriores. El chat externo clasifica XS–XL/Proyecto, sin ejecutar un modelo en el panel. Los cierres preservan evidencia, correcciones y definición exacta; sus listados/detalles se paginan. Los precios XS/S/M se comparten con Paquetes y las ofertas emitidas quedan fijas. Valores provisionales hasta tener mediciones reales. QA local aprobado: 27 casos de navegador por lotes, incluidos cinco perfiles de pantalla, contratos MCP, componentes y servidor; evidencia y límites en `docs/audits/2026-11-05-requirement-calculator-qa.md`. Entrega y CI se verifican en PR #555; sin migraciones ni despliegue sobre el servicio.
 
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 

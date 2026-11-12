@@ -1,3 +1,4 @@
+from content.mcp.requirement_calculator_tools import CALCULATOR_TOOLS, PROJECT_CALCULATOR_TOOLS
 """Single registry of MCP connector identities and ordered tool sources."""
 from dataclasses import dataclass, replace
 from procurement.mcp_tools import PROCUREMENT_TOOLS
@@ -197,7 +198,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
     ),
     'commercial': ConnectorSpec(
         'commercial', '5.1.0',
-        (CLIENT_TOOLS, PROPOSAL_TOOLS, DIAGNOSTIC_TOOLS, COMMERCIAL_PARITY_TOOLS, CONSULTING_TOOLS,
+        (CLIENT_TOOLS, PROPOSAL_TOOLS, DIAGNOSTIC_TOOLS, COMMERCIAL_PARITY_TOOLS, CONSULTING_TOOLS, CALCULATOR_TOOLS,
          PROPOSAL_VIDEO_TOOLS, PROPOSAL_FORMALIZATION_TOOLS,
          [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS
           if tool['name'] not in {existing['name'] for existing in COMMERCIAL_PARITY_TOOLS}]),
@@ -214,7 +215,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['programs'],),
     ),
     'projects': ConnectorSpec(
-        'projects', '3.2.0', (PROJECT_TOOLS, ACCESS_TOOLS), uploads=True,
+        'projects', '3.3.0', (PROJECT_TOOLS, ACCESS_TOOLS, PROJECT_CALCULATOR_TOOLS), uploads=True,
     ),
     'content': ConnectorSpec(
         'content', '2.1.1',

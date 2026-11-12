@@ -1,0 +1,15 @@
+{
+  "id": "admin-requirement-calculator-revision-restore",
+  "name": "Restaurar una revisión general de la calculadora",
+  "module": "commercial",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "El administrador consulta revisiones paginadas, carga una anterior en el editor y la publica como una nueva revisión inmutable. Si falla la carga o publicación, no sustituye silenciosamente la definición vigente.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

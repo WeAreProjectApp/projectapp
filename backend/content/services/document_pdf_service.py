@@ -99,6 +99,11 @@ class DocumentPdfService:
             bytes: PDF content, or None on failure.
         """
         try:
+            if (getattr(document, 'metadata', {}) or {}).get('requirement_calculator', {}).get('kind') == 'project':
+                from content.models import ProjectCalculatorVersion
+                frozen = ProjectCalculatorVersion.objects.filter(document=document, status='approved').only('pdf_content').first()
+                if frozen is not None and frozen.pdf_content:
+                    return bytes(frozen.pdf_content)
             if getattr(document, 'content_format', 'markdown') == 'pdf':
                 file = document.generated_file or document.uploaded_pdf
                 with file.open('rb') as source:

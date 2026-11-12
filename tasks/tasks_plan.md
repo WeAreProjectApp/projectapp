@@ -8,6 +8,8 @@ Implementado Accesos autorizados: código, Google, cuentas administradas por pan
 
 > **PA-201, PA-202/205, PA-208 y PA-214 — 2026-11-06:** compactar Radar y detalle, redimensionar menú y navegación de Enlaces seguros, reubicar Consultoría e integrar Estado de los emails con Historial y reintentos individuales. Criterio de entrega: cobertura del envío para dos cuentas distintas, reintento histórico y por destinatario, arrastres en las tres vistas y matriz responsiva validados en CI; PR abierto y verde. No se ejecutan tests locales.
 
+> **Calculadora por tallas — PR #555 (2026-11-05):** definición general administrable y versionada; variantes opcionales por proyecto con parámetros negociables, Borrador/Aprobada y documento/PDF congelados al aprobar. MCP Comercial consulta/clasifica desde el chat externo y registra estimaciones/cierres; MCP Proyectos ajusta y aprueba variantes. Calibración separa definiciones efectivas, conserva correcciones y propone revisión sin cambios automáticos. Horas/costos son internos; valores iniciales provisionales. Migraciones accounts.0091 y content.0305–0306 pendientes del deploy. QA local y CI se verifican en la rama de sesión; esta nota no acredita integración ni despliegue.
+
 > **Enlaces seguros — 2026-10-26:** jerarquía propia, navegación compartida,
 > clasificación inicial por proyecto y MCP de administración completo.
 > Migraciones mediante deploy; entrega y validación se verifican en el PR.

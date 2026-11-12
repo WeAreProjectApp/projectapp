@@ -35,7 +35,7 @@ FIELDS = {
         is_active automations_paused project_type_custom market_type_custom email_features
         email_method_phases email_signed_by rejection_reason rejection_comment deliverable
         selected_modules contract_params contract_modality'''.split(),
-    'project': '''name description status current_state client production_url staging_url repository_url
+    'project': '''name description status current_state client calculator_document production_url staging_url repository_url
         admin_url admin_username'''.split(),
     'client': '''company_name phone address cedula nit billing_code archived_at'''.split(),
 }

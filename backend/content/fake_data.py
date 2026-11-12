@@ -204,6 +204,10 @@ DERIVED_MODELS = {
 
 CATALOG_MODELS = {
     'secure_links.SecureLinkFolderLock',
+
+    # Published calculator rules are administrative configuration; demo seeds
+    # preserve the exact revision and never manufacture calibration authority.
+    'content.RequirementCalculator', 'content.CalculatorRevision',
     'accounts.PlatformAISettings', 'accounts.PlatformAITemplate', 'accounts.PlatformAITemplateRevision',
     # Help defaults and published revisions belong to the global catalog;
     # migrations and administrators maintain them, not demo-data generation.
@@ -226,6 +230,12 @@ EXEMPT_MODELS = {
     # Provider ingestion receipts and real authentication material are not
     # evidence that a fake monitoring source actually delivered an event.
     'monitoring.Credential', 'monitoring.Delivery',
+
+    # Negotiated agreements and measured execution require explicit staff
+    # input. Fabricating these would contaminate the calibration evidence.
+    # A confirmed non-production reset removes their protected business graph.
+    'content.ProjectCalculatorVersion', 'content.ProjectCalculatorChange',
+    'content.CalculatorEstimate', 'content.CalculatorActual',
     # Private client conversations and expiring replies reflect real requests;
     # demo seeds must not fabricate their content or quota provenance.
     'accounts.AppiConversation', 'accounts.AppiTurn',

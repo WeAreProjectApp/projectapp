@@ -389,6 +389,17 @@
         "admin-procurement-settings-sync",
         "admin-procurement-deliveries"
       ]
+    },
+    {
+      "title": "Section 40 — Requirement Calculator (Nov 5, 2026)",
+      "flows": [
+        "admin-requirement-calculator-definition",
+        "admin-requirement-calculator-revision-restore",
+        "admin-project-requirement-calculator-draft",
+        "admin-project-requirement-calculator-approve",
+        "admin-requirement-calculator-calibration",
+        "admin-managed-calculator-document"
+      ]
     }
   ]
 }

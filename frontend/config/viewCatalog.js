@@ -428,6 +428,13 @@ export const viewCatalogSections = [
         viewType: 'list',
       },
       {
+        label: 'Calculadora de requerimientos', url: '/panel/requirement-calculator', group: 'Consultoría y asesoría',
+        file: 'frontend/pages/panel/requirement-calculator/index.vue',
+        reference: 'definición y parámetros versionados de la calculadora, documentos sincronizados y calibración interna',
+        notes: 'Comercial administra la definición, señales, valores y revisiones por panel/MCP. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.',
+        audience: 'admin', viewType: 'config',
+      },
+      {
         label: 'Consultoría y asesoría', url: '/panel/consulting', group: 'Consultoría y asesoría',
         file: 'frontend/pages/panel/consulting/index.vue',
         reference: 'distribución y vista previa de la presentación de consultoría empresarial versionada',
