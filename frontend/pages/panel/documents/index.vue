@@ -616,6 +616,7 @@ const router = useRouter();
 const { t } = useI18n();
 const { openRow } = useRowNavigation();
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
+useHead({ title: 'Gestor Documental | ProjectApp' });
 
 const documentStore = useDocumentStore();
 const folderStore = useDocumentFolderStore();

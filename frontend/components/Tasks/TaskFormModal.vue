@@ -17,11 +17,13 @@
             <div class="px-6 py-4 space-y-4">
             <BaseFormField
               label="Title"
+              :for="`${modalFormId}-title`"
               required
               :error="titleError"
             >
               <template #default="{ errorId, invalid }">
                 <BaseInput
+                  :id="`${modalFormId}-title`"
                   v-model="form.title"
                   :error="invalid"
                   :aria-describedby="errorId"
@@ -31,32 +33,33 @@
               </template>
             </BaseFormField>
 
-            <BaseFormField label="Description">
-              <BaseTextarea v-model="form.description" rows="3" />
+            <BaseFormField label="Description" :for="`${modalFormId}-description`">
+              <BaseTextarea :id="`${modalFormId}-description`" v-model="form.description" rows="3" />
             </BaseFormField>
 
             <BaseFormRow :cols="3" :gap="4">
-              <BaseFormField label="Status">
-                <BaseSelect v-model="form.status" :options="statusOptions" />
+              <BaseFormField label="Status" :for="`${modalFormId}-status`">
+                <BaseSelect :id="`${modalFormId}-status`" v-model="form.status" :options="statusOptions" />
               </BaseFormField>
-              <BaseFormField label="Priority">
+              <BaseFormField label="Priority" :for="`${modalFormId}-priority`">
                 <BaseSelect
+                  :id="`${modalFormId}-priority`"
                   v-model="form.priority"
                   :options="priorityOptions"
                   data-testid="task-priority-select"
                 />
               </BaseFormField>
-              <BaseFormField label="Tablero">
-                <BaseSelect v-model="form.board_type" :options="boardOptions" />
+              <BaseFormField label="Tablero" :for="`${modalFormId}-board`">
+                <BaseSelect :id="`${modalFormId}-board`" v-model="form.board_type" :options="boardOptions" />
               </BaseFormField>
             </BaseFormRow>
 
             <BaseFormRow :cols="2" :gap="4">
-              <BaseFormField label="Due date">
-                <BaseInput v-model="form.due_date" type="date" />
+              <BaseFormField label="Due date" :for="`${modalFormId}-due-date`">
+                <BaseInput :id="`${modalFormId}-due-date`" v-model="form.due_date" type="date" />
               </BaseFormField>
-              <BaseFormField label="Assigned to">
-                <BaseSelect v-model="form.assignee_id" :options="assigneeOptions" />
+              <BaseFormField label="Assigned to" :for="`${modalFormId}-assignee`">
+                <BaseSelect :id="`${modalFormId}-assignee`" v-model="form.assignee_id" :options="assigneeOptions" />
               </BaseFormField>
             </BaseFormRow>
 

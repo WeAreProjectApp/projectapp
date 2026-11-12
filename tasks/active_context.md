@@ -70,6 +70,21 @@ no acredita despliegue ni validación manual.
 
 Implementación en rama propia sobre main y PR #571. Los encabezados contienen nombres largos; Código y cabeceras HTML TH>P conservan contraste; Gestionar carpetas recibe semántica modal y foco coherente; las tarjetas interpretan escapes Markdown sin alterar la fuente; los historiales comparten estados en español. Vencimiento usa días calendario de la zona del navegador con hora conservada, carga sin escritura y conversión local al reabrir. Sin migraciones ni cambios de API. Automatizadas exclusivamente en CI; reprueba manual solicitada por buzón a Backlog para asignar una única dupla al PR. Este registro no acredita CI verde, aprobación de QA, integración ni deploy. Guion: docs/audits/PA-235-238-239-240-handoff.md.
 
+## 2026-11-07 — PA-232/233/234/236/237
+
+Implementación en el worktree propio `pa232-237-panel-platform`, base `main`
+b01448a2. Se corrigen la raíz del catálogo compartido para el retorno SPA,
+los mensajes vacíos del historial según filtros aplicados, el foco de tres
+diálogos, los rótulos de perfil y Tareas, el aviso de título de Solicitudes
+y los mínimos de las columnas del detalle del cliente. Sin migraciones.
+`isCustomized` y `clearAll` se conservan según el alcance aprobado.
+
+Regresiones automatizadas exclusivamente en CI; Chrome y datos aislados a
+cargo de la dupla que asigne Backlog. Se pidió asignación en el buzón compartido;
+no se reanuda DEVQA-000. Guion y límites en
+`docs/audits/2026-11-07-pa232-237-validation.md`. Este registro no acredita
+validación manual, integración ni despliegue.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
