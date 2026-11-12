@@ -8,7 +8,8 @@ import { test, expect } from '../helpers/test.js';
 import {
   mockRequirementPackagesWorkspace,
   REQUIREMENT_PACKAGE_PROJECT,
-  REQUIREMENT_PACKAGE_ORDER_ID,
+  REQUIREMENT_PACKAGE_NEW_ORDER_ID,
+  REQUIREMENT_PACKAGE_PAID_ORDER_ID,
   REQUIREMENT_PACKAGE_QUOTE_DIGEST,
 } from '../helpers/requirement-packages-workspace.js';
 import { setPlatformAuth, mockPlatformClient } from '../helpers/platform-auth.js';
@@ -115,7 +116,9 @@ test.describe('Platform requirement packages', () => {
     await page.getByLabel('He leído y acepto las condiciones del paquete').check();
     await payment.click();
 
-    await expect(page.getByText(/Paquete Atlas.*Pago pendiente/)).toContainText('1.190.000');
+    const createdOrder = page.getByTestId(`package-order-${REQUIREMENT_PACKAGE_NEW_ORDER_ID}`);
+    await expect(createdOrder).toContainText('Pago pendiente');
+    await expect(createdOrder).toContainText('1.190.000');
     expect(calls.find((call) => call.apiPath === 'requirement-packages/projects/1/orders/').body).toMatchObject({
       package_id: 101,
       method: 'external',
@@ -176,7 +179,7 @@ test.describe('Platform requirement packages', () => {
     await openPackagesFromProject(page);
 
     await page.getByRole('button', { name: 'Ver solicitud', exact: true }).click();
-    await expect(page.getByText(`El cupo se descontará de la compra ${REQUIREMENT_PACKAGE_ORDER_ID}.`)).toBeVisible();
+    await expect(page.getByText(`El cupo se descontará de la compra ${REQUIREMENT_PACKAGE_PAID_ORDER_ID}.`)).toBeVisible();
     const accept = page.getByTestId('package-accept');
     await expect(accept).toBeDisabled();
     await page.getByLabel('Confirmo el alcance, la talla y la agenda orientativa de esta propuesta.').check();
@@ -186,7 +189,7 @@ test.describe('Platform requirement packages', () => {
     await expect(page.getByTestId('package-balance-XS')).toHaveText('0');
     const decisions = calls.filter((call) => call.apiPath === 'requirement-packages/projects/1/requests/701/decide/');
     expect(decisions).toHaveLength(1);
-    expect(decisions[0].body).toMatchObject({ decision: 'accept', proposal_id: 801, order_id: REQUIREMENT_PACKAGE_ORDER_ID });
+    expect(decisions[0].body).toMatchObject({ decision: 'accept', proposal_id: 801, order_id: REQUIREMENT_PACKAGE_PAID_ORDER_ID });
   });
 
   test('displays the proposed size, scope, and source purchase before consent', {
@@ -201,7 +204,7 @@ test.describe('Platform requirement packages', () => {
 
     await expect(page.getByTestId('package-request-detail')).toContainText('Talla S');
     await expect(page.getByTestId('package-request-detail')).toContainText('Mostrar el estado confirmado del pedido.');
-    await expect(page.getByText(`El cupo se descontará de la compra ${REQUIREMENT_PACKAGE_ORDER_ID}.`)).toBeVisible();
+    await expect(page.getByText(`El cupo se descontará de la compra ${REQUIREMENT_PACKAGE_PAID_ORDER_ID}.`)).toBeVisible();
   });
 
   test('keeps the XS balance when a consented decision fails', {

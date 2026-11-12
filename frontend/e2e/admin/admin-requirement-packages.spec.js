@@ -10,6 +10,7 @@ import {
   mockRequirementPackagesWorkspace,
   REQUIREMENT_PACKAGE_PROJECT,
   REQUIREMENT_PACKAGE_ORDER_ID,
+  REQUIREMENT_PACKAGE_PAID_ORDER_ID,
 } from '../helpers/requirement-packages-workspace.js';
 import {
   ADMIN_REQUIREMENT_PACKAGE_COMMERCE,
@@ -108,6 +109,7 @@ test.describe('Admin requirement packages', () => {
 
     await page.getByRole('button', { name: 'Ver solicitud', exact: true }).click();
     await page.getByRole('button', { name: 'Comenzar evaluación', exact: true }).click();
+    await expect(page.getByTestId('package-request-detail')).toContainText('En evaluación');
     await page.getByLabel('Alcance propuesto').fill('Mostrar el estado confirmado sin crear un flujo nuevo.');
     await page.getByLabel('Por qué corresponde esta talla').fill('Reutiliza datos y vista existentes.');
     await page.getByLabel('Desde').fill('2026-11-17');
@@ -197,7 +199,9 @@ test.describe('Admin requirement packages', () => {
     await page.getByLabel('Referencia del pago').fill('ATLAS-PAID-01');
     await page.getByRole('button', { name: 'Confirmar pago y activar cupos', exact: true }).click();
 
-    await expect(page.getByText(/Paquete Atlas.*Pagada/)).toContainText('1.190.000');
+    const confirmedOrder = page.getByTestId(`package-order-${REQUIREMENT_PACKAGE_ORDER_ID}`);
+    await expect(confirmedOrder).toContainText('Pagada');
+    await expect(confirmedOrder).toContainText('1.190.000');
     await expect(page.getByTestId('package-balance-S')).toHaveText('2');
     expect(calls.find((call) => call.apiPath === `requirement-packages/projects/1/orders/${REQUIREMENT_PACKAGE_ORDER_ID}/confirm-external/`).body).toMatchObject({
       payment_reference: 'ATLAS-PAID-01',
@@ -213,9 +217,9 @@ test.describe('Admin requirement packages', () => {
     await openQueue(page);
     await openProjectWorkspace(page);
 
-    await expect(page.getByText('Paquete Atlas', { exact: false })).toBeVisible();
-    await expect(page.getByText('Pago pendiente', { exact: true })).toBeVisible();
-    await expect(page.getByText('Consumo · 1 S', { exact: false })).toBeVisible();
+    await expect(page.getByTestId(`package-order-${REQUIREMENT_PACKAGE_ORDER_ID}`)).toContainText('Pago pendiente');
+    await expect(page.getByTestId(`package-order-${REQUIREMENT_PACKAGE_PAID_ORDER_ID}`)).toContainText('Pagada');
+    await expect(page.getByText('Consumo · -1 S', { exact: false })).toBeVisible();
   });
 
   test('does not credit a balance when external payment confirmation fails', {

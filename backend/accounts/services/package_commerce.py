@@ -167,7 +167,9 @@ def checkout(project_id, actor, order_id, data):
                       'single_use': True, 'collect_shipping': False, 'currency': 'COP',
                       'amount_in_cents': int(order.total * 100), 'redirect_url': redirect}, timeout=15)
             response.raise_for_status()
-            link_id = response.json().get('data', {}).get('id')
+            payload = response.json()
+            link = payload.get('data') if isinstance(payload, dict) else None
+            link_id = link.get('id') if isinstance(link, dict) else None
         except (requests.RequestException, ValueError):
             raise ValidationError('No se pudo preparar el pago. La compra sigue pendiente.') from None
         if not isinstance(link_id, str) or not link_id or len(link_id) > 100:

@@ -14,6 +14,8 @@ export const REQUIREMENT_PACKAGE_PROJECT = {
 };
 
 export const REQUIREMENT_PACKAGE_ORDER_ID = '11111111-1111-4111-8111-111111111111';
+export const REQUIREMENT_PACKAGE_NEW_ORDER_ID = '22222222-2222-4222-8222-222222222222';
+export const REQUIREMENT_PACKAGE_PAID_ORDER_ID = '33333333-3333-4333-8333-333333333333';
 export const REQUIREMENT_PACKAGE_QUOTE_DIGEST = 'a3f18b32b1d1b3361e64e3c50b07c3de12986f0e644f1fbd6e93b6a961e68d52';
 
 const json = (body, status = 200) => ({
@@ -46,7 +48,7 @@ function fixture({ admin = false } = {}) {
     description: 'Necesito ver el estado del pedido en el espacio de Atlas.',
     status: 'offered',
     version: 4,
-    suggested_order_id: REQUIREMENT_PACKAGE_ORDER_ID,
+    suggested_order_id: REQUIREMENT_PACKAGE_PAID_ORDER_ID,
     proposal: {
       id: 801,
       size: 'S',
@@ -67,8 +69,17 @@ function fixture({ admin = false } = {}) {
     status: 'pending',
     total: '1190000',
     currency: 'COP',
+    expires_at: null,
+    snapshot: { name: 'Paquete Atlas', counts: { XS: 2, S: 1, M: 0 } },
+  };
+  const paidOrder = {
+    id: REQUIREMENT_PACKAGE_PAID_ORDER_ID,
+    method: 'external',
+    status: 'paid',
+    total: '2380000',
+    currency: 'COP',
     expires_at: '2027-11-12T00:00:00Z',
-    snapshot: { name: 'Paquete Atlas' },
+    snapshot: { name: 'Paquete Atlas ampliado', counts: { XS: 2, S: 2, M: 0 } },
   };
   return {
     admin,
@@ -88,11 +99,11 @@ function fixture({ admin = false } = {}) {
       online_available: true,
     }],
     requests: [request],
-    orders: [externalOrder],
+    orders: [externalOrder, paidOrder],
     movements: [{
       id: 901,
       kind: 'debit',
-      quantity: 1,
+      quantity: -1,
       size: 'S',
       reason: 'Aceptación previa',
       created_at: '2026-11-01T00:00:00Z',
@@ -242,7 +253,7 @@ export async function mockRequirementPackagesWorkspace(page, options = {}) {
       calls.push({ apiPath, method, body: route.request().postDataJSON() });
       if (failures.order) return error('No pudimos crear la compra. Inténtalo de nuevo.', failures.order);
       const body = route.request().postDataJSON();
-      const order = { id: '22222222-2222-4222-8222-222222222222', method: body.method, status: 'pending', total: '1190000', currency: 'COP', snapshot: { name: 'Paquete Atlas' }, expires_at: null };
+      const order = { id: REQUIREMENT_PACKAGE_NEW_ORDER_ID, method: body.method, status: 'pending', total: '1190000', currency: 'COP', snapshot: { name: 'Paquete Atlas', counts: { XS: 2, S: 1, M: 0 } }, expires_at: null };
       state.orders.unshift(order);
       return json(order, 201);
     }
@@ -252,7 +263,8 @@ export async function mockRequirementPackagesWorkspace(page, options = {}) {
       if (failures.external) return error('No pudimos confirmar el pago externo.', failures.external);
       const order = state.orders.find((row) => row.id === externalMatch[1]);
       order.status = 'paid';
-      state.balances.S += 1;
+      order.expires_at = '2027-11-12T00:00:00Z';
+      for (const [size, count] of Object.entries(order.snapshot.counts)) state.balances[size] += count;
       return json(order);
     }
     const reverseMatch = path.match(/^movements\/(\d+)\/reverse\/$/);

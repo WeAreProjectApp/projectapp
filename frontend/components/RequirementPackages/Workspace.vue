@@ -415,6 +415,7 @@ onMounted(async () => {
         <article
           v-for="order in data.orders.results"
           :key="order.id"
+          :data-testid="`package-order-${order.id}`"
           class="space-y-3 rounded-xl border border-border-default p-4"
         >
           <p class="font-semibold text-text-default">
