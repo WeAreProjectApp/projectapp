@@ -73,6 +73,18 @@ describe('ensureFunctionalRequirementItemIds', () => {
 });
 
 describe('buildItemRequirementsMap', () => {
+  it('preserves technical detail formatting without aliasing the saved document', () => {
+    const source = { flowKey: 'registration', title: 'Registro', linked_item_ids: ['item-a'],
+      configuration: 'Validar correo único.', usageFlow: 'Completar → enviar.',
+      text_formats: { '/configuration': 'markdown_html_v1' } };
+    const map = buildItemRequirementsMap({ epics: [{ requirements: [source] }] });
+
+    expect(map['item-a'][0].configuration).toBe(source.configuration);
+    expect(map['item-a'][0].usageFlow).toBe(source.usageFlow);
+    expect(map['item-a'][0].text_formats).toEqual(source.text_formats);
+    map['item-a'][0].text_formats['/configuration'] = 'plain';
+    expect(source.text_formats['/configuration']).toBe('markdown_html_v1');
+  });
   const TECH_DOC = {
     epics: [{
       epicKey: 'views',
