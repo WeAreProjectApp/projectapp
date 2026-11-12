@@ -101,6 +101,10 @@ Desarrollo independiente en `feat/05112026-procurement-module`. Referencia funci
 
 Conector propio, revisiones persistentes diarias y a demanda, panel administrativo con correcciones y deshacer. Alcance contable individual y tres correcciones documentales nuevas (DC9–DC11). Todos los administradores pueden operar integridad financiera; los demás permisos contables conservan su contrato. Trabajo en la rama de sesión; despliegue y consumidores se verifican por separado.
 
+## Accesos autorizados — implementado
+
+Rama de sesión: `feat/05112026-authorized-access`, [PR #554](https://github.com/WeAreProjectApp/projectapp/pull/554). Contraseña, código y Google para cuentas habilitadas; módulo Accesos y MCP. Los correos con credenciales dejan de copiarse y de exponer contenido en historial. Pruebas focales de autenticación, administración, privacidad y cinco tamaños de pantalla en verde. CI e integración se consultan en el PR; migración y configuración Google sólo mediante deploy.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

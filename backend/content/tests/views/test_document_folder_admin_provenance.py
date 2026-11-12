@@ -2,6 +2,7 @@
 import pytest
 from django.test import RequestFactory
 
+from accounts.models import UserProfile
 from content.admin import DocumentFolderAdminForm, admin_site
 from content.models import DocumentFolder
 
@@ -35,10 +36,15 @@ def test_admin_folder_form_rejects_a_duplicate_root_name():
     assert 'name: Ya existe una carpeta con ese nombre aquí' in form.non_field_errors()
 
 
-def test_admin_folder_form_rejects_a_user_without_client_profile(admin_user):
+def test_admin_folder_form_rejects_a_user_without_client_profile(django_user_model):
     """Falla si el admin descarta silenciosamente la asociación de un usuario sin perfil."""
+    user = django_user_model.objects.create_user(
+        username='folder-user-without-profile',
+        email='folder-user-without-profile@example.com',
+    )
+    UserProfile.objects.filter(user=user).delete()
     form = DocumentFolderAdminForm(
-        data={'name': 'Client folder', 'order': 0, 'client_user': admin_user.pk},
+        data={'name': 'Client folder', 'order': 0, 'client_user': user.pk},
     )
 
     assert form.is_valid() is False

@@ -2,6 +2,10 @@
 
 > **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).
 
+## Accesos autorizados — 2026-11-05
+
+Accesos requiere google-auth y GOOGLE_OAUTH_CLIENT_ID propio. Desafíos y cuotas compartidas en DB con bloqueos por usuario/bucket. ACCESS_TRUSTED_PROXY_IPS se configura sólo con proxies conocidos. Ver docs/AUTHORIZED_ACCESS.md; migración accounts.0091 mediante deploy.
+
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
 
 ## Contrato del radar — 2026-10-26

@@ -1,4 +1,5 @@
 import pytest
+from content.models.business_proposal import BusinessProposal
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
@@ -10,8 +11,10 @@ from accounts.models import (
     UserProfile,
     VerificationCode,
 )
-from content.models.business_proposal import BusinessProposal
-from accounts.services.tokens import get_tokens_for_user, get_verification_token_for_user
+from accounts.services.tokens import (
+    get_tokens_for_user,
+    get_verification_token_for_user,
+)
 
 User = get_user_model()
 
@@ -433,7 +436,7 @@ class TestClientFilterEdgeCases:
 
 @pytest.mark.django_db
 class TestNoProfileEdgeCases:
-    def test_me_for_user_without_profile_returns_404(self, api_client):
+    def test_me_for_user_without_profile_returns_401(self, api_client):
         user = User.objects.create_user(
             username='noprof2@test.com', email='noprof2@test.com',
             password='pass123!',
@@ -447,10 +450,10 @@ class TestNoProfileEdgeCases:
             HTTP_AUTHORIZATION=f'Bearer {token}',
         )
 
-        assert response.status_code == 404
-        assert 'perfil' in response.json()['detail'].lower()
+        assert response.status_code == 401
+        assert response.json()['code'] == 'token_not_valid'
 
-    def test_complete_profile_for_user_without_profile_returns_404(self, api_client):
+    def test_complete_profile_for_user_without_profile_returns_401(self, api_client):
         user = User.objects.create_user(
             username='noprof3@test.com', email='noprof3@test.com',
             password='pass123!',
@@ -469,4 +472,5 @@ class TestNoProfileEdgeCases:
             HTTP_AUTHORIZATION=f'Bearer {token}',
         )
 
-        assert response.status_code == 404
+        assert response.status_code == 401
+        assert response.json()['code'] == 'token_not_valid'

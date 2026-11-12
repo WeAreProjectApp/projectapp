@@ -303,12 +303,18 @@ class EmailDeliveryGateway:
         )
         _CURRENT_DELIVERY.set(trace)
 
+        # Clone before the primary call: a backend is free to mutate the
+        # message while preparing MIME, and attachments must remain identical.
+        from content.services.email_privacy_policy import credential_email, history_message
+        if credential_email(template_key) and (len(primary_recipients) != 1 or cc_recipients or direct_bcc_recipients):
+            _CURRENT_DELIVERY.set(None)
+            raise ValueError('Credential emails require exactly one primary recipient.')
         from content.services.email_snapshot_service import (
             capture_delivery_snapshot,
         )
         try:
             # Preserve content before a backend can mutate it to prepare MIME.
-            copy_source = _clone_message(message)
+            copy_source = history_message(_clone_message(message), template_key)
             trace.snapshot = capture_delivery_snapshot(
                 copy_source,
                 delivery_id=trace.delivery_id,
@@ -372,7 +378,7 @@ class EmailDeliveryGateway:
             return sent_count
 
         try:
-            recipients = _active_copy_recipients(family)
+            recipients = [] if credential_email(template_key) else _active_copy_recipients(family)
         except Exception:
             # A missing table during a rolling deploy or a transient database
             # error must never turn a successful customer send into a failure.

@@ -43,7 +43,7 @@ def create_client(*, email, first_name, last_name, company_name='', phone='', cr
         password=temp_password,
         first_name=first_name,
         last_name=last_name,
-        is_active=True,
+        is_active=False,
     )
 
     UserProfile.objects.create(

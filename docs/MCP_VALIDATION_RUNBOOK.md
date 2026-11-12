@@ -2965,3 +2965,7 @@ Pruebas focalizadas (por archivo, máximo 20 tests por lote): `test_uploaded_pdf
 ## Contratación estatal — procurement
 
 Validar listado/filtros/exportación, búsquedas con owner_id, alertas con destinatarios y frecuencias, vista previa sin correo, configuración sensible con confirmación, sincronización única, seguimiento con motivo e historial, detalle de entrega y reintento. Rechazar campos desconocidos, owner no-staff y mutaciones sensibles sin confirmar. Una credencial de staff sin superusuario no puede leer ni cambiar búsquedas de otro dueño ni escribir sus clasificaciones; confirmar una acción tampoco amplía ese permiso. No se exponen source_data ni claves de buzones. El análisis externo se registra en notes. Operación y evidencia de validación: `docs/PROCUREMENT.md`.
+
+## Accesos autorizados — projects 4.5.0
+
+Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.

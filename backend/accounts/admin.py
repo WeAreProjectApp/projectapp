@@ -95,7 +95,11 @@ class ProjectAdmin(admin.ModelAdmin):
         }),
     )
 
-admin_site.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('access_version',)
+
+
+admin_site.register(UserProfile, UserProfileAdmin)
 admin_site.register(VerificationCode)
 admin_site.register(Project, ProjectAdmin)
 admin_site.register(ChangeRequest)
