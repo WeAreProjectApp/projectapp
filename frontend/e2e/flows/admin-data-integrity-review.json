@@ -1,0 +1,16 @@
+{
+  "id": "admin-data-integrity-review",
+  "name": "Aceptar o reabrir un hallazgo de integridad",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "El administrador acepta como intencional o reabre un hallazgo presente con motivo y confirmación. La decisión conserva actor y fecha. Evidencia nueva vuelve a pendientes y un conflicto no cambia la decisión.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

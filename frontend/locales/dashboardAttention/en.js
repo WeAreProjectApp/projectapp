@@ -1,4 +1,5 @@
 export default {
+  integrityPending: 'pending integrity findings',
   loading: 'Loading…', more: 'Load more', retry: 'Retry', close: 'Close',
   loadError: 'The items could not be loaded.', detailError: 'The details could not be loaded.',
   missing: 'This item no longer exists or is unavailable.', forbidden: 'You do not have permission to view this item.',
@@ -11,6 +12,7 @@ export default {
   assignee: 'Assignee', priority: 'Priority', client: 'Client', days_unopened: 'Days unopened', description: 'Description',
   pending_at: 'Pending since',
   destination: {
+    data_integrity: 'Review data integrity',
     collection_documents_pending: 'Complete linked document',
     emails_failed: 'View delivery in history', recurring_due: 'View recurring payment', tasks_overdue: 'View task',
     documents_overdue: 'View collection account', proposals_stale: 'View proposal',

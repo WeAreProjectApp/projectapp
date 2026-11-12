@@ -35,7 +35,14 @@ from django.db import transaction
 from django.db.models import Count, F, Q
 from django.db.models.deletion import ProtectedError
 
-from content.fake_data import SeedContext, covered_model_labels
+from content.fake_data import (
+    CATALOG_MODELS,
+    DERIVED_MODELS,
+    EXEMPT_MODELS,
+    SEEDED_MODELS,
+    SeedContext,
+    covered_model_labels,
+)
 from content.models import (
     AdditionalModule,
     AdditionalModuleShareLink,
@@ -195,12 +202,24 @@ def complete_dataset_snapshot():
 def test_model_contract_classifies_every_concrete_business_model():
     actual = {
         model._meta.label
-        for app_name in ('accounts', 'content')
+        for app_name in ('accounts', 'content', 'monitoring', 'secure_links')
         for model in apps.get_app_config(app_name).get_models()
         if not model._meta.proxy
     }
 
     assert covered_model_labels() == actual
+
+
+def test_demo_contract_excludes_authentication_state():
+    authentication_models = {
+        'accounts.AccessEvent',
+        'accounts.AccessRateBucket',
+        'accounts.GoogleIdentity',
+        'accounts.LoginChallenge',
+    }
+
+    assert authentication_models <= EXEMPT_MODELS
+    assert authentication_models.isdisjoint(SEEDED_MODELS | DERIVED_MODELS | CATALOG_MODELS)
 
 
 def test_fake_delivery_reset_removes_only_owned_notice_roots(django_capture_on_commit_callbacks):
@@ -312,6 +331,7 @@ def test_fake_reset_removes_reassignment_receipt_before_proposal(admin_user):
 
 
 def test_fake_reset_scopes_secure_link_cleanup_to_project_owners():
+    from secure_links import services
     from secure_links.models import SecureLink, SecureLinkEvent
 
     run_command('create_fake_secure_links')
@@ -324,12 +344,12 @@ def test_fake_reset_scopes_secure_link_cleanup_to_project_owners():
     platform_event_ids = set(SecureLinkEvent.objects.filter(
         link_id__in=platform_link_ids,
     ).values_list('pk', flat=True))
-    standalone_link = SecureLink.objects.filter(
-        project__isnull=True, retention_context__isnull=True,
-    ).order_by('pk').first()
+    standalone_link, _ = services.create_link(
+        secret_type='custom', title='Enlace independiente del dataset', origin='panel',
+        fields={'custom_name': 'Nota independiente', 'content': 'Contenido ficticio conservado.'},
+    )
 
     assert len(platform_event_ids) >= len(platform_link_ids) > len(platform_project_ids) > 0
-    assert standalone_link is not None
 
     run_command('delete_fake_data', '--confirm')
 
@@ -610,9 +630,10 @@ def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflo
 def test_mihuella_flush_rejects_custom_secure_folder_content(make_client_profile):
     """Resetting the demo cannot remove a custom secure folder or its independent link."""
     from accounts.management.commands.seed_mihuella import CLIENT_EMAIL, PROJECT_NAME
-    from content.tests.data_integrity_merge_factories import make_secure_link
     from secure_links import folder_services as filing
     from secure_links.models import SecureLinkFolder
+
+    from content.tests.data_integrity_merge_factories import make_secure_link
 
     profile = make_client_profile(
         username=CLIENT_EMAIL,
@@ -930,12 +951,13 @@ def test_orchestrator_keeps_cross_module_relationships_coherent():
         'collection_account_missing_origin': tuple(
             DocumentCollectionAccount.objects.filter(
                 document__income_record__isnull=True,
+                document__hosting_record__isnull=True,
             ).values_list('document__title', flat=True)
         ),
         'collection_account_total_mismatch': tuple(
             DocumentCollectionAccount.objects.exclude(
                 document__total=F('document__income_record__total_amount'),
-            ).values_list('document__title', flat=True)
+            ).filter(document__income_record__isnull=False).values_list('document__title', flat=True)
         ),
         'thread_project_owner_mismatch': tuple(
             CommunicationThread.objects.filter(

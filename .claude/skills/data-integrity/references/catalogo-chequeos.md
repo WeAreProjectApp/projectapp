@@ -1,4 +1,4 @@
-# Catálogo de chequeos y reglas del motor (catálogo 1.1.0)
+# Catálogo de chequeos y reglas del motor (catálogo 1.2.0)
 
 Cada fila cruza un chequeo del inventario U7 con la regla del motor que lo detecta.
 
@@ -59,9 +59,9 @@ la mira (exenta o hueco conocido). Vive en
 | Chequeo | Regla | Invariante | Riesgo · vía |
 |---|---|---|---|
 | DOC-01 activos bajo archivados | DC6 | Archivar es en cascada | BAJO · herramienta |
-| DOC-02 documento y carpeta de distinto cliente | **DC9** | La carpeta organiza y no es dueña (`content/serializers/document.py`, `_inherit_from_folder`) | BAJO · a mano: puede ser intencional |
-| DOC-12 documento y carpeta de distinto proyecto | **DC10** | Ídem | BAJO · a mano |
-| DOC-03 sin carpeta | **DC11** | Aparece en «Sin carpeta». Los borradores de cuenta de cobro se excluyen: se archivan solos al emitirse o anularse (`generated_document_filing_service.file_collection_account`) | BAJO · a mano |
+| DOC-02 documento y carpeta de distinto cliente | **DC9** | La carpeta organiza y no es dueña (`content/serializers/document.py`, `_inherit_from_folder`) | BAJO · motor: elegir carpeta compatible, o aceptar con motivo si es intencional |
+| DOC-12 documento y carpeta de distinto proyecto | **DC10** | Ídem | BAJO · motor: elegir carpeta compatible |
+| DOC-03 sin carpeta | **DC11** | Aparece en «Sin carpeta». Los borradores de cuenta de cobro se excluyen: se archivan solos al emitirse o anularse (`generated_document_filing_service.file_collection_account`) | BAJO · motor: elegir carpeta compatible |
 | DOC-04 dos cuentas vigentes por ingreso | **AC9** | A lo sumo una cuenta no anulada por ingreso (`content/services/collection_account_create_service.py`) | ALTO · anular por su flujo |
 | DOC-05 cuenta de otro proyecto o cliente que su ingreso | **AC10** | La liquidación busca la cuenta por el proyecto y el cliente exactos (`content/services/income_settlement_policy.py`). Una cuenta a la que sólo le falta el proyecto del ingreso es de PJ1 | ALTO · borrador: editar; emitida: anular y regenerar |
 | DOC-06 número público repetido | **DC12** | Único entre cuentas de cobro (`content/services/collection_account_numbering.py`) | SÓLO REPORTE |

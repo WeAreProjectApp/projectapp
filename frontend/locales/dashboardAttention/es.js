@@ -1,4 +1,5 @@
 export default {
+  integrityPending: 'hallazgos de integridad pendientes',
   loading: 'Cargando…', more: 'Cargar más', retry: 'Reintentar', close: 'Cerrar',
   loadError: 'No se pudieron cargar los elementos.', detailError: 'No se pudo cargar el detalle.',
   missing: 'Este elemento ya no existe o no está disponible.', forbidden: 'No tienes permiso para consultar este elemento.',
@@ -11,6 +12,7 @@ export default {
   assignee: 'Responsable', priority: 'Prioridad', client: 'Cliente', days_unopened: 'Días sin abrir', description: 'Descripción',
   pending_at: 'Pendiente desde',
   destination: {
+    data_integrity: 'Revisar integridad de datos',
     collection_documents_pending: 'Completar documento vinculado',
     emails_failed: 'Ver envío en historial', recurring_due: 'Ver recurrente', tasks_overdue: 'Ver tarea',
     documents_overdue: 'Ver cuenta de cobro', proposals_stale: 'Ver propuesta',

@@ -363,18 +363,18 @@
     </BaseModal>
 
     <BaseModal v-model="isPreviewOpen" kind="workspace" padding="none">
-      <div class="flex flex-col h-[85vh]">
-        <div class="flex items-center justify-between gap-4 p-4 border-b border-input-border">
-          <div>
+      <div class="flex min-w-0 flex-col h-[85vh]">
+        <div class="flex min-w-0 shrink-0 flex-col gap-3 p-4 border-b border-input-border panel-landscape:flex-row panel-landscape:items-center panel-landscape:justify-between" data-testid="edit-email-preview-header">
+          <div class="min-w-0">
             <h3 class="text-base font-medium text-text-default">Vista previa del correo</h3>
             <p class="text-xs text-text-muted mt-0.5">
               Render real usando los datos guardados de la propuesta + los cambios actuales de la sección de configuración de correo.
             </p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="grid min-w-0 grid-cols-2 gap-2 panel-portrait:flex panel-portrait:flex-wrap panel-portrait:items-center panel-landscape:shrink-0">
             <select
               v-model="previewTemplateKey"
-              class="px-3 py-2 border border-input-border bg-input-bg text-input-text rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
+              class="col-span-2 w-full min-w-0 max-w-full px-3 py-2 border border-input-border bg-input-bg text-input-text rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none panel-portrait:w-auto"
               data-testid="edit-email-preview-select"
             >
               <option v-for="tpl in PREVIEWABLE_EMAIL_TEMPLATES" :key="tpl.key" :value="tpl.key">
@@ -390,7 +390,7 @@
             </BaseButton>
           </div>
         </div>
-        <div class="flex-1 overflow-hidden bg-surface-muted">
+        <div class="min-h-0 min-w-0 flex-1 overflow-hidden bg-surface-muted">
           <div v-if="previewLoading" class="flex items-center justify-center h-full text-text-muted text-sm">
             Generando vista previa…
           </div>
@@ -463,6 +463,7 @@
 </template>
 
 <script setup>
+import { toLocalDatetime } from '~/utils/proposalExpiry';
 import DashboardRadarDestination from '~/components/panel/dashboard/DashboardRadarDestination.vue';
 import { normalizeEditorialFeatures, remapEditorialArrayFormats } from '~/utils/editorialMetadata';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
@@ -1085,9 +1086,7 @@ function hydrateFormFromProposal() {
     hosting_discount_nine_month: proposal.value.hosting_discount_nine_month ?? 40,
     hosting_discount_semiannual: proposal.value.hosting_discount_semiannual ?? 20,
     hosting_discount_quarterly: proposal.value.hosting_discount_quarterly ?? 10,
-    expires_at: proposal.value.expires_at
-      ? proposal.value.expires_at.slice(0, 16)
-      : '',
+    expires_at: toLocalDatetime(proposal.value.expires_at),
     reminder_days: proposal.value.reminder_days,
     urgency_reminder_days: proposal.value.urgency_reminder_days ?? 15,
     discount_percent: proposal.value.discount_percent ?? 0,

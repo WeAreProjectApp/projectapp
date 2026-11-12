@@ -6,7 +6,7 @@
     "platform-admin"
   ],
   "priority": "P2",
-  "description": "Admin-only client detail page with profile card, edit form (name, company, phone, active toggle), quick actions (resend invite, deactivate/reactivate).",
+  "description": "Admin-only client detail page with profile card, edit form (name, company, phone, active toggle), quick actions (resend invite, deactivate/reactivate). Long client names and company values retain a usable edit form without horizontal page overflow on direct load and resize at all five reference viewports, with either sidebar state (PA-237).",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

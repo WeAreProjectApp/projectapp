@@ -4,27 +4,27 @@
       <!-- KPIs -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl border border-border-default bg-surface p-4">
-          <p class="text-xs uppercase tracking-wider text-green-light/70">Progreso</p>
+          <p class="text-xs uppercase tracking-wider text-text-muted">Progreso</p>
           <p class="mt-2 text-2xl font-semibold text-text-default">{{ project.progress ?? 0 }}%</p>
         </div>
         <div class="rounded-2xl border border-border-default bg-surface p-4">
-          <p class="text-xs uppercase tracking-wider text-green-light/70">Bugs abiertos</p>
+          <p class="text-xs uppercase tracking-wider text-text-muted">Bugs abiertos</p>
           <p class="mt-2 text-2xl font-semibold" :class="(project.bugs_open_count || 0) > 0 ? 'text-red-600' : 'text-text-default'">
             {{ project.bugs_open_count ?? 0 }}
           </p>
         </div>
         <div class="rounded-2xl border border-border-default bg-surface p-4">
-          <p class="text-xs uppercase tracking-wider text-green-light/70">Solicitudes pendientes</p>
+          <p class="text-xs uppercase tracking-wider text-text-muted">Solicitudes pendientes</p>
           <p class="mt-2 text-2xl font-semibold" :class="(project.changes_pending_count || 0) > 0 ? 'text-amber-600' : 'text-text-default'">
             {{ project.changes_pending_count ?? 0 }}
           </p>
         </div>
         <div class="rounded-2xl border border-border-default bg-surface p-4">
-          <p class="text-xs uppercase tracking-wider text-green-light/70">Próximo pago de hosting</p>
+          <p class="text-xs uppercase tracking-wider text-text-muted">Próximo pago de hosting</p>
           <p class="mt-2 text-2xl font-semibold text-text-default">
             {{ project.next_hosting_payment ? formatCurrency(project.next_hosting_payment.amount) : '—' }}
           </p>
-          <p v-if="project.next_hosting_payment?.date" class="text-xs text-green-light/60">
+          <p v-if="project.next_hosting_payment?.date" class="text-xs text-text-muted">
             {{ formatDate(project.next_hosting_payment.date) }}
             <span v-if="project.next_hosting_payment.plan" class="ml-1">· {{ planLabel(project.next_hosting_payment.plan) }}</span>
           </p>
@@ -42,7 +42,7 @@
       <!-- Actions -->
       <div v-if="authStore.isAdmin" class="rounded-2xl border border-border-default bg-surface p-6">
         <h2 class="text-base font-medium text-text-default">Acciones</h2>
-        <p class="mt-1 text-xs text-green-light/60">
+        <p class="mt-1 text-xs text-text-muted">
           Edita los datos descriptivos aquí. Los estados y sus consecuencias se administran en la ficha comercial.
         </p>
         <div class="mt-3 flex flex-wrap gap-2">
@@ -70,20 +70,31 @@
         <Transition name="modal-overlay">
           <div
             v-if="isEditOpen"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="platform-project-editor-title"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
             @click.self="isEditOpen = false"
           >
             <Transition name="modal-content" appear>
-              <div v-if="isEditOpen" class="w-full max-w-md rounded-3xl border border-border-default bg-surface p-6 shadow-2xl sm:p-8">
-                <h2 class="mb-5 text-lg font-bold text-text-default">Editar proyecto</h2>
+              <div
+                v-if="isEditOpen"
+                ref="editDialogRef"
+                role="dialog"
+                aria-modal="true"
+                :aria-labelledby="editTitleId"
+                tabindex="-1"
+                class="w-full max-w-md rounded-3xl border border-border-default bg-surface p-6 shadow-2xl focus:outline-none focus:ring-2 focus:ring-focus-ring sm:p-8"
+              >
+                <h2 :id="editTitleId" class="mb-5 text-lg font-bold text-text-default">Editar proyecto</h2>
                 <form class="space-y-4" @submit.prevent="handleEditSubmit">
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Nombre <span class="text-red-400">*</span></label>
-                    <input v-model="editForm.name" type="text" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-primary-strong dark:text-white" />
+                    <input v-model="editForm.name" type="text" required class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white" />
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Descripción</label>
-                    <textarea v-model="editForm.description" rows="3" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-primary-strong dark:text-white" />
+                    <textarea v-model="editForm.description" rows="3" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white" />
                   </div>
                   <p v-if="editError" class="rounded-xl border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-600 dark:text-red-400">{{ editError }}</p>
                   <div class="flex justify-end gap-3 pt-2">
@@ -99,12 +110,13 @@
         </Transition>
       </Teleport>
     </section>
-    <div v-else class="px-6 py-12 text-center text-green-light/60">Cargando proyecto…</div>
+    <div v-else class="px-6 py-12 text-center text-text-muted">Cargando proyecto…</div>
   </ProjectShell>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, useId, watch } from 'vue'
+import { useFocusTrap } from '~/composables/useFocusTrap'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 import { formatDate as formatDateUtil } from '~/utils/formatDate'
@@ -125,6 +137,9 @@ const phases = ref([])
 const showAddPhase = ref(false)
 
 const isEditOpen = ref(false)
+const editDialogRef = ref(null)
+const editTitleId = `${useId()}-edit-title`
+useFocusTrap(editDialogRef, { active: isEditOpen })
 const editForm = reactive({ name: '', description: '' })
 const editError = ref('')
 

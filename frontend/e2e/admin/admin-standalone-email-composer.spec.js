@@ -8,6 +8,8 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
+import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import { ADMIN_STANDALONE_EMAIL_COMPOSER, ADMIN_STANDALONE_EMAIL_DEFAULTS } from '../helpers/flow-tags.js';
 import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
@@ -99,13 +101,23 @@ function setupMocks(page, { history = mockHistoryEmpty } = {}) {
       };
     }
     if (apiPath.startsWith('emails/history') && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(history) };
+      const result = typeof history === 'function' ? history(new URL(route.request().url()).searchParams) : history;
+      return { status: 200, contentType: 'application/json', body: JSON.stringify(result) };
     }
     if (apiPath === 'emails/send/' && method === 'POST') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) };
     }
     return null;
   });
+}
+
+async function openEmailsFromMenu(page) {
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  }
+  await page.getByRole('link', { name: 'Emails', exact: true }).click();
 }
 
 test.describe('Admin Standalone Email Composer', () => {
@@ -258,6 +270,68 @@ test.describe('Admin Standalone Email Composer', () => {
 
     await expect(page.getByText('No se han enviado correos aún.')).toBeVisible();
     await expect(page.getByText('Bienvenido al proyecto')).not.toBeVisible();
+  });
+
+  test('clearing an unmatched recipient restores the existing email history', {
+    tag: [...ADMIN_STANDALONE_EMAIL_COMPOSER, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    await setupMocks(page, { history: (params) => params.has('recipient') ? mockHistoryEmpty : mockHistoryWithEntries });
+    await openEmailsFromMenu(page);
+    await page.getByRole('tab', { name: 'Historial' }).click();
+    await expect(page.getByTestId('email-history-record-1')).toContainText('Bienvenido al proyecto');
+
+    await page.getByRole('searchbox', { name: 'Buscar destinatario' }).fill('qa-responsive-sin-historial-880019@example.invalid');
+    await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+
+    await expect(page.getByTestId('email-history-empty')).toHaveText('Ningún correo coincide con los filtros aplicados.');
+    await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+    await expect(page.getByTestId('email-history-record-1')).toContainText('Bienvenido al proyecto');
+    await expect(page.getByTestId('email-history-record-2')).toContainText('Seguimiento entregable');
+    await expect(page.getByRole('searchbox', { name: 'Buscar destinatario' })).toHaveValue('');
+  });
+
+  test('keeps the empty message tied to the applied recipient filter', {
+    tag: [...ADMIN_STANDALONE_EMAIL_COMPOSER, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    await setupMocks(page);
+    await openEmailsFromMenu(page);
+    await page.getByRole('tab', { name: 'Historial' }).click();
+    const search = page.getByRole('searchbox', { name: 'Buscar destinatario' });
+    await expect(page.getByTestId('email-history-empty')).toHaveText('No se han enviado correos aún.');
+
+    await search.fill('absent@example.invalid');
+    await expect(page.getByTestId('email-history-empty')).toHaveText('No se han enviado correos aún.');
+    await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+    await expect(page.getByTestId('email-history-empty')).toHaveText('Ningún correo coincide con los filtros aplicados.');
+    await search.fill('');
+    await expect(page.getByTestId('email-history-empty')).toHaveText('Ningún correo coincide con los filtros aplicados.');
+    await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+    await expect(page.getByTestId('email-history-empty')).toHaveText('No se han enviado correos aún.');
+  });
+
+  test('recognizes the false attachment-presence filter as active', {
+    tag: [...ADMIN_STANDALONE_EMAIL_COMPOSER, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    await setupMocks(page);
+    await openEmailsFromMenu(page);
+    await page.getByRole('tab', { name: 'Historial' }).click();
+    await page.getByRole('combobox', { name: 'Filtrar por presencia de adjuntos' }).selectOption('false');
+    await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
+
+    await expect(page.getByTestId('email-history-empty')).toHaveText('Ningún correo coincide con los filtros aplicados.');
+  });
+
+  test('describes an unmatched radar link as a filtered history', {
+    tag: [...ADMIN_STANDALONE_EMAIL_COMPOSER, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    await setupMocks(page);
+    // quality: allow-deep-link (radar email links intentionally open one filtered history record)
+    await page.goto('/es-co/panel/emails?tab=history&email=999999', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('email-history-empty')).toHaveText('Ningún correo coincide con los filtros aplicados.');
+    await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+    await expect(page).not.toHaveURL(/email=/);
+    await expect(page.getByTestId('email-history-empty')).toHaveText('No se han enviado correos aún.');
   });
 
   test('defaults tab shows the config form prefilled from the API', {

@@ -197,6 +197,7 @@ function plural(count, singular, plural_) {
 }
 
 const TYPE_CONFIG = {
+  data_integrity: { icon: QuestionMarkCircleIcon, module: 'Integridad de datos', route: '/panel/data-integrity', text: ({ count }) => `${count} ${text.value.integrityPending}` },
   collection_documents_pending: {
     icon: DocumentTextIcon, module: 'Contabilidad', route: '/panel/accounting/collections',
     text: ({ count }) => `${count} ${plural(count, 'cuenta con documento pendiente', 'cuentas con documento pendiente')}`,

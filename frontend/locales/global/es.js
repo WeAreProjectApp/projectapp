@@ -1,4 +1,8 @@
 export default {
+    theme: {
+      enableLight: "Activar modo claro",
+      enableDark: "Activar modo oscuro",
+    },
     navbar: {
       menu_button: "Menú",
       get_in_touch: "Contacto",
@@ -62,4 +66,3 @@ export default {
       sign_in: "Iniciar Sesión",
     },
   };
-  

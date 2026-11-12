@@ -19,6 +19,8 @@
 
 El radar incluye cuentas con documento vinculado pendiente para superusuarios: borradores, emitidas y pagadas, excluyendo anuladas, archivadas y datos retenidos. Abre la cuenta exacta y permite completar el vínculo. La decisión resuelta desaparece en la siguiente lectura del radar; la autoría se conserva.
 
+- **Integridad de datos:** los hallazgos presentes no aceptados son visibles para administradores. El destino `/panel/data-integrity?finding=<fingerprint>` filtra el hallazgo exacto; «Ver todos los hallazgos» retira el foco. El radar no ejecuta barridos al consultar.
+
 ## Disposición compacta
 
 En escritorio, desplegar la alerta de dos pagos recurrentes muestra dos tarjetas en paralelo. Ambas conservan nombre, valor, fecha y medio de pago y abren su detalle individual, limitado a 48rem. En móvil se apilan sin perder acciones.

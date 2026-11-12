@@ -1,5 +1,5 @@
 <template>
-  <div v-if="tour.completedTour.value && store.videoEnabled && videoAvailable" class="fixed bottom-5 left-4 z-50 max-w-sm rounded-2xl border border-border-default bg-surface p-4 shadow-xl dark:bg-primary" role="status">
+  <div v-if="tour.completedTour.value && store.videoEnabled && videoAvailable" class="fixed bottom-5 left-4 z-50 max-w-sm rounded-2xl border border-border-default bg-surface p-4 shadow-xl dark:bg-surface" role="status">
     <p class="mb-3 text-sm text-text-default">{{ t('platformHelp.videoInvitation') }}</p>
     <div class="flex gap-2">
       <BaseButton variant="accent" @click="openVideo">{{ t('platformHelp.video') }}</BaseButton>
@@ -68,7 +68,7 @@ async function refresh() {
 
 function openVideo() { tour.completedTour.value = null; help.openVideo() }
 watch(() => route.path, async () => { await tour.pause(); tour.completedTour.value = null; await refresh() })
-watch(() => auth.user?.id, async () => { await tour.pause(); store.reset(); lastAutoContext = ''; await refresh() })
+watch(() => auth.user?.user_id, async () => { await tour.pause(); store.reset(); lastAutoContext = ''; await refresh() })
 watch(() => [auth.hasValidatedSession, auth.needsProfileCompletion], async ([validated, needsProfile]) => {
   if (!validated || needsProfile) await tour.pause()
   else await refresh()

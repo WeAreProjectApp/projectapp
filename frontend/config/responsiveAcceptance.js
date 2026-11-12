@@ -63,6 +63,9 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/panel/projects/',
     'frontend/pages/panel/projects/',
     'frontend/pages/panel/monitoring/',
+    'frontend/pages/panel/procurement/',
+    'frontend/components/Procurement/',
+    'frontend/stores/procurement.js',
     'frontend/pages/panel/platform/ai.vue',
   ], [
     'Buscar y cambiar el alcance del listado.',
@@ -147,6 +150,9 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/panel/dashboard/',
     'frontend/components/stats/',
     'frontend/pages/panel/admins/',
+    'frontend/pages/panel/data-integrity.vue',
+
+    'frontend/pages/panel/access/',
     'frontend/pages/panel/index.vue',
     'frontend/pages/panel/tasks/',
     'frontend/pages/panel/views.vue',
@@ -296,11 +302,13 @@ export function modulesForChangedFiles(files) {
 
 /** Every catalog view has one accountable responsive module or dependency. */
 export function responsiveOwnerForView(sectionId, view) {
+  if (view.url.startsWith('/panel/procurement')) return 'projects';
   if (view.url === '/panel/platform/ai') return 'projects';
   if (view.url === '/platform/projects/:id/secure-links') return 'communications';
   const { file, url } = view;
   if (sectionId.startsWith('public-') || view.audience === 'public') return 'public';
   if (sectionId === 'panel-accounting') return 'accounting';
+  if (sectionId === 'panel-data-integrity') return 'dashboard';
   if (sectionId === 'panel-mcps') return 'mcp';
   if (sectionId === 'client-platform') return 'clients';
 
@@ -313,6 +321,6 @@ export function responsiveOwnerForView(sectionId, view) {
   if (url === '/panel/emails' || url.includes('/email-')) return 'emails';
   if (url.startsWith('/panel/proposals') || url.startsWith('/panel/diagnostics') || url.startsWith('/panel/consulting') || url.startsWith('/panel/hour-packages') || url.startsWith('/panel/additional-modules') || url.startsWith('/panel/partnership-program') || url.startsWith('/panel/financing') || url.startsWith('/panel/building-with-us') || url === '/panel/cells' || url === '/panel/defaults') return 'commercial';
   if (url.startsWith('/panel/blog') || url.startsWith('/panel/linkedin') || url.startsWith('/panel/portfolio') || url.startsWith('/panel/qr-cards') || url.startsWith('/panel/linktrees')) return 'content';
-  if (url === '/panel' || url.startsWith('/panel/tasks') || url.startsWith('/panel/admins') || url === '/panel/views') return 'dashboard';
+  if (url === '/panel' || url.startsWith('/panel/tasks') || url.startsWith('/panel/admins') || url.startsWith('/panel/access') || url === '/panel/views') return 'dashboard';
   return null;
 }

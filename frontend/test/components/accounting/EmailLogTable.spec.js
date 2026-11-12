@@ -70,6 +70,18 @@ async function openMenu(wrapper, id) {
 }
 
 describe('EmailLogTable', () => {
+  it('renders Spanish transport labels when the backend sends English labels', () => {
+    // Falla si Ver correos vuelve a exponer Sent y Failed dentro de la interfaz en español.
+    const wrapper = mountTable([
+      { ...SENT, status_label: 'Sent' },
+      { ...FAILED, status_label: 'Failed' },
+    ]);
+
+    const statusText = wrapper.findAll('[data-field="status"]').map((cell) => cell.text());
+
+    expect(statusText).toEqual(['Enviado', 'Fallido']);
+  });
+
   afterEach(() => {
     wrappers.splice(0).forEach(wrapper => wrapper.unmount());
     document.body.innerHTML = '';

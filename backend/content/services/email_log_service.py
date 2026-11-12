@@ -123,6 +123,12 @@ def record_send(
         matching_delivery_trace,
     )
 
+    from content.services.email_privacy_policy import credential_email, REDACTED_TEXT
+    if credential_email(template_key):
+        html_body, text_body = '', REDACTED_TEXT
+        subject = 'Mensaje de acceso — ProjectApp'
+        metadata = {'content_redacted': True}
+        error_message = ''
     client_id = getattr(client, 'pk', client)
     audience = audience or EmailLog.Audience.INTERNAL
     delivery_role = delivery_role or EmailLog.DeliveryRole.PRIMARY

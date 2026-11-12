@@ -72,11 +72,11 @@
       -->
       <div
         v-if="_panelSectionLabel && _panelViewLabel"
-        class="mb-5 hidden items-center gap-1.5 text-xs panel-landscape:flex"
-        :class="isDark ? 'text-green-light/60' : 'text-green-light'"
+        data-testid="panel-breadcrumb"
+        class="mb-5 hidden items-center gap-1.5 text-xs text-text-muted panel-landscape:flex"
       >
         <span>{{ _panelSectionLabel }}</span>
-        <span class="text-green-light/40 dark:text-green-light/30">›</span>
+        <span aria-hidden="true" class="text-text-subtle">›</span>
         <span class="text-text-muted">{{ _panelViewLabel }}</span>
       </div>
       <BasePageShell width="panel">

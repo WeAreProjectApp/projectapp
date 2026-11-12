@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Client requests a change against a published requirement. Original contract, scope, phase, stage, round and version remain frozen. The shared source engine verifies contractual reply citations against a server-captured conversation before explicit human publication; private provenance stays hidden. Conversion creates a new draft in an explicit stage of the applicable contract.",
+  "description": "Client requests a change against a published requirement. Original contract, scope, phase, stage, round and version remain frozen. The shared source engine verifies contractual reply citations against a server-captured conversation before explicit human publication; private provenance stays hidden. Conversion creates a new draft in an explicit stage of the applicable contract. A title longer than 300 characters is rejected in Spanish while retaining the form, its title and its selected published source (PA-234).",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

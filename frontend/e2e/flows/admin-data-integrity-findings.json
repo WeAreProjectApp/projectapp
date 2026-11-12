@@ -1,0 +1,16 @@
+{
+  "id": "admin-data-integrity-findings",
+  "name": "Revisar y filtrar hallazgos de integridad",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Un administrador consulta resultados privados persistidos, inicia una revisión completa o acotada, filtra módulo/gravedad/estado y pagina. Una revisión fallida conserva el último resultado válido. El radar abre el fingerprint exacto y permite regresar a todos los hallazgos.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

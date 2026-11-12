@@ -47,8 +47,11 @@ export default defineI18nLocale(async () => {
     buildingOnDemandAdmin,
     videoResources,
     platformAI,
+    integrity,
     platformHelp,
     documentPdf,
+    documentFolders,
+    procurement,
   ] = await Promise.all([
     import('../../locales/panelUsability/en.js').then(m => m.default),
     import('~/locales/global/en.js'),
@@ -97,8 +100,11 @@ export default defineI18nLocale(async () => {
     import('~/locales/buildingOnDemandAdmin/en.js'),
     import('~/locales/videoResources/en.js'),
     import('~/locales/platformAI/en.js'),
+    import('~/locales/integrity/en.js'),
     import('~/locales/platformHelp/en.js'),
     import('~/locales/documentPdf/en.js'),
+    import('~/locales/documentFolders/en.js'),
+    import('~/locales/procurement/en.js'),
   ])
 
   return {
@@ -149,7 +155,10 @@ export default defineI18nLocale(async () => {
     buildingOnDemandAdmin: buildingOnDemandAdmin.default,
     videoResources: videoResources.default,
     platformAI: platformAI.default,
+    integrity: integrity.default,
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
+    documentFolders: documentFolders.default,
+    procurement: procurement.default,
   }
 })

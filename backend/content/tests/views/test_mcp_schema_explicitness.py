@@ -1,4 +1,4 @@
-"""Ratchets for the breaking documents 4 / projects 3 input contract sweep."""
+"""Ratchets for the closed documents, projects and data-integrity MCP input contracts."""
 
 from copy import deepcopy
 from unittest.mock import Mock
@@ -140,7 +140,10 @@ def test_every_closed_tool_rejects_unknown_arguments_before_execution(monkeypatc
     credentials = {}
     for slug in CONNECTORS:
         connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug})
-        credentials[slug] = McpCredential.objects.create(connector=connector, actor=superuser, label='Schema guard')
+        credentials[slug] = McpCredential.objects.create(
+            connector=connector, actor=superuser, label='Schema guard',
+            allowed_tools=[tool['name'] for tool in TOOLS_BY_SLUG[slug]],
+        )
     offenders, probed = [], []
     unknown = '__p2_unknown_argument__'
     callbacks = ('handler', 'impact_builder', 'prepare_arguments', 'confirmation_predicate', 'etag_resolver')

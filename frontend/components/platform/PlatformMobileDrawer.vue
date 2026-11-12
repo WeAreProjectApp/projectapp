@@ -12,14 +12,14 @@
         v-if="isOpen"
         :class="[
           'fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r md:hidden',
-          'border-input-border/[0.06] bg-surface dark:border-white/[0.06] dark:bg-primary-strong',
+          'border-input-border/[0.06] bg-surface dark:border-white/[0.06] dark:bg-surface-muted',
         ]"
       >
         <!-- Header -->
         <div class="flex h-16 shrink-0 items-center justify-between border-b border-input-border/[0.06] px-5 dark:border-white/[0.06]">
           <div class="flex items-center gap-3">
             <span class="text-xl font-bold tracking-tight text-text-brand dark:text-white">
-              Project<span class="text-text-brand dark:text-accent">App.</span>
+              Project<span class="text-text-brand dark:text-text-brand">App.</span>
             </span>
           </div>
           <BaseButton
@@ -27,7 +27,7 @@
             icon-only
             type="button"
             aria-label="Cerrar navegación"
-            class="flex h-9 w-9 items-center justify-center rounded-full text-green-light transition hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white"
+            class="flex h-9 w-9 items-center justify-center rounded-full text-text-muted transition hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white"
             @click="$emit('close')"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,7 +39,7 @@
         <!-- Navigation (reuse sidebar items) -->
         <nav class="flex-1 overflow-y-auto px-3 py-4">
           <div class="mb-5">
-            <p class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-green-light/60">Navegación</p>
+            <p class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">Navegación</p>
             <SidebarItem
               v-for="item in primaryItems"
               :key="item.href"
@@ -52,7 +52,7 @@
           </div>
 
           <div class="mb-5">
-            <p class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-green-light/60">Cuenta</p>
+            <p class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">Cuenta</p>
             <SidebarItem
               v-for="item in accountItems"
               :key="item.href"
@@ -73,7 +73,7 @@
           </div>
 
           <div v-if="authStore.isAdmin" class="mb-5">
-            <p class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-green-light/60">Administración</p>
+            <p class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-text-muted">Administración</p>
             <SidebarItem
               v-for="item in adminItems"
               :key="item.href"
@@ -96,15 +96,32 @@
                 alt="Avatar"
                 class="h-full w-full object-cover"
               />
-              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-white dark:bg-accent-soft dark:text-text-brand">
+              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary dark:bg-accent dark:text-on-accent">
                 {{ authStore.userInitials }}
               </div>
             </div>
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-medium text-text-brand dark:text-white">{{ authStore.displayName }}</p>
-              <p class="truncate text-xs text-green-light">{{ userSubtitle }}</p>
+              <p class="truncate text-xs text-text-muted">{{ userSubtitle }}</p>
             </div>
           </div>
+
+          <BaseButton
+            unstyled
+            type="button"
+            :aria-label="themeToggleLabel"
+            class="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg text-xs font-medium text-text-muted transition hover:bg-primary-soft hover:text-text-brand focus-visible:ring-2 focus-visible:ring-focus-ring dark:hover:bg-surface/[0.06] dark:hover:text-white"
+            @click="$emit('toggleTheme')"
+          >
+            <svg class="h-4 w-4 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <template v-if="isDark">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+              </template>
+              <path v-else d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+            {{ themeToggleLabel }}
+          </BaseButton>
 
           <div class="mt-2 flex items-center gap-1">
             <!-- Theme customization -->
@@ -113,7 +130,7 @@
               icon-only
               type="button"
               aria-label="Personalizar apariencia"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-green-light transition hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white"
+              class="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white"
               @click="$emit('close'); $emit('openThemePicker')"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -149,6 +166,8 @@ const props = defineProps({
   isDark: { type: Boolean, default: true },
 })
 
+const { t } = useI18n()
+const themeToggleLabel = computed(() => t(props.isDark ? 'global.theme.enableLight' : 'global.theme.enableDark'))
 const authStore = usePlatformAuthStore()
 
 const { primaryItems, accountItems, adminItems, isActive } = usePlatformNav()

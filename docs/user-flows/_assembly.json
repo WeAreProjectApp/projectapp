@@ -6,7 +6,11 @@
         "layout-navbar-navigation",
         "layout-icon-interaction-feedback",
         "layout-locale-switch",
-        "layout-footer-navigation"
+        "layout-footer-navigation",
+        "admin-data-integrity-findings",
+        "admin-data-integrity-review",
+        "admin-data-integrity-fix",
+        "admin-data-integrity-history"
       ]
     },
     {
@@ -372,6 +376,18 @@
         "platform-appi-private-history",
         "platform-appi-availability",
         "platform-appi-shared-quota-audio"
+      ]
+    },
+    {
+      "title": "Section 39 — Contratación estatal (Nov 5, 2026)",
+      "flows": [
+        "admin-procurement-opportunity-list",
+        "admin-procurement-filters-export",
+        "admin-procurement-classification",
+        "admin-procurement-saved-searches",
+        "admin-procurement-alerts",
+        "admin-procurement-settings-sync",
+        "admin-procurement-deliveries"
       ]
     }
   ]
