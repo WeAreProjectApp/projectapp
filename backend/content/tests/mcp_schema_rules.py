@@ -225,6 +225,11 @@ PARITY_PAIRS = {
         'content/tests/views/test_mcp_project_client_change.py', 'test_confirmed_transfer_matches_the_selected_plan',
         ('change_project_client', 'confirm_action'),
     ),
+    ('projects', 'preview_project_force_delete'): (
+        'content/tests/views/test_mcp_project_force_delete.py',
+        'test_confirmed_forced_deletion_preserves_billing_history',
+        ('force_delete_project', 'confirm_action'),
+    ),
     ('projects', 'preview_delivery_notification_retry'): (
         'content/tests/views/test_mcp_delivery_notifications.py', 'test_notice_confirmation_records_the_credential_owner',
         ('retry_delivery_notification_event', 'confirm_action'),

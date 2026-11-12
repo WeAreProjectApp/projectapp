@@ -1,6 +1,7 @@
 """Module ownership and the finite compatibility policy for MCP connectors."""
 
 MODULE_CONNECTORS = {
+    'procurement': ('procurement', ('procurement',)),
     'operations': ('overview', ('operations',)),
     'commercial': ('commercial', (
         'commercial', 'clients', 'proposals', 'diagnostics',

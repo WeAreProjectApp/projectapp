@@ -96,6 +96,17 @@ def test_create_requires_content(api_client, mcp_token):
     assert not SecureLink.objects.exists()
 
 
+def test_message_create_rejects_removed_subject(api_client, mcp_token):
+    """Falla si MCP conserva el contrato de Asunto retirado del producto."""
+    response = call_tool(api_client, mcp_token, 'create_secure_link', {
+        'secret_type': 'confidential_message', 'title': 'Referencia',
+        'fields': {'subject': 'Retirado', 'message': 'Mensaje'},
+    })
+
+    assert result(response)['isError'] is True
+    assert not SecureLink.objects.exists()
+
+
 def test_secret_values_are_not_copied_to_request_logs(api_client, mcp_token):
     """Falla si la contraseña queda registrada en la bitácora del conector."""
     call_tool(api_client, mcp_token, 'create_secure_link', {

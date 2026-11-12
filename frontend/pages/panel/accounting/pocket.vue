@@ -172,7 +172,6 @@
 
       <AccountingTable
         v-else
-        column-layout="content"
         :loading="store.isLoading"
         :highlight-id="lastMutatedId"
         :columns="columns"

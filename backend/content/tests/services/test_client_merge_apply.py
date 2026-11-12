@@ -6,6 +6,7 @@ from accounts.models import Project, UserProfile
 from accounts.models_project_ideas import ProjectIdea, ProjectIdeaCollection
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
+from procurement.models import Activity, Alert, Classification, Opportunity, SavedSearch, SyncRun
 
 from content.models import (
     AccountingChangeLog,
@@ -43,6 +44,38 @@ from content.tests.data_integrity_merge_factories import (
 )
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def procurement_identity_records():
+    survivor, duplicate = client_pair()
+    opportunity = Opportunity.objects.create(source_id='merge-procurement', entity_name='Entidad')
+    classification = Classification.objects.create(opportunity=opportunity, owner=duplicate.user)
+    Classification.objects.create(opportunity=opportunity, owner=survivor.user, state='reviewing')
+    search = SavedSearch.objects.create(owner=duplicate.user, name='Personal')
+    SavedSearch.objects.create(owner=survivor.user, name='Personal')
+    return survivor, duplicate, {
+        Classification: classification,
+        SavedSearch: search,
+        Activity: Activity.objects.create(classification=classification, actor=duplicate.user, action='classify'),
+        Alert: Alert.objects.create(name='Original', created_by=duplicate.user),
+        SyncRun: SyncRun.objects.create(requested_by=duplicate.user),
+    }
+
+
+@pytest.mark.parametrize('model,field', [
+    (Classification, 'owner_id'), (SavedSearch, 'owner_id'), (Activity, 'actor_id'),
+    (Alert, 'created_by_id'), (SyncRun, 'requested_by_id'),
+], ids=['classification', 'saved-search', 'activity', 'alert', 'sync'])
+def test_merge_preserves_procurement_identity(superuser, procurement_identity_records, model, field):
+    """A commercial merge must preserve procurement's personal data and audit identity."""
+    survivor, duplicate, records = procurement_identity_records
+    record = records[model]
+
+    run_client_merge(superuser, survivor, duplicate)
+
+    record.refresh_from_db()
+    assert getattr(record, field) == duplicate.user_id
 
 
 @pytest.mark.parametrize('revision_model,content', [

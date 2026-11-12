@@ -1,5 +1,6 @@
 """Single registry of MCP connector identities and ordered tool sources."""
 from dataclasses import dataclass, replace
+from procurement.mcp_tools import PROCUREMENT_TOOLS
 
 from content.mcp import registry
 from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
@@ -124,6 +125,9 @@ def accounting_area(area):
 
 
 SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
+    'procurement': ConnectorSpec('procurement', '1.0.0', (PROCUREMENT_TOOLS,), confirm_sensitive=True,
+        notes=('Contratación estatal interna: sin IA ni acceso a buzones. El asistente externo aporta el análisis y usa owner_id para las búsquedas y clasificaciones personales. Palabras clave O UNSPSC; los demás filtros se combinan con Y.',)),
+
     'data-integrity': ConnectorSpec('data-integrity', '1.0.1', (DATA_INTEGRITY_TOOLS,), confirm_sensitive=True),
     'blog': ConnectorSpec(
         'blog', '1.1.0', (BLOG_TOOLS,),

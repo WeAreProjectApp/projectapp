@@ -49,6 +49,8 @@ export default defineI18nLocale(async () => {
     integrity,
     platformHelp,
     documentPdf,
+    documentFolders,
+    procurement,
   ] = await Promise.all([
     import('~/locales/global/es.js'),
     import('~/locales/richText/es.js'),
@@ -99,6 +101,8 @@ export default defineI18nLocale(async () => {
     import('~/locales/integrity/es.js'),
     import('~/locales/platformHelp/es.js'),
     import('~/locales/documentPdf/es.js'),
+    import('~/locales/documentFolders/es.js'),
+    import('~/locales/procurement/es.js'),
   ])
 
   return {
@@ -151,5 +155,7 @@ export default defineI18nLocale(async () => {
     integrity: integrity.default,
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
+    documentFolders: documentFolders.default,
+    procurement: procurement.default,
   }
 })

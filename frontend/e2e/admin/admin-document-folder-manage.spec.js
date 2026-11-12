@@ -14,6 +14,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_FOLDER_MANAGE } from '../helpers/flow-tags.js';
+import { viewportUse } from '../helpers/viewports.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -103,6 +104,55 @@ test.describe('Admin Document Folder Manage', () => {
 
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 8700, role: 'admin', is_staff: true } });
+  });
+
+  test('restores focus after closing the named folder manager', {
+    // Bug caught: Gestionar carpetas was an unnamed overlay that left focus behind it or on BODY.
+    tag: [...ADMIN_DOCUMENT_FOLDER_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    await mockApi(page, async ({ apiPath }) => baseRoutes(apiPath, [emptyFolder]));
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+
+    const opener = page.getByRole('button', { name: 'Gestionar', exact: true });
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: 'Gestionar carpetas' });
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await expect(dialog.getByTestId('folder-manager-new-name')).toBeFocused();
+    const edit = dialog.getByRole('button', { name: 'Editar carpeta', exact: true });
+    await edit.hover();
+    await edit.click();
+    const child = page.getByRole('dialog', { name: 'Editar "Contratos"' });
+    await expect(child).toBeVisible();
+    await child.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(edit).toBeFocused();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+
+    await dialog.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
+    await expect(opener).toBeFocused();
+  });
+
+  test.describe('folder manager from the compact drawer', () => {
+    test.use(viewportUse('compact'));
+
+    test('returns focus to Cambiar navegación after its drawer opener unmounts', {
+      // Bug caught: closing the manager opened from the drawer returned focus to a removed button.
+      tag: [...ADMIN_DOCUMENT_FOLDER_MANAGE, '@role:admin', '@outcome:success', '@responsive:documents'],
+    }, async ({ page }) => {
+      await mockApi(page, async ({ apiPath }) => baseRoutes(apiPath, [emptyFolder]));
+      await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+
+      const drawerTrigger = page.getByTestId('folder-drawer-trigger');
+      await drawerTrigger.click();
+      const drawer = page.getByTestId('folder-drawer');
+      await drawer.getByRole('button', { name: 'Gestionar', exact: true }).click();
+
+      const dialog = page.getByRole('dialog', { name: 'Gestionar carpetas' });
+      await expect(dialog.getByTestId('folder-manager-new-name')).toBeFocused();
+      await dialog.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
+
+      await expect(drawerTrigger).toBeFocused();
+      await expect(drawerTrigger).toContainText('Cambiar navegación');
+    });
   });
 
   test('creates a root folder from the manager form', {

@@ -81,7 +81,8 @@ class McpCredential(models.Model):
 
     def allows(self, tool_name):
         # General connector access must never silently acquire secret reads.
-        if tool_name in {'reveal_secure_link_content', 'get_secure_link_url'}:
+        if tool_name in {'reveal_secure_link_content', 'get_secure_link_url',
+                         'preview_project_force_delete', 'force_delete_project'}:
             return tool_name in self.allowed_tools
         control_tools = {'describe_capabilities', 'confirm_action', 'cancel_action'}
         return (

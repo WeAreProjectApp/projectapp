@@ -1,3 +1,5 @@
+> **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
+
 > **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).
 
 > **IA de Plataforma y voz — 2026-10-24:** configuración compartida de chatbot y
@@ -1519,7 +1521,9 @@ description and preserves its credentials, active state and last-use timestamp.
   Pocket route is the structural exception below `PANEL_BREAKPOINTS.portrait`:
   `useIsMobile` renders exactly one `PocketMovementCards` branch with concept,
   signed amount and labelled facts, while the shared priority table returns at
-  640 px. Both branches reuse `PocketMovementRowActionsButton` and
+  640 px. From landscape up, Pocket uses the shared proportional column layout:
+  spare width is distributed across the six existing data columns instead of
+  being reserved for Concepto. Both branches reuse `PocketMovementRowActionsButton` and
   `PocketMovementActionsModal`; Incomes and Collection Accounts use the same
   `menu-start` contract in classic and grouped modes. `BaseBadge` owns atomic
   direction/link/status text. `withRunningBalance` remains filter-first, so cards

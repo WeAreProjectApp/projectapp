@@ -37,6 +37,7 @@ from content.models import (
     IncomeRecord,
 )
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
+from content.fake_data_files import fake_data_transaction
 from content.services import collection_account_service as ca_service
 from content.services import collection_account_create_service as ca_create_service
 from content.services.accounting_service import paid_amount_subquery
@@ -191,6 +192,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         add_seed_arguments(parser, count_default=40)
 
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('create_fake_documents')
         self.seed_context = seed_context(options, 'documents')
@@ -252,6 +254,12 @@ class Command(BaseCommand):
         md_folders = [f for f in leaves if f.name in ('Manuales', 'Anexos')] or leaves
         for i in range(n_markdown):
             title_base, body = MARKDOWN_DOCS[i % len(MARKDOWN_DOCS)]
+            if i == 0:
+                title_base = '[QA] Documento largo de referencia'
+                body += '\n\n## Lectura extensa\n\n' + ('Texto ficticio para probar lectura y desplazamiento. ' * 160)
+                body += '\n\n' + ('PALABRA_SIN_ESPACIOS_' + 'X' * 180) + '\n\n'
+                body += '| Uno | Dos | Tres | Cuatro | Cinco |\n|---|---|---|---|---|\n'
+                body += '| Dato local | Referencia | Texto extenso | 987654321012 COP | Fin |\n' * 8
             cycle = i // len(MARKDOWN_DOCS)
             title = f'{title_base}{" v" + str(cycle + 1) if cycle else ""}'
             status = rng.choices(

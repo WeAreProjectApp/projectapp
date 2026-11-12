@@ -10,7 +10,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { expectCompactModal } from '../helpers/modal-layout.js';
-import { expectContentSizedColumns } from '../helpers/table-geometry.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
@@ -51,6 +51,14 @@ const POCKET_ROWS = [
     notes: '',
     created_at: '2026-05-06T10:00:00Z',
     updated_at: '2026-05-06T10:00:00Z',
+  },
+];
+
+const POCKET_LAYOUT_ROWS = [
+  ...POCKET_ROWS,
+  {
+    ...POCKET_ROWS[0], id: 3, amount: '123456789.00',
+    concept: 'Desarrollo e integración del portal de facturación y conciliación del proyecto de operaciones',
   },
 ];
 
@@ -202,6 +210,7 @@ function buildHandler({
   reorderStatus = 200,
   duplicateStatus = 200,
   rows = RECURRING_ROWS,
+  pocketRows = POCKET_ROWS,
 }) {
   let currentRows = rows.map((row) => ({ ...row }));
   return async ({ route, apiPath, method }) => {
@@ -249,7 +258,7 @@ function buildHandler({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          results: POCKET_ROWS,
+          results: pocketRows,
           meta: { balance: '-149000.00' },
         }),
       };
@@ -1672,37 +1681,90 @@ for (const [alias, rowTestId] of [
       // quality: allow-duplicate (per-viewport contract: admin-accounting-pocket @ compact and portrait)
       // Bug caught: narrowing the ledger hid the outgoing amount or made its card scroll horizontally.
       await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
-      await mockApi(page, buildHandler({ calls: [] }));
+      await mockApi(page, buildHandler({ calls: [], pocketRows: POCKET_LAYOUT_ROWS }));
       await openSubview(page, 'pocket');
       const row = page.getByTestId(rowTestId);
 
       await expect(row).toContainText('Egreso');
       await expect(row).toContainText('2.272.000');
       expect(await row.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath('pocket-layout.png'), fullPage: true });
     });
   });
 }
 
 for (const alias of ['landscape', 'desktop', 'wide']) {
-  test.describe(`Pocket content layout — ${alias}`, () => {
+  test.describe(`Pocket proportional layout — ${alias}`, () => {
     test.use(viewportUse(alias));
 
-    test('keeps Tipo next to Valor without widening either column', {
+    test('distributes ledger data across the available width', {
       tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:display', '@responsive:accounting'],
     }, async ({ page }, testInfo) => {
       // quality: allow-deep-link (the first accounting subview is setup; the visible subnav selects Bolsillo)
       // quality: allow-duplicate (per-viewport contract: admin-accounting-pocket @ landscape, desktop and wide)
-      // Bug caught: Tipo or Valor absorbed spare desktop width, separating Egreso from its amount.
+      // Bug caught: Concepto absorbed the spare width, leaving the center of the ledger empty.
       await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
-      await mockApi(page, buildHandler({ calls: [] }));
+      await mockApi(page, buildHandler({ calls: [], pocketRows: POCKET_LAYOUT_ROWS }));
       await openSubview(page, 'pocket');
       const row = page.getByTestId('accounting-row-2');
 
       await expect(row).toContainText('Pago T.C Rappi');
       await expect(row).toContainText('Egreso');
-      await expectContentSizedColumns(row, { typeLabel: 'Tipo', valueLabel: 'Valor' });
+      const table = page.getByRole('table');
+      await expectNoBlankBand(table);
+      const geometry = await row.evaluate((node) => {
+        const cells = [...node.querySelectorAll('td')];
+        const tableWidth = node.closest('table').getBoundingClientRect().width;
+        return {
+          conceptShare: cells[2].getBoundingClientRect().width / tableWidth,
+          contained: [...node.closest('table').querySelectorAll('tbody td')]
+            .every((cell) => cell.scrollWidth <= cell.clientWidth + 1),
+        };
+      });
+      expect(geometry.conceptShare).toBeLessThan(0.35);
+      expect(geometry.contained).toBe(true);
       await page.screenshot({ path: testInfo.outputPath('pocket-layout.png'), fullPage: true });
+    });
+  });
+}
+
+for (const { profile, openMenu, menuFor } of [
+  {
+    profile: 'compact',
+    openMenu: (page) => page.getByRole('button', { name: 'Abrir menú', exact: true }).click(),
+    menuFor: (page) => page.getByRole('dialog', { name: 'Menú principal' }),
+  },
+  {
+    profile: 'desktop',
+    openMenu: (page) => page.getByRole('navigation', { name: 'Navegación del panel' }).waitFor(),
+    menuFor: (page) => page.getByRole('navigation', { name: 'Navegación del panel' }),
+  },
+]) {
+  test.describe(`Pocket panel navigation — ${profile}`, () => {
+    test.use(viewportUse(profile));
+
+    test('opens Bolsillo immediately after Resumen in the panel menu', {
+      tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (the recurring page is setup; the panel menu reaches the ledger)
+      // Bug caught: the panel menu put Bolsillo after Hostings instead of next to Resumen.
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+      await mockApi(page, buildHandler({ calls: [] }));
+      await page.goto('/panel/accounting/recurring', { waitUntil: 'domcontentloaded' });
+      await waitForNuxtApp(page);
+      await openMenu(page);
+      const menu = menuFor(page);
+      const entries = (await menu.getByRole('link').allTextContents()).map((label) => label.trim());
+      const summaryIndex = entries.indexOf('Resumen');
+
+      expect(entries.slice(summaryIndex, summaryIndex + 3))
+        .toEqual(['Resumen', 'Bolsillo', 'Ingresos']);
+      await menu.getByRole('link', { name: 'Bolsillo', exact: true }).click();
+
+      await expect(page).toHaveURL(/\/panel\/accounting\/pocket$/);
+      await expect(page.getByRole('heading', { name: 'Bolsillo ProjectApp', exact: true })).toBeVisible();
+      await expect(page.getByTestId('pocket-open-1')).toHaveText(POCKET_ROWS[0].concept);
     });
   });
 }

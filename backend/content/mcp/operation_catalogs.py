@@ -23,6 +23,7 @@ from content.mcp.platform_ai_tools import PLATFORM_AI_TOOLS
 from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
+from content.mcp.project_force_delete_tools import PROJECT_FORCE_DELETE_TOOLS
 from content.mcp.data_integrity_tools import LEGACY_DATA_INTEGRITY_TOOLS
 from content.mcp.proposal_schemas import writable_schema
 from content.serializers.additional_modules import AdditionalModuleAdminSerializer
@@ -172,6 +173,7 @@ PROJECT_TOOLS = [
     _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['update_project']),
     _PROJECT_DELETE_PREVIEW,
     _PROJECT_DELETE,
+    *PROJECT_FORCE_DELETE_TOOLS,
     _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto, incluidos los conservados de un proyecto eliminado (retained: proyecto de origen, duplicates: posibles duplicados) y sus hilos de comunicación conservados.', 'panel-projects-unlinked-records', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_unlinked_records']),
     _op('list_project_retention_contexts', 'Audita los datos conservados sin proyecto tras eliminaciones forzadas: por proyecto eliminado, cliente y categoría, cuántos quedaron al eliminar y cuántos siguen conservados (con sus ids), más las propuestas cuyo entregable o fase quedó conservado. client_profile_id filtra por perfil de cliente, page pagina de a 20 y integrity=true agrega las filas conservadas que volvieron a tener proyecto.', 'panel-projects-retained-data-audit', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_retention_contexts']),
     _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados (hosting_ids, income_ids, document_ids, thread_ids y reason opcional). Los conservados de un proyecto eliminado del mismo cliente salen de solo consulta con una operación auditada que se puede deshacer; sus cuentas e ingresos vinculados viajan juntos.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['assign_project_unlinked_records']),

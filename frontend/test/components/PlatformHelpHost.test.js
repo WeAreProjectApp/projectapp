@@ -60,7 +60,7 @@ describe('PlatformHelpHost', () => {
     global.useRoute = () => route
     global.useI18n = () => ({ t: (key) => key })
     auth = reactive({
-      user: { id: 41 }, isClient: true, hasValidatedSession: true, needsProfileCompletion: false,
+      user: { user_id: 41 }, isClient: true, hasValidatedSession: true, needsProfileCompletion: false,
     })
     store = reactive({
       tours: [], tourEnabled: true, videoEnabled: false,
@@ -113,7 +113,7 @@ describe('PlatformHelpHost', () => {
     store.fetchHelp.mockClear()
     guidedTour.start.mockClear()
 
-    auth.user = { id: 42 }
+    auth.user = { user_id: 42 }
     await flushPromises()
 
     expect(guidedTour.pause).toHaveBeenCalledTimes(1)

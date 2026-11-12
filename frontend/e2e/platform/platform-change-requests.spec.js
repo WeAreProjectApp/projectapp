@@ -44,7 +44,7 @@ const mockProjectRequirements = [
   { id: 501, title: 'Checkout flow', phase_title: 'Fase 1', stage_title: 'Etapa 1', source_publication_id: 101, source_requirement_version: 1 },
 ];
 
-function setupMocks(page, { user }) {
+function setupMocks(page, { user, createResponse = null }) {
   return mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
     if (apiPath === 'accounts/projects/1/issue-reports/context-options/' && method === 'GET') {
@@ -60,6 +60,7 @@ function setupMocks(page, { user }) {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockChangeRequests) };
     }
     if (apiPath === 'accounts/projects/1/change-requests/' && method === 'POST') {
+      if (createResponse) return createResponse(route.request().postDataJSON());
       return { status: 201, contentType: 'application/json', body: JSON.stringify({ id: 10, title: route.request().postDataJSON().title, status: 'pending', comments_count: 0 }) };
     }
     if (apiPath.match(/accounts\/projects\/1\/change-requests\/\d+\/evaluate\/$/) && method === 'POST') {
@@ -78,6 +79,33 @@ test.describe('Platform Change Requests — Client', () => {
   test.beforeEach(async ({ page }) => {
     await setPlatformAuth(page, { user: mockPlatformClient });
   });
+
+  for (const theme of ['light', 'dark']) {
+    test(`retains an oversized title after its Spanish rejection in ${theme} mode`, {
+      tag: [...PLATFORM_CHANGE_REQUESTS, '@role:platform-client', '@outcome:error'],
+    }, async ({ page }) => {
+      const title = 'a'.repeat(301);
+      await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme);
+      await setupMocks(page, {
+        user: mockPlatformClient,
+        createResponse: () => ({ status: 400, contentType: 'application/json', body: JSON.stringify({ title: ['El título admite hasta 300 caracteres.'] }) }),
+      });
+      await page.goto('/es-co/platform/projects/1/changes', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('button', { name: /nueva solicitud/i }).click();
+      await page.getByTestId('issue-source').selectOption('501');
+      await page.getByPlaceholder('¿Qué cambio necesitas?').fill(title);
+      const rejected = page.waitForResponse((response) => response.url().includes('/change-requests/') && response.request().method() === 'POST');
+
+      await page.getByRole('button', { name: 'Crear solicitud', exact: true }).click();
+
+      expect((await rejected).status()).toBe(400);
+      await expect(page.getByRole('alert')).toHaveText('El título admite hasta 300 caracteres.');
+      await expect(page.getByPlaceholder('¿Qué cambio necesitas?')).toHaveValue(title);
+      await expect(page.getByTestId('issue-source')).toHaveValue('501');
+      await expect(page.getByRole('heading', { name: 'Nueva solicitud de cambio', exact: true })).toBeVisible();
+      await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+    });
+  }
 
   test('renders change request list with status tabs', {
     tag: ['@outcome:display', ...PLATFORM_CHANGE_REQUESTS, '@role:platform-client'],

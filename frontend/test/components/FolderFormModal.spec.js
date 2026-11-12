@@ -21,6 +21,7 @@ global.useDocumentFolderStore = jest.fn(() => mockFolderStore);
 
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import { documentFolderI18n } from '../helpers/documentFolderI18n';
 import FolderFormModal from '../../components/panel/documents/FolderFormModal.vue';
 import BaseModal from '../../components/base/BaseModal.vue';
 import BaseInput from '../../components/base/BaseInput.vue';
@@ -75,6 +76,8 @@ const projectField = (w) => w.findComponent(ProjectSelectStub);
 
 describe('FolderFormModal', () => {
   beforeEach(() => {
+    global.useI18n = documentFolderI18n;
+    mockFolderStore.folders = [];
     mockFolderStore.createFolder.mockReset().mockResolvedValue({
       success: true, data: { id: 10, name: 'Nueva' },
     });
@@ -87,6 +90,18 @@ describe('FolderFormModal', () => {
   });
 
   describe('creating', () => {
+    it('shows the complete destination before saving a subfolder', () => {
+      mockFolderStore.folders = [
+        { id: 2, name: 'Proyecto', parent: null },
+        { id: 3, name: 'Entregables', parent: 2 },
+      ];
+      const wrapper = mountModal({ initialParent: 3 });
+
+      expect(wrapper.get('[data-testid="folder-form-destination"]').text())
+        .toBe('Destino: Proyecto / Entregables');
+      expect(mockFolderStore.createFolder).not.toHaveBeenCalled();
+    });
+
     it('creates the folder with the association the operator chose', async () => {
       const wrapper = mountModal();
       await nameInput(wrapper).setValue('Kore');
