@@ -70,6 +70,12 @@ def test_foreign_environment_is_ignored(local_state):
     assert b'/__hosting/notice.js' not in result.content
 
 
+def test_unknown_adapter_path_never_serves_product(local_state):
+    result = render(local_state(), local_state, url='/__hosting/unknown')
+    assert result.status_code == 404
+    assert result.content == b''
+
+
 def test_nuxt_document_consumes_banner(local_state, tmp_path, monkeypatch):
     from projectapp import views
     path = local_state(mode='banner')

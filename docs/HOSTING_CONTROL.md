@@ -14,7 +14,10 @@ sin tocar el otro mensaje ni cambiar el modo. Cada operación compara versión
 y conserva quién cambió qué y cuándo. Un conflicto conserva el borrador.
 
 La pantalla sustituye documentos y vistas autenticadas. El banner conserva
-contenido y funcionamiento. APIs, webhooks y rutas operativas continúan; el
+contenido y funcionamiento; limita su altura y reserva espacio para las
+cabeceras fijas. Los adaptadores declaran `data-hosting-offset` o usan
+`--hosting-banner-height` con valor inicial cero para conservar navegación,
+promociones y menús sin superposición. APIs, webhooks y rutas operativas continúan; el
 Panel central y su autenticación/MCP siguen accesibles. No cambia estados
 comerciales, cobros, permisos de negocio, procesos ni datos.
 

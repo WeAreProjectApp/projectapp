@@ -1,5 +1,6 @@
 <template>
   <aside
+    data-hosting-offset="top"
     :class="[
       'fixed inset-y-0 left-0 z-30 flex flex-col border-r transition-all duration-300 ease-in-out',
       'border-input-border/[0.06] bg-surface dark:border-white/[0.06] dark:bg-surface-muted',

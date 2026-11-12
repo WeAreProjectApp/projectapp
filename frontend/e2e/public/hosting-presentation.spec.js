@@ -12,7 +12,7 @@ async function setup(page, mode = 'normal') {
   await page.route('**/__hosting/notice.js', route => route.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(assets, 'notice.js'), 'utf8') }))
   await page.route('**/__hosting/notice.css', route => route.fulfill({ contentType: 'text/css', body: fs.readFileSync(path.join(assets, 'notice.css'), 'utf8') }))
   await page.route('**/__hosting/state', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(state) }))
-  await page.route('**/hosting-fixture/**', route => route.fulfill({ contentType: 'text/html', body: '<html><head><link rel="stylesheet" href="/__hosting/notice.css"><script defer src="/__hosting/notice.js"></script></head><body><main id="product">Producto disponible <a href="/hosting-fixture/other">Página interna</a><button id="use">Usar producto</button></main></body></html>' }))
+  await page.route('**/hosting-fixture/**', route => route.fulfill({ contentType: 'text/html', body: '<html><head><link rel="stylesheet" href="/__hosting/notice.css"><script defer src="/__hosting/notice.js"></script></head><body style="margin:0"><header id="site-header" data-hosting-offset="top" style="position:fixed;top:0;left:0;right:0;height:40px"><a href="/hosting-fixture/other">Cabecera del sitio</a></header><main id="product" style="padding-top:60px">Producto disponible <a href="/hosting-fixture/other">Página interna</a><button id="use">Usar producto</button></main></body></html>' }))
   await page.goto('/hosting-fixture/deep', { waitUntil: 'domcontentloaded' })
   return state
 }
@@ -56,4 +56,19 @@ test('a long mobile notice fits the viewport', { tag: [...tags, '@outcome:displa
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
   await expect(page.locator('#hosting-notice')).toContainText('Mensaje largo de prueba')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+
+test('banner keeps fixed navigation usable', { tag: [...tags, '@outcome:success'] }, async ({ page }) => {
+  const state = await setup(page, 'banner')
+  await expect(page.locator('#hosting-notice')).toBeVisible()
+  await page.getByRole('link', { name: 'Cabecera del sitio' }).click()
+  await expect(page).toHaveURL(/hosting-fixture\/other$/)
+  await expect(page.locator('#hosting-notice')).toBeVisible()
+  const bounds = await page.evaluate(() => ({ notice: document.getElementById('hosting-notice').getBoundingClientRect().bottom, header: document.getElementById('site-header').getBoundingClientRect().top }))
+  expect(bounds.header).toBeGreaterThanOrEqual(bounds.notice - 1)
+  state.mode = 'normal'; state.version = 2
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+  await expect(page.locator('#hosting-notice')).toHaveCount(0)
+  expect(await page.locator('#site-header').evaluate(element => element.getBoundingClientRect().top)).toBe(0)
 })

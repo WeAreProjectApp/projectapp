@@ -6545,7 +6545,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `public-financing-terms` | public | P2 | success | — |
 | `public-financing-theme` | public | P2 | success,failure | — |
 | `public-home` | public | P1 | display | 1 |
-| `public-hosting-presentation` | public | P1 | success,failure,display | 5 |
+| `public-hosting-presentation` | public | P1 | success,failure,display | 6 |
 | `public-landing-apps` | public | P3 | display | 1 |
 | `public-landing-software` | public | P3 | display | 1 |
 | `public-landing-web-design` | public | P2 | display | 1 |

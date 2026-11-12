@@ -29,6 +29,7 @@
     <!-- Mobile top bar -->
     <div
       class="mobile-topbar sticky top-0 z-30 flex h-14 items-center justify-between border-b border-input-border/[0.06] px-4 md:hidden"
+      data-hosting-offset="top"
       :class="hasCover ? '' : 'bg-surface/80 backdrop-blur-xl dark:bg-surface-muted/90'"
     >
       <BaseButton
