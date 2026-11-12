@@ -3359,7 +3359,7 @@ test.describe('Admin Accounting Incomes — vista agrupada por cliente', () => {
 test.describe('Income detail collection status (PA-259)', () => {
   test.use({ viewport: { width: 1528, height: 732 } });
   test.beforeEach(async ({ page }) => {
-    await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+    await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true, is_superuser: true } });
   });
 
   for (const [status, label, dateLabel] of [
@@ -3376,8 +3376,9 @@ test.describe('Income detail collection status (PA-259)', () => {
         commercial_status: status, issue_date: '2026-11-08', total: '119000.00',
       };
       await mockApi(page, buildHandler({ rows: [incomeRow()], calls, linkedCollectionAccount }));
-      await page.goto('/en-us/panel/accounting', { waitUntil: 'domcontentloaded' });
+      await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
       await waitForNuxtApp(page);
+      await page.locator('aside').getByRole('link', { name: 'Resumen', exact: true }).click();
       await page.getByTestId('accounting-subnav-incomes').click();
 
       await page.getByTestId('income-actions-1').click();
@@ -3396,8 +3397,9 @@ test.describe('Income detail collection status (PA-259)', () => {
   }, async ({ page }) => {
     const calls = [];
     await mockApi(page, buildHandler({ rows: [incomeRow()], calls }));
-    await page.goto('/en-us/panel/accounting', { waitUntil: 'domcontentloaded' });
+    await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
     await waitForNuxtApp(page);
+    await page.locator('aside').getByRole('link', { name: 'Resumen', exact: true }).click();
     await page.getByTestId('accounting-subnav-incomes').click();
 
     await page.getByTestId('income-actions-1').click();
