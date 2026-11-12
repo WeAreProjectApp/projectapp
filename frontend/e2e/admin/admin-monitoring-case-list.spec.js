@@ -122,7 +122,9 @@ test.describe('Monitoring case list', () => {
   test('opens stale server-source details without leaving the server context', {
     tag: ['@flow:admin-monitoring-case-list', '@outcome:display', '@role:admin'],
   }, async ({ page }) => {
-    await openMonitoring(page);
+    await installMonitoringMock(page);
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('navigation', { name: 'Navegación del panel' }).getByRole('link', { name: 'Monitoreo', exact: true }).click();
     await page.getByRole('button', { name: 'Servers', exact: true }).click();
     await page.getByTestId('monitoring-summary').getByRole('button', { name: /Stale sources/ }).click();
 
