@@ -58,7 +58,7 @@ test.describe('Monitoring server trends', () => {
   }, async ({ page }) => {
     await openServerMonitoring(page, { seriesFailureOnce: true });
     const charts = page.getByTestId('monitoring-charts');
-    await expect(charts.getByRole('alert')).toHaveText('Could not load data. Try refreshing.');
+    await expect(charts.getByRole('alert').getByText('Could not load data. Try refreshing.', { exact: true })).toHaveCount(1);
     await charts.getByRole('button', { name: 'Refresh', exact: true }).click();
 
     await expect(charts.getByRole('heading', { name: 'RAM', exact: true })).toHaveCount(1);

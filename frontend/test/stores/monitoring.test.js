@@ -68,6 +68,23 @@ describe('useMonitoringStore', () => {
     expect(store.count).toBe(0)
   })
 
+  it('keeps page sources with their snapshot without replacing the global catalog', async () => {
+    // Falla si una página mezcla sus fuentes de cobertura con el catálogo global de otro corte.
+    store.sources = [{ id: 3, name: 'Fuente del catálogo', health: 'current' }]
+    get_request.mockResolvedValue({
+      data: {
+        results: [{ id: 14, title: 'Alerta de disco' }], count: 26, page_size: 25, page: 2, snapshot: 'snapshot-42',
+        sources: [{ id: 8, name: 'Fuente del corte', health: 'no_data' }],
+      },
+    })
+
+    await store.list({ page: 2, snapshot: 'snapshot-42' })
+
+    expect(store.currentPage).toBe(2)
+    expect(store.snapshotSources).toEqual([{ id: 8, name: 'Fuente del corte', health: 'no_data' }])
+    expect(store.sources).toEqual([{ id: 3, name: 'Fuente del catálogo', health: 'current' }])
+  })
+
   it('keeps the detail closed when its request resolves after close', async () => {
     // Falla si una respuesta tardía vuelve a abrir un modal que el operador cerró.
     const detailRequest = deferred()

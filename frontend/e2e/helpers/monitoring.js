@@ -60,7 +60,7 @@ export function installMonitoringMock(page, options = {}) {
     if (apiPath === 'monitoring/status/' && method === 'GET') return options.statusFailure ? json({ detail: 'falló' }, 500) : json({ revision: state.revision, hosts: params.kind === 'project' ? [] : [{ id: 2, name: 'VPS de producción', metrics: options.noHistory ? null : metrics, health: options.noHistory ? 'no_data' : 'current', pressure: [] }] });
     if (apiPath === 'monitoring/servers/2/series/' && method === 'GET') {
       if (failOnce('seriesFailureOnce')) return json({ detail: 'falló' }, 500);
-      return json({ period: params.period || '24h', interval_seconds: 60, last_observed_at: options.noHistory ? null : metrics.observed_at, capacity: options.noHistory ? null : { cpu_count: 2, ram_total_bytes: metrics.ram_total_bytes, disk_total_bytes: metrics.disk_total_bytes }, points: [
+      return json({ period: params.period || '24h', interval_seconds: 300, last_observed_at: options.noHistory ? null : metrics.observed_at, capacity: options.noHistory ? null : { cpu_count: 2, ram_total_bytes: metrics.ram_total_bytes, disk_total_bytes: metrics.disk_total_bytes }, points: [
         { timestamp: Date.parse('2026-09-19T10:04:00Z'), count: 0, average: { cpu_percent: null, cpu_count: null, ram_used_bytes: null, ram_total_bytes: null, disk_used_bytes: null, disk_total_bytes: null, load_1m: null }, max: {} },
         { timestamp: Date.parse(metrics.observed_at), count: options.noHistory ? 0 : 1, average: options.noHistory ? {} : metrics, max: options.noHistory ? {} : metrics },
       ] });

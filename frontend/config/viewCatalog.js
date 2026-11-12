@@ -921,7 +921,7 @@ export const viewCatalogSections = [
         reference: 'prioridades, telemetría medida y capacidad informativa de proyectos y servidores',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Indicadores del conjunto filtrado, atención prioritaria, gráficas con huecos de datos, capacidad informativa y consultas paginadas estables. El detalle conserva evidencia original y páginas independientes de notas y entregas. La recuperación técnica no cierra el seguimiento.',
+        notes: 'Indicadores del conjunto filtrado con acceso a condición y seguimiento, atención prioritaria, detalle de salud de fuentes, gráficas con huecos de datos, capacidad informativa y consultas paginadas estables. El detalle conserva evidencia original y páginas independientes de notas y entregas. La recuperación técnica no cierra el seguimiento.',
       },
     ],
   },

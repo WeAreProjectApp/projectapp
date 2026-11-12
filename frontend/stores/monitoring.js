@@ -7,7 +7,7 @@ export const useMonitoringStore = defineStore('monitoring', {
   state: () => ({
     resources: [], sources: [], records: [], count: 0, pageSize: 25,
     detail: null, loading: false, saving: false, error: '', requestId: 0, detailId: 0,
-    snapshot: '', revision: '', capturedAt: '', summary: null, attention: [], currentPage: 1, expired: false,
+    snapshot: '', revision: '', capturedAt: '', summary: null, attention: [], snapshotSources: null, currentPage: 1, expired: false,
   }),
   actions: {
     async catalog() {
@@ -37,6 +37,7 @@ export const useMonitoringStore = defineStore('monitoring', {
         this.capturedAt = data.captured_at || ''
         this.summary = data.summary || null
         this.attention = data.attention || []
+        this.snapshotSources = data.sources ?? null
         return true
       } catch (error) {
         if (requestId === this.requestId) {
@@ -45,6 +46,7 @@ export const useMonitoringStore = defineStore('monitoring', {
           this.count = 0
           this.summary = null
           this.attention = []
+          this.snapshotSources = null
           this.expired = error.response?.status === 409
         }
         return false

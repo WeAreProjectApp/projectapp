@@ -58,4 +58,5 @@ export default {
   condition: 'Condición técnica', followup: 'Seguimiento', followupOnly: 'Pendiente o en revisión',
   sourcesWithoutData: 'Fuentes sin datos', staleSources: 'Fuentes desactualizadas', resourcesUnderPressure: 'Servidores bajo presión',
   noSourcesInState: 'No hay fuentes en este estado dentro del ámbito seleccionado.', expectedInterval: 'Intervalo esperado de observación: {seconds} segundos.',
+  aggregationInterval: 'Promedio y máximo cada {minutes} minutos',
 }

@@ -18,7 +18,7 @@ from .services import Conflict
 PAGE_SIZE = 25
 SNAPSHOT_TTL = 900
 SAMPLE_FIELDS = ('cpu_percent', 'cpu_count', 'load_1m', 'ram_total_bytes', 'ram_used_bytes', 'disk_total_bytes', 'disk_used_bytes')
-PERIODS = {'24h': (1, 60), '7d': (7, 900), '30d': (30, 3600), '90d': (90, 21600)}
+PERIODS = {'24h': (1, 300), '7d': (7, 1800), '30d': (30, 7200), '90d': (90, 21600)}
 
 
 class SnapshotExpired(APIException):

@@ -25,6 +25,7 @@ const mockStore = reactive({
   capturedAt: '',
   summary: null,
   attention: [],
+  snapshotSources: null,
   currentPage: 1,
   expired: false,
   list: jest.fn(),
@@ -43,8 +44,10 @@ global.useRouter = () => ({ replace: routerReplace })
 jest.mock('../../stores/monitoring', () => ({
   useMonitoringStore: () => mockStore,
 }))
+jest.mock('../../stores/services/request_http', () => ({ get_request: jest.fn() }))
 
 const { mount, flushPromises } = require('@vue/test-utils')
+const { get_request } = require('../../stores/services/request_http')
 const PanelMonitoringIndex = require('../../pages/panel/monitoring/index.vue').default
 
 const MonitoringSelectStub = {
@@ -122,6 +125,7 @@ describe('panel/monitoring index page', () => {
     mockStore.capturedAt = ''
     mockStore.summary = null
     mockStore.attention = []
+    mockStore.snapshotSources = null
     mockStore.expired = false
     mockStore.list.mockReset().mockResolvedValue(true)
     mockStore.catalog.mockReset().mockResolvedValue(undefined)
@@ -129,6 +133,7 @@ describe('panel/monitoring index page', () => {
     mockStore.open.mockReset().mockResolvedValue(undefined)
     mockStore.note.mockReset().mockResolvedValue(undefined)
     mockStore.transition.mockReset().mockResolvedValue(undefined)
+    get_request.mockReset()
     jest.useFakeTimers()
   })
 
@@ -368,5 +373,41 @@ describe('panel/monitoring index page', () => {
     await flushPromises()
 
     expect(mockStore.list).toHaveBeenCalledWith({ kind: 'project', page: 1, followup: 'true', snapshot: 'new' }, false)
+  })
+
+  it('announces a newer revision before refreshing the filtered first page', async () => {
+    // Falla si el sondeo de 60 segundos reemplaza eventos que el operador todavía está revisando, o si Actualizar pierde los filtros.
+    routeQuery = { resource: '1', search: 'disco', page: '3' }
+    mockStore.resources = [resource(1, 'Proyecto Uno', 'project')]
+    mockStore.revision = 'snapshot-a'
+    get_request
+      .mockResolvedValueOnce({ data: { hosts: [], revision: 'snapshot-a' } })
+      .mockResolvedValueOnce({ data: { hosts: [], revision: 'snapshot-b' } })
+      .mockResolvedValue({ data: { hosts: [], revision: 'snapshot-b' } })
+    wrapper = mountPage()
+    await flushPromises()
+    mockStore.list.mockClear()
+
+    jest.advanceTimersByTime(60000)
+    await flushPromises()
+
+    expect(mockStore.list).toHaveBeenCalledTimes(0)
+    expect(wrapper.get('[role="status"]').text()).toBe('monitoring.newDatamonitoring.refresh')
+
+    await wrapper.get('[role="status"]').get('[role="button"]').trigger('click')
+    await flushPromises()
+
+    expect(mockStore.list).toHaveBeenCalledWith({ kind: 'project', page: 1, resource: '1', search: 'disco', snapshot: 'new' }, false)
+  })
+
+  it('uses snapshot sources instead of the global catalog for source indicators', async () => {
+    // Falla si una página conserva fuentes de otro corte y muestra un contador de cobertura distinto al de sus eventos.
+    mockStore.summary = { total: 1, active: { critical: 0, warning: 0, info: 0 }, followup: 0 }
+    mockStore.sources = [source(11, 1, 'Proyecto de catálogo', 'Inspector')]
+    mockStore.snapshotSources = [{ ...source(22, 2, 'Proyecto del corte', 'Sonda'), health: 'no_data' }]
+    wrapper = mountPage()
+    await flushPromises()
+
+    expect(buttonWithLabel(wrapper, 'monitoring.sourcesWithoutData1').text()).toBe('monitoring.sourcesWithoutData1')
   })
 })

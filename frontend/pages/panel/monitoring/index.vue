@@ -50,7 +50,7 @@ const humanTitle = record => {
 }
 const invalidDates = computed(() => Boolean(filters.since && filters.until && filters.since > filters.until))
 const totalPages = computed(() => Math.max(1, Math.ceil(store.count / store.pageSize)))
-const scopedSources = computed(() => visibleSources.value.filter(source => !filters.source || String(source.id) === filters.source))
+const scopedSources = computed(() => store.snapshotSources ?? visibleSources.value.filter(source => !filters.source || String(source.id) === filters.source))
 const sourceProblems = computed(() => scopedSources.value.filter(source => ['no_data', 'stale'].includes(source.health)))
 const pressureHosts = computed(() => hosts.value.filter(host => host.pressure.length))
 const resourceLabel = computed(() => tr(reports.value ? 'resource' : tab.value === 'server' ? 'serverLabel' : 'projectLabel'))
@@ -276,7 +276,7 @@ onBeforeUnmount(() => { disposed = true; statusRequest++; detailRequest++; clear
         <p v-if="actionError" role="alert" class="text-sm text-text-default">{{ actionError }}</p><p v-if="detailLoading" role="status">{{ tr('loading') }}</p>
         <template v-if="store.detail && !detailLoading"><p class="text-sm text-text-subtle">{{ store.detail.resource.name }} · {{ sourceLabel({ key: store.detail.source_key, name: store.detail.source_name }) }}</p>
           <template v-if="detailReports"><p class="text-sm text-text-subtle">{{ tr('readOnlyReport') }}</p><pre class="whitespace-pre-wrap break-words text-sm text-text-default">{{ store.detail.text }}</pre></template>
-          <template v-else><p class="text-sm text-text-default">{{ tr(store.detail.condition) }} · {{ tr(store.detail.state) }} · {{ tr('detections', { count: store.detail.detections }) }}</p><p class="text-xs text-text-subtle">{{ tr('first') }}: {{ formatDate(store.detail.first_seen_at) }} · {{ tr('last') }}: {{ formatDate(store.detail.last_seen_at) }}</p>
+          <template v-else><p class="text-sm text-text-default"><span>{{ tr(store.detail.condition) }} · {{ tr(store.detail.state) }}</span> · {{ tr('detections', { count: store.detail.detections }) }}</p><p class="text-xs text-text-subtle">{{ tr('first') }}: {{ formatDate(store.detail.first_seen_at) }} · {{ tr('last') }}: {{ formatDate(store.detail.last_seen_at) }}</p>
             <form class="flex flex-wrap items-end gap-3" @submit.prevent="save('state')"><MonitoringSelect v-model="selectedState" :label="tr('state')" :options="options(['pending', 'reviewing', 'resolved'])" test-id="monitor-detail-state" /><BaseButton type="submit" :disabled="store.saving" :disabled-reason="tr('busy')">{{ tr('save') }}</BaseButton></form>
             <section><h3 class="mb-3 font-medium text-text-default">{{ tr('evidence') }}</h3><MonitoringEvidence :evidence="store.detail.evidence" /><p v-if="humanTitle(store.detail) !== store.detail.title" class="mt-2 break-words text-xs text-text-subtle">{{ tr('originalTitle') }}: {{ store.detail.title }}</p></section>
             <form class="space-y-3" @submit.prevent="save('note')"><BaseFormField :label="tr('note')" for="monitor-note"><BaseTextarea id="monitor-note" v-model="note" maxlength="4000" /></BaseFormField><BaseButton type="submit" :disabled="store.saving || !note.trim()" :disabled-reason="store.saving ? tr('busy') : tr('emptyNote')">{{ tr('addNote') }}</BaseButton></form>

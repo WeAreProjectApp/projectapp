@@ -66,7 +66,7 @@ const charts = computed(() => definitions.map(definition => {
       <h3 class="font-medium text-text-default">{{ tr('serverTrends') }}</h3>
       <MonitoringSelect v-model="period" :label="tr('period')" :options="['24h', '7d', '30d', '90d'].map(value => ({ value, label: tr(`periods.${value}`) }))" />
     </div>
-    <p class="text-xs text-text-subtle">{{ tr('measuredOnly') }} · {{ tr('lastUpdate') }}: {{ lastUpdate }}</p>
+    <p class="text-xs text-text-subtle"><span>{{ tr('measuredOnly') }}</span> · {{ tr('lastUpdate') }}: {{ lastUpdate }}<span v-if="data"> · {{ tr('aggregationInterval', { minutes: data.interval_seconds / 60 }) }}</span></p>
     <p v-if="loading" role="status" class="text-sm text-text-subtle">{{ tr('loading') }}</p>
     <div v-else-if="error" role="alert" class="space-y-2"><p>{{ tr('load') }}</p><BaseButton variant="secondary" @click="load">{{ tr('refresh') }}</BaseButton></div>
     <p v-else-if="!hasData" class="rounded-xl border border-border-default p-5 text-sm text-text-subtle">{{ tr('noHistory') }}</p>

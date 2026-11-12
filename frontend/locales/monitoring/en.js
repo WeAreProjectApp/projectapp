@@ -58,4 +58,5 @@ export default {
   condition: 'Technical condition', followup: 'Follow-up', followupOnly: 'Pending or under review',
   sourcesWithoutData: 'Sources without data', staleSources: 'Stale sources', resourcesUnderPressure: 'Servers under pressure',
   noSourcesInState: 'No sources in this state in the selected scope.', expectedInterval: 'Expected observation interval: {seconds} seconds.',
+  aggregationInterval: 'Average and maximum per {minutes} minutes',
 }
