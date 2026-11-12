@@ -33,4 +33,4 @@ def test_confirmed_mcp_edit_is_visible_in_canonical_data():
     control.refresh_from_db()
     assert control.banner_title == 'Pago de prueba MCP'
     assert control.mode == 'normal'
-    assert Event.objects.get().source == 'mcp:projects'
+    assert Event.objects.get().source.startswith('mcp:projects:credential:')

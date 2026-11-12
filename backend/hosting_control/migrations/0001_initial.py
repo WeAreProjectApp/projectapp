@@ -26,6 +26,7 @@ class Migration(migrations.Migration):
             ('adapter', models.CharField(max_length=40)),
             ('acknowledged_version', models.PositiveIntegerField(null=True)),
             ('acknowledged_digest', models.CharField(blank=True, max_length=64)),
+            ('acknowledged_payload', models.JSONField(default=dict)),
             ('acknowledged_at', models.DateTimeField(null=True)),
             ('last_seen_at', models.DateTimeField(null=True)),
             ('last_error', models.CharField(blank=True, max_length=300)),

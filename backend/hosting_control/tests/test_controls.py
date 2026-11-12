@@ -1,4 +1,6 @@
 """Panel/MCP share one audited, production-scoped write boundary."""
+import json
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -138,3 +140,30 @@ def test_unknown_switch_fields_are_rejected(admin_client, control):
     response = admin_client.patch(f'/api/hosting-controls/{control.pk}/mode/', {'expected_version': 0, 'mode': 'banner', 'suspended': True}, format='json')
     assert response.status_code == 400
     assert not Event.objects.exists()
+
+
+def test_changing_one_project_preserves_another(admin_client, control):
+    other = Control.objects.create(resource=Resource.objects.create(key='site-b', name='Sitio B', kind='project'))
+    admin_client.patch(f'/api/hosting-controls/{control.pk}/mode/', {'expected_version': 0, 'mode': 'suspended'}, format='json')
+    other.refresh_from_db()
+    assert other.mode == 'normal'
+    assert other.version == 0
+
+
+def test_failed_application_does_not_confirm_intent(machine, admin_client, control):
+    client, _ = machine
+    value = runtime_payload(control.targets.get())
+    client.post('/api/hosting-runtime/receipts/', {key: value[key] for key in ['target_key', 'version', 'digest']} | {'applied': False}, format='json')
+    result = admin_client.get(f'/api/hosting-controls/{control.pk}/').json()['targets'][0]
+    assert result['state'] == 'error'
+    assert result['acknowledged_version'] is None
+
+
+def test_runtime_payload_does_not_expose_inactive_message(machine, control):
+    client, _ = machine
+    control.mode = 'banner'
+    control.suspension_text = 'Texto inactivo privado de prueba'
+    control.save()
+    result = client.get('/api/hosting-runtime/configs/').json()
+    assert result['configs'][0]['message']['text'] == control.banner_text
+    assert 'Texto inactivo privado de prueba' not in json.dumps(result)

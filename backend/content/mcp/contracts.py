@@ -1705,7 +1705,7 @@ MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)
 MCP_MODEL_CONTRACTS['projects'] += (
     _contract('hosting_control.Control', read_only='id resource version updated_at',
               read_write='mode suspension_title suspension_text banner_title banner_text'),
-    _contract('hosting_control.Target', read_only='id control key origins lifecycle adapter acknowledged_version acknowledged_digest acknowledged_at last_seen_at last_error'),
+    _contract('hosting_control.Target', read_only='id control key origins lifecycle adapter acknowledged_version acknowledged_digest acknowledged_payload acknowledged_at last_seen_at last_error'),
     _contract('hosting_control.Event', read_only='id control actor actor_name source before after version created_at'),
     _contract('hosting_control.RuntimeCredential', excluded=_excluded('Credencial de transporte administrada exclusivamente mediante archivo protegido; nunca por MCP.', 'id label token_hash targets revoked_at')),
 )

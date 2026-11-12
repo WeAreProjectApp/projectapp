@@ -100,6 +100,10 @@ onBeforeUnmount(() => { clearInterval(timer); clearTimeout(searchTimer) })
           <p v-for="origin in target.origins" :key="origin" class="break-all text-sm text-text-default">{{ origin }}</p>
           <p class="text-sm text-text-muted" :data-testid="`hosting-status-${target.key}`">{{ statusLabels[target.state] }}</p>
           <p v-if="target.acknowledged_at" class="text-xs text-text-subtle">Última confirmación: {{ new Date(target.acknowledged_at).toLocaleString() }} · versión {{ target.acknowledged_version }}</p>
+          <div v-if="target.acknowledged?.mode" class="text-sm text-text-muted">
+            <p>Último modo confirmado: {{ modeLabels[target.acknowledged.mode] }}</p>
+            <p class="whitespace-pre-wrap break-words">{{ target.acknowledged.message.title }} {{ target.acknowledged.message.text }}</p>
+          </div>
           <p v-if="target.error" class="text-sm text-danger-strong">{{ target.error }}</p>
         </div>
         <BaseButton variant="secondary" @click="refresh">Actualizar confirmación</BaseButton>

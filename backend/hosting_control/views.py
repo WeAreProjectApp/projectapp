@@ -33,7 +33,7 @@ def change(request, control_id, serializer_class):
     serializer = serializer_class(data=request.data)
     serializer.is_valid(raise_exception=True)
     context = current_mcp_context()
-    source = f'mcp:{context.connector.slug}' if context else 'panel'
+    source = f'mcp:{context.connector.slug}:credential:{context.credential.pk}' if context else 'panel'
     return response(services.update(request.user, control_id, serializer.validated_data, source))
 
 

@@ -57,6 +57,7 @@ def target_payload(target):
     return {'key': target.key, 'origins': target.origins, 'adapter': target.adapter,
             'lifecycle': target.lifecycle, 'state': state, 'acknowledged_version': target.acknowledged_version,
             'acknowledged_digest': target.acknowledged_digest, 'acknowledged_at': target.acknowledged_at,
+            'acknowledged': target.acknowledged_payload,
             'last_seen_at': target.last_seen_at, 'error': target.last_error}
 
 
@@ -136,6 +137,7 @@ def receive(credential, data):
     if data['applied']:
         target.acknowledged_version = data['version']
         target.acknowledged_digest = data['digest']
+        target.acknowledged_payload = {'mode': current['mode'], 'message': current['message'], 'version': current['version']}
         target.acknowledged_at = target.last_seen_at
     target.save()
     return {'accepted': True, 'applied': data['applied']}

@@ -37,6 +37,7 @@ class Target(models.Model):
     adapter = models.CharField(max_length=40)
     acknowledged_version = models.PositiveIntegerField(null=True)
     acknowledged_digest = models.CharField(max_length=64, blank=True)
+    acknowledged_payload = models.JSONField(default=dict)
     acknowledged_at = models.DateTimeField(null=True)
     last_seen_at = models.DateTimeField(null=True)
     last_error = models.CharField(max_length=300, blank=True)
