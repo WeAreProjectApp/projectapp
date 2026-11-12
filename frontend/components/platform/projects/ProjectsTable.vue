@@ -78,8 +78,7 @@
 
     <!-- Compact / portrait: retain the complete project name in each card. -->
     <div v-else class="space-y-3">
-      <!-- design-tokens: allow-raw-button — the whole card is a project listing row. -->
-      <button
+      <BaseButton unstyled
         v-for="p in projects"
         :key="p.id"
         type="button"
@@ -129,7 +128,7 @@
             <dd class="text-text-muted" :data-testid="`project-last-activity-${p.id}`">{{ relativeTime(p.last_activity_at) }}</dd>
           </div>
         </dl>
-      </button>
+      </BaseButton>
 
       <div v-if="!projects.length" class="rounded-2xl border border-border-default bg-surface px-4 py-12 text-center text-text-muted">
         No hay proyectos para mostrar.

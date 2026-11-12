@@ -111,24 +111,24 @@
    1. PRIMARY BUTTONS
    ============================ */
 :root[style*="--theme-color"] .bg-lemon {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 :root[style*="--theme-color"] .bg-lemon:hover {
-  filter: brightness(1.12) !important;
+  background-color: var(--color-primary-strong) !important;
 }
 /* Light mode: bg-esmerald paired with text-white (primary buttons + active pills) */
 :root[style*="--theme-color"] .bg-esmerald.text-white {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 /* Dark mode: dark:bg-lemon buttons */
-:root[style*="--theme-color"] .dark .dark\:bg-lemon {
-  background-color: var(--theme-color) !important;
+:root[style*="--theme-color"].dark .dark\:bg-lemon {
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 /* Dark mode button text override (dark:text-esmerald-dark on buttons) */
-:root[style*="--theme-color"] .dark .dark\:bg-lemon.dark\:text-esmerald-dark {
+:root[style*="--theme-color"].dark .dark\:bg-lemon.dark\:text-esmerald-dark {
   color: var(--theme-btn-text, #fff) !important;
 }
 
@@ -136,12 +136,12 @@
    2. TEXT ACCENTS
    ============================ */
 :root[style*="--theme-color"] .text-lemon,
-:root[style*="--theme-color"] .dark .dark\:text-lemon {
-  color: var(--theme-color) !important;
+:root[style*="--theme-color"].dark .dark\:text-lemon {
+  color: var(--color-text-brand) !important;
 }
 /* Brand text in headings/labels (not inside sidebar or topbar) */
 :root[style*="--theme-color"] main .text-esmerald:not(h1):not(.text-3xl):not(.text-xl) {
-  color: var(--theme-dark) !important;
+  color: var(--color-text-brand) !important;
 }
 
 /* ============================
@@ -155,8 +155,8 @@
   border-color: rgba(var(--theme-border-rgb), 0.20) !important;
 }
 /* Dark mode card borders */
-:root[style*="--theme-color"] .dark main .rounded-3xl,
-:root[style*="--theme-color"] .dark main .rounded-2xl {
+:root[style*="--theme-color"].dark main .rounded-3xl,
+:root[style*="--theme-color"].dark main .rounded-2xl {
   border-color: rgba(var(--theme-accent-rgb), 0.18) !important;
 }
 
@@ -164,7 +164,7 @@
 :root[style*="--theme-color"] main table tr {
   border-color: rgba(var(--theme-border-rgb), 0.12) !important;
 }
-:root[style*="--theme-color"] .dark main table tr {
+:root[style*="--theme-color"].dark main table tr {
   border-color: rgba(var(--theme-accent-rgb), 0.10) !important;
 }
 
@@ -174,8 +174,8 @@
 :root[style*="--theme-color"] main input:focus,
 :root[style*="--theme-color"] main textarea:focus,
 :root[style*="--theme-color"] main select:focus {
-  border-color: rgba(var(--theme-rgb), 0.40) !important;
-  --tw-ring-color: rgba(var(--theme-rgb), 0.15) !important;
+  border-color: var(--color-focus-ring) !important;
+  --tw-ring-color: var(--color-focus-ring) !important;
 }
 
 /* ============================
@@ -186,7 +186,7 @@
   background-color: rgba(var(--theme-rgb), 0.10) !important;
 }
 :root[style*="--theme-color"] aside .hover\:text-esmerald:hover {
-  color: var(--theme-dark) !important;
+  color: var(--color-text-brand) !important;
 }
 /* Sidebar border */
 :root[style*="--theme-color"] aside {
@@ -197,7 +197,7 @@
   border-color: rgba(var(--theme-border-rgb), 0.15) !important;
 }
 /* Dark mode sidebar hover */
-:root[style*="--theme-color"] .dark aside .dark\:hover\:bg-white\/\[0\.06\]:hover {
+:root[style*="--theme-color"].dark aside .dark\:hover\:bg-white\/\[0\.06\]:hover {
   background-color: rgba(var(--theme-rgb), 0.12) !important;
 }
 
@@ -205,10 +205,10 @@
    6. AVATAR FALLBACK BG
    ============================ */
 :root[style*="--theme-color"] .bg-esmerald.text-white:not(button):not(a):not([role="button"]) {
-  background-color: var(--theme-color) !important;
+  background-color: var(--color-text-brand) !important;
 }
-:root[style*="--theme-color"] .dark .dark\:bg-lemon.dark\:text-esmerald-dark:not(button):not(a):not([role="button"]) {
-  background-color: var(--theme-color) !important;
+:root[style*="--theme-color"].dark .dark\:bg-lemon.dark\:text-esmerald-dark:not(button):not(a):not([role="button"]) {
+  background-color: var(--color-text-brand) !important;
   color: var(--theme-btn-text, #fff) !important;
 }
 
@@ -218,8 +218,8 @@
 .platform-color-only {
   background-color: var(--theme-surface, #f9fafb) !important;
 }
-.platform-color-only.dark {
-  background-color: rgba(var(--theme-dark-rgb, 0, 0, 0), 0.95) !important;
+.dark .platform-color-only {
+  background-color: color-mix(in srgb, var(--theme-color) 8%, var(--color-surface-muted)) !important;
 }
 
 .swal2-icon.swal2-success .swal2-success-circular-line-left,

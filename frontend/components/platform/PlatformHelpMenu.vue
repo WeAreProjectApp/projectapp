@@ -5,7 +5,7 @@
       @click="open = !open">
       <span aria-hidden="true">?</span><span v-if="!collapsed">{{ t('platformHelp.help') }}</span>
     </BaseButton>
-    <div v-if="open" class="mt-2 space-y-2 rounded-xl border border-border-default bg-surface p-3 text-sm dark:bg-primary" data-testid="platform-help-menu">
+    <div v-if="open" class="mt-2 space-y-2 rounded-xl border border-border-default bg-surface p-3 text-sm dark:bg-surface" data-testid="platform-help-menu">
       <BaseButton v-for="tour in availableTours" :key="tour.id" :data-testid="`platform-help-tour-${tour.slug}`" variant="ghost" class="w-full text-left" @click="launch(tour.id)">
         {{ tour.content[`title_${language}`] }}
       </BaseButton>

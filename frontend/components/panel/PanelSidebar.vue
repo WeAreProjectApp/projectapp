@@ -35,7 +35,7 @@
         <p
           v-if="!isCollapsed"
           class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest"
-          :class="section.muted ? 'text-green-light/40 dark:text-text-subtle/60' : 'text-green-light/60 dark:text-text-subtle/80'"
+          :class="section.muted ? 'text-text-subtle' : 'text-text-muted'"
         >
           {{ section.label }}
         </p>

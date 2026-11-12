@@ -23,7 +23,7 @@ jest.mock('../../stores/platform-notifications', () => ({
 
 import PlatformSidebar from '../../components/platform/PlatformSidebar.vue';
 
-function mountPlatformSidebar(props = {}) {
+function mountPlatformSidebar(props = {}, toggleTheme = jest.fn()) {
   return mount(PlatformSidebar, {
     props,
     global: {
@@ -34,7 +34,7 @@ function mountPlatformSidebar(props = {}) {
       },
       provide: {
         toggleSidebar: jest.fn(),
-        toggleTheme: jest.fn(),
+        toggleTheme,
         showThemePicker: false,
       },
     },
@@ -69,16 +69,24 @@ describe('PlatformSidebar', () => {
   it('emits logout when logout button is clicked', async () => {
     const wrapper = mountPlatformSidebar();
 
-    const logoutBtn = wrapper.findAll('button').find(b => {
-      const svg = b.find('svg');
-      return svg.exists() && b.attributes('title') === 'Salir';
-    }) || wrapper.findAll('button')[1]; // fallback
+    await wrapper.get('button[aria-label="Cerrar sesión"]').trigger('click');
 
-    if (logoutBtn) {
-      await logoutBtn.trigger('click');
-    }
+    expect(wrapper.emitted('logout')).toEqual([[]]);
+  });
 
-    // Verify emit (even via indirect button) or just that the component renders logout correctly
-    expect(wrapper.find('aside').exists()).toBe(true);
+  it.each([
+    [false, false, 'global.theme.enableDark', 'global.theme.enableLight'],
+    [true, false, 'global.theme.enableLight', 'global.theme.enableDark'],
+    [false, true, 'global.theme.enableDark', 'global.theme.enableLight'],
+    [true, true, 'global.theme.enableLight', 'global.theme.enableDark'],
+  ])('switches the theme with dark=%s collapsed=%s', async (isDark, isCollapsed, action, nextAction) => {
+    const toggleTheme = jest.fn();
+    const wrapper = mountPlatformSidebar({ isDark, isCollapsed }, toggleTheme);
+
+    await wrapper.get(`button[aria-label="${action}"]`).trigger('click');
+
+    expect(toggleTheme).toHaveBeenCalledTimes(1);
+    await wrapper.setProps({ isDark: !isDark });
+    expect(wrapper.get(`button[aria-label="${nextAction}"]`).attributes('type')).toBe('button');
   });
 });

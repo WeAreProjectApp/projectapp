@@ -25,7 +25,7 @@
 
       <div class="rounded-3xl border border-white/[0.1] bg-white/95 p-8 shadow-2xl backdrop-blur-2xl">
         <h2 class="text-xl font-medium text-text-default">¿Olvidaste tu contraseña?</h2>
-        <p class="mt-2 text-sm leading-6 text-green-light">
+        <p class="mt-2 text-sm leading-6 text-text-muted">
           Ingresa tu email y te enviaremos un código para restablecerla.
         </p>
 
@@ -41,7 +41,7 @@
               v-model="email"
               type="email"
               autocomplete="email"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default focus:ring-1 focus:ring-esmerald/10"
               placeholder="cliente@empresa.com"
             >
           </div>
@@ -51,7 +51,7 @@
           </BaseButton>
         </form>
 
-        <p class="mt-6 text-center text-sm text-green-light">
+        <p class="mt-6 text-center text-sm text-text-muted">
           <NuxtLink :to="localePath('/platform/login')" class="underline">Volver al inicio de sesión</NuxtLink>
         </p>
       </div>

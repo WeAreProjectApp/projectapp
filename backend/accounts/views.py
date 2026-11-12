@@ -358,7 +358,7 @@ def me_view(request):
         profile.avatar = data['avatar']
         profile_fields.append('avatar')
 
-    if 'custom_cover_image' in data and data['custom_cover_image'] is not None:
+    if 'custom_cover_image' in data:
         profile.custom_cover_image = data['custom_cover_image']
         profile_fields.append('custom_cover_image')
 

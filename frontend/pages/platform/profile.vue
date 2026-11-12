@@ -1,7 +1,7 @@
 <template>
   <div id="platform-profile" class="mx-auto max-w-3xl">
     <h1 class="mb-1 text-xl font-bold text-text-default">Configuracion</h1>
-    <p class="mb-8 text-sm text-green-light">Revisa y actualiza tu informacion personal.</p>
+    <p class="mb-8 text-sm text-text-muted">Revisa y actualiza tu informacion personal.</p>
 
     <!-- Success message -->
     <div
@@ -23,7 +23,7 @@
       <!-- Avatar card -->
       <div class="rounded-3xl border border-border-default bg-surface p-6 shadow-sm">
         <div class="flex flex-col items-center gap-4">
-          <button
+          <BaseButton unstyled
             type="button"
             class="touch-target group relative h-24 w-24 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2"
             aria-label="Cambiar foto de perfil"
@@ -37,7 +37,7 @@
                 alt="Avatar"
                 class="h-full w-full object-cover"
               />
-              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-2xl font-bold text-white dark:bg-accent dark:text-text-default">
+              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-2xl font-bold text-on-primary dark:bg-accent dark:text-on-accent">
                 {{ authStore.userInitials }}
               </div>
             </div>
@@ -52,7 +52,7 @@
             <div v-if="isUploadingAvatar" class="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
               <div class="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             </div>
-          </button>
+          </BaseButton>
           <input
             ref="fileInput"
             type="file"
@@ -62,7 +62,7 @@
           />
           <div class="text-center">
             <p class="text-base font-semibold text-text-default">{{ authStore.displayName }}</p>
-            <p class="text-xs text-green-light">{{ authStore.user?.email }}</p>
+            <p class="text-xs text-text-muted">{{ authStore.user?.email }}</p>
             <span
               class="mt-2 inline-block rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider"
               :class="authStore.isAdmin
@@ -89,7 +89,7 @@
               id="profile-first-name"
               v-model="form.first_name"
               type="text"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
@@ -97,7 +97,7 @@
             <input
               v-model="form.last_name"
               type="text"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
@@ -105,7 +105,7 @@
             <input
               v-model="form.company_name"
               type="text"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
@@ -113,7 +113,7 @@
             <input
               v-model="form.phone"
               type="tel"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
@@ -121,7 +121,7 @@
             <input
               v-model="form.cedula"
               type="text"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
@@ -129,14 +129,14 @@
             <input
               v-model="form.date_of_birth"
               type="date"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
             <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Sexo</label>
             <select
               v-model="form.gender"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             >
               <option value="">Sin especificar</option>
               <option value="male">Masculino</option>
@@ -149,7 +149,7 @@
             <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Nivel de educacion</label>
             <select
               v-model="form.education_level"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             >
               <option value="">Sin especificar</option>
               <option value="primaria">Primaria</option>
@@ -201,7 +201,7 @@
 
             <!-- Zoom slider -->
             <div class="mb-4 flex items-center gap-3 px-2">
-              <svg class="h-4 w-4 shrink-0 text-green-light" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6" /></svg>
+              <svg class="h-4 w-4 shrink-0 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6" /></svg>
               <input
                 v-model.number="cropZoom"
                 type="range"
@@ -210,7 +210,7 @@
                 step="0.05"
                 class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-esmerald/10 accent-esmerald dark:bg-white/10 dark:accent-lemon"
               />
-              <svg class="h-4 w-4 shrink-0 text-green-light" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6M11 8v6" /></svg>
+              <svg class="h-4 w-4 shrink-0 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6M11 8v6" /></svg>
             </div>
 
             <div class="flex gap-3">
