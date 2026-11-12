@@ -83,7 +83,9 @@ del botón agrupaba icono y rótulo fuera del gap de la fila. Se limita esa
 propiedad al menú colapsado y se alinea el cajón móvil con las filas de cuenta.
 No se atribuye una causa común a los tres síntomas del ticket.
 
-Las iniciales usan blanco sobre el verde de marca #002921 en ambos temas:
+Las iniciales de escritorio, cajón y encabezado móvil usan un par de tokens propio,
+independiente del color primario personalizado: blanco sobre el verde de marca
+#002921 en ambos temas:
 contraste calculado 15,68:1. Se conservan las fotografías. Los controles pendientes
 se identifican con aria-disabled y una etiqueta legible; Modelo de datos sigue
 sin destino habilitado y conserva PRONTO. No cambia la personalización guardada.

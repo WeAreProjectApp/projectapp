@@ -21,6 +21,28 @@ const meResponse = (user) => ({
   body: JSON.stringify(user),
 });
 
+test.describe('Platform initials palette', () => {
+  test.setTimeout(60_000);
+  for (const mode of ['light', 'dark']) {
+    test(`keeps the initials brand pair with a light personal palette in ${mode} mode`, {
+      tag: [...PLATFORM_SIDEBAR_NAVIGATION, '@role:platform-admin', '@outcome:display'],
+    }, async ({ page }) => {
+      // Bug caught: inheriting the personalized primary could replace the agreed avatar pair.
+      const user = { ...mockPlatformAdmin, theme_color: '#F0FF3D' };
+      await setPlatformAuth(page, { user });
+      await setupSidebarMocks(page, user);
+      await page.addInitScript(theme => localStorage.setItem('platform_theme', theme), mode);
+      await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
+      const sidebar = page.getByRole('complementary');
+      await sidebar.getByRole('link', { name: 'Configuración', exact: true }).click();
+
+      const initials = sidebar.getByText('AE', { exact: true });
+      await expect(initials).toHaveCSS('background-color', 'rgb(0, 41, 33)');
+      await expect(initials).toHaveCSS('color', 'rgb(255, 255, 255)');
+    });
+  }
+});
+
 function setupSidebarMocks(page, user) {
   return mockApi(page, async ({ apiPath, method }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
