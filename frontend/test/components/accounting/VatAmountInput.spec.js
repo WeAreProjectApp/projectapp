@@ -124,6 +124,37 @@ describe('VatAmountInput', () => {
     expect(wrapper.emitted('capture').at(-1)).toEqual([null])
   })
 
+  it('shows a zero percent breakdown after selecting Sin IVA', async () => {
+    // Fails if the shortcut does not update the editable field and its financial reading.
+    const wrapper = mountInput({ 'onUpdate:rate': (rate) => wrapper.setProps({ rate }) })
+
+    await button(wrapper, 'Sin IVA').trigger('click')
+
+    expect(rateInput(wrapper).element.value).toBe('0')
+    expect(wrapper.get('[data-testid="vat-breakdown"]').text()).toContain('IVA (0 %)')
+    expect(wrapper.get('[data-testid="vat-tax"]').text()).toContain('$0')
+  })
+
+  it('shows unregistered VAT after clearing the percentage', async () => {
+    // Fails if empty percentage is silently treated as an explicit zero rate.
+    const wrapper = mountInput({ 'onUpdate:rate': (rate) => wrapper.setProps({ rate }) })
+
+    await rateInput(wrapper).setValue('')
+
+    expect(wrapper.emitted('update:rate').at(-1)).toEqual([null])
+    expect(wrapper.get('[data-testid="vat-tax"]').text()).toBe('IVA sin registrar')
+  })
+
+  it.each([{ disabled: true }, { rateDisabled: true }])('protects the VAT shortcut with %j', async (props) => {
+    // Fails if a locked amount or inherited rate can be changed using the shortcut.
+    const wrapper = mountInput(props)
+
+    await button(wrapper, 'Sin IVA').trigger('click')
+
+    expect(button(wrapper, 'Sin IVA').attributes('disabled')).toBeDefined()
+    expect(wrapper.emitted('update:rate')).toBeUndefined()
+  })
+
   it('reopens in total mode after its reset key changes', async () => {
     // Fails if opening a new account reuses the previous form's pre-VAT entry mode.
     const wrapper = mountInput({ resetKey: 1 })
