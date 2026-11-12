@@ -32,4 +32,6 @@ Recorrer claro y oscuro en 412×915, 835×1194 (tableta vertical), 1195×835, 14
 
 CI ejecuta las automatizadas; no se ejecutaron tests ni builds locales. Los specs nuevos conservan la marca de no validados hasta su ejecución efectiva en CI. La revisión estática del catálogo, contrato responsive y registro de flujos no acredita una revisión visual manual.
 
+El recolector compatible está publicado en el toolkit, SHA `4a7f5da620b036dc2e75672d8e43f29a98a2e4db`, con sus nueve controles de [CI aprobados](https://github.com/ProjectAppSunset/vps-ops-toolkit/actions/runs/43232950513). La captura permanece desactivada hasta que DevQA o el despliegue la habiliten después del backend.
+
 La evidencia de cierre distingue resultados de CI por SHA, DEV LISTO por SHA servido y dictamen de QA por caso. Una aprobación de esta rama no sustituye la futura validación de `main` integrado. El [runbook MCP](../MCP_VALIDATION_RUNBOOK.md) y el [contrato de Monitoreo](../monitoring-dashboard.md) detallan operaciones y límites.

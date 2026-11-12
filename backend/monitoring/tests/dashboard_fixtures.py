@@ -1,4 +1,5 @@
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.utils import timezone
@@ -11,6 +12,14 @@ from monitoring.models import Case, Credential, Resource, Source
 def dashboard(db):
     cache.clear()
     actor = get_user_model().objects.create_user(username='dashboard-operator', is_staff=True, is_superuser=True)
+    # The access-version middleware invalidates sessions whose user lacks a
+    # profile.  The production signal defers that record until commit, which
+    # does not happen inside pytest's transactional db fixture.
+    UserProfile.objects.create(
+        user=actor,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
+    )
     client = APIClient()
     client.force_login(actor)
     server = Resource.objects.create(key='fixture-host', name='Servidor de pruebas', kind='server', environment='development')

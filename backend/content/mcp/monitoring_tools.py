@@ -59,6 +59,8 @@ MONITORING_TOOLS = [
     operation('get_monitoring_server_series', 'Consulta muestras reales, huecos y capacidad de RAM, disco, CPU y carga.', 'monitoring-series', path=True, query={'period': field('string', 'Periodo histórico; 24h por defecto.', enum=['24h', '7d', '30d', '90d'])}),
     operation('get_monitoring_capacity', 'Consulta asignación informativa, servidor y disponibilidad de consumo por proyecto.', 'monitoring-capacity', path=True),
     operation('update_monitoring_capacity', 'Registra capacidad informativa sin aplicar límites al servidor; conserva auditoría y versión.', 'monitoring-capacity', path=True, method='PUT', payload=closed_object(CAPACITY, ['version', 'cpu_mode', 'ram_mode', 'storage_mode'])),
-    operation('list_monitoring_capacity_history', 'Consulta cambios de capacidad con autor y valores anteriores y posteriores.', 'monitoring-capacity-history', path=True, query={'page': PAGE}),
+    operation('list_monitoring_capacity_history', 'Consulta cambios de capacidad con autor y valores anteriores y posteriores; conserva el límite recibido entre páginas.', 'monitoring-capacity-history', path=True, query={
+        'page': PAGE, 'changes_before': field('integer', 'Límite superior recibido en history_bounds.changes; omitir para iniciar una consulta nueva.', minimum=0),
+    }),
     operation('link_monitoring_project', 'Vincula un recurso técnico de proyecto con un proyecto comercial; null desvincula.', 'monitoring-resource-link', path=True, method='PATCH', payload=closed_object({'project': field(['integer', 'null'], 'ID de accounts.Project, o null para desvincular.')}, ['project'])),
 ]

@@ -6,7 +6,7 @@ from content.mcp.protocol import ToolError
 from content.models import McpConnector, McpCredential
 from django.contrib.auth import get_user_model
 
-from monitoring.models import CapacityAllocation, CaseActivity, Delivery
+from monitoring.models import CapacityAllocation, CapacityChange, CaseActivity, Delivery
 from monitoring.tests.dashboard_fixtures import create_cases
 
 pytest_plugins = ('monitoring.tests.dashboard_fixtures',)
@@ -34,6 +34,22 @@ def test_capacity_mcp_updates_the_informational_record(dashboard_fixture):
     result = _tool('update_monitoring_capacity')({'resource_id': dashboard_fixture['project'].pk, 'version': 0, 'cpu_mode': 'shared', 'ram_mode': 'assigned', 'ram_bytes': 1048576, 'storage_mode': 'unknown'})
     assert result['allocation']['ram_bytes'] == 1048576
     assert CapacityAllocation.objects.get().version == 1
+
+
+def test_capacity_history_mcp_preserves_a_zero_bound(dashboard_fixture):
+    """Fails if MCP loses the upper bound of an initially empty capacity history."""
+    allocation = CapacityAllocation.objects.create(resource=dashboard_fixture['project'])
+    first = _tool('list_monitoring_capacity_history')({'resource_id': dashboard_fixture['project'].pk})
+    CapacityChange.objects.create(allocation=allocation, before={}, after={})
+
+    frozen = _tool('list_monitoring_capacity_history')({
+        'resource_id': dashboard_fixture['project'].pk,
+        'changes_before': first['history_bounds']['changes'],
+    })
+
+    assert first['history_bounds'] == {'changes': 0}
+    assert frozen['count'] == 0
+    assert frozen['results'] == []
 
 
 def test_note_mcp_preserves_real_authorship(dashboard_fixture):
@@ -73,7 +89,7 @@ def test_case_mcp_returns_bounded_history_pages(dashboard_fixture):
     assert result['history_bounds']['deliveries'] >= result['deliveries']['results'][0]['id']
 
 
-def test_case_mcp_rejects_a_missing_case_identifier():
+def test_case_mcp_rejects_a_missing_case_identifier(db):
     """Fails if the MCP adapter sends a case-detail request without its required identifier."""
     with pytest.raises(ToolError) as rejected:
         _tool('get_monitoring_case')({})
@@ -87,9 +103,22 @@ def test_case_mcp_rejects_a_missing_case_identifier():
 def test_mcp_adapter_rejects_a_non_staff_actor(dashboard_fixture):
     """Fails if an MCP client without staff authority can consult capacity."""
     actor = get_user_model().objects.create_user(username='monitoring-client')
-    with use_mcp_context(McpExecutionContext(connector=None, credential=None, request_id='fixture', actor=actor)):
-        with pytest.raises(ToolError):
-            _tool('get_monitoring_capacity')({'resource_id': dashboard_fixture['project'].pk})
+    connector, _ = McpConnector.objects.get_or_create(
+        slug='projects',
+        defaults={'name': 'Projects'},
+    )
+    context = McpExecutionContext(
+        connector=connector,
+        credential=None,
+        request_id='fixture',
+        actor=actor,
+    )
+    with (
+        use_mcp_context(context),
+        pytest.raises(ToolError) as rejected,
+    ):
+        _tool('get_monitoring_capacity')({'resource_id': dashboard_fixture['project'].pk})
+    assert rejected.value.code == 'FORBIDDEN'
     assert CapacityAllocation.objects.count() == 0
 
 

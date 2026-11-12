@@ -32,6 +32,8 @@ El toolkit lee `/proc/meminfo` (usado = MemTotal − MemAvailable), diferencias 
 
 `GET|PUT /api/monitoring/resources/<resource_id>/capacity/` consulta o registra una asignación informativa de un recurso técnico de proyecto. Cada dimensión tiene modalidad unknown/shared/assigned. Asignada requiere cantidad positiva; las otras requieren null. CPU se expresa en vCPU; RAM y almacenamiento se persisten en bytes y se editan en GiB. Version 0 crea el registro; las siguientes ediciones envían la versión leída y una versión antigua devuelve 409 sin sobrescribir. Actor y valores anteriores/posteriores quedan en el historial paginado `/capacity/history/`.
 
+La primera página del historial devuelve `history_bounds.changes`. Reenviarlo como `changes_before` mantiene el total y las filas del mismo corte aunque otro operador registre una asignación; el límite 0 conserva un corte vacío. Omitirlo inicia una consulta nueva. El Panel conserva ese límite al paginar y lo renueva al recargar o guardar capacidad, sin cambiar el registro de auditoría.
+
 Guardar **no cambia** systemd, cgroups, planes comerciales ni cuotas. La relación con servidor es la ya configurada en el inventario. Consumo por proyecto permanece no disponible: ni repartir la RAM del servidor ni presentar un límite de Gunicorn como todo el proyecto representa una medición atribuible.
 
 ## Permisos y MCP

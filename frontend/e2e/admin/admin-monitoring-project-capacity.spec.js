@@ -54,7 +54,7 @@ test.describe('Monitoring project capacity', () => {
     await capacityPanel(page).getByRole('button', { name: 'Save capacity', exact: true }).click();
 
     await expect(cpu).toHaveValue('0');
-    await expect(cpu).toBeInvalid();
+    expect(await cpu.evaluate(input => input.validity.rangeUnderflow)).toBe(true);
     expect(capacityWrites(state)).toHaveLength(0);
   });
 

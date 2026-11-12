@@ -11,6 +11,7 @@ const error = ref('')
 const saved = ref(false)
 const history = ref(null)
 const historyPage = ref(1)
+const historyBefore = ref(null)
 const historyOpen = ref(false)
 const form = reactive({ version: 0, cpu_mode: 'unknown', ram_mode: 'unknown', storage_mode: 'unknown', cpu: '', ram: '', storage: '' })
 const dimensions = ['cpu', 'ram', 'storage']
@@ -25,16 +26,25 @@ function fill(allocation) {
   form.ram = allocation?.ram_bytes == null ? '' : allocation.ram_bytes / 1024 ** 3
   form.storage = allocation?.storage_bytes == null ? '' : allocation.storage_bytes / 1024 ** 3
 }
+function resetHistory() {
+  historyRequest++
+  history.value = null
+  historyBefore.value = null
+  historyPage.value = 1
+}
 async function load() {
   const id = ++requestId
   loading.value = true
   error.value = ''
   saved.value = false
-  historyRequest++
-  history.value = null
+  resetHistory()
   try {
     const response = await get_request(`monitoring/resources/${props.resourceId}/capacity/`)
-    if (id === requestId) { data.value = response.data; fill(response.data.allocation) }
+    if (id === requestId) {
+      data.value = response.data
+      fill(response.data.allocation)
+      if (historyOpen.value && data.value.allocation) loadHistory()
+    }
   } catch { if (id === requestId) { data.value = null; error.value = tr('load') } }
   finally { if (id === requestId) loading.value = false }
 }
@@ -55,7 +65,13 @@ async function save() {
   }
   try {
     const response = await put_request(`monitoring/resources/${props.resourceId}/capacity/`, payload)
-    if (id === requestId) { data.value = response.data; fill(response.data.allocation); saved.value = true; history.value = null }
+    if (id === requestId) {
+      data.value = response.data
+      fill(response.data.allocation)
+      saved.value = true
+      resetHistory()
+      if (historyOpen.value && data.value.allocation) loadHistory()
+    }
   } catch (failure) {
     if (id === requestId) error.value = failure.response?.status === 409 ? tr('capacityConflict') : tr('saveError')
   } finally { if (id === requestId) saving.value = false }
@@ -63,9 +79,15 @@ async function save() {
 async function loadHistory(page = 1) {
   const id = requestId
   const historyId = ++historyRequest
+  const params = { page }
+  if (historyBefore.value !== null) params.changes_before = historyBefore.value
   try {
-    const response = await get_request(`monitoring/resources/${props.resourceId}/capacity/history/`, { params: { page } })
-    if (id === requestId && historyId === historyRequest) { history.value = response.data; historyPage.value = page }
+    const response = await get_request(`monitoring/resources/${props.resourceId}/capacity/history/`, { params })
+    if (id === requestId && historyId === historyRequest) {
+      history.value = response.data
+      historyPage.value = page
+      historyBefore.value = response.data.history_bounds?.changes ?? null
+    }
   } catch { if (id === requestId && historyId === historyRequest) error.value = tr('load') }
 }
 function describe(allocation, dimension) {

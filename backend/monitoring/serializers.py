@@ -1,12 +1,22 @@
 import json
 import math
+from collections.abc import Mapping
 from datetime import timedelta
 
+from accounts.models import Project
 from django.utils import timezone
 from rest_framework import serializers
-from accounts.models import Project
 
-from .models import CapacityAllocation, CapacityChange, Case, CaseActivity, Delivery, Report, Resource, Source
+from .models import (
+    CapacityAllocation,
+    CapacityChange,
+    Case,
+    CaseActivity,
+    Delivery,
+    Report,
+    Resource,
+    Source,
+)
 
 
 class ResourceSerializer(serializers.ModelSerializer):
@@ -69,9 +79,12 @@ class MetricsSerializer(serializers.Serializer):
     disk_total_bytes = serializers.IntegerField(min_value=1, max_value=2**63 - 1)
     disk_used_bytes = serializers.IntegerField(min_value=0, max_value=2**63 - 1)
 
+    def to_internal_value(self, data):
+        if isinstance(data, Mapping) and set(data) - set(self.fields):
+            raise serializers.ValidationError({'non_field_errors': ['Métrica desconocida.']})
+        return super().to_internal_value(data)
+
     def validate(self, data):
-        if set(self.initial_data) - set(self.fields):
-            raise serializers.ValidationError('Métrica desconocida.')
         if any(isinstance(value, float) and not math.isfinite(value) for value in data.values()):
             raise serializers.ValidationError('Las mediciones deben ser finitas.')
         for metric in ('ram', 'disk'):
@@ -160,6 +173,7 @@ class FilterSerializer(serializers.Serializer):
     history_snapshot = serializers.BooleanField(required=False, default=False)
     activities_before = serializers.IntegerField(min_value=0, required=False)
     deliveries_before = serializers.IntegerField(min_value=0, required=False)
+    changes_before = serializers.IntegerField(min_value=0, required=False)
 
     def validate(self, data):
         if data.get('since') and data.get('until') and data['since'] > data['until']:

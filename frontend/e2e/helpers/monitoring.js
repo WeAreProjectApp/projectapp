@@ -72,10 +72,15 @@ export function installMonitoringMock(page, options = {}) {
       if (options.capacityFailure) return json({ detail: 'falló' }, 500);
       const before = state.capacity.allocation;
       state.capacity.allocation = { ...payload, version: payload.version + 1, updated_at: '2026-09-19T10:06:00Z' };
-      state.capacityHistory.unshift({ id: state.capacityHistory.length + 1, actor_name: 'admin', before, after: state.capacity.allocation, created_at: '2026-09-19T10:06:00Z' });
+      state.capacityHistory.unshift({ id: Math.max(0, ...state.capacityHistory.map(change => change.id)) + 1, actor_name: 'admin', before, after: state.capacity.allocation, created_at: '2026-09-19T10:06:00Z' });
       return json(state.capacity);
     }
-    if (apiPath === 'monitoring/resources/1/capacity/history/' && method === 'GET') return json({ results: state.capacityHistory.slice(((Number(params.page) || 1) - 1) * 25, (Number(params.page) || 1) * 25), count: state.capacityHistory.length, page: Number(params.page) || 1, page_size: 25 });
+    if (apiPath === 'monitoring/resources/1/capacity/history/' && method === 'GET') {
+      const before = params.changes_before === undefined ? Math.max(0, ...state.capacityHistory.map(change => change.id)) : Number(params.changes_before);
+      const records = state.capacityHistory.filter(change => change.id <= before);
+      const current = Math.min(Number(params.page) || 1, Math.max(1, Math.ceil(records.length / 25)));
+      return json({ results: records.slice((current - 1) * 25, current * 25), count: records.length, page: current, page_size: 25, history_bounds: { changes: before } });
+    }
     if (apiPath === 'monitoring/cases/' && method === 'GET') {
       if (options.listFailure) return json({ detail: 'falló' }, 500);
       if (failOnce('snapshotExpiredOnce')) return json({ detail: 'consulta vencida' }, 409);

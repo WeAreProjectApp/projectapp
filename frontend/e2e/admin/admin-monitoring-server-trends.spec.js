@@ -37,7 +37,7 @@ test.describe('Monitoring server trends', () => {
   }, async ({ page }) => {
     const state = await openServerMonitoring(page);
     const charts = page.getByTestId('monitoring-charts');
-    await charts.getByRole('button', { name: 'Period', exact: true }).click();
+    await charts.getByRole('button', { name: 'Period: Last 24 hours', exact: true }).click();
     await page.getByRole('dialog', { name: 'Period', exact: true }).getByRole('checkbox', { name: 'Last 7 days', exact: true }).check();
 
     await expect(charts.getByRole('button', { name: 'Period: Last 7 days', exact: true })).toHaveCount(1);

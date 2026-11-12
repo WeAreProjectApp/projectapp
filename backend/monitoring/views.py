@@ -4,20 +4,34 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 
 from .authentication import IngestAuthentication
+from .dashboard import frozen_page, host_status, revision, save_capacity, series
 from .models import CapacityAllocation, Case, CaseActivity, Report, Resource, Source
 from .serializers import (
-    ActivitySerializer, CaseSerializer, DeliverySerializer, FilterSerializer,
-    IngestSerializer, NoteSerializer, ReportSerializer, ResourceLinkSerializer, ResourceSerializer,
-    SourceSerializer, StateSerializer,
-    CapacitySerializer, CapacityChangeSerializer, SeriesFilterSerializer,
+    ActivitySerializer,
+    CapacityChangeSerializer,
+    CapacitySerializer,
+    CaseSerializer,
+    DeliverySerializer,
+    FilterSerializer,
+    IngestSerializer,
+    NoteSerializer,
+    ReportSerializer,
+    ResourceLinkSerializer,
+    ResourceSerializer,
+    SeriesFilterSerializer,
+    SourceSerializer,
+    StateSerializer,
 )
 from .services import change_state, ingest, link_resource
-from .dashboard import frozen_page, host_status, revision, save_capacity, series
 
 
 def admin_api(methods):
@@ -182,5 +196,12 @@ def resource_capacity(request, resource_id):
 def capacity_history(request, resource_id):
     resource = get_object_or_404(Resource, pk=resource_id, kind='project')
     allocation = get_object_or_404(CapacityAllocation, resource=resource)
-    page = validated(FilterSerializer, request.query_params)['page']
-    return Response(paginated(allocation.changes.all(), CapacityChangeSerializer, page))
+    data = validated(FilterSerializer, request.query_params)
+    changes = allocation.changes.all()
+    before = data.get('changes_before')
+    if before is None:
+        before = changes.order_by('-pk').values_list('pk', flat=True).first() or 0
+    return Response({
+        **paginated(changes.filter(pk__lte=before), CapacityChangeSerializer, data['page']),
+        'history_bounds': {'changes': before},
+    })

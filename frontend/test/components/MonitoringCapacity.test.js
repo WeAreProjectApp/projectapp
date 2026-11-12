@@ -19,7 +19,7 @@ const BaseInputStub = {
   template: '<input :data-testid="id" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
 }
 
-const BaseButtonStub = { props: ['type'], template: '<button role="button" :type="type || \'button\'"><slot /></button>' }
+const BaseButtonStub = { props: ['type'], emits: ['click'], template: '<button role="button" :type="type || \'button\'" @click="$emit(\'click\')"><slot /></button>' }
 const BasePaginationStub = { emits: ['go'], template: '<button role="button" type="button" @click="$emit(\'go\', 2)">next history</button>' }
 
 const allocation = (overrides = {}) => ({
@@ -113,13 +113,13 @@ describe('MonitoringCapacity', () => {
     expect(wrapper.get('[data-testid="monitoring-capacity"]').text()).toContain('Proyecto Boreal · monitoring.serverLabel: Servidor Sur')
   })
 
-  it('loads capacity history and moves it to the requested second page', async () => {
-    // Falla si Historial no presenta quién hizo el cambio y cuándo, o si su paginación no solicita la página siguiente.
+  it('forwards the history cursor to the second page', async () => {
+    // Falla si la segunda página deja de pertenecer al mismo corte del historial abierto.
     const date = jest.spyOn(Date.prototype, 'toLocaleString').mockReturnValue('12 Nov 2026, 09:30')
     get_request
       .mockResolvedValueOnce({ data: { resource: { name: 'Proyecto Atlas' }, server_name: 'Servidor Norte', allocation: allocation() } })
-      .mockResolvedValueOnce({ data: { count: 2, page_size: 1, results: [{ id: 41, actor_name: 'Ana Ruiz', created_at: '2026-11-12T14:30:00Z', before: allocation({ cpu_vcpu: 2 }), after: allocation({ cpu_vcpu: 4 }) }] } })
-      .mockResolvedValueOnce({ data: { count: 2, page_size: 1, results: [{ id: 42, actor_name: 'Luis Mora', created_at: '2026-11-11T14:30:00Z', before: allocation({ ram_bytes: 1073741824 }), after: allocation({ ram_bytes: 2147483648 }) }] } })
+      .mockResolvedValueOnce({ data: { count: 2, page_size: 1, history_bounds: { changes: 42 }, results: [{ id: 42, actor_name: 'Ana Ruiz', created_at: '2026-11-12T14:30:00Z', before: allocation({ cpu_vcpu: 2 }), after: allocation({ cpu_vcpu: 4 }) }] } })
+      .mockResolvedValueOnce({ data: { count: 2, page_size: 1, history_bounds: { changes: 42 }, results: [{ id: 41, actor_name: 'Luis Mora', created_at: '2026-11-11T14:30:00Z', before: allocation({ ram_bytes: 1073741824 }), after: allocation({ ram_bytes: 2147483648 }) }] } })
     const wrapper = mountCapacity()
     await flushPromises()
 
@@ -135,12 +135,42 @@ describe('MonitoringCapacity', () => {
     await wrapper.findAll('[role="button"]').find(button => button.text() === 'next history').trigger('click')
     await flushPromises()
 
+    expect(wrapper.text()).toContain('Luis Mora · 12 Nov 2026, 09:30')
     expect(get_request.mock.calls).toEqual([
       ['monitoring/resources/project-9/capacity/'],
       ['monitoring/resources/project-9/capacity/history/', { params: { page: 1 } }],
-      ['monitoring/resources/project-9/capacity/history/', { params: { page: 2 } }],
+      ['monitoring/resources/project-9/capacity/history/', { params: { page: 2, changes_before: 42 } }],
     ])
-    expect(wrapper.text()).toContain('Luis Mora · 12 Nov 2026, 09:30')
+    date.mockRestore()
+  })
+
+  it('restarts an open history at its first page after reload', async () => {
+    // Falla si Recargar conserva el límite anterior y omite el cambio nuevo que debe encabezar el historial.
+    const date = jest.spyOn(Date.prototype, 'toLocaleString').mockReturnValue('12 Nov 2026, 09:30')
+    get_request
+      .mockResolvedValueOnce({ data: { resource: { name: 'Proyecto Atlas' }, server_name: 'Servidor Norte', allocation: allocation() } })
+      .mockResolvedValueOnce({ data: { count: 1, page_size: 1, history_bounds: { changes: 42 }, results: [{ id: 42, actor_name: 'Ana Ruiz', created_at: '2026-11-12T14:30:00Z', before: allocation({ cpu_vcpu: 2 }), after: allocation({ cpu_vcpu: 4 }) }] } })
+      .mockResolvedValueOnce({ data: { resource: { name: 'Proyecto Atlas' }, server_name: 'Servidor Norte', allocation: allocation({ version: 7 }) } })
+      .mockResolvedValueOnce({ data: { count: 1, page_size: 1, history_bounds: { changes: 51 }, results: [{ id: 51, actor_name: 'Noelia Paz', created_at: '2026-11-12T15:00:00Z', before: allocation({ cpu_vcpu: 3 }), after: allocation({ cpu_vcpu: 4 }) }] } })
+    const wrapper = mountCapacity()
+    await flushPromises()
+
+    // MonitoringCapacity exposes only the section test id; its native history disclosure has no stable selector yet.
+    const history = wrapper.get('[data-testid="monitoring-capacity"]').find('details')
+    history.element.open = true
+    await history.trigger('toggle')
+    await flushPromises()
+
+    await buttonWithLabel(wrapper, 'monitoring.reloadCapacity').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Noelia Paz · 12 Nov 2026, 09:30')
+    expect(get_request.mock.calls).toEqual([
+      ['monitoring/resources/project-9/capacity/'],
+      ['monitoring/resources/project-9/capacity/history/', { params: { page: 1 } }],
+      ['monitoring/resources/project-9/capacity/'],
+      ['monitoring/resources/project-9/capacity/history/', { params: { page: 1 } }],
+    ])
     date.mockRestore()
   })
 })
