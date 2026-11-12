@@ -9,6 +9,7 @@
  *         (Amigable/Profesional) toggling the preview theme, the fixed notes save
  *         bar, the dual-style PDF download dropdown, and moving the document
  *         with the searchable folder picker.
+ * PA-227 catches preview links or small headings below 4.5:1 in either template style or document mode.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -19,6 +20,7 @@ import {
 } from '../helpers/flow-tags.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { fillRichTextSource } from '../helpers/editorial.js';
+import { textContrast } from '../helpers/text-contrast.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -1242,27 +1244,50 @@ test.describe('Admin Document Edit', () => {
     expect(clipboardText).toBe(documentWithMarkdown.content_markdown);
   });
 
-  test('selecting professional style applies its preview heading color', {
-    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin'],
-  }, async ({ page }) => {
-    const documentWithMarkdown = {
-      ...mockDocument,
-      content_markdown: '# Contrato\n\nEste es el contenido del contrato.',
-      template_style: 'friendly',
-    };
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === 'auth/check/') return authCheck;
-      if (apiPath === 'documents/1/detail/') return { status: 200, contentType: 'application/json', body: JSON.stringify(documentWithMarkdown) };
-      return null;
-    });
-    await page.goto('/panel/documents/1/edit');
+  for (const mode of ['light', 'dark']) {
+    for (const style of ['friendly', 'professional']) {
+      test(`keeps ${style} preview links readable in ${mode}`, {
+        tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],
+      }, async ({ page }, testInfo) => {
+        test.setTimeout(60_000);
+        // quality: allow-deep-link (document-list navigation is covered separately; this isolates the visible preview and template controls)
+        const documentWithMarkdown = {
+          ...mockDocument,
+          content_markdown: '# Contrato\n\n### Detalle del documento\n\n#### Alcance\n\n##### Validación\n\n###### Observaciones\n\n[Enlace al Gestor Documental](/es-co/panel/documents)',
+          template_style: 'friendly',
+        };
+        await page.addInitScript((dark) => localStorage.setItem('projectapp-dark-mode', JSON.stringify(dark)), mode === 'dark');
+        await mockApi(page, async ({ apiPath }) => {
+          if (apiPath === 'auth/check/') return authCheck;
+          if (apiPath === 'documents/1/detail/') return { status: 200, contentType: 'application/json', body: JSON.stringify(documentWithMarkdown) };
+          return null;
+        });
+        await page.goto('/panel/documents/1/edit', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
-    const previewHeading = page.getByRole('heading', { name: 'Contrato', level: 1, exact: true });
-    await expect(previewHeading).toBeVisible();
-    await page.getByTestId('doc-style-professional').click();
-    await expect(previewHeading).toHaveCSS('color', 'rgb(0, 41, 33)');
-  });
+        await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
+        await page.getByTestId(`doc-style-${style}`).click();
+
+        const preview = page.getByTestId('doc-markdown-preview-pane');
+        const previewHeading = preview.getByRole('heading', { name: 'Contrato', level: 1, exact: true });
+        await expect(previewHeading).toHaveText('Contrato');
+        const link = preview.getByRole('link', { name: 'Enlace al Gestor Documental', exact: true });
+        await expect(link).toHaveAttribute('href', '/es-co/panel/documents');
+        expect(await textContrast(link)).toBeGreaterThanOrEqual(4.5);
+        await link.hover();
+        expect(await textContrast(link)).toBeGreaterThanOrEqual(4.5);
+        expect(await textContrast(previewHeading)).toBeGreaterThanOrEqual(4.5);
+        for (const [level, name] of [[3, 'Detalle del documento'], [4, 'Alcance'], [5, 'Validación'], [6, 'Observaciones']]) {
+          const smallHeading = preview.getByRole('heading', { level, name, exact: true });
+          await expect(smallHeading).toHaveText(name);
+          expect(await textContrast(smallHeading)).toBeGreaterThanOrEqual(4.5);
+        }
+        await testInfo.attach('markdown-link-contrast', {
+          body: await page.screenshot({ fullPage: true, animations: 'disabled' }),
+          contentType: 'image/png',
+        });
+      });
+    }
+  }
 
   test('pastes clipboard content into the markdown textarea', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin'],

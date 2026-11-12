@@ -6,6 +6,8 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
+import { PANEL_BREAKPOINTS, PANEL_VIEWPORTS } from '../../config/responsive.js';
 import { ADMIN_DOCUMENT_STATES_MANAGE } from '../helpers/flow-tags.js';
 
 const json = (body, status = 200) => ({
@@ -56,9 +58,9 @@ function initialStates() {
   ];
 }
 
-function baseRoutes(apiPath, catalog) {
+function baseRoutes(apiPath, catalog, documents = []) {
   if (apiPath === 'auth/check/') return authCheck;
-  if (apiPath === 'documents/') return json([]);
+  if (apiPath === 'documents/') return json(documents);
   if (apiPath === 'documents/counts/') {
     return json({ documents: { active: 0, archived: 0 }, folders: { active: 0, archived: 0 } });
   }
@@ -72,6 +74,15 @@ async function openCatalog(page) {
   await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('document-state-catalog-link').click();
   await expect(page.getByTestId('document-state-catalog')).toBeVisible();
+}
+
+async function openDocumentsFromMenu(page) {
+  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  }
+  await page.getByRole('link', { name: 'Gestor Documental', exact: true }).click();
 }
 
 // The control must point at the message that explains it, not merely sit near it.
@@ -90,6 +101,36 @@ test.describe('Admin Document States Manage', () => {
       userAuth: { id: 8700, role: 'admin', is_staff: true },
     });
   });
+
+  for (const profile of ['compact', 'desktop', 'wide']) {
+    test(`returns to the document listing without reloading at ${profile}`, {
+      tag: [...ADMIN_DOCUMENT_STATES_MANAGE, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      const catalog = initialStates();
+      const documents = [{ id: 232, title: 'Documento de retorno PA-232', status: 'draft', folder: null, active_states: [], tag_details: [], created_at: '2026-11-07T10:00:00Z' }];
+      const messages = [];
+      page.on('console', (message) => messages.push(message.text()));
+      page.on('pageerror', (error) => messages.push(error.message));
+      await page.setViewportSize(PANEL_VIEWPORTS[profile]);
+      await mockApi(page, async ({ apiPath }) => baseRoutes(apiPath, catalog, documents));
+      await openDocumentsFromMenu(page);
+      const listing = page.getByTestId('documents-page');
+      await expect(listing.getByText(documents[0].title, { exact: true })).toBeVisible();
+      const timeOrigin = await page.evaluate(() => performance.timeOrigin);
+
+      await page.getByTestId('document-state-catalog-link').click();
+      await expect(page.getByTestId('document-state-catalog')).toBeVisible();
+      await page.getByRole('link', { name: 'Volver a documentos', exact: true }).click();
+
+      await expect(page).toHaveURL(/\/es-co\/panel\/documents$/);
+      await expect(listing.getByRole('heading', { name: 'Gestor Documental', exact: true })).toBeVisible();
+      await expect(listing.getByRole('link', { name: 'Nuevo Documento' })).toBeVisible();
+      await expect(listing.getByText(documents[0].title, { exact: true })).toBeVisible();
+      await expect(page).toHaveTitle('Gestor Documental | ProjectApp');
+      expect(await page.evaluate(() => performance.timeOrigin)).toBe(timeOrigin);
+      expect(messages.filter((message) => /NUXT_E4004|non-element root|single root/.test(message))).toEqual([]);
+    });
+  }
 
   test('renders the seeded catalog inventory', {
     tag: [...ADMIN_DOCUMENT_STATES_MANAGE, '@role:admin', '@outcome:display'],

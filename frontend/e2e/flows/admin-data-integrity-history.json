@@ -1,0 +1,16 @@
+{
+  "id": "admin-data-integrity-history",
+  "name": "Consultar y deshacer una corrección de integridad",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "El historial pagina operaciones y decisiones. El administrador revisa el deshacer exacto y confirma con motivo; cambios posteriores o una reversión previa bloquean la operación.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

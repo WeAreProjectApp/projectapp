@@ -18,10 +18,14 @@ User = get_user_model()
 
 @pytest.fixture
 def admin_client(client):
-    User.objects.create_superuser(
+    user = User.objects.create_superuser(
         username='arch-admin@example.com',
         email='arch-admin@example.com',
         password='pass12345',
+    )
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': UserProfile.ROLE_ADMIN},
     )
     client.login(username='arch-admin@example.com', password='pass12345')
     return client

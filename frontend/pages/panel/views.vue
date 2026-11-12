@@ -2,7 +2,7 @@
   <div>
     <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-green-light dark:text-green-light/80">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-text-muted">
           Ecosistema
         </p>
         <h1 class="text-2xl font-light text-text-default">Mapa de vistas</h1>

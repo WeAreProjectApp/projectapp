@@ -142,6 +142,9 @@ def snapshot_payload(log):
     """Serialize exact evidence or an explicit legacy information gap."""
     from content.services.email_snapshot_service import extract_body_links
 
+    from content.services.email_privacy_policy import credential_email, protected_snapshot_payload
+    if credential_email(log.template_key):
+        return protected_snapshot_payload()
     if log.snapshot_id:
         attachments = [
             _attachment_payload(attachment, log.pk)

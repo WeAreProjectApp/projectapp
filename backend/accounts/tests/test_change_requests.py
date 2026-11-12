@@ -311,6 +311,35 @@ class TestChangeRequestList:
 
 @pytest.mark.django_db
 class TestChangeRequestCreate:
+    def test_title_limit_rejects_301_characters_in_spanish(
+        self, api_client, client_headers, project, source_requirement,
+    ):
+        """Reject an oversized title without persisting a request."""
+        title = 'a' * 301
+
+        response = api_client.post(_url(project.id), {
+            'title': title,
+            'source_requirement_id': source_requirement.id,
+        }, format='json', HTTP_ACCEPT_LANGUAGE='es-CO', **client_headers)
+
+        assert response.status_code == 400
+        assert response.json()['title'] == ['El título admite hasta 300 caracteres.']
+        assert not ChangeRequest.objects.filter(project=project, title=title).exists()
+
+    def test_title_limit_accepts_300_characters(
+        self, api_client, client_headers, project, source_requirement,
+    ):
+        """Persist a title at the supported length boundary."""
+        title = 'a' * 300
+
+        response = api_client.post(_url(project.id), {
+            'title': title,
+            'source_requirement_id': source_requirement.id,
+        }, format='json', **client_headers)
+
+        assert response.status_code == 201
+        assert ChangeRequest.objects.get(pk=response.json()['id']).title == title
+
     def test_client_creates_change_request(
         self, api_client, client_headers, project, source_requirement,
     ):

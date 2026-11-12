@@ -871,6 +871,27 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     });
   });
 
+  for (const viewMode of ['classic', 'grouped']) {
+    test(`identifies an unassigned project in the ${viewMode} income view`, {
+      tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await mockApi(page, buildHandler({
+        rows: [incomeRow({ project: null, project_name: null })],
+        calls: [],
+        incomeViewMode: viewMode,
+      }));
+      await navigateToIncomesFromPanel(page);
+
+      await expect(page.getByTestId('income-no-project-1').filter({ visible: true }))
+        .toHaveText('Sin proyecto');
+      await expect(page.getByTestId('income-project-space-1')).toHaveCount(0);
+      await page.getByTestId('income-open-1').filter({ visible: true }).click();
+
+      await expect(page.getByTestId('income-detail-project')).toContainText('Proyecto: Sin proyecto');
+    });
+  }
+
   test('renders the mocked income rows', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
@@ -2319,7 +2340,7 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
   for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
     test(`linking an existing project contract unlocks its collection preview (${profile})`, {
       tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
-    }, async ({ page }) => {
+    }, async ({ page }, testInfo) => {
       await page.setViewportSize(viewportUse(profile).viewport);
       const calls = [];
       const project = { id: 10, name: 'Litigio' };
@@ -2352,7 +2373,11 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
       await page.getByTestId('income-actions-1').click();
       await page.getByTestId('income-action-generate-collection-1').click();
       await page.getByTestId('billing-nature').selectOption('contract');
-      await page.getByTestId('billing-link-contract-open').click();
+      const linkAction = page.getByRole('button', { name: 'Vincular contrato existente', exact: true });
+      await expect(linkAction).toHaveAttribute('aria-expanded', 'false');
+      await linkAction.click();
+      await expect(linkAction).toHaveAttribute('aria-expanded', 'true');
+      await page.screenshot({ path: testInfo.outputPath('collection-contract.png'), fullPage: true });
       const search = page.getByRole('combobox', { name: 'Contrato existente del proyecto' });
       await search.click();
       const options = page.getByRole('listbox', { name: 'Documentos del proyecto' });

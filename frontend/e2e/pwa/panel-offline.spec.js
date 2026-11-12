@@ -5,8 +5,14 @@ import { ADMIN_PWA_OFFLINE, ADMIN_PWA_INSTALL } from '../helpers/flow-tags.js'
 async function openInstalledPanel(page) {
   // This public panel entry registers the actual worker without requiring a
   // production account or any database fixture.
+  const configResponse = page.waitForResponse((response) => (
+    new URL(response.url()).pathname === '/api/auth/config/'
+    && response.request().method() === 'GET'
+  ));
   await page.goto('/es-co/panel/login', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByRole('link', { name: 'Ir al Django Admin' })).toBeVisible()
+  expect((await configResponse).status()).toBe(200)
+  const passwordEntry = page.getByRole('link', { name: 'Entrar con contraseña' })
+  await expect(passwordEntry).toHaveAttribute('href', '/admin/login/?next=%2Fpanel%2F')
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready
     if (!navigator.serviceWorker.controller) {
@@ -41,7 +47,7 @@ test.describe('PWA build served by Django', () => {
     await expect(page.getByRole('heading', { name: 'Sin conexión' })).toBeVisible()
     await context.setOffline(false)
     await page.getByRole('button', { name: 'Reintentar' }).click()
-    await expect(page.getByRole('link', { name: 'Ir al Django Admin' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Entrar con contraseña' })).toHaveAttribute('href', '/admin/login/?next=%2Fpanel%2F')
     await expect(page).toHaveURL(/\/es-co\/panel\/login$/)
     expect(await page.evaluate(() => caches.keys())).toEqual([])
   })

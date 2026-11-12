@@ -2,8 +2,9 @@
 
 Aceptar una propuesta cierra la decisión comercial. El equipo revisa después
 el cliente, el proyecto y los documentos que deben incorporarse al proyecto.
-La aceptación pública y el cambio de estado del Panel no crean proyectos ni
-clientes automáticamente.
+La aprobación interna diferida no crea proyectos ni clientes automáticamente.
+La aceptación pública sigue deshabilitada y el cambio genérico de estado exige
+abrir la revisión interna.
 
 ## Recorrido del equipo
 
@@ -41,8 +42,8 @@ firma electrónica ni crea un contrato de seguimiento de entregas.
 ## Contrato técnico
 
 `GET /api/proposals/:id/approval/` devuelve cliente, proyecto vinculado,
-resumen comercial, modalidad y documentos disponibles, archivos confirmados
-y `source_hash`. La respuesta incluye la fecha de sincronización y las
+resumen comercial, modalidad y documentos disponibles, archivos confirmados,
+`selected_document_ids` y `source_hash`. La respuesta incluye la fecha de sincronización y las
 transiciones vigentes para actualizar el siguiente paso del editor sin recargar.
 `POST` usa las acciones `confirm`, `defer` y `retry`.
 
@@ -52,13 +53,20 @@ y `request_id`. Los archivos personalizados viajan como `custom_files` y
 su descripción como `custom_documents`. En multipart la metadata se envía
 en el campo JSON `payload`.
 
+Al crear un cliente en esta revisión, `new_client.address` es opcional y admite
+hasta 512 caracteres, igual que el perfil. La confirmación conserva la dirección
+introducida; omitirla o dejarla vacía mantiene una dirección vacía. Panel y MCP
+aplican la misma validación antes de crear entidades. Esto no activa la cuenta
+del cliente ni envía una invitación.
+
 El servidor valida cliente, pertenencia del proyecto, documentos y versión
 antes de guardar, incluidas las condiciones automáticas resueltas desde el
 catálogo de horas. Los clientes comerciales no archivados pueden vincularse
 sin activar sus cuentas de acceso. La confirmación atómica conserva un manifiesto y copias
 privadas duraderas, junto con el cliente y las condiciones comerciales
 confirmadas. Editar la propuesta después no modifica ese paquete. Un reintento reutiliza el mismo vínculo y paquete, sin
-duplicar proyectos, clientes, archivos ni correos de aceptación. Los recursos
+duplicar proyectos, clientes, archivos ni correos de aceptación. En revisiones se recupera
+la selección confirmada; ningún anexo nuevo queda marcado automáticamente. Los recursos
 técnicos existentes se conservan durante la sincronización de aprobación.
 
 El Panel usa `SessionAuthentication`, permisos administrativos y CSRF.
@@ -66,6 +74,12 @@ Platform usa `SessionJWTAuthentication` y la autorización del proyecto.
 Las descargas de las copias privadas requieren autorización; no se publican
 rutas de almacenamiento. MCP comparte el servicio, el paquete explícito,
 la validación de assets y la confirmación sensible.
+
+En el Gestor, un conflicto al sustituir un adjunto conserva el archivo elegido.
+Revisar versión actual aplica los datos de la fuente devueltos por el servidor
+sin desmontar el editor. El reintento explícito usa el mismo archivo y la huella
+revisada; una consulta fallida conserva el archivo y la huella anterior. El
+archivo aprobado sólo cambia mediante la confirmación de otra revisión.
 
 La migración nueva `content/0278` depende de
 `0277_merge_vat_and_economic_conditions` y de la migración existente

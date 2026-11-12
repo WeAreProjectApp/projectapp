@@ -1979,7 +1979,8 @@ class EmailLogSerializer(serializers.ModelSerializer):
         return EMAIL_TEMPLATE_LABELS.get(obj.template_key, obj.template_key)
 
     def get_has_body(self, obj):
-        return obj.body_id is not None
+        from content.services.email_privacy_policy import credential_email
+        return obj.body_id is not None and not credential_email(obj.template_key)
 
     def get_is_retryable(self, obj):
         return (

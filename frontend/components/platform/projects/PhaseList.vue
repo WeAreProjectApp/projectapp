@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between">
       <h2 class="text-base font-medium text-text-default">{{ t('platformDelivery.commercialPhases') }}</h2>
     </div>
-    <p v-if="!phases.length" class="mt-4 text-sm text-green-light/60">
+    <p v-if="!phases.length" class="mt-4 text-sm text-text-muted">
       Este proyecto no tiene fases vinculadas todavía.
     </p>
     <draggable
@@ -17,9 +17,9 @@
     >
       <template #item="{ element }">
         <div class="flex items-center gap-2 rounded-xl border border-border-muted bg-surface-muted/30 px-3 py-3 sm:gap-3 sm:px-4">
-          <span v-if="authStore.isAdmin" class="drag-handle shrink-0 cursor-grab select-none text-green-light/40" aria-label="Arrastrar">⠿</span>
+          <span v-if="authStore.isAdmin" class="drag-handle shrink-0 cursor-grab select-none text-text-muted" aria-label="Arrastrar">⠿</span>
           <span class="min-w-0 flex-1 truncate font-medium text-text-default">{{ element.order }}. {{ element.proposal.title }}</span>
-          <span class="shrink-0 text-sm text-green-light/60">${{ element.proposal.total_amount }}</span>
+          <span class="shrink-0 text-sm text-text-muted">${{ element.proposal.total_amount }}</span>
           <template v-if="authStore.isAdmin">
             <BaseButton variant="secondary" size="sm" class="shrink-0" @click="onEditProposal(element.proposal.id)">Editar</BaseButton>
             <BaseButton variant="danger-ghost" icon-only size="sm" class="shrink-0" aria-label="Eliminar" :data-testid="`remove-phase-${element.id}`" @click="onRemove(element.id)">×</BaseButton>

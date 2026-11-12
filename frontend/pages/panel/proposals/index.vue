@@ -396,7 +396,7 @@
         <template #cell-heat_score="{ row: proposal }">
           <BaseTooltip v-if="proposal.heat_score > 0 && proposal.engagement_summary" position="left" width="max-w-[260px]" minWidth="min-w-0">
             <template #trigger>
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white" :class="heatScoreColor(proposal.heat_score)">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold" :class="heatScoreColor(proposal.heat_score)">
                 {{ proposal.heat_score }}
               </span>
             </template>
@@ -409,7 +409,7 @@
               <div v-if="proposal.engagement_summary.skipped_sections?.length" class="border-t border-white/15 pt-1"><span class="text-text-subtle">No revisó:</span><span class="ml-1 text-amber-400">{{ proposal.engagement_summary.skipped_sections.map(sectionLabel).join(', ') }}</span></div>
             </div>
           </BaseTooltip>
-          <span v-else-if="proposal.heat_score > 0" class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white" :class="heatScoreColor(proposal.heat_score)">{{ proposal.heat_score }}</span>
+          <span v-else-if="proposal.heat_score > 0" class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold" :class="heatScoreColor(proposal.heat_score)">{{ proposal.heat_score }}</span>
           <span v-else class="text-xs text-text-subtle">—</span>
         </template>
 
@@ -1437,9 +1437,9 @@ function inactiveDays(p) {
 }
 
 function heatScoreColor(score) {
-  if (score >= 8) return 'bg-red-500';
-  if (score >= 5) return 'bg-orange-400';
-  if (score >= 2) return 'bg-yellow-400 text-text-default';
+  if (score >= 8) return 'bg-danger-strong text-on-danger';
+  if (score >= 5) return 'bg-warning-soft text-warning-strong';
+  if (score >= 2) return 'bg-accent-soft text-on-accent';
   return 'bg-surface-raised text-text-default';
 }
 

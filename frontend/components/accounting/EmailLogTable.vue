@@ -64,7 +64,7 @@
                 class="inline-flex min-w-0 max-w-full flex-wrap rounded-full px-2.5 py-1 text-xs font-medium [overflow-wrap:anywhere]"
                 :class="statusClass(entry.status)"
               >
-                {{ entry.status_label }}
+                {{ emailStatusLabel(entry.status, entry.status_label) }}
               </span>
             </td>
           </tr>
@@ -98,7 +98,7 @@
                     class="min-w-0 max-w-full text-xs [overflow-wrap:anywhere]"
                     :class="copy.status === 'failed' ? 'text-danger-strong' : 'text-success-strong'"
                   >
-                    {{ copy.status_label }}<span v-if="copy.error_message"> · {{ copy.error_message }}</span>
+                    {{ emailStatusLabel(copy.status, copy.status_label) }}<span v-if="copy.error_message"> · {{ copy.error_message }}</span>
                   </span>
                 </div>
               </div>
@@ -128,6 +128,7 @@ import BaseButton from '~/components/base/BaseButton.vue';
 import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
 import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue';
 import { formatDateTime } from '~/utils/formatDate';
+import { emailStatusLabel } from '~/utils/emailStatus';
 import { ROW_ACTION_LAYOUTS, minWidthFor, resolveColumns } from '~/utils/tableLayout';
 
 // Destinatario is the identifying column here — the whole point of the view

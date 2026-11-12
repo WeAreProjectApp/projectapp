@@ -9,6 +9,13 @@ export function contentFieldValues(fields = []) {
   return Object.fromEntries(fields.map((field) => [field.key, field.value]));
 }
 
+/** Only the current catalog can define the writable content contract. */
+export function catalogFieldValues(values, type) {
+  return Object.fromEntries((type?.fields || [])
+    .filter(field => Object.hasOwn(values, field.key))
+    .map(field => [field.key, values[field.key]]));
+}
+
 /** Shared catalog loading, validation and visible errors for both creators. */
 export function useSecureLinkForm(formElement, selectedType, t) {
   const store = useSecureLinksStore();

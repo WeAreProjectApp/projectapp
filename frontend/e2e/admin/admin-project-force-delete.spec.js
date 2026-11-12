@@ -175,8 +175,7 @@ async function openBlockedDeletion(page) {
 
 async function openForcedDeletion(page) {
   await openBlockedDeletion(page);
-  await page.getByTestId('project-delete-change-state').click();
-  await expect(page.getByTestId('project-state-transition-modal')).toBeVisible();
+  await expect(page.getByTestId('project-delete-force-control')).toBeVisible();
   await page.getByTestId('project-force-delete-toggle').click();
   await expect(page.getByTestId('project-force-delete-review')).toContainText('Documentos');
 }
@@ -224,7 +223,7 @@ test('keeps forced deletion unavailable when normal state change does not origin
 
   await expect(page.getByRole('heading', { name: 'Cambiar estado', exact: true })).toBeVisible();
   await expect(page.getByTestId('project-force-delete-toggle')).toHaveCount(0);
-  await expect(page.getByTestId('project-state-target')).toHaveValue('');
+  await expect(page.getByTestId('project-state-target')).toContainText('Selecciona el estado real');
 });
 
 test('keeps forced deletion unavailable to an ordinary admin from the blocked delete route', {
@@ -337,7 +336,6 @@ test('retries a failed forced preview without deleting the project', {
   const calls = await setup(page, { failForcePreview: true });
   await enterProjects(page, 'desktop');
   await openBlockedDeletion(page);
-  await page.getByTestId('project-delete-change-state').click();
   await page.getByTestId('project-force-delete-toggle').click();
 
   await expect(page.getByTestId('project-force-delete-error')).toHaveText('No se pudo revisar las dependencias forzadas');
@@ -356,7 +354,7 @@ test('cancels forced deletion without issuing a destructive request', {
   await enterProjects(page, 'desktop');
   await openForcedDeletion(page);
 
-  await page.getByRole('dialog', { name: 'Cambiar estado', exact: true })
+  await page.getByRole('dialog', { name: 'Eliminar proyecto', exact: true })
     .getByRole('button', { name: 'Cancelar', exact: true })
     .click();
 

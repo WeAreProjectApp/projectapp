@@ -67,7 +67,7 @@
 ### E2E scope decisions (audit follow-up)
 
 - **TechnicalDocumentEditor (panel):** No dedicated flow ID. Scope remains within `admin-proposal-edit` and `admin-proposal-defaults-config`; client-facing technical reading is covered by `proposal-technical-view`.
-- **Panel sidebar (collapse / mobile drawer):** No dedicated flow ID. Exercised indirectly by specs that load `/panel` routes using the admin layout.
+- **Panel sidebar:** ancho ajustable, etiquetas completas y navegación cubiertos por `admin-panel-sidebar-resize`; el drawer conserva los mismos accesos.
 
 ### Backend-only and system-triggered flows (not browser E2E)
 
@@ -1082,26 +1082,6 @@ La revisión sigue contrato → alcance → fases de ejecución → etapas → g
   - [Branch D — Empty state] No admins → empty state message with invite CTA.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-admin-management.spec.js`
-
-### 9.3 Email Deliverability Dashboard
-
-#### FLOW: `admin-email-deliverability`
-
-- **Module:** admin
-- **Role:** admin
-- **Priority:** P3
-- **Routes:** `/panel/proposals/email-deliverability`
-- **Description:** Dashboard tracking email send/delivery/bounce/open rates for all proposal-related automated emails. Admin monitors deliverability health.
-- **Steps:**
-  1. Admin navigates to `/panel/proposals/email-deliverability`.
-  2. Dashboard loads email delivery metrics from API.
-  3. Stats render: total sent, delivered, bounced, open rate.
-  4. Per-proposal email log table shows individual send events.
-- **Branches:**
-  - [Branch A — Empty state] No emails sent yet → "No hay datos de entregas." message.
-  - [Branch B — Date filter] Admin filters by date range → metrics update.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/admin/admin-email-deliverability.spec.js`
 
 ### 9.4 Public Landing Pages
 

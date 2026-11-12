@@ -222,7 +222,7 @@ VALUE_KEYS = (
 
 def values_from_metadata(metadata):
     """The stored facts of a sent confirmation, for an identical retry."""
-    metadata = metadata or {}
+    metadata = metadata if isinstance(metadata, dict) else {}
     return {key: metadata.get(key) for key in VALUE_KEYS}
 
 

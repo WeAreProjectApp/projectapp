@@ -2,15 +2,22 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" @click.self="$emit('close')">
-        <div class="w-full max-w-3xl rounded-3xl border border-border-default bg-surface p-6 shadow-2xl">
+        <div
+          ref="dialogRef"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="titleId"
+          tabindex="-1"
+          class="w-full max-w-3xl rounded-3xl border border-border-default bg-surface p-6 shadow-2xl focus:outline-none focus:ring-2 focus:ring-focus-ring"
+        >
           <div class="mb-6 flex items-center justify-between">
-            <h2 class="text-xl font-medium text-text-default">{{ mode === 'create' ? 'Nuevo proyecto' : 'Agregar fases' }}</h2>
+            <h2 :id="titleId" class="text-xl font-medium text-text-default">{{ mode === 'create' ? 'Nuevo proyecto' : 'Agregar fases' }}</h2>
             <BaseButton variant="ghost" icon-only size="sm" aria-label="Cerrar" @click="$emit('close')">×</BaseButton>
           </div>
 
           <!-- Step 1: client -->
           <section v-if="step === 1">
-            <p class="mb-3 text-sm text-green-light">Selecciona el cliente.</p>
+            <p class="mb-3 text-sm text-text-muted">Selecciona el cliente.</p>
             <select
               data-testid="client-select"
               v-model.number="selectedClientId"
@@ -27,19 +34,19 @@
           <!-- Step 2: proposals -->
           <section v-if="step === 2" class="grid gap-4 sm:grid-cols-2">
             <div>
-              <p class="mb-2 text-xs uppercase tracking-wider text-green-light/70">Propuestas elegibles</p>
-              <div v-if="!eligibleProposals.length" class="rounded-xl border border-border-default p-4 text-sm text-green-light/60">
+              <p class="mb-2 text-xs uppercase tracking-wider text-text-muted">Propuestas elegibles</p>
+              <div v-if="!eligibleProposals.length" class="rounded-xl border border-border-default p-4 text-sm text-text-muted">
                 No hay propuestas elegibles (firmadas / aprobadas, sin proyecto activo) para este cliente.
               </div>
               <label v-for="p in eligibleProposals" :key="p.id" class="mb-2 flex items-center gap-2 rounded-xl border border-border-default px-3 py-2">
                 <input type="checkbox" :value="p.id" v-model="selectedIds" />
                 <span class="text-text-default">{{ p.title }}</span>
-                <span class="ml-auto text-xs text-green-light/60">${{ p.total_amount }}</span>
+                <span class="ml-auto text-xs text-text-muted">${{ p.total_amount }}</span>
               </label>
             </div>
             <div>
-              <p class="mb-2 text-xs uppercase tracking-wider text-green-light/70">Fases (en orden)</p>
-              <div v-if="!selectedProposals.length" class="rounded-xl border border-dashed border-border-default p-4 text-sm text-green-light/60">
+              <p class="mb-2 text-xs uppercase tracking-wider text-text-muted">Fases (en orden)</p>
+              <div v-if="!selectedProposals.length" class="rounded-xl border border-dashed border-border-default p-4 text-sm text-text-muted">
                 Selecciona al menos una propuesta.
               </div>
               <div
@@ -47,7 +54,7 @@
                 class="mb-2 flex items-center gap-2 rounded-xl border border-border-muted bg-surface-muted/30 px-3 py-2"
               >
                 <span class="font-medium text-text-default">{{ idx + 1 }}. {{ p.title }}</span>
-                <span class="ml-auto text-xs text-green-light/60">${{ p.total_amount }}</span>
+                <span class="ml-auto text-xs text-text-muted">${{ p.total_amount }}</span>
                 <BaseButton variant="danger-ghost" icon-only size="sm" aria-label="Quitar fase" @click="unselect(p.id)">×</BaseButton>
               </div>
             </div>
@@ -56,7 +63,7 @@
 
           <!-- Step 3: confirm -->
           <section v-if="step === 3">
-            <p class="text-sm text-green-light">Confirmación</p>
+            <p class="text-sm text-text-muted">Confirmación</p>
             <p class="mt-2 text-base font-medium text-text-default">Cliente: {{ selectedClient?.email || '—' }}</p>
             <ol class="mt-3 space-y-1">
               <li v-for="(p, idx) in selectedProposals" :key="p.id" class="text-sm text-text-default">
@@ -91,7 +98,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toRef, useId, watch } from 'vue'
+import { useFocusTrap } from '~/composables/useFocusTrap'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 
 const props = defineProps({
@@ -102,6 +110,10 @@ const props = defineProps({
   clientId: { type: Number, default: 0 },
 })
 const emit = defineEmits(['close', 'created', 'phases-added'])
+
+const dialogRef = ref(null)
+const titleId = `${useId()}-title`
+useFocusTrap(dialogRef, { active: toRef(props, 'visible') })
 
 const store = usePlatformProjectsStore()
 const step = ref(1)

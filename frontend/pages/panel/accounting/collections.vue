@@ -209,7 +209,7 @@
             class="text-text-subtle"
             title="Sin proyecto — típico de un cobro por diagnóstico"
             :data-testid="`collection-no-project-${row.id}`"
-          >—</span>
+          >Sin proyecto</span>
         </template>
         <template #cell-commercial_status="{ row }">
           <BaseBadge
@@ -298,7 +298,9 @@
     <!-- Create modal: form → preview del correo/PDF → confirmar y enviar -->
     <CollectionAccountFormModal
       :open="createOpen"
-      @close="createOpen = false"
+      :resume-draft="billingReturn.resumeDraft.value"
+      @reconcile="billingReturn.reconcile"
+      @close="createOpen = false; billingReturn.clear()"
       @created="onCreated"
     />
 
@@ -325,6 +327,7 @@
 </template>
 
 <script setup>
+import { useBillingDraftReturn } from '~/composables/useBillingDraftReturn';
 import { computed, onMounted, ref } from 'vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingIndicatorGroup from '~/components/accounting/AccountingIndicatorGroup.vue';
@@ -873,12 +876,15 @@ const confirmMessage = computed(() => {
 // ── Create modal ──
 
 const createOpen = ref(false);
+const billingReturn = useBillingDraftReturn({ kind: 'income-account', open: createOpen });
 
 function openCreateModal() {
+  billingReturn.clear();
   createOpen.value = true;
 }
 
 function onCreated() {
+  billingReturn.clear();
   createOpen.value = false;
   loadRecords();
 }

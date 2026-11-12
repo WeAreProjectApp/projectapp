@@ -1,6 +1,7 @@
 """Tests for the manual payment registration endpoint."""
 import pytest
 from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
 
 from accounts.models import (
     HostingSubscription,
@@ -11,7 +12,6 @@ from accounts.models import (
 )
 from accounts.services.project_phases import add_phase
 from accounts.services.tokens import get_tokens_for_user
-from rest_framework.test import APIClient
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db
@@ -28,9 +28,11 @@ def admin_user(db):
 
 @pytest.fixture
 def client_user(db):
-    return User.objects.create_user(
+    user = User.objects.create_user(
         username='client@example.com', email='client@example.com', password='x',
     )
+    UserProfile.objects.create(user=user, role=UserProfile.ROLE_CLIENT, is_onboarded=True)
+    return user
 
 
 @pytest.fixture

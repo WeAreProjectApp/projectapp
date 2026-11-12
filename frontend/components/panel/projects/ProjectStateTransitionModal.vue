@@ -2,94 +2,16 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from '#imports';
 import { useProjectStateStore } from '~/stores/project_states';
-import { usePanelProjectsStore } from '~/stores/panel_projects';
 import { stateBadgeVariant } from '~/utils/documentState';
 import ProjectStateHelpBadge from './ProjectStateHelpBadge.vue';
+import ProjectStateChoice from './ProjectStateChoice.vue';
 
 const props = defineProps({
   open: { type: Boolean, default: false },
   project: { type: Object, default: null },
-  allowForceDelete: { type: Boolean, default: false },
-  isSuperuser: { type: Boolean, default: false },
 });
-const emit = defineEmits(['close', 'changed', 'deleted']);
+const emit = defineEmits(['close', 'changed']);
 const stateStore = useProjectStateStore();
-const projectStore = usePanelProjectsStore();
-const forceMode = ref(false);
-const deletionPreview = ref(null);
-const deletionLoading = ref(false);
-const deleting = ref(false);
-const deletionError = ref('');
-const confirmation = ref('');
-const selectedDeletionKeys = ref([]);
-const { locale } = useI18n();
-const deletionLabel = (item) => locale.value.startsWith('en') ? item.label_en || item.label : item.label;
-const deletionDescription = (item) => locale.value.startsWith('en') ? item.description_en || item.description : item.description;
-let deletionVersion = 0;
-const offersForceDelete = computed(() => props.allowForceDelete && props.isSuperuser);
-const deleteBlockReasons = computed(() => {
-  const reasons = [];
-  if (!deletionPreview.value || deletionLoading.value) reasons.push('Revisa las dependencias antes de confirmar.');
-  if (deletionPreview.value && !deletionPreview.value.can_delete) reasons.push('Resuelve los datos compartidos o protegidos antes de eliminar.');
-  if (confirmation.value !== 'DELETE') reasons.push('Escribe exactamente DELETE en mayúsculas.');
-  return reasons;
-});
-
-async function loadDeletionPreview({ resetSelection = false } = {}) {
-  const id = props.project?.id;
-  if (!id || !offersForceDelete.value) return;
-  const version = ++deletionVersion;
-  confirmation.value = '';
-  if (resetSelection) selectedDeletionKeys.value = [];
-  deletionError.value = '';
-  deletionLoading.value = true;
-  const result = await projectStore.previewDeletion(id, { force: true, deleteKeys: [...selectedDeletionKeys.value] });
-  if (version !== deletionVersion || !forceMode.value) return;
-  deletionLoading.value = false;
-  if (result.success) deletionPreview.value = result.data;
-  else deletionError.value = result.message;
-}
-
-watch(forceMode, (enabled) => {
-  deletionVersion += 1;
-  confirmation.value = '';
-  deletionPreview.value = null;
-  deletionLoading.value = false;
-  deletionError.value = '';
-  stateStore.clearPreview();
-  selectedDeletionKeys.value = [];
-  if (enabled) loadDeletionPreview();
-});
-
-function toggleDeletionCategory(key, enabled) {
-  selectedDeletionKeys.value = enabled
-    ? [...new Set([...selectedDeletionKeys.value, key])]
-    : selectedDeletionKeys.value.filter((item) => item !== key);
-  loadDeletionPreview();
-}
-
-async function confirmForceDeletion() {
-  if (deleting.value || deleteBlockReasons.value.length || !offersForceDelete.value) return;
-  deleting.value = true;
-  deletionError.value = '';
-  const result = await projectStore.deleteProject(props.project.id, {
-    force: true, delete_keys: [...selectedDeletionKeys.value], confirmation: confirmation.value,
-    impact_token: deletionPreview.value.impact_token,
-  });
-  deleting.value = false;
-  if (result.success) {
-    emit('deleted', result);
-    emit('close');
-  } else {
-    confirmation.value = '';
-    // A returned conflict is a new review, never an authorization to retry
-    // using the confirmation of the old dependency graph.
-    deletionPreview.value = result.preview || null;
-    selectedDeletionKeys.value = result.preview?.delete_keys || [];
-    deletionError.value = result.message;
-  }
-}
-
 const selectedStateId = ref('');
 const useExactTime = ref(false);
 const effectiveAt = ref('');
@@ -150,10 +72,10 @@ const impactMessages = computed(() => {
   if (preview.value.target_effect === 'suspended') {
     messages.push('Se detienen nuevos cobros y avisos mientras el proyecto siga suspendido. La deuda ya causada se conserva.');
   }
-  if (preview.value.future_incomes?.length) {
-    messages.push(`${preview.value.future_incomes.length} ingresos futuros se marcarán como cancelados.`);
+  if (['suspended', 'completed', 'decommissioned'].includes(preview.value.target_effect) && preview.value.future_incomes?.length) {
+    messages.push(`${preview.value.future_incomes.length} ingresos esperados futuros dejarán de contar como esperados por cobrar y no generarán avisos. Sus registros se conservan con estado Cancelado; no se borran ni se marcan como perdidos.`);
   }
-  if (preview.value.future_payments?.length) {
+  if (['suspended', 'completed', 'decommissioned'].includes(preview.value.target_effect) && preview.value.future_payments?.length) {
     messages.push(`${preview.value.future_payments.length} cobros futuros de hosting se archivarán.`);
   }
   if (['completed', 'decommissioned'].includes(preview.value.target_effect)) {
@@ -169,13 +91,6 @@ const impactMessages = computed(() => {
 });
 
 watch([() => props.open, () => props.project?.id], async ([open]) => {
-  deletionVersion += 1;
-  forceMode.value = false;
-  selectedDeletionKeys.value = [];
-  confirmation.value = '';
-  deletionPreview.value = null;
-  deletionLoading.value = false;
-  deletionError.value = '';
   if (!open) return;
   stateStore.clearPreview();
   selectedStateId.value = '';
@@ -218,7 +133,7 @@ async function reviewImpact() {
 }
 
 async function applyState() {
-  if (!canApply.value || !props.project?.id) return;
+  if (!canApply.value || !props.project?.id || stateStore.isUpdating) return;
   applyErrorMessage.value = '';
   const payload = {
     state_id: Number(selectedStateId.value),
@@ -247,9 +162,9 @@ async function applyState() {
     :model-value="open"
     kind="form"
     title-id="project-state-transition-title"
-    :close-on-backdrop="!deleting"
-    :close-on-esc="!deleting"
-    @close="!deleting && emit('close')"
+    :close-on-backdrop="!stateStore.isUpdating"
+    :close-on-esc="!stateStore.isUpdating"
+    @close="!stateStore.isUpdating && emit('close')"
   >
     <div class="border-b border-border-muted px-6 pb-4 pt-6">
       <h2 id="project-state-transition-title" class="text-lg font-bold text-text-default">Cambiar estado</h2>
@@ -259,67 +174,6 @@ async function applyState() {
     </div>
 
     <div class="space-y-5 px-6 py-5" data-testid="project-state-transition-modal">
-      <div v-if="offersForceDelete" class="flex items-center justify-between gap-4 rounded-lg border border-border-muted p-4">
-        <div>
-          <p class="font-semibold text-text-default">{{ $t('projectAccess.deletion.forceTitle') }}</p>
-          <p class="mt-1 text-sm text-text-muted">{{ $t('projectAccess.deletion.forceHint') }}</p>
-        </div>
-        <BaseToggle
-          v-model="forceMode"
-          :aria-label="$t('projectAccess.deletion.forceTitle')"
-          :disabled="deleting"
-          disabled-reason="La eliminación está en curso."
-          on-class="bg-danger-strong"
-          data-testid="project-force-delete-toggle"
-        />
-      </div>
-
-      <section v-if="forceMode" class="space-y-4" data-testid="project-force-delete-review">
-        <BaseAlert variant="danger">{{ $t('projectAccess.deletion.forceWarning') }}</BaseAlert>
-        <p v-if="deletionLoading" role="status" class="text-sm text-text-muted">{{ $t('projectAccess.deletion.loading') }}</p>
-        <template v-if="deletionPreview">
-          <p class="text-sm text-text-muted">{{ $t('projectAccess.deletion.forcePreserved') }}</p>
-          <ul class="divide-y divide-border-muted rounded-lg border border-border-muted" data-testid="project-force-delete-dependencies">
-            <li v-for="item in deletionPreview.dependencies" :key="item.key" class="flex items-start gap-3 px-3 py-3 text-sm">
-              <div class="min-w-0 flex-1">
-                <p class="break-words font-semibold text-text-default">{{ deletionLabel(item) }} <span class="tabular-nums">({{ item.count }})</span></p>
-                <p class="mt-1 break-words text-text-muted">{{ deletionDescription(item) }}</p>
-                <p class="mt-1 text-xs" :class="selectedDeletionKeys.includes(item.key) ? 'text-danger-strong' : 'text-text-subtle'">{{ $t(selectedDeletionKeys.includes(item.key) ? 'projectAccess.deletion.selected' : 'projectAccess.deletion.retained') }}</p>
-              </div>
-              <BaseToggle
-                :model-value="selectedDeletionKeys.includes(item.key)"
-                :aria-label="`${$t('projectAccess.deletion.selectCategory')} ${deletionLabel(item)}`"
-                :disabled="deleting"
-                disabled-reason="La eliminación está en curso."
-                on-class="bg-danger-strong"
-                :data-testid="`project-delete-category-${item.key}`"
-                @update:model-value="toggleDeletionCategory(item.key, $event)"
-              />
-            </li>
-          </ul>
-          <p class="text-sm text-text-muted">{{ $t('projectAccess.deletion.operationalRemoved') }}</p>
-          <p class="text-sm text-text-muted">{{ $t('projectAccess.deletion.automationsStopped') }}</p>
-          <BaseAlert v-if="deletionPreview.blockers?.length" variant="warning" data-testid="project-force-delete-blockers">
-            <ul class="space-y-2"><li v-for="(blocker, index) in deletionPreview.blockers" :key="index">{{ blocker.message }}</li></ul>
-          </BaseAlert>
-          <BaseFormField v-slot="{ errorId }" :label="$t('projectAccess.deletion.confirmationLabel')" required :hint="$t('projectAccess.deletion.confirmationHint')">
-            <BaseInput
-              v-model="confirmation"
-              autocomplete="off"
-              autocapitalize="off"
-              :spellcheck="false"
-              :aria-label="$t('projectAccess.deletion.confirmationLabel')"
-              :aria-describedby="errorId"
-              :disabled="deleting"
-              disabled-reason="La eliminación está en curso."
-              data-testid="project-force-delete-confirmation"
-            />
-          </BaseFormField>
-        </template>
-        <BaseAlert v-if="deletionError" variant="danger" role="alert" data-testid="project-force-delete-error">{{ deletionError }}</BaseAlert>
-        <BaseButton v-if="!deletionPreview && !deletionLoading" variant="secondary" data-testid="project-force-delete-retry" @click="loadDeletionPreview">{{ $t('projectAccess.deletion.retry') }}</BaseButton>
-      </section>
-      <template v-else>
       <BaseAlert v-if="project?.state_review_required" variant="warning">
         Este proyecto viene del catálogo anterior. Revisa y confirma su estado real.
       </BaseAlert>
@@ -335,23 +189,13 @@ async function applyState() {
           required
           :error="stateError"
         >
-          <select
+          <ProjectStateChoice
             v-model="selectedStateId"
-            aria-label="Nuevo estado del proyecto"
-            :aria-invalid="invalid || undefined"
-            :aria-describedby="errorId"
-            data-testid="project-state-target"
-            class="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
-          >
-            <option value="">Selecciona el estado real…</option>
-            <option
-              v-for="state in stateStore.activeStates.filter((item) => item.id !== project?.current_state?.id)"
-              :key="state.id"
-              :value="state.id"
-            >
-              {{ state.name }}
-            </option>
-          </select>
+            label="Nuevo estado del proyecto" :invalid="invalid" :describedby="errorId"
+            testid="project-state-target" placeholder="Selecciona el estado real…"
+            :disabled="stateStore.isUpdating"
+            :options="stateStore.activeStates.filter(item => item.id !== project?.current_state?.id).map(state => ({ value: state.id, label: state.name }))"
+          />
         </BaseFormField>
       </BaseFormRow>
 
@@ -410,7 +254,6 @@ async function applyState() {
           {{ stateStore.isUpdating && !preview ? 'Calculando…' : 'Revisar consecuencias' }}
         </BaseButton>
       </section>
-      </template>
 
       <section v-if="preview" class="space-y-4 rounded-xl border border-border-default bg-surface-raised p-4" data-testid="project-state-impact">
         <h3 class="font-semibold text-text-default">Consecuencias antes de confirmar</h3>
@@ -435,18 +278,13 @@ async function applyState() {
               class="mt-2"
               :error="incomeResolutionError(income)"
             >
-              <select
+              <ProjectStateChoice
                 v-model="resolutions[income.id]"
-                :aria-label="`Decisión para ${income.concept}`"
-                :aria-invalid="invalid || undefined"
-                :aria-describedby="errorId"
-                class="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
-                :data-testid="`project-state-income-${income.id}`"
-              >
-                <option value="">Decide qué hacer…</option>
-                <option value="keep_receivable">Conservar por cobrar, sin avisos automáticos</option>
-                <option value="write_off">Dar el saldo por perdido</option>
-              </select>
+                :label="`Decisión para ${income.concept}`" :invalid="invalid" :describedby="errorId"
+                :testid="`project-state-income-${income.id}`" placeholder="Decide qué hacer…"
+                :disabled="stateStore.isUpdating"
+                :options="[{ value: 'keep_receivable', label: 'Conservar por cobrar, sin avisos automáticos' }, { value: 'write_off', label: 'Dar el saldo por perdido' }]"
+              />
             </BaseFormField>
             <p v-else class="mt-1 text-xs text-text-subtle">La deuda se conserva.</p>
           </article>
@@ -481,18 +319,8 @@ async function applyState() {
     </div>
     <template #footer>
       <BaseModalActions>
-        <BaseButton variant="secondary" :disabled="deleting" disabled-reason="La eliminación está en curso." @click="emit('close')">Cancelar</BaseButton>
+        <BaseButton variant="secondary" :disabled="stateStore.isUpdating" disabled-reason="El cambio está en curso." @click="emit('close')">Cancelar</BaseButton>
         <BaseButton
-          v-if="forceMode"
-          variant="danger"
-          data-testid="project-force-delete-confirm"
-          :loading="deleting"
-          :disabled="Boolean(deleteBlockReasons.length) || deleting"
-          :disabled-reason="deleting ? 'La eliminación está en curso.' : deleteBlockReasons.join(' ')"
-          @click="confirmForceDeletion"
-        >{{ $t('projectAccess.deletion.forceConfirm') }}</BaseButton>
-        <BaseButton
-          v-else
           variant="primary"
           data-testid="project-state-apply"
           :loading="stateStore.isUpdating"

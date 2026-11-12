@@ -207,7 +207,7 @@ from content.views.linkedin import (
 )
 from content.views.standalone_email import (
     send_standalone_email, standalone_email_defaults, list_standalone_emails,
-    preview_composed_email, resend_standalone_email,
+    preview_composed_email, resend_standalone_email, retry_standalone_email,
     standalone_email_attachment, standalone_email_body,
 )
 from content.views.document import (
@@ -392,6 +392,7 @@ from content.views.project_retention import (
 from content.views.data_integrity import (
     data_integrity_findings, data_integrity_fix_apply, data_integrity_fix_preview,
     data_integrity_operation_undo, data_integrity_operations, data_integrity_rules,
+    data_integrity_scans, data_integrity_scan, data_integrity_review, data_integrity_reviews,
 )
 
 from content.views.consulting import (
@@ -410,6 +411,16 @@ urlpatterns = [
     path('projects/retained-data/audit/', retained_project_data_audit, name='panel-projects-retained-data-audit'),
     path('projects/retained-operations/<int:operation_id>/undo/', retained_operation_undo, name='panel-projects-retained-operation-undo'),
     path('projects/retained-contexts/<int:context_id>/cleanup/', retained_context_cleanup, name='panel-projects-retained-context-cleanup'),
+    path('data-integrity/rules/', data_integrity_rules, name='data-integrity-rules'),
+    path('data-integrity/findings/', data_integrity_findings, name='data-integrity-findings'),
+    path('data-integrity/fixes/preview/', data_integrity_fix_preview, name='data-integrity-fix-preview'),
+    path('data-integrity/fixes/apply/', data_integrity_fix_apply, name='data-integrity-fix-apply'),
+    path('data-integrity/operations/', data_integrity_operations, name='data-integrity-operations'),
+    path('data-integrity/operations/<int:operation_id>/undo/', data_integrity_operation_undo, name='data-integrity-operation-undo'),
+    path('data-integrity/scans/', data_integrity_scans, name='data-integrity-scans'),
+    path('data-integrity/scans/<int:scan_id>/', data_integrity_scan, name='data-integrity-scan'),
+    path('data-integrity/reviews/', data_integrity_reviews, name='data-integrity-reviews'),
+    path('data-integrity/reviews/apply/', data_integrity_review, name='data-integrity-review'),
     path('projects/data-integrity/rules/', data_integrity_rules, name='panel-data-integrity-rules'),
     path('projects/data-integrity/findings/', data_integrity_findings, name='panel-data-integrity-findings'),
     path('projects/data-integrity/fixes/preview/', data_integrity_fix_preview, name='panel-data-integrity-fix-preview'),
@@ -912,6 +923,7 @@ urlpatterns = [
     path('emails/preview/', preview_composed_email, name='preview-composed-email'),
     path('emails/defaults/', standalone_email_defaults, name='standalone-email-defaults'),
     path('emails/history/', list_standalone_emails, name='list-standalone-emails'),
+    path('emails/history/<int:log_id>/retry/', retry_standalone_email, name='retry-standalone-email'),
     path(
         'emails/history/<int:log_id>/body/', standalone_email_body,
         name='standalone-email-body',

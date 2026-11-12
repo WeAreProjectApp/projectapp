@@ -9,10 +9,11 @@ from django.db.models import Exists, OuterRef, Prefetch, prefetch_related_object
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from projectapp.recaptcha import CaptchaError, verify_captcha
@@ -134,6 +135,10 @@ def login_view(request):
             'email': user.email,
         })
 
+    from accounts.services.access import record_event
+    record_event(user, 'login', method='password', surface='platform', request=request)
+    user.last_login = timezone.now()
+    user.save(update_fields=['last_login'])
     tokens = get_tokens_for_user(user)
     return Response({
         'requires_verification': False,
@@ -164,7 +169,8 @@ def verify_view(request):
         validated_token = jwt_auth.get_validated_token(token_str)
         if validated_token.get('purpose') != 'verification':
             raise TokenError('Token purpose mismatch.')
-        user = jwt_auth.get_user(validated_token)
+        from accounts.authentication import SessionJWTAuthentication
+        user = SessionJWTAuthentication().get_user(validated_token)
     except Exception:
         return Response(
             {'detail': 'Token de verificación inválido o expirado.'},
@@ -185,6 +191,7 @@ def verify_view(request):
     user.save(update_fields=['password'])
 
     profile = user.profile
+    profile.refresh_from_db()
     was_onboarded = profile.is_onboarded
     profile.is_onboarded = True
     profile.save(update_fields=['is_onboarded'])
@@ -221,7 +228,8 @@ def resend_code_view(request):
         validated_token = jwt_auth.get_validated_token(token_str)
         if validated_token.get('purpose') != 'verification':
             raise TokenError('Token purpose mismatch.')
-        user = jwt_auth.get_user(validated_token)
+        from accounts.authentication import SessionJWTAuthentication
+        user = SessionJWTAuthentication().get_user(validated_token)
     except Exception:
         return Response(
             {'detail': 'Token de verificación inválido o expirado.'},
@@ -246,11 +254,13 @@ def token_refresh_view(request):
 
     try:
         refresh = RefreshToken(refresh_token)
+        from accounts.authentication import SessionJWTAuthentication
+        SessionJWTAuthentication().get_user(refresh)
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
         })
-    except TokenError:
+    except (TokenError, InvalidToken, AuthenticationFailed):
         return Response(
             {'detail': 'Refresh token inválido o expirado.'},
             status=status.HTTP_401_UNAUTHORIZED,
@@ -348,7 +358,7 @@ def me_view(request):
         profile.avatar = data['avatar']
         profile_fields.append('avatar')
 
-    if 'custom_cover_image' in data and data['custom_cover_image'] is not None:
+    if 'custom_cover_image' in data:
         profile.custom_cover_image = data['custom_cover_image']
         profile_fields.append('custom_cover_image')
 
@@ -503,9 +513,8 @@ def client_detail_view(request, user_id):
         return Response(ClientListSerializer(profile, context={'request': request}).data)
 
     if request.method == 'DELETE':
-        user = profile.user
-        user.is_active = False
-        user.save(update_fields=['is_active'])
+        from accounts.services.access import change_access
+        change_access(profile.user_id, actor=request.user, enabled=False)
         return Response({'detail': 'Cliente desactivado.'})
 
     serializer = UpdateClientSerializer(data=request.data)
@@ -547,9 +556,8 @@ def client_detail_view(request, user_id):
         profile.save(update_fields=billing_fields)
 
     if 'is_active' in data:
-        user = profile.user
-        user.is_active = data['is_active']
-        user.save(update_fields=['is_active'])
+        from accounts.services.access import change_access
+        change_access(profile.user_id, actor=request.user, enabled=data['is_active'])
 
     profile.refresh_from_db()
     return Response(ClientListSerializer(profile, context={'request': request}).data)
@@ -578,9 +586,9 @@ def client_resend_invite_view(request, user_id):
 
 def _require_staff(request):
     """Check that the request user is a Django staff member (super admin)."""
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return Response(
-            {'detail': 'No autorizado.'},
+            {'detail': 'Solo un superusuario administra los accesos del equipo.'},
             status=status.HTTP_403_FORBIDDEN,
         )
     return None
@@ -663,9 +671,8 @@ def admin_detail_view(request, user_id):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = profile.user
-        user.is_active = False
-        user.save(update_fields=['is_active'])
+        from accounts.services.access import change_access
+        change_access(profile.user_id, actor=request.user, enabled=False)
         return Response({'detail': 'Administrador desactivado.'})
 
     # PATCH
@@ -691,8 +698,8 @@ def admin_detail_view(request, user_id):
                     {'detail': 'No se puede desactivar al último administrador activo.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        user.is_active = data['is_active']
-        changed_fields.append('is_active')
+        from accounts.services.access import change_access
+        change_access(user.pk, actor=request.user, enabled=data['is_active'])
 
     if changed_fields:
         user.save(update_fields=changed_fields)

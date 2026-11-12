@@ -46,9 +46,15 @@ Recibidos, el estado inicial se presenta como **Disponible para abrir**.
 
 El tipo se elige con el mismo dropdown del formulario de parámetros de contrato
 de servicio. **Personalizado** muestra debajo el campo para darle un nombre.
-Los campos esenciales están visibles; **Más detalles** despliega los opcionales.
-**Configuración** agrupa cliente, proyecto, idioma y vigencia del panel
-(1/3/7/30 días, 7 por defecto). Cliente y proyecto siguen siendo opcionales.
+En el panel todos los campos de contenido y configuración están visibles desde
+el inicio, incluidos cliente, proyecto, idioma y vigencia (1/3/7/30 días, 7 por
+defecto). Cliente y proyecto siguen siendo opcionales. Los formularios público
+y de Plataforma conservan sus campos opcionales desplegables.
+
+Mensaje confidencial admite únicamente `fields.message`: Asunto fue retirado del
+catálogo compartido y las escrituras REST/MCP lo rechazan como campo desconocido.
+Los contenidos antiguos pueden leerse sin esa clave; no se reescriben en bloque
+ni se cambian tokens, cifrado, permisos o consumo único.
 La página pública conserva nombre del remitente y CAPTCHA cuando está habilitado.
 
 La URL del enlace seguro se genera automáticamente. En la plantilla Credenciales,

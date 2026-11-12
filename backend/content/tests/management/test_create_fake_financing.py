@@ -45,8 +45,10 @@ def test_financing_seed_creates_representative_lifecycle(tmp_path, monkeypatch):
     ).count() == 3
 
 
-def test_delete_fake_data_removes_private_financing_pdf(tmp_path, monkeypatch):
-    """Fixture cleanup removes private files together with their records."""
+def test_delete_fake_data_removes_private_financing_pdf(
+    tmp_path, monkeypatch, django_capture_on_commit_callbacks,
+):
+    """Fixture cleanup retains private files until the deletion commits."""
     field = FinancingAgreement._meta.get_field('signed_document')
     monkeypatch.setattr(
         field,
@@ -65,7 +67,9 @@ def test_delete_fake_data_removes_private_financing_pdf(tmp_path, monkeypatch):
         signed_document='',
     ).get().signed_document.name
 
-    call_command('delete_fake_data', '--confirm', verbosity=0)
+    with django_capture_on_commit_callbacks(execute=True):
+        call_command('delete_fake_data', '--confirm', verbosity=0)
+        assert field.storage.exists(signed_name)
 
     assert not FinancingAgreement.objects.exists()
     assert not field.storage.exists(signed_name)

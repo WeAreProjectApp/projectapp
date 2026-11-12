@@ -32,7 +32,7 @@
         class="mb-8 rounded-2xl border border-border-default bg-surface p-5"
         data-enter
       >
-        <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-green-light/60">Subir modelo de datos</h2>
+        <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Subir modelo de datos</h2>
 
         <!-- Template buttons -->
         <div class="mb-4 flex flex-wrap gap-2">
@@ -50,7 +50,7 @@
             ref="fileInput"
             type="file"
             accept=".json"
-            class="text-xs text-green-light file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted/30 file:px-3 file:py-2 file:text-xs file:font-medium file:text-text-default dark:file:bg-white/10 dark:file:text-accent"
+            class="text-xs text-text-muted file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted/30 file:px-3 file:py-2 file:text-xs file:font-medium file:text-text-default dark:file:bg-white/10 dark:file:text-accent"
             @change="handleFileUpload"
           />
         </div>
@@ -60,7 +60,7 @@
           v-model="jsonRaw"
           rows="10"
           placeholder='{"entities": [{"name": "...", "description": "...", "keyFields": "...", "relationship": "..."}]}'
-          class="mb-3 w-full rounded-xl border border-border-default bg-surface-muted/20 px-4 py-3 font-mono text-xs text-text-default dark:bg-primary-strong dark:text-white"
+          class="mb-3 w-full rounded-xl border border-border-default bg-surface-muted/20 px-4 py-3 font-mono text-xs text-text-default dark:bg-surface-muted dark:text-white"
           @input="parseJson"
         />
 
@@ -101,10 +101,10 @@
           <table class="w-full text-left text-sm">
             <thead>
               <tr class="border-b border-border-default">
-                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-green-light/60">Entidad</th>
-                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-green-light/60">Descripcion</th>
-                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-green-light/60">Campos clave</th>
-                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-green-light/60">Relacion</th>
+                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Entidad</th>
+                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Descripcion</th>
+                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Campos clave</th>
+                <th class="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Relacion</th>
               </tr>
             </thead>
             <tbody>
@@ -114,20 +114,20 @@
                 class="border-b border-border-muted last:border-0"
               >
                 <td class="px-5 py-3 font-semibold text-text-default">{{ entity.name }}</td>
-                <td class="px-5 py-3 text-xs text-green-light">{{ entity.description || '\u2014' }}</td>
+                <td class="px-5 py-3 text-xs text-text-muted">{{ entity.description || '\u2014' }}</td>
                 <td class="px-5 py-3">
                   <div v-if="entity.key_fields" class="flex flex-wrap gap-1">
                     <span
                       v-for="field in entity.key_fields.split(',')"
                       :key="field.trim()"
-                      class="rounded-md bg-surface-muted/30 px-2 py-0.5 text-[11px] font-medium text-text-default dark:bg-white/10 dark:text-accent"
+                      class="rounded-md bg-surface-muted/30 px-2 py-0.5 text-[11px] font-medium text-text-default dark:bg-white/10 dark:text-text-brand"
                     >
                       {{ field.trim() }}
                     </span>
                   </div>
-                  <span v-else class="text-xs text-green-light/50">&mdash;</span>
+                  <span v-else class="text-xs text-text-muted">&mdash;</span>
                 </td>
-                <td class="px-5 py-3 text-xs text-green-light">{{ entity.relationship || '\u2014' }}</td>
+                <td class="px-5 py-3 text-xs text-text-muted">{{ entity.relationship || '\u2014' }}</td>
               </tr>
             </tbody>
           </table>
@@ -140,8 +140,8 @@
         class="rounded-2xl border border-border-default bg-surface p-10 text-center"
         data-enter
       >
-        <p class="text-sm text-green-light">No hay modelo de datos definido para este proyecto.</p>
-        <p v-if="authStore.isAdmin" class="mt-2 text-xs text-green-light/60">Sube un JSON con las entidades para empezar.</p>
+        <p class="text-sm text-text-muted">No hay modelo de datos definido para este proyecto.</p>
+        <p v-if="authStore.isAdmin" class="mt-2 text-xs text-text-muted">Sube un JSON con las entidades para empezar.</p>
       </div>
 </template>
   </div>

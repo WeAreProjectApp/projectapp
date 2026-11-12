@@ -189,6 +189,10 @@
     </template>
 
     <!-- Search / Monitoring -->
+    <template v-else-if="name === 'conversation'">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h4M21 12a8 8 0 01-8 8H5l-4 3V12a10 10 0 0120 0z" />
+    </template>
+
     <template v-else-if="name === 'search'">
       <circle cx="11" cy="11" r="8" />
       <path d="m16.65 16.65 4.35 4.35" />

@@ -9,16 +9,17 @@ test.describe('Platform CAPTCHA', () => {
     await page.goto('/es-co/platform/login', { waitUntil: 'domcontentloaded' })
     await page.getByLabel('Email', { exact: true }).fill(captchaCredentials.email)
     await page.getByLabel('Contraseña', { exact: true }).fill(captchaCredentials.password)
+    return page.locator('form').filter({ has: page.getByLabel('Contraseña', { exact: true }) })
   }
 
   test('opens the client portal after a verified login', {
     tag: [...PLATFORM_LOGIN, '@outcome:success', '@role:platform-client'],
   }, async ({ page }, testInfo) => {
     await mockCaptchaProvider(page, testInfo.testId)
-    await openLogin(page)
+    const passwordForm = await openLogin(page)
     await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeDisabled()
 
-    await page.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
+    await passwordForm.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
     await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
     await expect(page).toHaveURL(/\/platform\/documents$/)
@@ -29,9 +30,9 @@ test.describe('Platform CAPTCHA', () => {
     tag: [...PLATFORM_LOGIN, '@outcome:error', '@role:guest'],
   }, async ({ page }, testInfo) => {
     await mockCaptchaProvider(page, testInfo.testId, { mode: 'invalid' })
-    await openLogin(page)
+    const passwordForm = await openLogin(page)
 
-    await page.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
+    await passwordForm.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
     await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
     await expect(page.getByText('Verificación de captcha fallida. Intenta de nuevo.')).toBeVisible()
@@ -42,14 +43,14 @@ test.describe('Platform CAPTCHA', () => {
     tag: [...PLATFORM_LOGIN, '@outcome:error', '@role:guest'],
   }, async ({ page }, testInfo) => {
     await mockCaptchaProvider(page, testInfo.testId)
-    await openLogin(page)
+    const passwordForm = await openLogin(page)
     await page.getByLabel('Contraseña', { exact: true }).fill('wrong-password')
 
-    await page.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
+    await passwordForm.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
     await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
     await expect(page.getByText('Credenciales incorrectas.')).toBeVisible()
-    await expect(page.getByRole('checkbox', { name: 'No soy un robot (prueba)' })).not.toBeChecked()
+    await expect(passwordForm.getByRole('checkbox', { name: 'No soy un robot (prueba)' })).not.toBeChecked()
     await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeDisabled()
   })
 
@@ -57,9 +58,9 @@ test.describe('Platform CAPTCHA', () => {
     tag: [...PLATFORM_LOGIN, '@outcome:failure', '@role:guest'],
   }, async ({ page }, testInfo) => {
     await mockCaptchaProvider(page, testInfo.testId, { mode: 'unavailable' })
-    await openLogin(page)
+    const passwordForm = await openLogin(page)
 
-    await page.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
+    await passwordForm.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
     await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
     await expect(page.getByText('No pudimos verificar el captcha. Reintenta en unos momentos.')).toBeVisible()
@@ -71,13 +72,13 @@ test.describe('Platform CAPTCHA', () => {
     tag: [...PLATFORM_LOGIN, '@outcome:failure', '@role:guest'],
   }, async ({ page }, testInfo) => {
     await mockCaptchaProvider(page, testInfo.testId, { failScript: true })
-    await openLogin(page)
-    await expect(page.getByText('No pudimos cargar el captcha. Reintenta en unos momentos.')).toBeVisible()
+    const passwordForm = await openLogin(page)
+    await expect(passwordForm.getByText('No pudimos cargar el captcha. Reintenta en unos momentos.')).toBeVisible()
     await page.unroute('https://www.google.com/recaptcha/api.js*')
     await mockCaptchaProvider(page, testInfo.testId)
 
-    await page.getByRole('button', { name: 'Reintentar' }).click()
-    await page.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
+    await passwordForm.getByRole('button', { name: 'Reintentar' }).click()
+    await passwordForm.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
 
     await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeEnabled()
   })

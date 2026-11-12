@@ -19,8 +19,10 @@
 | display | Reabrir propuesta vinculada | Cliente/proyecto y archivos confirmados del mismo vínculo |
 | success | Cancelar o pulsar Escape | Se conserva el estado previo y vuelve el foco al disparador |
 
-La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora todos los anexos activos. Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
+La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora sólo los anexos activos seleccionados explícitamente (ninguno marcado en el primer cierre). Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
 
 Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresión desde Clientes.
+
+- **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
 
 PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.

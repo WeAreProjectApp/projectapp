@@ -161,11 +161,11 @@ def build_collection_account_email(document, *, resend=False):
 
 
 def send_collection_account_email(
-    document, *, hosting=None, resend=False, retry_of=None,
+    document, *, hosting=None, resend=False, retry_of=None, recipient=None,
 ):
     """Build + send the client email with the PDF attached. True on success."""
     extension = document.collection_account
-    recipient = extension.customer_email
+    recipient = extension.customer_email if recipient is None else recipient
     if not recipient:
         logger.warning(
             'Collection account %s has no customer email; not sent.',

@@ -14,6 +14,10 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   record: { type: Object, default: null },
   saving: { type: Boolean, default: false },
+  // Collection-account creation supplies its existing owner; it is not an edit.
+  initialContext: { type: Object, default: null },
+  contextLabel: { type: String, default: '' },
+  submitError: { type: String, default: '' },
 })
 
 const emit = defineEmits(['close', 'submit', 'project-created'])
@@ -99,6 +103,10 @@ watch(
       }
     } else {
       form.value = defaultForm()
+      if (props.initialContext) {
+        onClientSelect(props.initialContext.client)
+        form.value.project = props.initialContext.projectId
+      }
     }
     inlineClientOpen.value = false
     inlineClientErrors.value = {}
@@ -224,13 +232,16 @@ const modalFormId = useId();
 </script>
 
 <template>
-  <BaseModal :model-value="open" kind="form" title-id="hosting-form-title" @close="emit('close')">
+  <BaseModal :model-value="open" kind="form" title-id="hosting-form-title" :close-on-esc="!saving" :close-on-backdrop="!saving" @close="!saving && emit('close')">
     <div class="px-6 pt-6 pb-2">
       <h3 id="hosting-form-title" class="text-lg font-bold text-text-default">{{ title }}</h3>
     </div>
     <EntityHistorySection v-if="open && record?.id" entity-type="hosting" :object-id="record.id" class="mx-5" />
     <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
+      <p v-if="contextLabel" class="text-sm text-text-muted" data-testid="hosting-form-context">{{ contextLabel }}</p>
+      <p v-if="submitError" role="alert" class="text-sm text-danger-strong">{{ submitError }}</p>
       <BaseFormField
+        v-if="!initialContext"
         label="Cliente"
         :required="!isEdit"
         required-message="Elige o crea un cliente."
@@ -280,6 +291,7 @@ const modalFormId = useId();
 
       <!-- The `Marca` half of the old `Persona - Marca` label, as a relation -->
       <ProjectSelect
+        v-if="!initialContext"
         v-model="form.project"
         :client-profile-id="form.client"
         :client-label="form.client_display_name"

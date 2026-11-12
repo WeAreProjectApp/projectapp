@@ -20,7 +20,7 @@ async function reviewCurrent() {
     conflict.value = false;
     error.value = '';
     reviewed.value = true;
-    emit('updated');
+    emit('updated', result.data.document);
   } catch { error.value = en.value ? 'Could not load the current revision. Your file has been kept.' : 'No se pudo consultar la versión actual. Conservamos tu archivo.'; }
   finally { busy.value = false; }
 }
@@ -38,7 +38,7 @@ async function save() {
     version.value = result.data.document.source_hash;
     saved.value = true;
     file.value = null;
-    emit('updated');
+    emit('updated', result.data.document);
   } catch (failure) {
     conflict.value = failure.response?.status === 409;
     error.value = failure.response?.status === 409

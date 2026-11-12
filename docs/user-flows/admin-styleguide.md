@@ -4,11 +4,11 @@
 - **Role:** admin
 - **Priority:** P3
 - **Routes:** `/panel/styleguide`
-- **Description:** Admin browses the executable base-component/design-token catalog and verifies the canonical responsive behavior at compact, portrait, landscape, desktop and wide widths.
+- **Description:** El operador consulta el catálogo de componentes y tokens, cambia el tema desde la guía o el control general del Panel y comprueba su persistencia y comportamiento responsive.
 - **Interaction matrix:**
-  - `display` — the admin reaches the catalog, sees the matching responsive profile, navigation mode, tabs/filters, priority table and capped content shell.
-  - `success` — n/a: the page is a reference catalog and does not persist product data.
-  - `error` — n/a: component validation belongs to unit tests; there is no user-submitted payload.
-  - `failure` — n/a: the examples are local and make no product mutation request.
-- **Coverage:** ✅ Covered
+  - `display` — catálogo, perfil responsive, navegación, pestañas/filtros, tabla prioritaria y ancho limitado del contenido.
+  - `success` — STAFF sin superusuario cambia el tema con Enter/Espacio; se actualizan la etiqueta, las superficies, el título y los tokens. La recarga conserva la elección y el control general permite volver al estado original. Regresión en 412×915 y 1440×900 (PA-227 / RESP-R068).
+  - `error` — no aplica a elegir tema: son dos opciones válidas y no hay entrada libre. La validación de las muestras de formularios pertenece a sus componentes.
+  - `failure` — no hay petición de mutación al servidor para esta preferencia local. El control no presenta un resultado de fallo por almacenamiento bloqueado; no se declara cobertura E2E de ese estado.
+- **Coverage:** Regresiones existentes de visualización; selección persistente de tema pendiente de CI y de aceptación Chrome con STAFF16.
 - **E2E Spec:** `e2e/visual/styleguide.spec.js`

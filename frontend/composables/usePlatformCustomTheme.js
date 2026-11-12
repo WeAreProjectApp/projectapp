@@ -1,7 +1,9 @@
 import { ref, computed } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformApi } from '~/composables/usePlatformApi'
-import { hexToRgb, luminance, toRgbString, measureBrightness } from '~/utils/colorUtils'
+import { hexToRgb, toRgbString, measureBrightness } from '~/utils/colorUtils'
+import { contrastRatio, readableBrand, readableForeground } from '~/utils/themeContrast'
+import { usePlatformTheme } from '~/composables/usePlatformTheme'
 
 const THEME_COLORS = [
   { name: 'Esmerald', shades: ['#e6efef', '#ccdedd', '#99bdbc', '#669c9a', '#337b79', '#002921', '#00231c', '#001d17', '#001713'] },
@@ -52,20 +54,20 @@ const THEME_VARS = [
 
 const SEMANTIC_VARS = [
   '--color-primary', '--color-primary-strong', '--color-primary-soft',
-  '--color-text-brand', '--color-focus-ring',
+  '--color-text-brand', '--color-focus-ring', '--color-accent', '--color-accent-strong',
+  '--color-on-primary', '--color-on-accent',
 ]
 
 export function usePlatformCustomTheme() {
   const authStore = usePlatformAuthStore()
+  const { isDark } = usePlatformTheme()
 
   function hydrate() {
     if (initialized) return
     const user = authStore.user
-    if (user) {
-      themeColor.value = user.theme_color || ''
-      coverImage.value = user.cover_image || ''
-      customCoverImageUrl.value = user.custom_cover_image || ''
-    }
+    themeColor.value = user?.theme_color || ''
+    coverImage.value = user?.cover_image || ''
+    customCoverImageUrl.value = user?.custom_cover_image || ''
     applyTheme()
     detectCoverBrightness()
     initialized = true
@@ -76,24 +78,48 @@ export function usePlatformCustomTheme() {
     if (typeof document === 'undefined') return
     const root = document.documentElement
 
-    if (themeColor.value && themeColor.value.length === 7) {
+    if (/^#[\da-f]{6}$/i.test(themeColor.value)) {
       const { r, g, b } = hexToRgb(themeColor.value)
-      const isLight = luminance(themeColor.value) > 186
       const shades = findColorFamily(themeColor.value)
+      const foreground = readableForeground(themeColor.value)
+      const surface = getComputedStyle(root).getPropertyValue('--color-surface').trim()
+        || (isDark.value ? '#002921' : '#ffffff')
+      const surfaceRgb = hexToRgb(surface)
+      const blend = (alpha) => '#' + [r, g, b].map((channel, index) => Math.round(
+        channel * alpha + [surfaceRgb.r, surfaceRgb.g, surfaceRgb.b][index] * (1 - alpha),
+      ).toString(16).padStart(2, '0')).join('')
+      const softSurface = !isDark.value && shades ? shades[0] : blend(isDark.value ? 0.12 : 0.10)
+      const brand = readableBrand(themeColor.value, shades, [surface, softSurface], isDark.value)
+      const candidateStrong = shades ? shades[5] : themeColor.value
+      const strong = contrastRatio(foreground, candidateStrong) >= 4.5 ? candidateStrong : themeColor.value
 
       // Primary color
       root.style.setProperty('--theme-color', themeColor.value)
       root.style.setProperty('--theme-rgb', `${r}, ${g}, ${b}`)
-      root.style.setProperty('--theme-btn-text', isLight ? '#1a1a1a' : '#ffffff')
+      root.style.setProperty('--theme-btn-text', foreground)
 
       // Bridge to the semantic design-system tokens — overrides the values from
       // assets/styles/theme.css so base components (BaseButton, BaseBadge, etc.)
       // automatically pick up the tenant's brand color.
-      root.style.setProperty('--color-primary', themeColor.value)
-      root.style.setProperty('--color-primary-strong', shades ? shades[5] : themeColor.value)
-      root.style.setProperty('--color-primary-soft', shades ? shades[0] : `rgba(${r}, ${g}, ${b}, 0.10)`)
-      root.style.setProperty('--color-text-brand', shades ? shades[5] : themeColor.value)
-      root.style.setProperty('--color-focus-ring', themeColor.value)
+      const semanticColors = {
+        '--color-primary': themeColor.value,
+        '--color-primary-strong': strong,
+        '--color-accent': themeColor.value,
+        '--color-accent-strong': strong,
+        '--color-on-primary': foreground,
+        '--color-on-accent': foreground,
+        '--color-text-brand': brand,
+        '--color-focus-ring': brand,
+      }
+      Object.entries(semanticColors).forEach(([name, color]) => {
+        const rgb = hexToRgb(color)
+        root.style.setProperty(name, color)
+        root.style.setProperty(`${name}-rgb`, `${rgb.r} ${rgb.g} ${rgb.b}`)
+      })
+      root.style.setProperty('--color-primary-soft', isDark.value
+        ? `rgba(${r}, ${g}, ${b}, 0.12)`
+        : (shades ? shades[0] : `rgba(${r}, ${g}, ${b}, 0.10)`))
+      root.style.setProperty('--color-primary-soft-rgb', `${r} ${g} ${b}`)
 
       if (shades) {
         // Full semantic palette from the shade family
@@ -123,8 +149,27 @@ export function usePlatformCustomTheme() {
     } else {
       THEME_VARS.forEach(v => root.style.removeProperty(v))
       // Reset semantic-token overrides so theme.css defaults take over again.
-      SEMANTIC_VARS.forEach(v => root.style.removeProperty(v))
+      SEMANTIC_VARS.forEach(v => {
+        root.style.removeProperty(v)
+        root.style.removeProperty(`${v}-rgb`)
+      })
     }
+  }
+
+  function release() {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement
+      THEME_VARS.forEach(name => root.style.removeProperty(name))
+      SEMANTIC_VARS.forEach(name => {
+        root.style.removeProperty(name)
+        root.style.removeProperty(`${name}-rgb`)
+      })
+    }
+    initialized = false
+    themeColor.value = ''
+    coverImage.value = ''
+    customCoverImageUrl.value = ''
+    coverDark.value = false
   }
 
   async function setThemeColor(color) {
@@ -134,11 +179,14 @@ export function usePlatformCustomTheme() {
   }
 
   async function setCoverImage(path) {
-    coverImage.value = path
-    customCoverImageUrl.value = ''
-    applyTheme()
-    detectCoverBrightness()
-    try { await authStore.updateProfile({ cover_image: path }) } catch { /* silent */ }
+    try {
+      const result = await authStore.updateProfile({ cover_image: path, custom_cover_image: null })
+      if (!result.success) return
+      coverImage.value = path
+      customCoverImageUrl.value = ''
+      applyTheme()
+      detectCoverBrightness()
+    } catch { /* Keep the saved cover visible when persistence fails. */ }
   }
 
   async function setCustomCoverImage(file) {
@@ -164,10 +212,7 @@ export function usePlatformCustomTheme() {
   }
 
   async function clearCover() {
-    coverImage.value = ''
-    customCoverImageUrl.value = ''
-    coverDark.value = false
-    try { await authStore.updateProfile({ cover_image: '' }) } catch { /* silent */ }
+    await setCoverImage('')
   }
 
   async function clearAll() {
@@ -176,7 +221,7 @@ export function usePlatformCustomTheme() {
     customCoverImageUrl.value = ''
     coverDark.value = false
     applyTheme()
-    try { await authStore.updateProfile({ theme_color: '', cover_image: '' }) } catch { /* silent */ }
+    try { await authStore.updateProfile({ theme_color: '', cover_image: '', custom_cover_image: null }) } catch { /* silent */ }
   }
 
   const hasTheme = computed(() => Boolean(themeColor.value))
@@ -195,6 +240,7 @@ export function usePlatformCustomTheme() {
     isCustomized,
     hydrate,
     applyTheme,
+    release,
     setThemeColor,
     setCoverImage,
     setCustomCoverImage,

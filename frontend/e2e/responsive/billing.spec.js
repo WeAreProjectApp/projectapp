@@ -88,8 +88,8 @@ async function exerciseBillingView(page, view) {
   await page.getByLabel('Origen contable operativo').selectOption('30');
   await page.getByLabel('Razón').first().fill('Matriz responsive del origen operativo');
   await page.getByRole('button', { name: 'Previsualizar asociación' }).click();
-  const preview = page.getByTestId('hosting-reconciliation-preview').getByText('"decision": "ready"');
-  await expect(preview).toHaveCount(1);
+  const preview = page.getByTestId('hosting-decision-summary');
+  await expect(preview).toContainText('#30 · aurora.test');
   return preview;
 }
 

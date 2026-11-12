@@ -197,13 +197,14 @@
             </div>
           </div>
 
-          <div v-else-if="tab === 'calendar'" class="space-y-4">
+          <div v-else-if="tab === 'calendar'" class="min-w-0 space-y-4" data-testid="recurring-calendar">
             <StatsBarChart
               :series="[{ name: 'Equiv. COP mensual', data: calendar.days.map((day) => day.total) }]"
               :categories="calendar.days.map((day) => String(day.day))"
               :colors="[palette.categorical[0]]"
               :tooltip-value-formatter="dayTooltip"
-              :height="280"
+              :height="isCompactCalendar ? calendar.days.length * 32 + 80 : 280"
+              :horizontal="isCompactCalendar"
               chart-id="recurring-chart-calendar"
               empty-title="Sin cobros con día definido"
             />
@@ -267,6 +268,7 @@ import {
   visibleRows,
 } from '~/utils/recurringCharts';
 import { toSlug } from '~/utils/slugify';
+import { usePanelViewportProfile } from '~/composables/usePanelViewportProfile';
 
 /**
  * The recurring spend, seen instead of read.
@@ -296,6 +298,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'clear-filters']);
+const { profile } = usePanelViewportProfile();
+const isCompactCalendar = computed(() => profile.value === 'compact');
 
 const TABS = [
   { id: 'category', label: 'Categoría' },

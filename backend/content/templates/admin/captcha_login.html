@@ -17,6 +17,7 @@
   {% if user.is_authenticated %}
   <p class="errornote">{% blocktranslate trimmed %}You are authenticated as {{ username }}, but are not authorized to access this page. Would you like to login to a different account?{% endblocktranslate %}</p>
   {% endif %}
+  <p><a href="/panel/login?next={{ next|urlencode }}">Entrar con código por correo o Google</a></p>
   <form action="{{ app_path }}" method="post" id="login-form">
     {% csrf_token %}
     <div class="form-row">{{ form.username.errors }}{{ form.username.label_tag }} {{ form.username }}</div>

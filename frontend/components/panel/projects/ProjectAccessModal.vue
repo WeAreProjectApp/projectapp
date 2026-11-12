@@ -1,6 +1,7 @@
 <script setup>
 import EntityHistoryTabs from '~/components/history/EntityHistoryTabs.vue';
 import { computed } from 'vue'
+import ProjectSpaceLink from '~/components/panel/projects/ProjectSpaceLink.vue'
 import ProjectAccessEditor from '~/components/projects/ProjectAccessEditor.vue'
 import ProjectClientAccessPolicyEditor from '~/components/projects/client-access/ProjectClientAccessPolicyEditor.vue'
 import { createProjectClientAccessApi } from '~/services/projectClientAccessApi'
@@ -48,6 +49,9 @@ const clientApi = computed(() => createProjectClientAccessApi({ get: get_request
             {{ t('projectAccess.modalTitle') }}
           </h2>
           <p class="mt-1 truncate text-sm text-text-subtle">{{ project.name }}</p>
+          <div class="mt-3">
+            <ProjectSpaceLink :project-id="project.id" show-label data-testid="project-detail-space-link" />
+          </div>
         </div>
         <BaseActionButton
           action="close"

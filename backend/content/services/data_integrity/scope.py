@@ -28,8 +28,10 @@ HOSTING = 'content.hostingrecord'
 SECURE_LINK = 'secure_links.securelink'
 SECURE_LINK_FOLDER = 'secure_links.securelinkfolder'
 RECURRING = 'content.recurringpayment'
+EXPENSE = 'content.expenserecord'
+POCKET = 'content.pocketmovement'
 
-SCOPE_KINDS = ('all', 'client', 'project', 'proposal', 'document', 'thread')
+SCOPE_KINDS = ('all', 'client', 'project', 'proposal', 'document', 'thread', 'income', 'expense', 'hosting', 'pocket_movement')
 QUERYABLE_KINDS = ('client', 'project')
 MAX_CANDIDATES = 10
 
@@ -175,11 +177,51 @@ def _thread_scope(thread):
     return {THREAD: {thread.pk}, COMM_FOLDER: {thread.folder_id} if thread.folder_id else set()}
 
 
+def _financial_scope(kind, record_id):
+    from content.models import Document, ExpenseRecord, HostingRecord, IncomeRecord, PocketMovement
+    models = {'income': IncomeRecord, 'expense': ExpenseRecord, 'hosting': HostingRecord, 'pocket_movement': PocketMovement}
+    record = get_object_or_404(models[kind]._base_manager, pk=record_id)
+    incomes = {record.pk} if kind == 'income' else set()
+    expenses = {record.pk} if kind == 'expense' else set()
+    hostings = {record.pk} if kind == 'hosting' else set()
+    pockets = {record.pk} if kind == 'pocket_movement' else set()
+    # Follow accounting edges to a fixed point: a collective pocket movement
+    # may contain payments of several expected incomes. Client/project equality
+    # alone never pulls another row into this graph.
+    while True:
+        before = (len(incomes), len(expenses), len(pockets))
+        incomes |= set(ExpenseRecord._base_manager.filter(pk__in=expenses, source_income__isnull=False)
+                       .values_list('source_income_id', flat=True))
+        incomes |= _ids(IncomeRecord._base_manager.filter(pocket_movement_id__in=pockets))
+        incomes |= set(IncomeRecord._base_manager.filter(pk__in=incomes, expected_income__isnull=False)
+                       .values_list('expected_income_id', flat=True))
+        incomes |= _ids(IncomeRecord._base_manager.filter(expected_income_id__in=incomes))
+        expenses |= _ids(ExpenseRecord._base_manager.filter(Q(source_income_id__in=incomes) | Q(pocket_movement_id__in=pockets)))
+        pockets |= set(IncomeRecord._base_manager.filter(pk__in=incomes, pocket_movement__isnull=False)
+                       .values_list('pocket_movement_id', flat=True))
+        pockets |= set(ExpenseRecord._base_manager.filter(pk__in=expenses, pocket_movement__isnull=False)
+                       .values_list('pocket_movement_id', flat=True))
+        if sum((len(incomes), len(expenses), len(pockets))) > 5000:
+            from content.services.data_integrity.types import IntegrityConflict
+            raise IntegrityConflict('Las relaciones superan el máximo del alcance individual.', code='scope_too_large')
+        if before == (len(incomes), len(expenses), len(pockets)):
+            break
+    docs = Document._base_manager.filter(Q(income_record_id__in=incomes) | Q(hosting_record_id__in=hostings))
+    documents = _ids(docs)
+    # Context is carried by records, not by widening the scan to all siblings
+    # owned by their client/project.
+    return record, {INCOME: incomes, EXPENSE: expenses, HOSTING: hostings, POCKET: pockets,
+                    DOCUMENT: documents, FOLDER: set(docs.exclude(folder=None).values_list('folder_id', flat=True))}
+
+
 def resolve_scope(kind, scope_id=None):
     """Build the scope; unknown ids raise 404 through ``get_object_or_404``."""
     from accounts.models import Project, UserProfile
     from content.models import BusinessProposal, CommunicationThread, Document
 
+    if kind in ('income', 'expense', 'hosting', 'pocket_movement'):
+        record, ids = _financial_scope(kind, scope_id)
+        return Scope(kind, record.pk, getattr(record, 'concept', '') or f'{kind} #{record.pk}', ids)
     if kind == 'all':
         return Scope()
     if kind == 'client':

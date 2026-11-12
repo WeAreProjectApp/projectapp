@@ -1,4 +1,8 @@
 export default {
+    theme: {
+      enableLight: "Activar modo claro",
+      enableDark: "Activar modo oscuro",
+    },
     clientRegister: {
       loadError: 'No se pudieron cargar los clientes. Vuelve a intentar.',
       retry: 'Reintentar',

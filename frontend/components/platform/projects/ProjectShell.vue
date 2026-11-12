@@ -10,8 +10,8 @@
         <!-- PA-50 return path: the same record's commercial face. Admin-only —
              a client never sees the panel. Plain link on the Django session
              (PhaseList precedent), NOT the JWT bridge: wrong direction. -->
-        <button
-          v-if="isAdminUser"
+        <BaseButton unstyled
+          v-if="isAdminUser && project"
           type="button"
           class="inline-flex items-center gap-1.5 text-sm text-text-brand hover:underline whitespace-nowrap"
           :title="t('projectAccess.commercialRecord.title')"
@@ -20,25 +20,34 @@
         >
           <ArrowTopRightOnSquareIcon class="w-4 h-4" />
           {{ t('projectAccess.commercialRecord.label') }}
-        </button>
+        </BaseButton>
       </div>
-      <p v-if="project" class="mt-1 text-sm text-green-light">
+      <p v-if="project" class="mt-1 text-sm text-text-muted">
         <template v-if="project.client_name">Cliente: {{ project.client_name }}</template>
         <template v-if="project.start_date"> · Inició: {{ formatDate(project.start_date) }}</template>
         <template v-if="project.next_deliverable"> · Próx. entrega: {{ formatDate(project.next_deliverable.due_date) }}</template>
       </p>
     </header>
-    <div class="flex flex-col gap-4 lg:flex-row">
+    <div v-if="project" class="flex flex-col gap-4 lg:flex-row">
       <ProjectSecondarySidebar :project-id="projectId" />
       <main class="min-w-0 flex-1 rounded-3xl border border-border-default bg-surface px-4 py-6 shadow-sm sm:px-6">
         <slot />
       </main>
     </div>
+    <p v-else-if="store.isLoading" role="status" class="px-6 py-12 text-center text-text-muted">Cargando proyecto…</p>
+    <section v-else-if="store.error" role="alert" class="space-y-4 rounded-3xl border border-border-default bg-surface p-6" data-testid="project-access-error">
+      <h2 class="text-lg font-semibold text-text-default">{{ errorTitle }}</h2>
+      <p class="text-sm text-text-muted">{{ errorMessage }}</p>
+      <div class="flex flex-wrap gap-3">
+        <BaseButton as="NuxtLink" :to="localePath('/platform/projects')" variant="secondary">Volver a proyectos</BaseButton>
+        <BaseButton v-if="store.errorStatus !== 403 && store.errorStatus !== 404" variant="primary" @click="store.fetchProject(projectId)">Volver a intentar</BaseButton>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, onBeforeMount, watch } from 'vue'
 import { ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
@@ -59,10 +68,15 @@ function openPanelRecord() {
 }
 
 const projectId = computed(() => Number(route.params.id))
-const project = computed(() => store.currentProject)
+const project = computed(() => Number(store.currentProject?.id) === projectId.value ? store.currentProject : null)
+const errorTitle = computed(() => store.errorStatus === 403 ? 'No tienes acceso a este proyecto' : store.errorStatus === 404 ? 'Proyecto no disponible' : 'No pudimos abrir el proyecto')
+const errorMessage = computed(() => store.errorStatus === 403
+  ? 'Tu cuenta no tiene permiso para abrir este espacio. Consulta con el equipo que administra tu acceso.'
+  : store.errorStatus === 404 ? 'El proyecto no está disponible. Vuelve al listado para consultar tus proyectos.'
+    : 'No pudimos cargar este espacio. Comprueba tu sesión y vuelve a intentarlo.')
 
-onMounted(() => { if (projectId.value) store.fetchProject(projectId.value) })
-watch(projectId, (id) => { if (id) store.fetchProject(id) })
+onBeforeMount(() => { if (projectId.value) store.fetchProject(projectId.value) })
+watch(projectId, (id) => { if (id) store.fetchProject(id) }, { flush: 'sync' })
 
 function statusChipClass(state) {
   const base = 'rounded-full px-2 py-0.5 text-xs font-medium'

@@ -123,6 +123,12 @@ def record_send(
         matching_delivery_trace,
     )
 
+    from content.services.email_privacy_policy import credential_email, REDACTED_TEXT
+    if credential_email(template_key):
+        html_body, text_body = '', REDACTED_TEXT
+        subject = 'Mensaje de acceso — ProjectApp'
+        metadata = {'content_redacted': True}
+        error_message = ''
     client_id = getattr(client, 'pk', client)
     audience = audience or EmailLog.Audience.INTERNAL
     delivery_role = delivery_role or EmailLog.DeliveryRole.PRIMARY
@@ -338,7 +344,7 @@ def attach_delivery_recipients(logs):
                 delivery_id__in=delivery_ids,
                 delivery_role=EmailLog.DeliveryRole.PRIMARY,
             )
-            .select_related('client__user')
+            .select_related('client__user', 'snapshot')
             .annotate(
                 _kind_order=Case(
                     When(recipient_kind=EmailLog.RecipientKind.TO, then=Value(0)),
@@ -361,7 +367,7 @@ def attach_delivery_recipients(logs):
     return logs
 
 
-def delivery_recipient_payloads(log):
+def delivery_recipient_payloads(log, *, retry_actor=None):
     """Return separate To/CC payloads for one grouped history result."""
     from accounts.services.proposal_client_service import build_client_display_name
     from content.models import EmailLog
@@ -380,6 +386,13 @@ def delivery_recipient_payloads(log):
             'client_id': profile.pk if profile else None,
             'client_name': build_client_display_name(profile) if profile else '',
         }
+        if retry_actor is not None:
+            from content.services.email_retry_service import error_message, retry_payload
+
+            payload.update({
+                'id': recipient_log.pk, 'error_message': error_message(recipient_log),
+                **retry_payload(recipient_log, retry_actor),
+            })
         key = (
             'cc_recipients'
             if recipient_log.recipient_kind == EmailLog.RecipientKind.CC

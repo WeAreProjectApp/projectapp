@@ -4,6 +4,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
+import { textContrast } from '../helpers/text-contrast.js';
 import {
   buildingWithUsApiFixture, buildingWithUsContractFixture,
   buildingWithUsOverviewFixture, buildingWithUsProgramFixture,
@@ -176,19 +177,26 @@ test.describe('Admin Building with Us', () => {
     await expect(page.getByTestId('building-with-us-program-history-error')).toHaveCount(0);
   });
 
-  test('opens the synchronized contract from its tab', {
-    tag: [...ADMIN_BUILDING_WITH_US_CONTRACT, '@role:admin', '@outcome:display', '@responsive:commercial'],
-  }, async ({ page }) => {
-    // quality: allow-deep-link (the proposals list is an authenticated entry point; the contract is reached through the sidebar and tab)
-    await openFromSidebar(page);
+  for (const theme of ['light', 'dark']) {
+    test(`opens the synchronized contract from its tab in ${theme}`, {
+      tag: [...ADMIN_BUILDING_WITH_US_CONTRACT, '@role:admin', '@outcome:display', '@responsive:commercial'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (the proposals list is an authenticated entry point; the contract is reached through the sidebar and tab)
+      await page.addInitScript((dark) => localStorage.setItem('projectapp-dark-mode', JSON.stringify(dark)), theme === 'dark');
+      await openFromSidebar(page);
 
-    await page.getByTestId('building-with-us-tab-contract').click();
+      await page.getByTestId('building-with-us-tab-contract').click();
 
-    await expect(page).toHaveURL(/\/es-co\/panel\/building-with-us\?tab=contract$/);
-    await expect(page.getByTestId('building-with-us-mirror-status')).toHaveText('Sincronizado');
-    await expect(page.getByTestId('building-with-us-mirror-link')).toHaveAttribute('href', `/es-co/panel/documents/${contract.mirror.document_id}/edit`);
-    await expect(page.getByTestId('building-with-us-contract-body').getByRole('heading', { level: 1, name: 'Contrato de alianza Building with Us', exact: true })).toHaveText('Contrato de alianza Building with Us');
-  });
+      await expect(page).toHaveURL(/\/es-co\/panel\/building-with-us\?tab=contract$/);
+      await expect(page.getByTestId('building-with-us-mirror-status')).toHaveText('Sincronizado');
+      await expect(page.getByTestId('building-with-us-mirror-link')).toHaveAttribute('href', `/es-co/panel/documents/${contract.mirror.document_id}/edit`);
+      const body = page.getByTestId('building-with-us-contract-body');
+      const heading = body.getByRole('heading', { level: 1, name: 'Contrato de alianza Building with Us', exact: true });
+      await expect(heading).toHaveText('Contrato de alianza Building with Us');
+      expect(await textContrast(heading)).toBeGreaterThanOrEqual(4.5);
+      expect(await textContrast(body.locator('p').first())).toBeGreaterThanOrEqual(4.5);
+    });
+  }
 
   test('warns about an outdated contract mirror', {
     tag: [...ADMIN_BUILDING_WITH_US_CONTRACT, '@role:admin', '@outcome:display'],

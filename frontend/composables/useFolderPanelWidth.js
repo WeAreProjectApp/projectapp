@@ -13,9 +13,9 @@ export const FOLDER_PANEL_DEFAULT = 384; // 24rem; 336 truncaba el nombre de 22 
 export const FOLDER_PANEL_KEY = 'projectapp-documents-folder-width';
 const KEYBOARD_STEP = 16;
 
-function clampWidth(value) {
+function clampWidth(value, fallback = FOLDER_PANEL_DEFAULT) {
   const px = Number(value);
-  if (!Number.isFinite(px)) return FOLDER_PANEL_DEFAULT;
+  if (!Number.isFinite(px)) return fallback;
   return Math.min(FOLDER_PANEL_MAX, Math.max(FOLDER_PANEL_MIN, px));
 }
 
@@ -25,11 +25,13 @@ function clampWidth(value) {
  * es el div del grid, cuyo borde izquierdo coincide con el del panel, así
  * que `clientX - rect.left` ES el ancho pedido.
  */
-export function useFolderPanelWidth(containerRef) {
-  const { ref: width, write, remove } = usePersistedRef(FOLDER_PANEL_KEY, FOLDER_PANEL_DEFAULT);
+export function useFolderPanelWidth(containerRef, options = {}) {
+  const defaultWidth = clampWidth(options.defaultWidth ?? FOLDER_PANEL_DEFAULT);
+  const clamp = value => clampWidth(value, defaultWidth);
+  const { ref: width, write, remove } = usePersistedRef(options.storageKey || FOLDER_PANEL_KEY, defaultWidth);
   // Re-clamp de lo hidratado: un storage viejo, manipulado o de otra versión
   // no puede producir un layout inservible.
-  width.value = clampWidth(width.value);
+  width.value = clamp(width.value);
 
   const dragging = ref(false);
 
@@ -46,7 +48,7 @@ export function useFolderPanelWidth(containerRef) {
     if (!dragging.value || !containerRef.value) return;
     const rect = containerRef.value.getBoundingClientRect();
     if (!rect.width) return;
-    width.value = clampWidth(e.clientX - rect.left);
+    width.value = clamp(e.clientX - rect.left);
   }
 
   function onHandleUp(e) {
@@ -57,7 +59,7 @@ export function useFolderPanelWidth(containerRef) {
   }
 
   function resizeWidth(value) {
-    width.value = clampWidth(value);
+    width.value = clamp(value);
     write(width.value);
   }
 
@@ -75,7 +77,7 @@ export function useFolderPanelWidth(containerRef) {
   // El doble clic vuelve al default Y olvida la preferencia: si el default
   // cambia en el futuro, un valor viejo guardado no lo deja pisado.
   function resetWidth() {
-    width.value = FOLDER_PANEL_DEFAULT;
+    width.value = defaultWidth;
     remove();
   }
 

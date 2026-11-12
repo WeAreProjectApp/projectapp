@@ -63,6 +63,7 @@ describe('ProjectShell back link', () => {
     openSpy.mockRestore();
     delete global.useLocalePath;
     delete global.useI18n;
+    delete global.useRoute;
   });
 
   it.each(['es-co', 'en-us'])('preserves %s when opening the commercial record', async (locale) => {
@@ -85,6 +86,7 @@ describe('ProjectShell back link', () => {
 
     expect(wrapper.get('[data-testid="project-back-to-panel"]').text()).toBe(text.label);
     expect(wrapper.get('[data-testid="project-back-to-panel"]').attributes('title')).toBe(text.title);
+    wrapper.unmount();
   });
 
   it('a client never sees the panel link', () => {
@@ -92,5 +94,6 @@ describe('ProjectShell back link', () => {
     const wrapper = mountShell();
 
     expect(wrapper.find('[data-testid="project-back-to-panel"]').exists()).toBe(false);
+    wrapper.unmount();
   });
 });

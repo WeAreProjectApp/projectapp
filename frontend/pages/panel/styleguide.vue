@@ -1,11 +1,11 @@
 <script setup>
 import { ref } from 'vue'
-import { useDiagnosticDarkMode } from '~/composables/useDiagnosticDarkMode'
+import { useDarkMode } from '~/composables/useDarkMode'
 import { PANEL_ACTIONS } from '~/config/panelActions'
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
 
-const { isDark, toggle } = useDiagnosticDarkMode()
+const { isDark, toggle } = useDarkMode()
 
 // Demo state for components
 const sampleText = ref('Texto de ejemplo')
@@ -168,6 +168,7 @@ const canonicalActionEntries = Object.entries(PANEL_ACTIONS).map(([key, definiti
             class="rounded-xl border border-border-muted p-3 bg-surface flex items-center gap-3"
           >
             <span
+              :data-testid="`styleguide-token-${cls}`"
               class="block w-10 h-10 rounded-lg border border-border-muted"
               :class="cls.startsWith('text-') ? `${cls} flex items-center justify-center font-bold` : cls.startsWith('ring-') ? `ring-2 ${cls}` : cls"
             >

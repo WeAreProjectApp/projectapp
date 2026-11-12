@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Toggle between list and gallery views on /panel/documents via the 'Lista'/'Galería' segmented control (data-testid doc-view-list / doc-view-grid). Gallery renders one card per document with a sanitized markdown mini-preview, client and date, ordered active-state episodes with open durations and a +N overflow badge, plus the same kebab action opening DocumentActionsSheet. That action keeps the contextual accessible name Acciones de <title>, omits the native title and exposes exactly one short application tooltip, Acciones. Subfolder cards render first with dashed borders and act as drag-and-drop targets. The chosen mode persists in localStorage; on mobile the gallery is always used.",
+  "description": "Toggle between list and gallery views on /panel/documents via the 'Lista'/'Galería' segmented control (data-testid doc-view-list / doc-view-grid). Gallery renders one card per document with a sanitized markdown mini-preview, client and date, ordered active-state episodes with open durations and a +N overflow badge, plus the same kebab action opening DocumentActionsSheet. That action keeps the contextual accessible name Acciones de <title>, omits the native title and exposes exactly one short application tooltip, Acciones. Subfolder cards render first with dashed borders and act as drag-and-drop targets. The chosen mode persists in localStorage; on mobile the gallery is always used. La miniatura interpreta escapes Markdown de puntuación y conserva barras literales dentro del código.",
   "expectedSpecs": 1,
   "outcomes": [
     "display"

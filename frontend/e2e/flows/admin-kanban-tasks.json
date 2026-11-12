@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Internal Kanban task board at /panel/tasks (alias /panel/tareas redirects here). Admin can create, edit, move across TO DO/In Progress/Blocked/Done columns, and delete tasks.",
+  "description": "Internal Kanban task board at /panel/tasks (alias /panel/tareas redirects here). Admin can create, edit, move across TO DO/In Progress/Blocked/Done columns, and delete tasks. The seven primary fields in create and edit dialogs are named by their visible labels, preserving values, validation and mouse focus (PA-236).",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

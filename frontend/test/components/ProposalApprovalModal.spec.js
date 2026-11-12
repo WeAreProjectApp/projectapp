@@ -109,10 +109,40 @@ describe('ProposalApprovalModal',()=>{
     await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
     expect(create_request).toHaveBeenCalledWith('proposals/3/approval/',expect.objectContaining({new_client:expect.objectContaining({name:'Cliente nuevo'}),new_project:expect.objectContaining({name:'Sitio'})}));
   });
+  // Falla si posponer intenta validar o crear el cliente, el proyecto o los archivos preparados para el cierre.
+  it('defers acceptance without sending staged closing resources',async()=>{
+    create_request.mockResolvedValueOnce({data:{action:'defer',proposal:{id:3,status:'accepted',project_review_required:true}}});
+    await open();
+    await wrapper.get('[role="switch"]').trigger('click');
+    await addFile([new File(['draft contract'],'Borrador.pdf',{type:'application/pdf'})]);
+    await wrapper.get('[data-testid="approval-project-name"]').setValue('');
+
+    await wrapper.get('[data-testid="approval-defer"]').trigger('click');await flushPromises();
+
+    expect(create_request).toHaveBeenCalledWith('proposals/3/approval/',{action:'defer',accept_proposal:true});
+    expect(wrapper.emitted('completed')).toEqual([[{action:'defer',proposal:{id:3,status:'accepted',project_review_required:true}}]]);
+  });
+  // Falla si el primer cierre incorpora todos los anexos activos aunque la persona sólo seleccione uno.
+  it('confirms only the optional document selected for the packet',async()=>{
+    preview=createPreview({optional_documents:[{id:6,title:'Anexo de servicio'},{id:7,title:'Anexo de soporte'}],selected_document_ids:[]});
+
+    await open();
+    expect(wrapper.get('[data-testid="approval-optional-6"]').element.checked).toBe(false);
+    await wrapper.get('[data-testid="approval-optional-6"]').setValue(true);
+    expect(wrapper.get('[data-testid="approval-packet-preview"]').text()).toContain('Anexo de servicio');
+    expect(wrapper.get('[data-testid="approval-packet-preview"]').text()).not.toContain('Anexo de soporte');
+    await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
+
+    expect(create_request).toHaveBeenCalledWith('proposals/3/approval/',expect.objectContaining({action:'confirm',selected_document_ids:[6]}));
+  });
   it('retries a confirmed packet without remapping the project',async()=>{
     preview=createPreview({linked_project:{id:41,name:'Proyecto',client_profile_id:7},confirmed:true,confirmed_files:[{id:2,title:'Contrato firmado',filename:'Firmado.pdf',size:12,download_url:'/api/proposals/3/approval/files/2/'}]});
     await open({acceptProposal:false});
     expect(wrapper.find('[data-testid="approval-contract-switch"]').exists()).toBe(false);
+    // Falla si un paquete de sólo lectura vuelve a ofrecer diferir o confirmar un segundo cierre.
+    expect(wrapper.get('[data-testid="approval-retry"]').text()).toBe('Reintentar sincronización');
+    expect(wrapper.findAll('[data-testid="approval-defer"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="approval-confirm"]')).toHaveLength(0);
     await wrapper.get('[data-testid="approval-retry"]').trigger('click');await flushPromises();
     expect(create_request).toHaveBeenCalledWith('proposals/3/approval/',{action:'retry',request_id:expect.any(String)});
   });
@@ -169,6 +199,25 @@ describe('ProposalApprovalModal',()=>{
     await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
     expect(create_request).toHaveBeenCalledWith('proposals/3/approval/revisions/',expect.objectContaining({action:'confirm',accept_proposal:false,project_id:41,use_proposal_contracts:false,custom_documents:[]}));
     expect(wrapper.emitted('completed')).toEqual([[{action:'confirm',proposal:{id:3,status:'accepted',project_review_required:false}}]]);
+  });
+
+  // Falla si reabrir una revisión descarta los anexos que el paquete vigente ya había seleccionado.
+  it('preserves the prior optional-document selection when confirming a revision', async()=>{
+    preview=createPreview({
+      confirmed:true,
+      linked_project:{id:41,name:'Proyecto',client_profile_id:7},
+      optional_documents:[{id:6,title:'Anexo de servicio'},{id:7,title:'Anexo de soporte'}],
+      selected_document_ids:[7],
+    });
+
+    await open({acceptProposal:false,revision:true});
+
+    expect(wrapper.get('[data-testid="approval-optional-7"]').element.checked).toBe(true);
+    expect(wrapper.get('[data-testid="approval-packet-preview"]').text()).toContain('Anexo de soporte');
+    expect(wrapper.get('[data-testid="approval-packet-preview"]').text()).not.toContain('Anexo de servicio');
+    await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
+
+    expect(create_request).toHaveBeenCalledWith('proposals/3/approval/revisions/',expect.objectContaining({action:'confirm',project_id:41,selected_document_ids:[7]}));
   });
 
   it('filters retained custom files to required document types', async()=>{
