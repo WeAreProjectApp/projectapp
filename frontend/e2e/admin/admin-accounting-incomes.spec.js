@@ -3376,7 +3376,7 @@ test.describe('Income detail collection status (PA-259)', () => {
         commercial_status: status, issue_date: '2026-11-08', total: '119000.00',
       };
       await mockApi(page, buildHandler({ rows: [incomeRow()], calls, linkedCollectionAccount }));
-      await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
+      await page.goto('/panel', { waitUntil: 'domcontentloaded' });
       await waitForNuxtApp(page);
       await page.locator('aside').getByRole('link', { name: 'Resumen', exact: true }).click();
       await page.getByTestId('accounting-subnav-incomes').click();
@@ -3397,7 +3397,7 @@ test.describe('Income detail collection status (PA-259)', () => {
   }, async ({ page }) => {
     const calls = [];
     await mockApi(page, buildHandler({ rows: [incomeRow()], calls }));
-    await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
     await waitForNuxtApp(page);
     await page.locator('aside').getByRole('link', { name: 'Resumen', exact: true }).click();
     await page.getByTestId('accounting-subnav-incomes').click();
