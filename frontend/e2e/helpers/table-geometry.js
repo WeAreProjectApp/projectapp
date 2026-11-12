@@ -82,7 +82,9 @@ export async function expectContentSizedColumns(row, {
       const bodyCells = [...root.querySelectorAll('tbody tr, [role="row"]')]
         .filter((tableRow) => tableRow.getClientRects().length > 0)
         .map((tableRow) => [...tableRow.querySelectorAll(':scope > td, :scope > [role="cell"]')]
-          .filter((cell) => cell.getClientRects().length > 0)[index])
+          .filter((cell) => cell.getClientRects().length > 0))
+        .filter((rowCells) => rowCells.length === cells.length)
+        .map((rowCells) => rowCells[index])
         .filter(Boolean);
       return [headers[index], ...bodyCells].map(textMeasure);
     };

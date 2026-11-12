@@ -142,6 +142,12 @@ QA devolvió PA225-03 del PR #569 sobre 4d960880: Ingresos mostraba «—» sin 
 
 Acceso al espacio por ID desde el detalle y disponibilidad visible en Proyectos; errores de acceso sin datos anteriores. Aprobación diferida sin aprovisionamiento y anexos opcionales con selección explícita, inicialmente vacía; revisiones conservan la selección previa y su historia. Estos criterios actualizan la política de cierre obligatorio y anexos automáticos registrada en octubre. No se rehabilita la aceptación pública. Sin migraciones ni cambios automáticos de históricos. Validación automatizada exclusivamente en CI y Chrome coordinado con dev-qa; resultados pendientes de la entrega de esta rama.
 
+# PA-241–PA-244 — navegación, ingresos agrupados y estado de clientes (2026-11-07)
+
+Implementación en PR #572, rama `fix/07112026-pa241-244-navigation-clients`, base `main`. El retorno comercial usa el idioma activo; Agrupado reserva espacio flexible legible para concepto/proyecto; el registro de clientes publica filas y contadores de la misma consulta y busca nombres completos; el editor sincroniza el cliente canónico tras aprobar y al recargar sin perder otros borradores. `draft_client.is_email_placeholder` es aditivo y sólo informa la vista; no cambia el manifiesto congelado ni su hash.
+
+Automatizadas exclusivamente en CI. La reprueba manual requiere dupla y SHA servido confirmados; solicitud de asignación enviada a Backlog. No acredita validación visual, cambios de datos, migraciones, merge ni despliegue. PA-225/PA-216 y la dirección persistida mantienen su alcance propio. Guion: `docs/audits/2026-11-07-pa241-244.md`.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.

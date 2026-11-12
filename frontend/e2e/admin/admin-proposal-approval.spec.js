@@ -9,6 +9,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { expectCompactModal } from '../helpers/modal-layout.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 
 test.setTimeout(60_000);
 
@@ -38,6 +39,8 @@ function buildFixture({
   return {
     client,
     project,
+    projects: [project],
+    clients: [client],
     proposal,
     confirmed,
     optionalDocuments,
@@ -101,10 +104,10 @@ async function mockApproval(page, state, { rejectFirst = null } = {}) {
     if (apiPath === 'proposals/alerts/') return json([]);
     if (apiPath === 'proposals/71/detail/') return json({ ...state.proposal });
     if (apiPath === 'proposals/client-profiles/search/' || apiPath === 'proposals/client-profiles/') {
-      if (method === 'GET') return json([state.client]);
+      if (method === 'GET') return json(state.clients);
     }
-    if (apiPath === 'accounting/projects/') return json({ results: [state.project] });
-    if (apiPath === 'projects/') return json({ results: [state.project], meta: { total: 1 } });
+    if (apiPath === 'accounting/projects/') return json({ results: state.projects });
+    if (apiPath === 'projects/') return json({ results: state.projects, meta: { total: state.projects.length } });
     if (apiPath === 'project-states/') return json([{ id: 2, name: 'En desarrollo', is_active: true, merged_into: null, system_key: 'development' }]);
     if (apiPath === 'project-state-groups/') return json([]);
     if (apiPath === 'proposals/71/approval/' && method === 'GET') return json(preview(state));
@@ -119,15 +122,40 @@ async function mockApproval(page, state, { rejectFirst = null } = {}) {
         });
         return json({ ...preview(state), action: 'defer', idempotent: false });
       }
+      if (submission.payload.action === 'retry') {
+        return json({
+          ...preview(state), draft_client: { ...state.draftClient, profile_id: state.draftClient.id },
+          action: 'retry', idempotent: true,
+        });
+      }
+      const legacyProposal = { ...state.proposal, client: { ...state.client } };
       state.confirmed = true;
       state.selectedDocumentIds = submission.payload.selected_document_ids || [];
-      if (submission.payload.new_client) state.client = { ...submission.payload.new_client, id: 102 };
-      if (submission.payload.new_project) state.project = { id: 42, name: submission.payload.new_project.name, client_profile_id: state.client.id };
+      state.draftClient = submission.payload.new_client
+        ? { ...submission.payload.new_client, id: 102 }
+        : state.clients.find((client) => client.id === submission.payload.client_profile_id) || state.client;
+      if (submission.payload.new_client) state.clients.push(state.draftClient);
+      if (submission.payload.new_project) {
+        state.project = { id: 42, name: submission.payload.new_project.name, client_profile_id: state.draftClient.id };
+        state.projects.push(state.project);
+      } else if (submission.payload.project_id) {
+        state.project = state.projects.find((project) => project.id === submission.payload.project_id) || state.project;
+      }
       Object.assign(state.proposal, {
         status: 'accepted', project_review_required: false, linked_project: state.project,
+        client: { ...state.draftClient }, client_name: state.draftClient.name,
+        client_email: state.draftClient.email, client_phone: state.draftClient.phone,
         platform_onboarding_status: 'completed', available_transitions: ['finished'],
       });
-      return json({ ...preview(state), action: submission.payload.action, idempotent: false });
+      return json({
+        ...preview(state),
+        proposal: {
+          ...legacyProposal, status: 'accepted', project_review_required: false,
+          linked_project: state.project, platform_onboarding_status: 'completed', available_transitions: ['finished'],
+        },
+        draft_client: { ...state.draftClient, profile_id: state.draftClient.id },
+        linked_project: state.project, action: submission.payload.action, idempotent: false,
+      });
     }
     if (method !== 'GET') state.otherMutations.push({ apiPath, method });
     return null;
@@ -190,6 +218,74 @@ async function openApprovalFromEditor(page) {
   await page.getByTestId('proposal-action-approve').click();
   await expect(page.getByTestId('approval-defer')).toBeEnabled();
 }
+
+function editorApprovalScenario(kind) {
+  const state = buildFixture();
+  const client = {
+    id: 102, name: 'Cliente Canónico', email: 'canonico@example.test',
+    phone: '+573005551212', company: 'Canónica SAS',
+  };
+  const project = { id: 42, name: 'Proyecto Canónico', client_profile_id: client.id, client: { profile_id: client.id } };
+  if (kind === 'existing') {
+    state.clients.push(client);
+    state.projects.push(project);
+  }
+  return { state, client, project, kind };
+}
+
+function expectEditorApprovalSelection(scenario) {
+  const payload = scenario.state.submissions[0].payload;
+  const expected = {
+    existing: {
+      client_profile_id: scenario.client.id, project_id: scenario.project.id,
+      new_client: undefined, new_project: undefined,
+    },
+    new: {
+      client_profile_id: undefined, project_id: undefined,
+      new_client: expect.objectContaining({ name: scenario.client.name, email: scenario.client.email }),
+      new_project: expect.objectContaining({ name: scenario.project.name }),
+    },
+  };
+  expect({
+    client_profile_id: payload.client_profile_id, project_id: payload.project_id,
+    new_client: payload.new_client, new_project: payload.new_project,
+  }).toEqual(expected[scenario.kind]);
+}
+
+async function openEditorApproval(page) {
+  await page.goto('/es-co/panel/proposals/71/edit', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('proposal-record-header')).toContainText('Propuesta Portal Atlas');
+  await selectProposalDestination(page, 'general', 'general');
+  await page.getByTestId('general-finance-general-discount').fill('17');
+  await page.getByRole('combobox', { name: 'Cambiar estado de la propuesta' }).selectOption('accepted');
+  return page.getByTestId('proposal-approval-modal');
+}
+
+async function expectCanonicalProjectData(page, client, project) {
+  await selectProposalDestination(page, 'project', 'project-data');
+  await expect(page.getByTestId('edit-client-name')).toHaveValue(client.name);
+  await expect(page.getByTestId('edit-client-email')).toHaveValue(client.email);
+  await expect(page.getByTestId('edit-client-phone')).toHaveValue(client.phone);
+  await expect(page.getByTestId('edit-client-company')).toHaveValue(client.company);
+  await expect(page.getByTestId('proposal-linked-project')).toHaveText(project.name);
+}
+
+const editorApprovalActions = {
+  existing: async (page, modal, scenario) => {
+    await modal.getByTestId('approval-client').fill(scenario.client.name);
+    await page.getByTestId('client-autocomplete-option-102').click();
+    await modal.getByRole('radio', { name: 'Seleccionar proyecto existente', exact: true }).check();
+    await modal.getByTestId('approval-project').selectOption('42');
+  },
+  new: async (page, modal, scenario) => {
+    await modal.getByTestId('approval-toggle-client').click();
+    await modal.getByTestId('approval-new-client-name').fill(scenario.client.name);
+    await modal.getByTestId('approval-new-client-email').fill(scenario.client.email);
+    await modal.getByTestId('approval-new-client-phone').fill(scenario.client.phone);
+    await modal.getByTestId('approval-new-client-company').fill(scenario.client.company);
+    await modal.getByTestId('approval-project-name').fill(scenario.project.name);
+  },
+};
 
 test('inline approval links the selected project only after confirmation', {
   tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
@@ -426,6 +522,47 @@ test('review packet is reachable through proposal navigation', {
   await expect(modal.getByTestId('approval-packet-preview')).toContainText('Contrato de producto y servicio Atlas');
   await expect(modal.getByTestId('approval-packet-preview')).toContainText('Technical details');
   expect(state.submissions).toEqual([]);
+});
+
+for (const kind of ['existing', 'new']) {
+  test(`editor immediately shows the ${kind} canonical client after approval (PA-244)`, {
+    tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Catches a frozen approval snapshot surviving until reload or clearing an unrelated draft.
+    const scenario = editorApprovalScenario(kind);
+    await mockApproval(page, scenario.state);
+    const modal = await openEditorApproval(page);
+    await editorApprovalActions[kind](page, modal, scenario);
+    await page.getByTestId('approval-confirm').click();
+    await expect(modal).toHaveCount(0);
+    expectEditorApprovalSelection(scenario);
+    await expect(page.getByTestId('general-finance-general-discount')).toHaveValue('17');
+    await expectCanonicalProjectData(page, scenario.client, scenario.project);
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expectCanonicalProjectData(page, scenario.client, scenario.project);
+  });
+}
+
+test('retrying a confirmed closure keeps an unsaved client phone edit (PA-244)', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  // Catches a retry rehydrating the editor and discarding an unrelated client draft.
+  const state = buildFixture({ status: 'accepted', confirmed: true });
+  const canonical = { id: 102, name: 'Cliente Canónico', email: 'canonico@example.test', phone: '+573005551212', company: 'Canónica SAS' };
+  state.draftClient = canonical;
+  Object.assign(state.proposal, {
+    client: canonical, client_name: canonical.name, client_email: canonical.email,
+    client_phone: canonical.phone, project_review_required: true,
+  });
+  await mockApproval(page, state);
+  await page.goto('/es-co/panel/proposals/71/edit', { waitUntil: 'domcontentloaded' });
+  await selectProposalDestination(page, 'project', 'project-data');
+  await page.getByTestId('edit-client-phone').fill('+573009998877');
+  await page.getByTestId('approval-review-71').click();
+  await page.getByTestId('approval-retry').click();
+  await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
+  await expect(page.getByTestId('edit-client-phone')).toHaveValue('+573009998877');
 });
 
 for (const alias of ['compact', 'portrait']) {

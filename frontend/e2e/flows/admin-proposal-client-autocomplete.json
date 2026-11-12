@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Client picker autocomplete in proposal create/edit: type to search, select a client to auto-fill snapshot fields, fallback \"Crear nuevo\" when no match.",
+  "description": "Client picker autocomplete in proposal create/edit: type to search, select a client to auto-fill snapshot fields, fallback \"Crear nuevo\" when no match. La API también encuentra el nombre completo visible cuando nombre y apellido se guardan en columnas separadas, conservando el control por correo y empresa.",
   "expectedSpecs": 1,
   "outcomes": [
     "display"

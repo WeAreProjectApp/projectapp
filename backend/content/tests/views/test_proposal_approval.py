@@ -53,6 +53,18 @@ def confirm(proposal, profile, actor, **changes):
     return review_proposal(proposal.pk, values, actor=actor, files=[pdf()])
 
 
+def test_review_identifies_the_current_clients_placeholder_email(admin_client, reviewed_proposal, approval_client):
+    """The editor must not expose a generated address as a usable contact."""
+    approval_client.user.email = 'cliente_27@temp.example.com'
+    approval_client.user.save(update_fields=['email'])
+
+    response = admin_client.get(reverse('proposal-approval', args=[reviewed_proposal.pk]))
+
+    assert response.status_code == 200
+    assert response.data['draft_client']['profile_id'] == approval_client.pk
+    assert response.data['draft_client']['is_email_placeholder'] is True
+
+
 def test_defer_accepts_without_provisioning(reviewed_proposal, admin_user):
     """Falla si posponer crea proyecto, paquete o archivos mientras acepta la propuesta."""
     result = review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)

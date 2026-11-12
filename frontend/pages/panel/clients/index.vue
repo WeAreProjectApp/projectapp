@@ -155,6 +155,11 @@
       Cargando clientes...
     </div>
 
+    <div v-else-if="clientsStore.error" role="alert" class="space-y-3 py-16 text-center text-sm text-text-subtle">
+      <p>{{ $t('global.clientRegister.loadError') }}</p>
+      <BaseButton variant="secondary" @click="loadClients()">{{ $t('global.clientRegister.retry') }}</BaseButton>
+    </div>
+
     <!-- Empty -->
     <div
       v-else-if="filteredClients.length === 0"
@@ -1515,22 +1520,14 @@ async function loadClients({ silent = false } = {}) {
   if (clientStatus.value === 'orphans') orphans = true;
   else if (clientStatus.value === 'active') orphans = false;
   const search_ = search.value.trim();
-  await Promise.all([
-    clientsStore.fetchClients({
-      search: search_,
-      orphans,
-      // The endpoint does not paginate and every filter on this page — the
-      // subfilters and their counts included — runs over whatever was loaded,
-      // so ask for the endpoint's hard cap instead of the default 100. Past 500
-      // clients this needs real server-side pagination.
-      limit: 500,
-      archived: clientStatus.value === 'archived',
-      silent,
-    }),
-    // Same search, so the numbers in the selector describe the same table the
-    // list is showing.
-    clientsStore.fetchStatusCounts({ search: search_ }),
-  ]);
+  await clientsStore.fetchClientRegister({
+    search: search_,
+    orphans,
+    // All local filters run over this endpoint's loaded rows (hard cap 500).
+    limit: 500,
+    archived: clientStatus.value === 'archived',
+    silent,
+  });
 }
 
 /**
@@ -1618,6 +1615,8 @@ function compactContextLabel(client) {
 
 function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer);
+  clientsStore.invalidateClientRegister();
+  clientsResetPage();
   searchTimer = setTimeout(loadClients, 250);
 }
 
@@ -1665,6 +1664,7 @@ function applyHighlightFromQuery() {
 usePanelRefresh(refreshAll);
 onBeforeUnmount(() => {
   if (searchTimer) clearTimeout(searchTimer);
+  clientsStore.invalidateClientRegister({ pending: false });
   document.removeEventListener('keydown', handleEditEscape);
 });
 

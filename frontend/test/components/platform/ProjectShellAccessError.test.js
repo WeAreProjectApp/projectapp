@@ -21,6 +21,7 @@ jest.mock('../../../stores/platform-projects', () => ({
 function mountShell() {
   global.useRoute = () => ({ params: { id: '6' }, query: {}, path: '/platform/projects/6' });
   global.useLocalePath = () => (path) => path;
+  global.useI18n = () => ({ t: (key) => key });
   return mount(ProjectShell, {
     slots: { default: '<p>Contenido privado del espacio</p>' },
     global: {
@@ -44,6 +45,7 @@ describe('ProjectShell access errors', () => {
   afterEach(() => {
     delete global.useRoute;
     delete global.useLocalePath;
+    delete global.useI18n;
   });
 
   // Falla si un 403 para la ruta nueva deja visibles datos, navegación o retorno al Panel del proyecto anterior.

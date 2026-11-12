@@ -3,6 +3,10 @@ export default {
       enableLight: "Switch to light mode",
       enableDark: "Switch to dark mode",
     },
+    clientRegister: {
+      loadError: 'Clients could not be loaded. Please try again.',
+      retry: 'Retry',
+    },
     navbar: {
       menu_button: "Menu",
       get_in_touch: "Contact",

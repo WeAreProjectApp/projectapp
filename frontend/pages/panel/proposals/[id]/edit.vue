@@ -23,7 +23,7 @@
       :proposal="approvalProposal || {}"
       :accept-proposal="approvalAccept"
       @close="approvalProposal = null"
-      @completed="approvalCompleted"
+      @completed="onApprovalCompleted"
     />
     <ContractParamsModal
       :visible="showContractModal"
@@ -685,6 +685,17 @@ async function handleStatusChange(newStatus) {
 // The store updates currentProposal on success, so no local assignment needed.
 const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
 
+function onApprovalCompleted(result) {
+  approvalCompleted(result);
+  if (!result.draft_client || result.action !== 'confirm') return;
+  const refreshed = clientFormValues();
+  // Only the fields this operation committed get a new baseline. Other tabs
+  // can still hold unsaved work and must keep their existing dirty state.
+  Object.assign(form, refreshed);
+  Object.assign(savedForm.value, refreshed);
+  creatingNewClient.value = false;
+}
+
 const { updatingId: statusUpdatingId, changeStatus } = useProposalStatusChange({
   requestConfirm,
   onAccept: (record) => openApproval(record, true),
@@ -1065,16 +1076,26 @@ async function syncInvestmentPercentagesFromGeneral() {
   return result.success ? { success: true } : { success: false };
 }
 
+function clientFormValues() {
+  const client = proposal.value.client;
+  // A linked project's owner is authoritative even when a legacy proposal
+  // still carries contact snapshots from its previous client.
+  const linked = Boolean(proposal.value.linked_project && client);
+  return {
+    source_hash: proposal.value.proposal_source_hash,
+    client_id: client?.id ?? null,
+    client_name: linked ? client.name ?? '' : proposal.value.client_name,
+    client_email: client?.is_email_placeholder ? '' : linked ? client.email ?? '' : proposal.value.client_email || '',
+    client_phone: linked ? client.phone ?? '' : proposal.value.client_phone || '',
+    client_company: client?.company ?? '',
+  };
+}
+
 function hydrateFormFromProposal() {
   if (!proposal.value) return;
   Object.assign(form, {
-    source_hash: proposal.value.proposal_source_hash,
+    ...clientFormValues(),
     title: proposal.value.title,
-    client_id: proposal.value.client?.id ?? null,
-    client_name: proposal.value.client_name,
-    client_email: proposal.value.client_email || '',
-    client_phone: proposal.value.client_phone || '',
-    client_company: proposal.value.client?.company || '',
     project_type: proposal.value.project_type || '',
     market_type: proposal.value.market_type || '',
     project_type_custom: proposal.value.project_type_custom || '',

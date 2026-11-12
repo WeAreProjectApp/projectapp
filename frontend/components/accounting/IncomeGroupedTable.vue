@@ -430,11 +430,18 @@ const hasMenuStart = computed(() => (
   props.showActions && props.rowActionsLayout === ROW_ACTION_LAYOUTS.MENU_START
 ));
 
-/** Widths by content, slack shared in proportion — see utils/tableLayout. */
+/** Long names share the remaining space instead of starving the concept. */
 const resolved = computed(() => resolveColumns(props.columns, {
   hasActions: props.showActions,
   rowActionsLayout: props.rowActionsLayout,
   columnLayout: props.columnLayout,
+}).map((column) => {
+  if (props.columnLayout !== 'content'
+    || (!column.responsive?.primary && column.key !== 'project_name')) return column;
+  return {
+    ...column,
+    track: `minmax(${column.minRem}rem, ${column.responsive?.primary ? 2 : 1}fr)`,
+  };
 }));
 
 function ariaSort(column) {
@@ -475,7 +482,7 @@ function visibleColumns(profile) {
   return resolved.value
     .filter((column) => policyFor(column, profile) === 'keep')
     .map((column) => (
-      column.responsive?.primary
+      column.responsive?.primary && profile !== 'landscape'
         ? { ...column, track: 'minmax(0, 1fr)' }
         : column
     ));

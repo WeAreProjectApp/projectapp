@@ -10,7 +10,7 @@
   2. Client list loads from `GET /api/proposals/client-profiles/`, and the per-status counts from `GET /api/proposals/client-profiles/status-counts/`.
   3. Clients render with name, email, proposal count, and orphan/placeholder/inactive badges.
   4. Admin uses the status selector (data-testid: `clients-status-<id>`), labelled with each option's count — sends `?orphans=true/false` / `?inactive=true` and mirrors the choice in `?status=`.
-  5. Admin searches clients by name, email, or company.
+  5. Admin searches clients by full name, email, or company. Rows and status counts publish together for the latest query; obsolete responses are ignored. No matches clears the cards and pagination; a failed load shows a retry action instead of stale results.
   6. Admin expands a client row to view individual proposals (lazy-loaded via `GET /api/proposals/client-profiles/:id/`).
   7. Pressing the global panel refresh button invalidates the per-client detail cache and refetches expanded rows, so renamed/reassigned proposals show up.
 - **Coverage:** ⚠️ Partial
