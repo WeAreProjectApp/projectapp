@@ -76,6 +76,9 @@ class Command(BaseCommand):
             ))
             return
 
+        from procurement.fake_data import clear_examples
+        clear_examples()
+
         # Signed and review PDF evidence protects documents and source messages.
         # A fake reset explicitly clears that graph before those source records.
         project_ids = list(Project.objects.values_list('pk', flat=True))

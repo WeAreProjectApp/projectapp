@@ -93,6 +93,7 @@ OUTBOUND_EMAIL_CHANNELS = {
     'task_deadline_notification': TASKS_OPERATIONS,
     'task_alert_notification': TASKS_OPERATIONS,
     'generic_internal_notification': TASKS_OPERATIONS,
+    'procurement_alert': TASKS_OPERATIONS,
     # Only the in-app (inline, local development) frontend build sends it;
     # production asks the ops toolkit to regenerate instead.
     'frontend_build_failure': TASKS_OPERATIONS,

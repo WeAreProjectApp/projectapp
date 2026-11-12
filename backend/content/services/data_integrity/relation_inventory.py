@@ -103,6 +103,10 @@ _decide(exempt('Confirmación de corta vida del administrador que revisó un cam
         'content.ProposalContractChangeIntent.owner')
 _decide(exempt('Identidad técnica del conector MCP, no un dato del cliente.'), 'content.McpCredential.actor')
 _decide(exempt('Asignación interna de tareas del equipo.'), 'content.Task.assignee')
+_decide(exempt('Decisiones y búsquedas personales del equipo: se conservan en su usuario original, '
+               'sin limpiarse ni reasignarse como relaciones comerciales.'), '''
+    procurement.Classification.owner procurement.SavedSearch.owner
+''')
 
 # ── accounts.Project ─────────────────────────────────────────────────────────
 

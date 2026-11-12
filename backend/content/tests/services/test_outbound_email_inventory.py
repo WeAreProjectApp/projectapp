@@ -118,6 +118,7 @@ def test_operations_inventory_lists_every_channel():
         'frontend_build_failure',
         'linkedin_token_expiry',
         'proposal_notification_diagnostic',
+        'procurement_alert',
     }
 
 
@@ -132,5 +133,5 @@ def test_security_inventory_lists_every_channel():
     }
 
 
-def test_inventory_contains_65_unique_channels():
-    assert len(OUTBOUND_EMAIL_CHANNELS) == 65
+def test_inventory_contains_66_unique_channels():
+    assert len(OUTBOUND_EMAIL_CHANNELS) == 66
