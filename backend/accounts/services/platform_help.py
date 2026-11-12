@@ -8,8 +8,8 @@ from django.db import transaction
 from django.db.models import F, Q
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from accounts.models_platform_help import (
-    ClientPlatformHelpSettings, PlatformGuidedTour, PlatformGuidedTourRevision,
-    PlatformHelpEvent, PlatformHelpSettings, PlatformTourProgress,
+    PlatformGuidedTour, PlatformGuidedTourRevision,
+    PlatformHelpEvent, PlatformTourProgress,
 )
 from accounts.serializers_platform_help import (
     HelpFlagsSerializer, TourContentSerializer, TourProgressSerializer,
@@ -29,12 +29,6 @@ def require_client(actor):
     if not actor.is_authenticated or not actor.is_active or not profile or not profile.is_client or not profile.is_onboarded:
         raise PermissionDenied('Se requiere una cuenta activa de cliente.')
     return profile
-
-
-def _flags(instance):
-    return {'tour_enabled': instance.tour_enabled if instance else True,
-            'video_enabled': instance.video_enabled if instance else True,
-            'version': instance.version if instance else 0}
 
 
 def effective_flags(user):
@@ -68,8 +62,9 @@ def _event(actor, action, subject, changes):
 
 def settings_payload(actor):
     require_admin(actor)
-    return {**{field: features.values_for()[key] for field, key in HELP_FLAGS.items()},
-            'version': features.configuration().version}
+    scope = features.configuration()
+    return {**{field: scope.values.get(key, features.FEATURES[key]['default_enabled']) for field, key in HELP_FLAGS.items()},
+            'version': scope.version}
 
 
 def _client(user_id):
@@ -81,17 +76,24 @@ def client_payload(actor, user_id):
     user = _client(user_id)
     if not user:
         raise NotFound('Cliente no encontrado.')
+    scope = features.configuration(user_id)
+    values = {**features.values_for(), **scope.values}
     return {'user_id': user.pk, 'name': user.get_full_name() or user.email,
-            **{field: features.values_for(user_id)[key] for field, key in HELP_FLAGS.items()}, 'version': features.configuration(user_id).version}
+            **{field: values[key] for field, key in HELP_FLAGS.items()}, 'version': scope.version}
 
 
 def list_clients(actor, page=1, search=''):
     require_admin(actor)
-    users = get_user_model().objects.filter(profile__role='client').select_related('platform_help_settings').order_by('pk')
+    users = get_user_model().objects.filter(profile__role='client').select_related('platform_feature_settings').order_by('pk')
     if search:
         users = users.filter(Q(email__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search))
-    return paginate(users, page, lambda user: {'user_id': user.pk, 'name': user.get_full_name() or user.email,
-                                            **{field: features.values_for(user.pk)[key] for field, key in HELP_FLAGS.items()}, 'version': features.configuration(user.pk).version})
+    defaults = features.values_for()
+    def project(user):
+        scope = getattr(user, 'platform_feature_settings', None)
+        values = {**defaults, **(scope.values if scope else {})}
+        return {'user_id': user.pk, 'name': user.get_full_name() or user.email,
+                **{field: values[key] for field, key in HELP_FLAGS.items()}, 'version': scope.version if scope else 0}
+    return paginate(users, page, project)
 
 
 @transaction.atomic

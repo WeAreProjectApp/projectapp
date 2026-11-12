@@ -32,7 +32,7 @@ const options = item => [
 const choice = item => scope.value === 'client' && item.override === null ? t('platformFeatures.inherit')
   : t((scope.value === 'client' ? item.override : item.global_value) ? 'platformFeatures.enabled' : 'platformFeatures.disabled')
 let searchTimer
-watch(search, () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => run(() => store.searchClients(search.value)), 300) })
+watch(search, () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => store.searchClients(search.value).catch(() => { error.value = t('platformFeatures.error') }), 300) })
 onBeforeUnmount(() => clearTimeout(searchTimer))
 onMounted(() => run(() => Promise.all([store.load(), store.searchClients(), store.loadEvents()])))
 </script>
@@ -41,7 +41,7 @@ onMounted(() => run(() => Promise.all([store.load(), store.searchClients(), stor
   <div class="mx-auto max-w-screen-xl space-y-6" data-testid="platform-feature-admin">
     <h1 class="text-2xl font-semibold text-text-default">{{ t('platformFeatures.title') }}</h1>
     <p class="text-sm text-text-muted">{{ t('platformFeatures.precedence') }}</p>
-    <BaseAlert v-if="error" variant="error" role="alert">{{ error }}</BaseAlert>
+    <BaseAlert v-if="error" variant="danger" role="alert">{{ error }}</BaseAlert>
     <BaseAlert v-if="saved" variant="success" role="status">{{ t('platformFeatures.saved') }}</BaseAlert>
     <div class="flex flex-wrap gap-3">
       <BaseButton :variant="scope === 'global' ? 'primary' : 'secondary'" @click="scope = 'global'">{{ t('platformFeatures.global') }}</BaseButton>
@@ -62,7 +62,7 @@ onMounted(() => run(() => Promise.all([store.load(), store.searchClients(), stor
         <BaseButton v-if="store.clients.page * 20 < store.clients.count" variant="ghost" @click="run(() => store.searchClients(search, store.clients.page + 1))">{{ t('platformFeatures.next') }}</BaseButton>
       </div>
     </section>
-    <p v-if="!selected" class="text-sm text-text-muted" role="status">{{ t(scope === 'client' ? 'platformFeatures.chooseClient' : 'platformFeatures.loading') }}</p>
+    <p v-if="!selected && !error" class="text-sm text-text-muted" role="status">{{ t(scope === 'client' ? 'platformFeatures.chooseClient' : 'platformFeatures.loading') }}</p>
     <section v-else class="grid gap-4 panel-portrait:grid-cols-2">
       <article v-for="item in selected.features" :key="item.key" class="min-w-0 space-y-3 rounded-xl border border-border-default bg-surface p-4" :data-testid="`feature-${item.key}`">
         <h2 class="font-semibold text-text-default">{{ label(item) }}</h2>

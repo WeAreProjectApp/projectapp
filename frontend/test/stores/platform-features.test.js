@@ -2,10 +2,15 @@ import { createPinia, setActivePinia } from 'pinia'
 import { usePlatformFeaturesStore } from '../../stores/platform-features'
 import { usePlatformAuthStore } from '../../stores/platform-auth'
 import { usePlatformApi } from '../../composables/usePlatformApi'
+import { platformFeatureCatalog } from '../../utils/platformFeatures'
 
 jest.mock('../../composables/usePlatformApi', () => ({
   usePlatformApi: jest.fn(), readPlatformSession: jest.fn(), writePlatformSession: jest.fn(), clearPlatformSession: jest.fn(),
 }))
+
+const evaluation = (values = {}) => ({ data: { user_id: 41,
+  features: { ...Object.fromEntries(platformFeatureCatalog.features.map(item => [item.key, item.default_enabled])), ...values },
+} })
 
 describe('Platform availability per identity', () => {
   let api, auth, store
@@ -25,7 +30,7 @@ describe('Platform availability per identity', () => {
   })
 
   it('uses the effective value returned for the current account', async () => {
-    api.get.mockResolvedValue({ data: { user_id: 41, features: { 'platform.bugs': false, 'platform.documents': true } } })
+    api.get.mockResolvedValue(evaluation({ 'platform.bugs': false, 'platform.documents': true }))
 
     await store.refresh()
 
@@ -40,7 +45,7 @@ describe('Platform availability per identity', () => {
     auth.user = { user_id: 42 }
     store.reset()
 
-    finish({ data: { user_id: 41, features: { 'platform.documents': true } } })
+    finish(evaluation({ 'platform.documents': true }))
     await first
 
     expect(store.routeAllowed('/platform/documents')).toBe(false)
@@ -48,7 +53,7 @@ describe('Platform availability per identity', () => {
   })
 
   it('clears earlier values after a failed refresh', async () => {
-    api.get.mockResolvedValueOnce({ data: { user_id: 41, features: { 'platform.documents': true } } })
+    api.get.mockResolvedValueOnce(evaluation({ 'platform.documents': true }))
     await store.refresh()
     api.get.mockRejectedValue(new Error('offline'))
 
@@ -59,7 +64,7 @@ describe('Platform availability per identity', () => {
   })
 
   it('hides a route after a server availability denial', async () => {
-    api.get.mockResolvedValue({ data: { user_id: 41, features: { 'platform.documents': true } } })
+    api.get.mockResolvedValue(evaluation({ 'platform.documents': true }))
     await store.refresh()
 
     store.markDisabled('platform.documents')
@@ -71,5 +76,14 @@ describe('Platform availability per identity', () => {
     auth.role = 'admin'
 
     expect(store.routeAllowed('/platform/documents')).toBe(true)
+  })
+
+  it('rejects an incomplete availability response', async () => {
+    api.get.mockResolvedValue({ data: { user_id: 41, features: null } })
+
+    await store.refresh()
+
+    expect(store.routeAllowed('/platform/documents')).toBe(false)
+    expect(store.error).toBe(true)
   })
 })

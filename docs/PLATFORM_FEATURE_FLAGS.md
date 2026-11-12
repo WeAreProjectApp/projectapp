@@ -101,3 +101,16 @@ y su mismo DevQA validarán sobre un único SHA/entorno autorizado: valores
 iniciales, ambos globales, ambas excepciones, retirada, dos clientes, persistencia,
 permisos, acceso directo, MCP y detección de brecha. El generador canónico añade
 el cliente `[QA] Perfil limited` con Documentos/Bugs apagados; los demás heredan.
+
+
+## Evidencia de implementación
+
+El PR #587 incorpora las pruebas de estas capacidades. Las pruebas antiguas de
+interruptores en las páginas IA/Ayuda pasan a sus funciones actuales (cuotas y
+contenido); la disponibilidad, fallos y conflictos se cubren en la pantalla
+central. La precedencia anterior global-Y-cliente se sustituye explícitamente
+por la excepción del cliente; los casos se actualizan a ese contrato.
+
+La regla prospectiva también está en las fuentes canónicas del toolkit
+(`682d82aa`, incluido en `master` por `7a2c61a9`), con espejo Codex renderizado.
+No se propagó runtime ni se publicó en Slack.

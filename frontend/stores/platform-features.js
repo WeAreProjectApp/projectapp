@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformApi } from '~/composables/usePlatformApi'
-import { featureForRoute, featureForTarget } from '~/utils/platformFeatures'
+import { featureForRoute, featureForTarget, platformFeatureCatalog } from '~/utils/platformFeatures'
 
 const pending = new WeakMap()
 
@@ -42,7 +42,10 @@ export const usePlatformFeaturesStore = defineStore('platform-features', {
       const task = (async () => {
         try {
           const { data } = await usePlatformApi().get('/api/platform/features/', { baseURL: '' })
-          if (generation !== this.generation || userId !== auth.user?.user_id || data.user_id !== userId) return false
+          if (generation !== this.generation || userId !== auth.user?.user_id) return false
+          if (data?.user_id !== userId || !platformFeatureCatalog.features.every(item => typeof data.features?.[item.key] === 'boolean')) {
+            throw new Error('Invalid availability response')
+          }
           this.features = data.features
           this.loaded = true
           this.error = false
@@ -59,4 +62,3 @@ export const usePlatformFeaturesStore = defineStore('platform-features', {
     },
   },
 })
-

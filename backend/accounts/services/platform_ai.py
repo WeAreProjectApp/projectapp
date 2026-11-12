@@ -133,8 +133,8 @@ def require_ai_feature(actor, feature, project=None, *, audio=False, require_pro
 def admin_settings(actor):
     require_admin(actor)
     config = configuration()
-    flags = features.configuration()
-    return {**SettingsSerializer(config).data, **{field: features.values_for()[key] for field, key in AI_FLAGS.items()},
+    flag_values = features.values_for()
+    return {**SettingsSerializer(config).data, **{field: flag_values[key] for field, key in AI_FLAGS.items()},
             'version': config.version, 'credentials': credential_status()}
 
 
@@ -157,9 +157,10 @@ def update_settings(actor, data):
     return admin_settings(actor)
 
 
-def client_data(profile):
+def client_data(profile, feature_values=None):
+    feature_values = features.values_for(profile.user_id) if feature_values is None else feature_values
     return {'user_id': profile.user_id, 'name': profile.user.get_full_name() or profile.user.email,
-            **{field: features.values_for(profile.user_id)[key] for field, key in AI_FLAGS.items()},
+            **{field: feature_values[key] for field, key in AI_FLAGS.items()},
             'ai_request_limit': profile.ai_request_limit, 'ai_window_minutes': profile.ai_window_minutes,
             'version': profile.updated_at.isoformat()}
 

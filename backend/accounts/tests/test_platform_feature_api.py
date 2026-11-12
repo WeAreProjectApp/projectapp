@@ -115,3 +115,15 @@ def test_client_override_reenables_global_disabled_route(client_api, client_user
 
     assert response.status_code == 200
 
+
+def test_project_summary_omits_disabled_module_data(client_api, client_user, project):
+    ClientPlatformFeatureSettings.objects.create(user=client_user, values={
+        'platform.bugs': False, 'platform.delivery': False, 'platform.hosting': False,
+    })
+
+    response = client_api.get(f'/api/accounts/projects/{project.pk}/')
+
+    assert response.status_code == 200
+    assert response.data['bugs_open_count'] is None
+    assert response.data['phases_total_amount'] is None
+    assert response.data['next_hosting_payment'] is None

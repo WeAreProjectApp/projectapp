@@ -19,7 +19,7 @@
             {{ project.changes_pending_count ?? 0 }}
           </p>
         </div>
-        <div class="rounded-2xl border border-border-default bg-surface p-4">
+        <div v-if="features.enabled('platform.hosting')" class="rounded-2xl border border-border-default bg-surface p-4">
           <p class="text-xs uppercase tracking-wider text-text-muted">Próximo pago de hosting</p>
           <p class="mt-2 text-2xl font-semibold text-text-default">
             {{ project.next_hosting_payment ? formatCurrency(project.next_hosting_payment.amount) : '—' }}
@@ -33,6 +33,7 @@
 
       <!-- Phases -->
       <PhaseList
+        v-if="features.enabled('platform.delivery')"
         :project-id="project.id"
         :phases="phases"
         @add-phase="onAddPhase"
@@ -148,12 +149,13 @@ const editForm = reactive({ name: '', description: '' })
 const editError = ref('')
 
 async function loadPhases() {
+  if (!features.enabled('platform.delivery')) { phases.value = []; return }
   if (!project.value) return
   phases.value = await projectsStore.loadPhases(project.value.id)
 }
 
 onMounted(loadPhases)
-watch(() => project.value?.id, loadPhases)
+watch(() => [project.value?.id, features.enabled('platform.delivery')], loadPhases)
 
 function onAddPhase() { showAddPhase.value = true }
 async function onPhasesAdded() {

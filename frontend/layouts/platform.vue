@@ -210,14 +210,31 @@ watch(() => route.fullPath, () => {
 })
 
 async function refreshFeatures() {
+  const actorId = authStore.user?.user_id
   if (!authStore.isClient) return
   const ready = await featureStore.refresh()
+  const [{ usePlatformAIStore }, { usePlatformChatbotStore }, { usePlatformHelpStore }] = await Promise.all([
+    import('~/stores/platform-ai'), import('~/stores/platform-chatbot'), import('~/stores/platform-help'),
+  ])
+  if (actorId !== authStore.user?.user_id) return
+  if (ready) await Promise.all([usePlatformAIStore().refreshCapabilities(), usePlatformChatbotStore().refreshCapabilities(), usePlatformHelpStore().fetchHelp(route.params.id)])
+  if (actorId !== authStore.user?.user_id) return
   if (!ready || !featureStore.routeAllowed(route.path)) {
     await navigateTo(localePath('/platform/unavailable') + (ready ? '' : '?reason=load'))
   }
 }
 
-watch(() => authStore.user?.user_id, () => { featureStore.reset(); refreshFeatures() })
+watch(() => authStore.user?.user_id, async (id) => {
+  featureStore.reset()
+  const [{ usePlatformAIStore }, { usePlatformChatbotStore }, { usePlatformHelpStore }] = await Promise.all([
+    import('~/stores/platform-ai'), import('~/stores/platform-chatbot'), import('~/stores/platform-help'),
+  ])
+  if (id !== authStore.user?.user_id) return
+  usePlatformAIStore().reset()
+  usePlatformChatbotStore().bindActor(id)
+  usePlatformHelpStore().reset()
+  refreshFeatures()
+})
 
 async function handleLogout() {
   authStore.logout()

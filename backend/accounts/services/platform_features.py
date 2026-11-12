@@ -84,7 +84,8 @@ def require_feature(actor, key):
 def payload(actor, user_id=None):
     require_admin(actor)
     user = client(user_id) if user_id is not None else None
-    defaults, scope = configuration(), configuration(user_id)
+    defaults = configuration()
+    scope = defaults if user_id is None else configuration(user_id)
     result = []
     for key, item in FEATURES.items():
         global_value = defaults.values.get(key, item['default_enabled'])

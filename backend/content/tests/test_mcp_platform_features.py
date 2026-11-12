@@ -52,3 +52,23 @@ def test_mcp_rejects_nonadministrative_actor(credential, client_user):
     result = call_tool_inprocess('projects', 'get_platform_feature_flags', {}, credential=credential)
 
     assert result['error']['code'] == 'ACCESS_REJECTED'
+
+
+def test_mcp_client_override_can_return_to_inheritance(credential, client_user):
+    from accounts.services import platform_features
+    platform_features.update(credential.actor, {'expected_version': 0, 'values': {'platform.documents': False}})
+    preview = call_tool_inprocess('projects', 'update_platform_client_feature_flags', {
+        'user_id': client_user.pk, 'expected_version': 0, 'values': {'platform.documents': True},
+    }, credential=credential)
+    call_tool_inprocess('projects', 'confirm_action', {'confirmation_id': preview['confirmation_id']}, credential=credential)
+    preview = call_tool_inprocess('projects', 'update_platform_client_feature_flags', {
+        'user_id': client_user.pk, 'expected_version': 1, 'values': {'platform.documents': None},
+    }, credential=credential)
+
+    call_tool_inprocess('projects', 'confirm_action', {'confirmation_id': preview['confirmation_id']}, credential=credential)
+    result = call_tool_inprocess('projects', 'get_platform_client_feature_flags', {'user_id': client_user.pk}, credential=credential)
+
+    flag = next(item for item in result['features'] if item['key'] == 'platform.documents')
+    assert flag['effective'] is False
+    assert flag['override'] is None
+    assert flag['source'] == 'global'

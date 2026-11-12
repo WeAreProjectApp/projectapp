@@ -162,8 +162,7 @@
         "platform-deliverable-upload-version",
         "platform-deliverable-attachments",
         "platform-deliverable-commercial-pdf",
-        "platform-deliverable-technical-pdf",
-        "platform-deliverable-data-model-entities"
+        "platform-deliverable-technical-pdf"
       ]
     },
     {
@@ -181,7 +180,8 @@
       "targets": [],
       "api_routes": [
         "platform-project-data-model-entities",
-        "platform-project-data-model-template"
+        "platform-project-data-model-template",
+        "platform-deliverable-data-model-entities"
       ]
     },
     {
