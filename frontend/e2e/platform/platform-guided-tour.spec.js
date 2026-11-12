@@ -8,6 +8,7 @@ import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
 import { setPlatformAuth, mockPlatformClient } from '../helpers/platform-auth.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
+import { textContrast } from '../helpers/text-contrast.js'
 import { viewportUse, VIEWPORTS } from '../helpers/viewports.js'
 import {
   PLATFORM_GUIDED_TOUR_GENERAL,
@@ -591,3 +592,56 @@ test.describe('Platform guided tour responsive anchors', () => {
     })
   })
 })
+
+
+for (const viewport of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+  for (const theme of ['dark', 'light']) {
+    test.describe(`Skip contrast ${viewport} ${theme} (PA-250)`, () => {
+      test.use({ ...viewportUse(viewport), colorScheme: theme })
+
+      test.beforeEach(async ({ page }) => {
+        await page.addInitScript((value) => localStorage.setItem('platform_theme', value), theme)
+      })
+
+      for (const [context, enter] of [
+        ['general', openProjects],
+        ['project', openOwnedProject],
+      ]) {
+        test(`keeps the initial ${context} skip readable before a manual replay`, {
+          tag: [...(context === 'general' ? PLATFORM_GUIDED_TOUR_GENERAL : PLATFORM_GUIDED_TOUR_PROJECT), '@role:platform-client', '@outcome:display'],
+        }, async ({ page }) => {
+          const general = tour({ id: 450, slug: 'general', context: 'general', status: context === 'project' ? 'completed' : '', target: 'welcome', title: 'Bienvenido a tu plataforma' })
+          const contextual = tour({ id: 451, slug: 'project-overview', context: 'project', target: 'project-summary', title: 'Resumen' })
+          const progress = await setupClient(page, { globalTours: [general], projectTours: [contextual] })
+          const current = context === 'general' ? general : contextual
+          await enter(page)
+          const popover = page.getByTestId('platform-tour-popover')
+          const skip = page.getByTestId('platform-tour-skip')
+          await expect(popover).toHaveAttribute('data-theme', theme)
+          await expect(skip).toBeFocused()
+          expect(await textContrast(skip)).toBeGreaterThanOrEqual(4.5)
+
+          await popover.getByText(current.content.title_es, { exact: true }).click()
+          expect(await textContrast(skip)).toBeGreaterThanOrEqual(4.5)
+          await skip.hover()
+          expect(await textContrast(skip)).toBeGreaterThanOrEqual(4.5)
+          await page.mouse.down()
+          expect(await textContrast(skip)).toBeGreaterThanOrEqual(4.5)
+          await page.mouse.up()
+
+          await expect(popover).toHaveCount(0)
+          await expect.poll(() => latestProgress(progress, current.id)?.body.status).toBe('skipped')
+          await page.reload({ waitUntil: 'domcontentloaded' })
+          await expect(page.getByTestId('platform-help-trigger').filter({ visible: true })).toBeVisible()
+          await expect(popover).toHaveCount(0)
+          await page.getByTestId('platform-help-trigger').filter({ visible: true }).click()
+          await page.getByTestId(`platform-help-tour-${current.slug}`).click()
+          await expect(popover).toContainText(current.content.title_es)
+          expect(await textContrast(skip)).toBeGreaterThanOrEqual(4.5)
+          await skip.click()
+          await expect.poll(() => latestProgress(progress, current.id)?.body.manual).toBe(true)
+        })
+      }
+    })
+  }
+}
