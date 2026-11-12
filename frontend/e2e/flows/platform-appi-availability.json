@@ -6,7 +6,7 @@
     "platform-client"
   ],
   "priority": "P1",
-  "description": "Cliente ve el lanzador de Appi sólo cuando chatbot está habilitado globalmente y para su cuenta. Si faltan las claves o el proveedor necesario, el lanzador explica que no está disponible y no abre un chat; al recuperar disponibilidad, puede abrir Appi sin mezclar el estado privado de otra sesión.",
+  "description": "El lanzador se muestra según el valor efectivo del chatbot, con excepción del cliente sobre global. IA y audio parten apagados; las credenciales y la preparación técnica siguen siendo condiciones adicionales. Cambiar de cuenta descarta estado privado anterior.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

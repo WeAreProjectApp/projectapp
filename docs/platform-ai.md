@@ -3,8 +3,10 @@
 ## Operación
 
 En **Plataforma → Configuración de IA** (`/panel/platform/ai`) el equipo administra
-activación global y por cliente, proveedores, plantillas ES/EN y consumo. Las dos
-funciones empiezan apagadas; un apagado global prevalece. El chatbot tiene su
+proveedores, plantillas ES/EN, cupos y consumo. La disponibilidad se administra en
+**Plataforma → Feature flags** (`/panel/platform/feature-flags`): IA y audio parten
+apagados y la excepción explícita del cliente prevalece sobre el global. Ver
+[catálogo y precedencia](PLATFORM_FEATURE_FLAGS.md). El chatbot tiene su
 propio frente de implementación y consume los contratos compartidos descritos aquí.
 
 El redactor se elige por función: `claude-haiku-5-5` inicialmente, o `gpt-6-luna`.
@@ -125,7 +127,7 @@ reservas no se exponen como recursos administrativos editables.
 
 Aplicar las migraciones mediante el deploy, provisionar la llave privada y cargar
 credenciales desde el panel. Validar primero en desarrollo y después con un cliente
-piloto; habilitar global y cliente explícitamente. Verificar el flujo completo,
+piloto; configurar la disponibilidad global o la excepción del cliente en Feature flags. Verificar el flujo completo,
 los casos sin permisos y el marcador antes de ampliar la activación. Las pruebas
 automáticas usan settings_test y fronteras de proveedor simuladas, sin costo de API.
 

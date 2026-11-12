@@ -10,6 +10,8 @@
   "expectedSpecs": 1,
   "outcomes": [
     "success",
+    "error",
+    "failure",
     "display"
   ]
 }

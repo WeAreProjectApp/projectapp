@@ -6251,7 +6251,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-panel-unsaved-guard` | admin | P2 | display,success,failure | 1 |
 | `admin-partnership-legacy-redirects` | admin | P2 | success,error | — |
 | `admin-platform-guided-tour-authoring` | admin | P2 | success,error,failure,display | 1 |
-| `admin-platform-help-settings` | admin | P1 | success,display | 1 |
+| `admin-platform-help-settings` | admin | P1 | success,error,failure,display | 1 |
 | `admin-platform-help-videos` | admin | P2 | display,success,error,failure | — |
 | `admin-portfolio-create` | admin | P2 | display,success,error | 1 |
 | `admin-portfolio-delete` | admin | P2 | display,success | 1 |
@@ -8189,12 +8189,12 @@ Guía de voz al abrir voluntariamente el formulario real con voz disponible; no 
 - **Rol:** admin
 - **E2E:** `frontend/e2e/admin/admin-platform-help.spec.js`
 
-Configuración global y por cliente de recorridos y videos, con control de versión e historial de vistos por usuario.
+Administración de Ayuda, contenido e historial de vistos, con enlace a Feature flags para la disponibilidad global y por cliente.
 
 | Resultado | Interacción y evidencia |
 |---|---|
 | display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
-| success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
+| success | Abrir la gestión central o guardar contenido de ayuda desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
@@ -8220,11 +8220,11 @@ Borradores bilingües con destinos conocidos, orden de pasos, vista previa, revi
 ### Panel: configuración de IA de Plataforma
 
 Entrada: iniciar sesión como staff, abrir **Plataforma → Configuración de IA**.
-Las dos funciones empiezan apagadas y el global apagado prevalece sobre el cliente.
+IA y audio parten apagados. Su disponibilidad se configura en Feature flags y la excepción del cliente prevalece sobre el global.
 
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
-| success | Cambiar activación y guardar. | Se conserva la configuración confirmada y se muestra confirmación. |
+| success | Abrir la gestión central de disponibilidad. | El enlace lleva a Feature flags; no existen controles de activación duplicados. |
 | success | Guardar una clave, elegir el redactor o un cupo global/cliente. | Sólo se informa presencia/versión de la clave; los dos canales comparten la política. |
 | success | Editar, previsualizar o restaurar una plantilla. | Vista previa sin proveedor; guardar/restaurar crea una versión. |
 | error | Previsualizar una plantilla con marcadores no permitidos. | Error visible, sin revisión nueva ni llamada al modelo. |
@@ -8321,11 +8321,11 @@ Cliente abre sus conversaciones privadas de Appi, cambia entre ellas, carga mens
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-appi.spec.js`
 
-Cliente ve el lanzador de Appi sólo cuando chatbot está habilitado globalmente y para su cuenta. Si faltan las claves o el proveedor necesario, el lanzador explica que no está disponible y no abre un chat; al recuperar disponibilidad, puede abrir Appi sin mezclar el estado privado de otra sesión.
+Cliente ve el lanzador de Appi sólo cuando el valor efectivo del chatbot está habilitado para su cuenta; la excepción del cliente prevalece sobre el global. Si faltan las claves o el proveedor necesario, el lanzador explica que no está disponible y no abre un chat; al recuperar disponibilidad, puede abrir Appi sin mezclar el estado privado de otra sesión.
 
 | Resultado | Interacción y evidencia |
 |---|---|
-| display | Entrar por la navegación normal como cliente y comprobar que el lanzador se oculta cuando el global o el cliente están apagados, y queda deshabilitado cuando falta preparación del proveedor. |
+| display | Entrar por la navegación normal como cliente y comprobar que el lanzador se oculta cuando su valor efectivo está apagado, y queda deshabilitado cuando falta preparación del proveedor. |
 | success | Con chatbot activo y disponible, abrir Appi desde el lanzador y comprobar que aparece el panel con su propósito y el campo de consulta. |
 | error | Cambiar a una cuenta sin capacidad de chatbot y comprobar que no conserva conversaciones, borrador ni cuota de la cuenta anterior. |
 | failure | Fallar la lectura de capacidades; no se abre un chat con estado incierto y el lanzador no permite una consulta facturable. |

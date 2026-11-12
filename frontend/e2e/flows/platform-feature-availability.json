@@ -6,7 +6,7 @@
     "client"
   ],
   "priority": "P1",
-  "description": "Omitir navegación apagada, denegar entrada directa, volver a Proyectos y tratar fallos sin habilitar funciones.",
+  "description": "Omitir navegación apagada, denegar entrada directa, volver a Proyectos y tratar fallos sin habilitar funciones. Al cambiar de identidad se limpian evaluaciones y capacidades de IA/Ayuda; las respuestas tardías no se aplican a otra cuenta.",
   "outcomes": [
     "success",
     "error",

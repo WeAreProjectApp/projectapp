@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Configurar valores globales, excepciones por cliente, herencia, persistencia y conflictos sin conceder permisos.",
+  "description": "Configurar valores globales, excepciones por cliente, herencia, persistencia y conflictos sin conceder permisos. Incluye búsqueda dinámica, procedencia, auditoría y conservación del valor mostrado ante conflictos o errores.",
   "outcomes": [
     "success",
     "error",
