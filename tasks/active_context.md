@@ -7,6 +7,11 @@ apps de negocio; las credenciales y evidencias externas siguen exentas.
 Validación automatizada exclusivamente en CI; no se operan servidores DEV ni
 se ejecutan migraciones desde el worktree. Ver `docs/FAKE_DATA_COVERAGE.md`.
 
+
+## 2026-11-06 — PA-206 / PA-207 / PA-210 — en validación
+
+Nueva carpeta desde el encabezado abre el formulario existente con destino visible y contexto de carpeta/proyecto. Gestionar carpetas reutiliza el selector con búsqueda y rutas, y su árbol muestra ancestros. El editor Visual distingue el código en línea mediante tokens del tema, sin alterar su serialización. Sin cambios de esquema. Pruebas automatizadas exclusivamente en CI; DevQA recibió el preaviso para el recorrido Chrome sobre datos aislados. La aprobación visual y el CI se registrarán con SHA en el informe de la sesión.
+
 ## 2026-10-29 — Documento pendiente en cuentas de cobro
 
 En implementación: diferimiento explícito del vínculo con auditoría, filtro, radar y paridad MCP; los históricos y PA-72 conservan su criterio. Rama `feat/29102026-pending-billing-document`; migración `accounts.0090_pending_billing_document`, sin aplicar sobre el servicio.
