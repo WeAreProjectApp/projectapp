@@ -587,6 +587,7 @@ import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useTooltipTexts } from '~/composables/useTooltipTexts';
 import { toSlug } from '~/utils/slugify';
+import { getExpiryDays, expiryFromDays } from '~/utils/proposalExpiry';
 
 const props = defineProps({
   proposal: { type: Object, required: true },
@@ -737,23 +738,10 @@ async function saveSlug() {
   }
 }
 
-const DEFAULT_EXPIRY_DAYS = 21;
-const padDate = (n) => String(n).padStart(2, '0');
-function getExpiryDaysFromStr(datetimeStr) {
-  if (!datetimeStr) return DEFAULT_EXPIRY_DAYS;
-  const diff = new Date(datetimeStr) - Date.now();
-  return Math.max(1, Math.round(diff / (24 * 60 * 60 * 1000)));
-}
-// Hydration and direct date edits only derive the displayed days. Write back
-// exclusively from the days input so loading saved dates never dirties the form.
 const expiryDaysInput = computed({
-  get: () => getExpiryDaysFromStr(form.expires_at),
+  get: () => getExpiryDays(form.expires_at),
   set: (days) => {
-    const safeDays = Number.isInteger(days) && days > 0 ? days : DEFAULT_EXPIRY_DAYS;
-    const expiry = new Date(Date.now() + safeDays * 24 * 60 * 60 * 1000);
-    const dateStr = `${expiry.getFullYear()}-${padDate(expiry.getMonth() + 1)}-${padDate(expiry.getDate())}`;
-    const timeStr = form.expires_at ? form.expires_at.slice(11, 16) : `${padDate(expiry.getHours())}:${padDate(expiry.getMinutes())}`;
-    form.expires_at = `${dateStr}T${timeStr}`;
+    form.expires_at = expiryFromDays(days, form.expires_at);
   },
 });
 

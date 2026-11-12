@@ -370,4 +370,10 @@ const safeHtml = computed(() => {
   background-color: rgba(250, 243, 224, 0.08);
   color: #e5e7eb;
 }
+/* HTML emitted by Visual puts paragraphs inside header cells. Keep their
+   default text on the cell's palette, including Professional and dark mode. */
+.markdown-preview :deep(.md-table th .md-p) { color: inherit; }
+.markdown-preview--professional :deep(.md-table th .md-p) { color: inherit; }
+:global(.dark) .markdown-preview :deep(.md-table th .md-p),
+:global(.dark) .markdown-preview--professional :deep(.md-table th .md-p) { color: inherit; }
 </style>

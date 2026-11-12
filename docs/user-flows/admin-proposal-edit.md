@@ -15,6 +15,7 @@
   7. Success feedback displays.
 - **Branches:**
   - [General — PA-226] Abrir o recargar una propuesta conserva su vencimiento sin activar el aviso de cambios pendientes, incluso si ya venció. Editar un dato o los días de vigencia activa el aviso; restituir el valor guardado lo retira. Guardar elimina el aviso y conserva los cambios al recargar; un fallo conserva el borrador y la confirmación de salida. La fecha escrita directamente, incluida una hora cercana a medianoche, no se recalcula a partir de los días mostrados.
+  - [Vencimiento] Días suma fechas calendario en la zona local del navegador y conserva la hora. La carga no escribe cambios; edición, reversión, guardado y reapertura conservan la correspondencia.
   - [Datos del proyecto] Proyecto → Datos está disponible en todos los estados. Reúne el cliente y los contactos con guardado propio; una propuesta ya vinculada conserva su cliente. El proyecto actual se muestra allí y su cambio exige destino del mismo cliente, motivo, revisión y confirmación.
   - [Recursos y correos] Recursos pertenece a Propuesta. Los enlaces anteriores a Comunicación → Recursos abren la nueva ubicación. Firma, funcionalidades y fases del correo se guardan desde Comunicación → Correos sin sobrescribir cambios pendientes en General.
   - [Disponibilidad de Documentos] La pestaña está disponible en todos los estados y permanece seleccionada cuando la propuesta pasa a finalizada. General conserva los PDFs originales de propuestas en borrador, vencidas y finalizadas, distintos de los documentos formales.

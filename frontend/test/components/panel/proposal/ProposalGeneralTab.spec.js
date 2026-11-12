@@ -53,7 +53,7 @@ describe('ProposalGeneralTab expiry', () => {
   it.each([
     ['expired', '2026-10-15T14:30', '1'],
     ['future', '2026-11-20T14:30', '14'],
-    ['late future', '2026-11-20T23:30', '15'],
+    ['late future', '2026-11-20T23:30', '14'],
     ['empty', '', '21'],
   ])('preserves the saved %s expiry during hydration', async (_label, savedDate, days) => {
     const form = createForm();
@@ -84,7 +84,7 @@ describe('ProposalGeneralTab expiry', () => {
 
     await wrapper.get('[data-testid="proposal-expiry-date"]').setValue('2026-11-20T23:30');
 
-    expect(wrapper.get('[data-testid="proposal-expiry-days"]').element.value).toBe('15');
+    expect(wrapper.get('[data-testid="proposal-expiry-days"]').element.value).toBe('14');
     expect(form.expires_at).toBe('2026-11-20T23:30');
   });
 

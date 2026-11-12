@@ -111,7 +111,7 @@ for (const fixture of [
 
       await expiryDate(page).fill('2026-11-20T23:30');
       await expect(notice(page)).toBeVisible();
-      await expect(page.getByTestId('proposal-expiry-days')).toHaveValue('15');
+      await expect(page.getByTestId('proposal-expiry-days')).toHaveValue('14');
       await expect(expiryDate(page)).toHaveValue('2026-11-20T23:30');
       await expiryDate(page).fill(proposal.expires_at.slice(0, 16));
 

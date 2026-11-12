@@ -3,6 +3,13 @@
     <Transition name="fade-modal">
       <div
         v-if="modelValue"
+        ref="dialogRef"
+        role="dialog"
+        :aria-modal="childOpen ? undefined : 'true'"
+        :aria-labelledby="titleId"
+        :aria-hidden="childOpen ? 'true' : undefined"
+        :inert="childOpen"
+        tabindex="-1"
         class="fixed inset-0 z-[9990] flex items-stretch justify-stretch bg-black/50 p-0 backdrop-blur-sm panel-portrait:items-center panel-portrait:justify-center panel-portrait:p-4"
         @click.self="close"
       >
@@ -18,7 +25,7 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-base font-semibold text-text-default">Gestionar carpetas</h3>
+                  <h3 :id="titleId" class="text-base font-semibold text-text-default">Gestionar carpetas</h3>
                   <p class="text-xs text-text-muted mt-0.5">Las raíces de proyecto son automáticas; sus subcarpetas y las propias se gestionan aquí</p>
                 </div>
               </div>
@@ -124,7 +131,7 @@
       Un solo contrato de borrado de carpeta en toda la app: este modal delega
       en DeleteFolderModal en vez de repetir un panel inline sin reja de
       confirmación. Anidado sin conflicto: este Teleport va a z-[9990] y
-      BaseModal a z-[9999], y el focus trap vive sólo en BaseModal.
+      BaseModal a z-[9999]; el gestor pausa su captura mientras el hijo está abierto.
     -->
     <DeleteFolderModal
       v-model="showDeleteFolder"
@@ -148,7 +155,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, toRef, useId, watch } from 'vue';
+import { useFocusTrap } from '~/composables/useFocusTrap';
 import DocumentFolderSelect from '~/components/panel/documents/DocumentFolderSelect.vue';
 import FolderManagerTree from '~/components/panel/documents/FolderManagerTree.vue';
 import DeleteFolderModal from '~/components/panel/documents/DeleteFolderModal.vue';
@@ -172,6 +180,47 @@ const deletingFolder = ref(null);
 const showDeleteFolder = ref(false);
 const errorMsg = ref('');
 const newNameError = ref('');
+const dialogRef = ref(null);
+const titleId = `${useId()}-folder-manager-title`;
+const childOpen = computed(() => showFolderForm.value || showDeleteFolder.value);
+
+useFocusTrap(dialogRef, {
+  active: toRef(props, 'modelValue'),
+  paused: childOpen,
+  initialFocus: () => dialogRef.value?.querySelector('[data-testid="folder-manager-new-name"]'),
+});
+
+// BaseModal closes before this parent's inert attribute is removed. Restore
+// the nested opener after the DOM update, when it can receive focus again.
+let childOpener = null;
+watch(childOpen, async (open, wasOpen) => {
+  if (typeof document === 'undefined') return;
+  if (open) {
+    childOpener = document.activeElement;
+  } else if (wasOpen) {
+    const opener = childOpener;
+    childOpener = null;
+    await nextTick();
+    if (props.modelValue && !childOpen.value && opener && document.contains(opener)) {
+      opener.focus();
+    }
+  }
+});
+
+let previousOverflow = null;
+watch([() => props.modelValue, childOpen], ([open]) => {
+  if (typeof document === 'undefined') return;
+  if (open) {
+    if (previousOverflow === null) previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  } else if (previousOverflow !== null) {
+    document.body.style.overflow = previousOverflow;
+    previousOverflow = null;
+  }
+}, { flush: 'post', immediate: true });
+onBeforeUnmount(() => {
+  if (previousOverflow !== null) document.body.style.overflow = previousOverflow;
+});
 
 watch(() => props.modelValue, async (open) => {
   if (open) {
@@ -223,6 +272,7 @@ async function handleCreate() {
 }
 
 function startEdit(folder) {
+  dialogRef.value?.querySelector(`[data-testid="folder-manager-row-${folder.id}"] [aria-label="Editar carpeta"]`)?.focus();
   editingFolder.value = folder;
   deletingFolder.value = null;
   showFolderForm.value = true;

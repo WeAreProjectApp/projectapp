@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin creates folders from the listing header through FolderFormModal, with a visible destination defaulting to the open folder or the selected project managed root, retaining its client/project. Saving returns to the originating listing. FolderManagerModal creates folders with a searchable parent picker, explicit null root option, full branch context in filtered results and visible ancestor paths in its tree. Choosing the destination commits its numeric ID; typing alone preserves the selection. Existing shared edit/delete dialogs, archive and sibling-only reordering remain available.",
+  "description": "Admin creates folders from the listing header through FolderFormModal, with a visible destination defaulting to the open folder or the selected project managed root, retaining its client/project. Saving returns to the originating listing. FolderManagerModal creates folders with a searchable parent picker, explicit null root option, full branch context in filtered results and visible ancestor paths in its tree. Choosing the destination commits its numeric ID; typing alone preserves the selection. Existing shared edit/delete dialogs, archive and sibling-only reordering remain available. Gestionar carpetas es un diálogo con nombre accesible, foco inicial en Nombre y retorno al disparador; desde el cajón cerrado retorna a Cambiar navegación.",
   "expectedSpecs": 1,
   "knownGaps": "Drag-reorder remains outside these ticket regressions. PA-206/PA-207 add project-root, subfolder and missing-root creation, cancellation, duplicate-name rejection and partial-name destination selection. Browser validation against isolated data is tracked separately from mocked CI.",
   "outcomes": [

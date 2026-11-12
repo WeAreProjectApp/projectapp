@@ -1263,8 +1263,11 @@ function selectFolderFromDrawer(id) {
   showFolderDrawer.value = false;
 }
 
-function openFolderManagerFromDrawer() {
+async function openFolderManagerFromDrawer() {
   showFolderDrawer.value = false;
+  // Let the drawer return focus to its persistent trigger before the manager
+  // captures its opener. The drawer's Gestionar button is about to unmount.
+  await nextTick();
   openFolderManager();
 }
 
