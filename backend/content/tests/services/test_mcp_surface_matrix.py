@@ -102,19 +102,12 @@ def _check_a_different_surface(report):
 
 
 def _check_the_wrong_tool_for_a_feature(report):
-    surface = next(item for item in report['surfaces'] if item['result'] != 'exempt')
-    feature = next(
-        item for item in surface['feature_checks']
-        if any(
-            surface['id'] in row['view_ids'] and row['id'] not in item['candidate_tools']
-            for row in report['rows']
-        )
-    )
-    other = next(
-        row for row in report['rows']
-        if surface['id'] in row['view_ids'] and row['id'] not in feature['candidate_tools']
-    )
-    feature['checks'] = [other['id']]
+    surface = next(item for item in report['surfaces'] if item['id'] == '/panel')
+    feature = next(item for item in surface['feature_checks'] if item['id'] == 'panel-command-center')
+    wrong_tool = next(item for item in report['rows'] if item['id'] == 'operations:list_monitoring_cases')
+    assert surface['id'] in wrong_tool['view_ids']
+    assert wrong_tool['id'] not in feature['candidate_tools']
+    feature['checks'] = [wrong_tool['id']]
 
 
 def test_static_matrix_stays_unverified_until_a_functional_run():

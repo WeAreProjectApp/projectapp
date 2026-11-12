@@ -185,7 +185,12 @@ def test_canonical_business_tools_list_appear_once_in_catalog_capabilities(
     )
     connector.credentials.all().delete()
     token = f'{slug}-catalog-capabilities'
-    _credential(connector, 'Catalog capabilities', token)
+    _credential(
+        connector,
+        'Catalog capabilities',
+        token,
+        allowed_tools=[tool['name'] for tool in TOOLS_BY_SLUG[slug]],
+    )
 
     listed = _endpoint(api_client, token, 'tools/list', slug=slug)
     catalog = super_client.get('/api/mcp-connectors/')

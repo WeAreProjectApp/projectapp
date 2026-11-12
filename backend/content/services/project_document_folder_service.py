@@ -324,7 +324,7 @@ def _synchronize_root(root, project, *, created):
         return _update_root(root, project, created=created)
 
 
-def project_root_values(root, project):
+def project_root_values(root, project, *, name_conflicts=None):
     """Read-only target shared by synchronization and integrity previews."""
     expected = {
         'name': project.name,
@@ -336,7 +336,9 @@ def project_root_values(root, project):
         'archived_via_folder_id': None,
     }
     if root.name != project.name:
-        matches = _manual_name_matches(project.name, exclude_folder_id=root.pk)
+        matches = name_conflicts
+        if matches is None:
+            matches = _manual_name_matches(project.name, exclude_folder_id=root.pk)
         if matches:
             expected.pop('name')
     return expected
@@ -344,11 +346,15 @@ def project_root_values(root, project):
 
 def _update_root(root, project, *, created):
     update_fields = []
-    expected = project_root_values(root, project)
+    name_conflicts = (
+        _manual_name_matches(project.name, exclude_folder_id=root.pk)
+        if root.name != project.name else []
+    )
+    expected = project_root_values(root, project, name_conflicts=name_conflicts)
     if 'name' not in expected:
         logger.warning(
-            'Keeping document root %s name for project %s: manual root conflict',
-            root.pk, project.pk,
+            'Keeping document root %s name for project %s: manual root conflict %s',
+            root.pk, project.pk, [folder.pk for folder in name_conflicts],
         )
     for field, value in expected.items():
         if getattr(root, field) != value:
