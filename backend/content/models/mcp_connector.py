@@ -64,7 +64,7 @@ class McpConnector(models.Model):
             defaults={
                 'token_hash': self.token_hash,
                 'token_prefix': self.token_prefix,
-                'catalog': 'canonical' if self.slug in {'offerings', 'programs'} else 'legacy',
+                'catalog': 'canonical' if self.slug in {'offerings', 'programs', 'data-integrity', 'projects'} else 'legacy',
             },
         )
         credential.token_hash = self.token_hash

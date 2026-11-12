@@ -71,4 +71,15 @@ describe('editorial format round trips', () => {
     expect([...host.querySelectorAll('td')].map((cell) => cell.style.textAlign)).toEqual(['left', 'center', 'right']);
     editor.destroy();
   });
+
+  // Catches merged cells reverting to a rectangular table when the editor returns to source mode.
+  it('retains merged table cell dimensions through source conversion', () => {
+    // quality: allow-fragile-selector (Cell spans and literal cell text are the persisted table contract.)
+    const html = '<table><tbody><tr><td colspan="2">Unida</td><td rowspan="2">Vertical</td></tr><tr><td>Uno</td><td>Dos</td></tr></tbody></table>';
+    const host = document.createElement('div');
+    host.innerHTML = sourceToHtml(htmlToSource(html));
+
+    expect([...host.querySelectorAll('td')].map((cell) => [cell.getAttribute('colspan'), cell.getAttribute('rowspan')])).toEqual([['2', null], [null, '2'], [null, null], [null, null]]);
+    expect([...host.querySelectorAll('td')].map((cell) => cell.textContent)).toEqual(['Unida', 'Vertical', 'Uno', 'Dos']);
+  });
 });

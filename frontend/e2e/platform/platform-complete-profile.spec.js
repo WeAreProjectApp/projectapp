@@ -10,6 +10,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PLATFORM_COMPLETE_PROFILE } from '../helpers/flow-tags.js';
+import { PANEL_VIEWPORTS } from '../helpers/viewports.js';
 import {
   setPlatformAuth,
   mockPlatformAdmin,
@@ -25,6 +26,27 @@ const meResponse = (user) => ({
 test.describe('Platform Complete Profile', () => {
   // SPA routes need longer timeout for Vite on-demand compilation on dev server
   test.setTimeout(60_000);
+
+  for (const profile of ['compact', 'desktop']) {
+    test(`exposes the eight profile fields through their visible labels at ${profile}`, {
+      tag: [...PLATFORM_COMPLETE_PROFILE, '@role:platform-client', '@outcome:display'],
+    }, async ({ page }) => {
+      await page.setViewportSize(PANEL_VIEWPORTS[profile]);
+      await setPlatformAuth(page, { user: mockPlatformClientIncompleteProfile });
+      await mockApi(page, async ({ apiPath }) => apiPath === 'accounts/me/' ? meResponse(mockPlatformClientIncompleteProfile) : null);
+      // quality: allow-deep-link (incomplete profiles land on this form through the authentication guard)
+      await page.goto('/es-co/platform/complete-profile', { waitUntil: 'domcontentloaded' });
+      await page.getByText('Nombre', { exact: true }).click();
+
+      await expect(page.getByLabel('Nombre', { exact: true })).toBeFocused();
+      for (const label of ['Nombre', 'Apellido', 'Empresa', 'Teléfono', 'Cédula', 'Fecha de nacimiento', 'Sexo', 'Nivel de educación']) {
+        const control = page.getByLabel(label, { exact: false });
+        await expect(control).toHaveAccessibleName(new RegExp(`^${label}`));
+        expect(await control.evaluate((element) => Array.from(element.labels, (item) => item.htmlFor))).toEqual([await control.getAttribute('id')]);
+      }
+      await expect(page.getByRole('button', { name: /completar perfil/i })).toBeDisabled();
+    });
+  }
 
   test('renders complete-profile form with all required fields', {
     tag: [...PLATFORM_COMPLETE_PROFILE, '@role:platform-client'],

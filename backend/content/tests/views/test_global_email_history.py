@@ -1,3 +1,5 @@
+"""Global outbound email history API coverage."""
+
 import uuid
 from datetime import timedelta
 from unittest.mock import patch
@@ -19,7 +21,6 @@ from content.models import (
     EmailLog,
 )
 from content.services.email_snapshot_service import EmailSnapshotCaptureError
-
 
 pytestmark = pytest.mark.django_db
 
@@ -288,25 +289,53 @@ def test_date_window_excludes_older_send(admin_client):
     assert [row['id'] for row in response.data['results']] == [current.pk]
 
 
-def test_admin_can_read_security_email_body(admin_client):
+def test_credential_history_row_is_redacted(admin_client):
+    """Fails if an access-message list row exposes retained content or resending."""
     body = EmailBody.objects.create(
-        text='Tu código es 123456',
-        html='<p>Tu código es <strong>123456</strong></p>',
+        text='ACCESS_VALUE_FOR_TEST_ONLY',
+        html='<p>ACCESS_VALUE_FOR_TEST_ONLY</p>',
     )
     log = make_log(
-        'verification_code_onboarding',
+        'login_code',
         audience=EmailLog.Audience.SECURITY,
         body=body,
     )
+
+    response = global_history(admin_client)
+
+    row = response.data['results'][0]
+    assert row['id'] == log.pk
+    assert row['snapshot_state'] == 'redacted'
+    assert row['has_body'] is False
+    assert row['can_resend'] is False
+    assert 'ACCESS_VALUE_FOR_TEST_ONLY' not in str(row)
+
+
+def test_credential_history_body_is_forbidden(admin_client):
+    """Fails if an administrator can recover an access secret from history."""
+    log = make_log('login_code', audience=EmailLog.Audience.SECURITY)
 
     response = admin_client.get(reverse(
         'standalone-email-body',
         kwargs={'log_id': log.pk},
     ))
 
-    assert response.status_code == 200
-    assert response.data['text'] == 'Tu código es 123456'
-    assert '123456' in response.data['html']
+    assert response.status_code == 403
+    assert response.data['code'] == 'credential_content_protected'
+
+
+def test_credential_history_resend_is_forbidden(admin_client):
+    """Fails if an administrator can reissue a credential message from history."""
+    log = make_log('login_code', audience=EmailLog.Audience.SECURITY)
+
+    response = admin_client.post(
+        reverse('resend-standalone-email', kwargs={'log_id': log.pk}),
+        {'recipient': 'another@example.com'},
+        format='json',
+    )
+
+    assert response.status_code == 403
+    assert EmailLog.objects.filter(template_key='login_code').count() == 1
 
 
 def test_anonymous_user_cannot_read_email_body(api_client):

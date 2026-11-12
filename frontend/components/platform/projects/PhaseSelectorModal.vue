@@ -1,10 +1,17 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="visible" role="dialog" aria-modal="true" aria-labelledby="phase-selector-title" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" @click.self="$emit('close')">
-        <div class="w-full max-w-3xl rounded-3xl border border-border-default bg-surface p-6 shadow-2xl">
+      <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" @click.self="$emit('close')">
+        <div
+          ref="dialogRef"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="titleId"
+          tabindex="-1"
+          class="w-full max-w-3xl rounded-3xl border border-border-default bg-surface p-6 shadow-2xl focus:outline-none focus:ring-2 focus:ring-focus-ring"
+        >
           <div class="mb-6 flex items-center justify-between">
-            <h2 id="phase-selector-title" class="text-xl font-medium text-text-default">{{ mode === 'create' ? 'Nuevo proyecto' : 'Agregar fases' }}</h2>
+            <h2 :id="titleId" class="text-xl font-medium text-text-default">{{ mode === 'create' ? 'Nuevo proyecto' : 'Agregar fases' }}</h2>
             <BaseButton variant="ghost" icon-only size="sm" aria-label="Cerrar" @click="$emit('close')">×</BaseButton>
           </div>
 
@@ -91,7 +98,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toRef, useId, watch } from 'vue'
+import { useFocusTrap } from '~/composables/useFocusTrap'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 
 const props = defineProps({
@@ -102,6 +110,10 @@ const props = defineProps({
   clientId: { type: Number, default: 0 },
 })
 const emit = defineEmits(['close', 'created', 'phases-added'])
+
+const dialogRef = ref(null)
+const titleId = `${useId()}-title`
+useFocusTrap(dialogRef, { active: toRef(props, 'visible') })
 
 const store = usePlatformProjectsStore()
 const step = ref(1)

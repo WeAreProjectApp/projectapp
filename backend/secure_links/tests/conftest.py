@@ -20,9 +20,14 @@ def _reset_throttles():
 
 @pytest.fixture
 def staff_user(db):
-    return get_user_model().objects.create_user(
+    user = get_user_model().objects.create_user(
         username='secure-staff', password='test-password', is_staff=True,
     )
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': UserProfile.ROLE_ADMIN},
+    )
+    return user
 
 
 @pytest.fixture
@@ -35,6 +40,10 @@ def staff_client(staff_user):
 @pytest.fixture
 def regular_client(db):
     user = get_user_model().objects.create_user(username='secure-regular', password='test-password')
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': UserProfile.ROLE_CLIENT},
+    )
     client = APIClient()
     client.force_login(user)
     return client

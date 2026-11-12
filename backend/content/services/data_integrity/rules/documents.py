@@ -603,7 +603,7 @@ def _documents_apart_from_folder(scope, own_field, folder_field):
         .order_by('pk'), DOCUMENT)
 
 
-@rule(id='DC9', domain='documents', severity='low', fix_kinds=(REPORT_ONLY,),
+@rule(id='DC9', domain='documents', severity='low', fix_kinds=(RELINK, REPORT_ONLY), version=2,
       title='Documento de un cliente en la carpeta de otro',
       description='El documento es de un cliente y está en una carpeta de otro. La carpeta organiza y no es dueña, '
                   'así que puede ser intencional; si no lo es, se mueve o se reasigna desde el Gestor Documental.')
@@ -612,6 +612,7 @@ def detect_document_in_other_client_folder(scope):
         folder = document.folder
         yield Finding(
             rule_id='DC9',
+            inputs={'folder_id': {'label': 'ID de la carpeta de destino', 'type': 'integer', 'required': True}},
             subjects=(RecordRef(DOCUMENT, document.pk, document.title), RecordRef(FOLDER, folder.pk, folder.name)),
             evidence={'document': document.pk, 'folder': folder.pk,
                       'client_user': [document.client_user_id, folder.client_user_id]},
@@ -621,7 +622,7 @@ def detect_document_in_other_client_folder(scope):
         )
 
 
-@rule(id='DC10', domain='documents', severity='low', fix_kinds=(REPORT_ONLY,),
+@rule(id='DC10', domain='documents', severity='low', fix_kinds=(RELINK, REPORT_ONLY), version=2,
       title='Documento de un proyecto en la carpeta de otro',
       description='El documento es de un proyecto y está en una carpeta de otro proyecto. La carpeta organiza y no '
                   'es dueña, así que puede ser intencional; si no lo es, se mueve o se reasigna desde el Gestor '
@@ -631,6 +632,7 @@ def detect_document_in_other_project_folder(scope):
         folder = document.folder
         yield Finding(
             rule_id='DC10',
+            inputs={'folder_id': {'label': 'ID de la carpeta de destino', 'type': 'integer', 'required': True}},
             subjects=(RecordRef(DOCUMENT, document.pk, document.title), RecordRef(FOLDER, folder.pk, folder.name),
                       RecordRef(PROJECT, document.project_id, document.project.name)),
             evidence={'document': document.pk, 'folder': folder.pk,
@@ -643,7 +645,7 @@ def detect_document_in_other_project_folder(scope):
 
 # ── DC11 · active document without a folder ─────────────────────────────────
 
-@rule(id='DC11', domain='documents', severity='low', fix_kinds=(REPORT_ONLY,),
+@rule(id='DC11', domain='documents', severity='low', fix_kinds=(RELINK, REPORT_ONLY), version=2,
       title='Documento activo sin carpeta',
       description='Un documento activo no está en ninguna carpeta, así que sólo aparece en «Sin carpeta» del Gestor '
                   'Documental. Se archiva en la carpeta que corresponda desde el Gestor.')
@@ -664,6 +666,7 @@ def detect_unfiled_document(scope):
             owner = f' ({_association_text(document.client_user, document.project)})'
         yield Finding(
             rule_id='DC11',
+            inputs={'folder_id': {'label': 'ID de la carpeta de destino', 'type': 'integer', 'required': True}},
             subjects=(RecordRef(DOCUMENT, document.pk, document.title),),
             evidence={'document': document.pk},
             message=f'«{document.title}»{owner} no está en ninguna carpeta: sólo aparece en «Sin carpeta» del Gestor '

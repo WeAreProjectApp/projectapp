@@ -83,20 +83,16 @@ class TestSessionTokenBridge:
 
         assert response.status_code == 403
 
-    def test_staff_without_profile_auto_creates_admin_profile(self, api_client, staff_no_profile):
-        """Fails if the original Panel first-visit bootstrap is lost."""
+    def test_staff_without_profile_gets_403(self, api_client, staff_no_profile):
+        """Fails if a profileless session can mint Platform authority."""
         api_client.force_login(staff_no_profile)
         assert not UserProfile.objects.filter(user=staff_no_profile).exists()
 
         response = api_client.post(BRIDGE_URL)
 
-        assert response.status_code == 200
-        profile = UserProfile.objects.get(user=staff_no_profile)
-        assert profile.role == UserProfile.ROLE_ADMIN
-        assert profile.is_onboarded is True
-
-        data = response.json()
-        assert data['user']['role'] == 'admin'
+        assert response.status_code == 403
+        assert 'tokens' not in response.data
+        assert not UserProfile.objects.filter(user=staff_no_profile).exists()
 
     @pytest.mark.parametrize('role', [UserProfile.ROLE_ADMIN, UserProfile.ROLE_CLIENT])
     def test_jwt_only_request_cannot_bootstrap_platform_authority(self, staff_user, role):
@@ -163,8 +159,8 @@ class TestSessionTokenBridge:
         assert 'tokens' not in response.data
         assert not UserProfile.objects.filter(user=staff_no_profile).exists()
 
-    def test_staff_session_with_csrf_creates_admin_profile(self, staff_no_profile):
-        """Fails if protected Panel bootstrap cannot create its first profile."""
+    def test_staff_session_with_csrf_cannot_create_profile(self, staff_no_profile):
+        """Fails if CSRF validation bypasses the required-profile guard."""
         api = APIClient(enforce_csrf_checks=True)
         api.force_login(staff_no_profile)
         csrf_request = RequestFactory().get('/')
@@ -173,9 +169,6 @@ class TestSessionTokenBridge:
 
         response = api.post(BRIDGE_URL, HTTP_X_CSRFTOKEN=csrf_token)
 
-        profile = UserProfile.objects.get(user=staff_no_profile)
-        assert response.status_code == 200
-        assert profile.role == UserProfile.ROLE_ADMIN
-        assert profile.is_onboarded is True
-        assert response.data['tokens']['access']
-        assert response.data['tokens']['refresh']
+        assert response.status_code == 403
+        assert 'tokens' not in response.data
+        assert not UserProfile.objects.filter(user=staff_no_profile).exists()

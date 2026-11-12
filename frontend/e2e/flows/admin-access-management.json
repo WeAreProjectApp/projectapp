@@ -1,0 +1,17 @@
+{
+  "id": "admin-access-management",
+  "name": "Administración de accesos autorizados",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "El equipo registra clientes sin acceso, busca y filtra cuentas, habilita o deshabilita con confirmación y consulta actividad. Equipo reservado a superusuarios.",
+  "expectedSpecs": 3,
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

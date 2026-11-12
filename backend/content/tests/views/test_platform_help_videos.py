@@ -1,9 +1,10 @@
 """Tutorial access uses JWT, feature capabilities and versioned resources."""
 import pytest
+from accounts.models import UserProfile
+from accounts.services.tokens import get_tokens_for_user
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models import UserProfile
 from content.models import VideoResource
 from content.services import platform_video_service as service
 
@@ -23,7 +24,7 @@ def tutorial_user(django_user_model, monkeypatch):
 
 def jwt_client(user):
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(user)}')
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {get_tokens_for_user(user)["access"]}')
     return client
 
 

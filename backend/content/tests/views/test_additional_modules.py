@@ -3,6 +3,7 @@ from io import BytesIO
 from unittest.mock import patch
 
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from freezegun import freeze_time
 from pypdf import PdfReader
@@ -398,6 +399,10 @@ def test_staff_session_preview_is_not_tracked(catalog):
     _commerce, _experience, landing, _pwa = catalog
     user = get_user_model().objects.create_user(
         username='preview-admin', password='preview-pass', is_staff=True,
+    )
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': UserProfile.ROLE_ADMIN},
     )
     share = create_share(user, [landing])
     client = APIClient()

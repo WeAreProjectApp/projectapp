@@ -69,6 +69,7 @@ const meta = computed(() => {
       <DocumentMarkdownBody
         v-if="excerpt"
         :markdown="excerpt"
+        standard-markdown
         variant="mini"
         class="px-4 py-3 pointer-events-none select-none"
       />

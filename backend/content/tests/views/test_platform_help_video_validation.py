@@ -5,12 +5,12 @@ import subprocess
 from unittest.mock import Mock
 
 import pytest
+from accounts.models import UserProfile
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models import UserProfile
 from content.models import VideoResource
 from content.services import video_resource_service
 
@@ -30,6 +30,11 @@ PROBE_ERROR = 'Usa un MP4 válido con video H.264 de hasta 4K y audio AAC opcion
 def staff_api(django_user_model):
     user = django_user_model.objects.create_user(
         'tutorial-validation-admin', password='test-only', is_staff=True,
+    )
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
     )
     client = APIClient()
     client.force_login(user)
@@ -95,8 +100,8 @@ def test_client_catalog_rejects_missing_profile(django_user_model):
 
     response = client.get('/api/platform/help/videos/')
 
-    assert response.status_code == 403
-    assert str(response.data['detail']) == 'Se requiere una cuenta de cliente activa.'
+    assert response.status_code == 401
+    assert response.data['code'] == 'token_not_valid'
 
 
 @pytest.mark.parametrize('module', [

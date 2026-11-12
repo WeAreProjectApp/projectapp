@@ -346,6 +346,9 @@ def resend_email_log(log, recipients, cc_recipients=()):
     from content.services import email_log_service
     from content.services.email_delivery_service import EmailDeliveryGateway
 
+    from content.services.email_privacy_policy import credential_email
+    if credential_email(log.template_key):
+        raise EmailSnapshotResendError('Los mensajes de acceso no se reenvían desde el historial.')
     snapshot = log.snapshot
     recipients = [recipients] if isinstance(recipients, str) else list(recipients)
     cc_recipients = (

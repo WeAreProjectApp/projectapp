@@ -1,10 +1,9 @@
 /**
  * E2E tests for the admin login entry point and the panel session guard.
  *
- * Admin authentication is Django-native: /panel/login is a static hand-off
- * page whose only job is to link out to the Django admin. There is no SPA
- * credential form to drive here. Real Django form and CAPTCHA interactions
- * are covered by captcha/panel-login-captcha.spec.js with its isolated server.
+ * Admin authentication retains Django password handoff while exposing an
+ * authorized email-code alternative. CAPTCHA interactions are covered by
+ * captcha/panel-login-captcha.spec.js with its isolated server.
  *
  * The second describe block covers the companion flow
  * admin-panel-session-expired: what happens when a browser without a valid
@@ -13,20 +12,79 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
-import { ADMIN_LOGIN, ADMIN_PANEL_SESSION_EXPIRED } from '../helpers/flow-tags.js';
+import { ADMIN_LOGIN, ADMIN_PANEL_SESSION_EXPIRED, AUTHORIZED_LOGIN } from '../helpers/flow-tags.js';
 
 test.describe('Admin Login', () => {
-  test('the login page hands off to the Django admin', {
-    tag: [...ADMIN_LOGIN, '@role:admin', '@outcome:display'],
+  test('password login remains available while an email code reaches the returned panel redirect', {
+    tag: [...AUTHORIZED_LOGIN, '@outcome:success', '@role:admin'],
   }, async ({ page }) => {
-    // quality: allow-no-interaction (admin login is Django-native — /panel/login only
-    // links out to /admin/, there is no SPA credential form to exercise; declared
-    // abstention recorded in docs/USER_FLOW_MAP.md)
-    // Fails if the hand-off link to the Django admin is removed or its href drifts.
-    await page.goto('/panel/login', { waitUntil: 'domcontentloaded' });
+    // Fails if the code journey removes the password fallback, posts a different
+    // challenge, or follows a redirect other than the backend's safe destination.
+    const posts = [];
+    await mockApi(page, async ({ route, apiPath, method }) => {
+      if (apiPath === 'auth/config/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ csrf_token: 'csrf', google_client_id: '' }) };
+      }
+      if (apiPath === 'auth/panel/email-request/' && method === 'POST') {
+        posts.push({ apiPath, body: route.request().postDataJSON() });
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ challenge_id: 'panel-challenge', detail: 'Si el correo está registrado y habilitado, recibirás un código.', retry_after: 0 }) };
+      }
+      if (apiPath === 'auth/panel/email-verify/' && method === 'POST') {
+        posts.push({ apiPath, body: route.request().postDataJSON() });
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ redirect: '/panel/access' }) };
+      }
+      if (apiPath === 'auth/check/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'code-admin', is_staff: true, is_superuser: true } }) };
+      }
+      if (apiPath === 'accounts/access/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0, page: 1, pages: 1, counts: {}, can_manage_team: true }) };
+      }
+      return null;
+    });
 
-    const adminLink = page.getByRole('link', { name: /Django Admin/i });
-    await expect(adminLink).toHaveAttribute('href', '/admin/');
+    await page.goto('/panel/login?next=/panel/access', { waitUntil: 'domcontentloaded' });
+
+    const passwordLink = page.getByRole('link', { name: 'Entrar con contraseña' });
+    await expect(passwordLink).toHaveAttribute('href', '/admin/login/?next=%2Fpanel%2Faccess');
+    await page.getByRole('tab', { name: 'Código por correo' }).click();
+    await page.getByTestId('access-email').fill('admin@example.com');
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    await expect(page.getByRole('status')).toHaveText('Si el correo está registrado y habilitado, recibirás un código.');
+    await page.getByTestId('access-code').fill('123456');
+    await page.getByRole('button', { name: 'Verificar e iniciar sesión' }).click();
+
+    await expect(page).toHaveURL(/\/panel\/access$/);
+    expect(posts).toEqual([
+      { apiPath: 'auth/panel/email-request/', body: { email: 'admin@example.com', recaptcha_token: '' } },
+      { apiPath: 'auth/panel/email-verify/', body: { challenge_id: 'panel-challenge', code: '123456', next: '/panel/access' } },
+    ]);
+  });
+
+  test('a failed email-code verification tells the administrator that the code cannot be used', {
+    tag: [...AUTHORIZED_LOGIN, '@outcome:failure', '@role:admin'],
+  }, async ({ page }) => {
+    // Fails if an unavailable or expired code error is hidden, leaving the
+    // operator unable to recover through the visible password or retry paths.
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/config/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ csrf_token: 'csrf', google_client_id: '' }) };
+      }
+      if (apiPath === 'auth/panel/email-request/' && method === 'POST') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ challenge_id: 'expired-challenge', detail: 'Si el correo está registrado y habilitado, recibirás un código.', retry_after: 0 }) };
+      }
+      if (apiPath === 'auth/panel/email-verify/' && method === 'POST') {
+        return { status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'No pudimos verificar el código. Intenta de nuevo.' }) };
+      }
+      return null;
+    });
+
+    await page.goto('/panel/login', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('access-email').fill('admin@example.com');
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    await page.getByTestId('access-code').fill('123456');
+    await page.getByRole('button', { name: 'Verificar e iniciar sesión' }).click();
+
+    await expect(page.getByRole('alert')).toHaveText('No pudimos verificar el código. Intenta de nuevo.');
   });
 });
 

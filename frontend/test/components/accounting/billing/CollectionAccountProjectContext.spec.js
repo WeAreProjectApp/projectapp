@@ -78,6 +78,22 @@ describe('CollectionAccountProjectContext', () => {
     mockProjectContextRequests();
   });
 
+  it('announces the contract source form when its action is toggled', async () => {
+    // Fails if the visible action no longer discloses its associated form to keyboard users.
+    const wrapper = mountContext({ modelValue: { billing_nature: 'contract' } });
+    await flushPromises();
+    const action = wrapper.get('[data-testid="billing-link-contract-open"]');
+
+    await action.trigger('click');
+
+    expect(action.attributes('aria-expanded')).toBe('true');
+    expect(wrapper.get('[data-testid="billing-link-contract-form"]').attributes('id'))
+      .toBe(action.attributes('aria-controls'));
+    await action.trigger('click');
+    expect(action.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('[data-testid="billing-link-contract-form"]').exists()).toBe(false);
+  });
+
   it('explains that the operator must choose contract or hosting', async () => {
     // Fails if a project charge reverts to the generic nature/link blocker.
     const wrapper = mountContext();

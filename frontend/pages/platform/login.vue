@@ -67,13 +67,15 @@
           </BaseButton>
         </form>
 
+        <div class="mt-6 border-t border-border-default pt-6"><AlternativeLogin surface="platform" @authenticated="alternativeAuthenticated" /></div>
+
         <p class="mt-6 text-center text-sm text-text-muted">
           <NuxtLink :to="localePath('/platform/forgot-password')" class="underline">¿Olvidaste tu contraseña?</NuxtLink>
         </p>
       </div>
 
       <p class="mt-8 text-center text-sm leading-6 text-white/40" data-enter>
-        Si es tu primer acceso, después de validar tus credenciales temporales te guiaremos para configurar tu contraseña definitiva.
+        También puedes activar tu primer acceso con código o Google sin crear contraseña. Completa tu perfil para continuar.
       </p>
     </div>
   </div>
@@ -83,6 +85,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
+import AlternativeLogin from '~/components/auth/AlternativeLogin.vue'
 import LoginCaptcha from '~/components/auth/LoginCaptcha.vue'
 import BackgroundGradientAnimation from '~/components/ui/BackgroundGradientAnimation.vue'
 
@@ -161,13 +164,22 @@ async function handleSubmit() {
     return
   }
 
+  await finishLogin()
+}
+
+async function alternativeAuthenticated(data) {
+  authStore.applyAuthenticatedSession(data.tokens, data.user)
+  await finishLogin()
+}
+
+async function finishLogin() {
   if (authStore.needsProfileCompletion) {
     await navigateTo(localePath('/platform/complete-profile'))
     return
   }
 
   const defaultTarget = localePath(authStore.isClient ? '/platform/documents' : '/platform/dashboard')
-  const redirectTarget = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
+  const redirectTarget = typeof route.query.redirect === 'string' && /^\/(?![\/\\])/.test(route.query.redirect) && !route.query.redirect.includes('\\')
     ? route.query.redirect
     : defaultTarget
 

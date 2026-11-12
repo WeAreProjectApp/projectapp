@@ -1,3 +1,16 @@
+> **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
+> pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
+> lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant
+> explícito y confirmación. Contrato: `docs/project-lifecycle-deletion.md`.
+
+> **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. La fusión comercial conserva las cinco relaciones personales/de autoría mediante políticas `NEVER`. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
+
+> **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).
+
+## Accesos autorizados — 2026-11-05
+
+Autenticación comparte `accounts.services.access` entre sesión Django, JWT y MCP projects. Desafíos de código separados de recuperación; identidad Google por sub; revocación por versión. El gateway conserva sólo recibos neutros de canales con credenciales.
+
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 
 `CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.

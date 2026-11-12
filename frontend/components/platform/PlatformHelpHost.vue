@@ -68,7 +68,7 @@ async function refresh() {
 
 function openVideo() { tour.completedTour.value = null; help.openVideo() }
 watch(() => route.path, async () => { await tour.pause(); tour.completedTour.value = null; await refresh() })
-watch(() => auth.user?.id, async () => { await tour.pause(); store.reset(); lastAutoContext = ''; await refresh() })
+watch(() => auth.user?.user_id, async () => { await tour.pause(); store.reset(); lastAutoContext = ''; await refresh() })
 watch(() => [auth.hasValidatedSession, auth.needsProfileCompletion], async ([validated, needsProfile]) => {
   if (!validated || needsProfile) await tour.pause()
   else await refresh()

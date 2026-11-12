@@ -78,6 +78,25 @@ function mountModal(props = {}, attachToBody = false) {
 }
 
 describe('TaskFormModal', () => {
+  describe.each([
+    ['creation', null],
+    ['editing', baseTask],
+  ])('%s field labels', (_mode, task) => {
+    it.each(['Title', 'Description', 'Status', 'Priority', 'Tablero', 'Due date', 'Assigned to'])(
+      'names its %s control through the visible label',
+      (name) => {
+        const wrapper = mountModal({ task });
+        const label = wrapper.findAll('label').find((item) => item.text().replace('*', '').trim() === name);
+
+        const control = label.element.control;
+
+        expect(control).not.toBeNull();
+        expect(control.labels).toContain(label.element);
+        wrapper.unmount();
+      },
+    );
+  });
+
   beforeEach(() => {
     mockTaskStore.taskAlerts = {};
     mockTaskStore.comments = {};

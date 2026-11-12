@@ -1,0 +1,16 @@
+{
+  "id": "admin-data-integrity-fix",
+  "name": "Previsualizar y aplicar correcciones de integridad",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "El administrador selecciona hasta veinte hallazgos corregibles, elige parámetros y revisa antes/después y bloqueos. La aplicación requiere motivo y confirmación del impacto vigente. Un lote bloqueado o vencido no modifica registros.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

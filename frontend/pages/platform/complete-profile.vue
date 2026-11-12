@@ -63,8 +63,9 @@
         <!-- Name row -->
         <div class="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Nombre</label>
+            <label for="profile-first-name" class="mb-1.5 block text-xs font-medium text-esmerald/70">Nombre</label>
             <input
+              id="profile-first-name"
               v-model="form.first_name"
               type="text"
               placeholder="Tu nombre"
@@ -72,8 +73,9 @@
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Apellido</label>
+            <label for="profile-last-name" class="mb-1.5 block text-xs font-medium text-esmerald/70">Apellido</label>
             <input
+              id="profile-last-name"
               v-model="form.last_name"
               type="text"
               placeholder="Tu apellido"
@@ -84,8 +86,9 @@
 
         <!-- Company -->
         <div class="mb-4">
-          <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Empresa <span class="text-red-400">*</span></label>
+          <label for="profile-company" class="mb-1.5 block text-xs font-medium text-esmerald/70">Empresa <span class="text-red-400">*</span></label>
           <input
+            id="profile-company"
             v-model="form.company_name"
             type="text"
             required
@@ -97,8 +100,9 @@
         <!-- Phone + Cedula row -->
         <div class="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Teléfono <span class="text-red-400">*</span></label>
+            <label for="profile-phone" class="mb-1.5 block text-xs font-medium text-esmerald/70">Teléfono <span class="text-red-400">*</span></label>
             <input
+              id="profile-phone"
               v-model="form.phone"
               type="tel"
               required
@@ -107,8 +111,9 @@
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Cédula <span class="text-red-400">*</span></label>
+            <label for="profile-cedula" class="mb-1.5 block text-xs font-medium text-esmerald/70">Cédula <span class="text-red-400">*</span></label>
             <input
+              id="profile-cedula"
               v-model="form.cedula"
               type="text"
               required
@@ -120,8 +125,9 @@
 
         <!-- Date of birth -->
         <div class="mb-4">
-          <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Fecha de nacimiento <span class="text-red-400">*</span></label>
+          <label for="profile-birth-date" class="mb-1.5 block text-xs font-medium text-esmerald/70">Fecha de nacimiento <span class="text-red-400">*</span></label>
           <input
+            id="profile-birth-date"
             v-model="form.date_of_birth"
             type="date"
             required
@@ -133,8 +139,9 @@
         <!-- Gender + Education row -->
         <div class="mb-6 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Sexo <span class="text-red-400">*</span></label>
+            <label for="profile-gender" class="mb-1.5 block text-xs font-medium text-esmerald/70">Sexo <span class="text-red-400">*</span></label>
             <select
+              id="profile-gender"
               v-model="form.gender"
               required
               data-testid="gender-select"
@@ -148,8 +155,9 @@
             </select>
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Nivel de educación <span class="text-red-400">*</span></label>
+            <label for="profile-education" class="mb-1.5 block text-xs font-medium text-esmerald/70">Nivel de educación <span class="text-red-400">*</span></label>
             <select
+              id="profile-education"
               v-model="form.education_level"
               required
               data-testid="education-select"
