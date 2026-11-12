@@ -236,8 +236,8 @@
 
       <div v-if="emailStore.isLoadingHistory" class="text-xs text-text-subtle py-4 text-center">Cargando historial...</div>
 
-      <div v-else-if="!emailStore.history.length" class="text-xs text-text-subtle py-4 text-center">
-        No se han enviado correos aún.
+      <div v-else-if="!emailStore.history.length" class="text-xs text-text-subtle py-4 text-center" data-testid="email-history-empty">
+        {{ hasAppliedHistoryFilters ? 'Ningún correo coincide con los filtros aplicados.' : 'No se han enviado correos aún.' }}
       </div>
 
       <div v-else class="space-y-2">
@@ -476,6 +476,7 @@
 </template>
 
 <script setup>
+import { emailStatusLabel as statusLabel } from '~/utils/emailStatus';
 import { useRadarFocus } from '~/composables/useRadarFocus';
 import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
 import { ref, computed, watch, onMounted } from 'vue';
@@ -553,6 +554,7 @@ const expandedIds = ref({});
 const selectedBodyEntry = ref(null);
 const selectedPdfAttachment = ref(null);
 const selectedResendEntry = ref(null);
+const hasAppliedHistoryFilters = computed(() => Object.values(emailStore.historyFilters).some(Boolean));
 const historyFilters = ref({
   recipient: '',
   family: '',
@@ -839,10 +841,6 @@ function sectionIsMarkdown(section) {
   return typeof section === 'object' && !!section?.markdown;
 }
 
-const STATUS_LABELS = { sent: 'Enviado', delivered: 'Entregado', bounced: 'Rebotado', failed: 'Fallido', skipped: 'Omitida' };
-function statusLabel(s) {
-  return STATUS_LABELS[s] || s;
-}
 
 function copyStatusClass(status) {
   if (status === 'failed' || status === 'bounced') return 'text-danger-strong';

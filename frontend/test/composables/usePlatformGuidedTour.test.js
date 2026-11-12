@@ -54,6 +54,9 @@ describe('usePlatformGuidedTour', () => {
   let originalScrollTo
   let originalScrollX
   let originalScrollY
+  let originalResizeObserver
+  let originalRequestAnimationFrame
+  let originalCancelAnimationFrame
 
   function mountHarness() {
     const wrapper = mount(defineComponent({
@@ -85,6 +88,9 @@ describe('usePlatformGuidedTour', () => {
     originalScrollTo = Object.getOwnPropertyDescriptor(window, 'scrollTo')
     originalScrollX = Object.getOwnPropertyDescriptor(window, 'scrollX')
     originalScrollY = Object.getOwnPropertyDescriptor(window, 'scrollY')
+    originalResizeObserver = globalThis.ResizeObserver
+    originalRequestAnimationFrame = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame')
+    originalCancelAnimationFrame = Object.getOwnPropertyDescriptor(window, 'cancelAnimationFrame')
     global.CSS = { escape: (value) => value }
     globalThis.__platformTourNextTick = jest.fn().mockResolvedValue(undefined)
     global.useI18n = () => ({ t: (key) => key, locale: ref('es-CO') })
@@ -126,6 +132,9 @@ describe('usePlatformGuidedTour', () => {
     restoreWindowProperty('scrollTo', originalScrollTo)
     restoreWindowProperty('scrollX', originalScrollX)
     restoreWindowProperty('scrollY', originalScrollY)
+    restoreGlobal('ResizeObserver', originalResizeObserver)
+    restoreWindowProperty('requestAnimationFrame', originalRequestAnimationFrame)
+    restoreWindowProperty('cancelAnimationFrame', originalCancelAnimationFrame)
     jest.clearAllMocks()
   })
 
@@ -163,6 +172,75 @@ describe('usePlatformGuidedTour', () => {
     expect(window.scrollTo).toHaveBeenLastCalledWith(31, 47)
     expect(document.activeElement.getAttribute('aria-label')).toBe('Volver a la página')
     expect(store.acknowledge).toHaveBeenLastCalledWith(expect.objectContaining({ id: 17 }), 'skipped', 'projects', null, true)
+  })
+
+  it('exposes a project destination behind the mobile Help drawer', async () => {
+    // Fails if opening a project guide leaves the global drawer covering Summary.
+    addTarget('project-summary')
+    window.matchMedia = jest.fn().mockImplementation((query) => ({ matches: query === '(max-width: 767px)' }))
+    sidebar.isMobileOpen.value = true
+    store.tours = [{ ...tourFixture([step('project-summary')]), context: 'project' }]
+    mountHarness()
+
+    await tour.start(17, { projectId: 71 })
+
+    expect(sidebar.isMobileOpen.value).toBe(false)
+    expect(tour.activeTour.value.id).toBe(17)
+  })
+
+  it('keeps the visible menu destination across repeated breakpoint measurements', async () => {
+    // Driver returns a resolved active-step copy but re-reads configured steps on drive().
+    const desktopTarget = addTarget('projects')
+    const mobileTarget = addTarget('projects')
+    mobileTarget.getClientRects = () => []
+    const frames = []
+    window.requestAnimationFrame = jest.fn((callback) => { frames.push(callback); return frames.length })
+    window.cancelAnimationFrame = jest.fn()
+    driver.refresh = jest.fn()
+    driver.getActiveElement = jest.fn().mockReturnValue(desktopTarget)
+    store.tours = [tourFixture([step('projects')])]
+    mountHarness()
+    await tour.start(17)
+    const config = globalThis.__platformDriverFactory.mock.calls[0][0]
+    driver.getConfig = jest.fn().mockReturnValue(config)
+    driver.getActiveStep = jest.fn().mockReturnValue({ ...config.steps[0] })
+    desktopTarget.getClientRects = () => []
+    mobileTarget.getClientRects = () => [{ width: 24, height: 24 }]
+    window.matchMedia = jest.fn().mockImplementation((query) => ({ matches: query === '(max-width: 767px)' }))
+
+    window.dispatchEvent(new Event('resize'))
+    await frames.shift()()
+    window.dispatchEvent(new Event('resize'))
+    await frames.shift()()
+
+    expect(config.steps[0].element).toBe(mobileTarget)
+    expect(driver.drive).toHaveBeenCalledTimes(2)
+    expect(driver.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases pending layout work when the guide closes', async () => {
+    // Fails if a closed guide keeps a DOM observer or queued measurement alive.
+    const observed = new Set()
+    const frames = new Map()
+    globalThis.ResizeObserver = jest.fn(() => ({
+      observe: (element) => observed.add(element),
+      unobserve: (element) => observed.delete(element),
+      disconnect: () => observed.clear(),
+    }))
+    window.requestAnimationFrame = jest.fn((callback) => { frames.set(1, callback); return 1 })
+    window.cancelAnimationFrame = jest.fn((frame) => frames.delete(frame))
+    const target = addTarget('projects')
+    store.tours = [tourFixture([step('projects')])]
+    mountHarness()
+    await tour.start(17)
+    expect(observed.has(target)).toBe(true)
+    window.dispatchEvent(new Event('resize'))
+    expect(frames.size).toBe(1)
+
+    await tour.cancel()
+
+    expect(observed.size).toBe(0)
+    expect(frames.size).toBe(0)
   })
 
   it('cancels a run paused while a navigation target is being prepared', async () => {

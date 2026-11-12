@@ -172,10 +172,17 @@
     <Teleport to="body">
       <Transition name="platform-modal">
         <div v-if="isInviteModalOpen" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" @click.self="closeInviteModal">
-          <div class="w-full max-w-lg rounded-3xl border border-border-default bg-surface p-6 shadow-2xl dark:shadow-black/40 sm:p-8">
+          <div
+            ref="inviteDialogRef"
+            role="dialog"
+            aria-modal="true"
+            :aria-labelledby="inviteTitleId"
+            tabindex="-1"
+            class="w-full max-w-lg rounded-3xl border border-border-default bg-surface p-6 shadow-2xl focus:outline-none focus:ring-2 focus:ring-focus-ring dark:shadow-black/40 sm:p-8"
+          >
             <div class="flex items-start justify-between gap-4">
               <div>
-                <h2 class="text-xl font-medium text-text-default">Invitar cliente</h2>
+                <h2 :id="inviteTitleId" class="text-xl font-medium text-text-default">Invitar cliente</h2>
                 <p class="mt-2 text-sm text-green-light">
                   Crea el acceso inicial y envía credenciales temporales por email.
                 </p>
@@ -253,7 +260,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, useId, watch } from 'vue'
+import { useFocusTrap } from '~/composables/useFocusTrap'
 import ConfirmModal from '~/components/ConfirmModal.vue'
 import { useConfirmModal } from '~/composables/useConfirmModal'
 import { useIsMobile } from '~/composables/useIsMobile'
@@ -276,6 +284,9 @@ const { isMobile } = useIsMobile()
 const activeFilter = ref('active')
 const search = ref('')
 const isInviteModalOpen = ref(false)
+const inviteDialogRef = ref(null)
+const inviteTitleId = `${useId()}-invite-title`
+useFocusTrap(inviteDialogRef, { active: isInviteModalOpen })
 const inviteError = ref('')
 const pageMessage = ref('')
 const pageMessageVariant = ref('success')

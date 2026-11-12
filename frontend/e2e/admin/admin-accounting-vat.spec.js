@@ -11,6 +11,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { viewportUse } from '../helpers/viewports.js';
 import {
   ADMIN_ACCOUNTING_COLLECTION_CREATE,
   ADMIN_ACCOUNTING_EXPENSES_CRUD,
@@ -182,6 +183,32 @@ test.describe('Admin accounting VAT', () => {
   test.beforeEach(async ({ page }) => {
     await authenticate(page);
   });
+
+  for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+    test.describe(`Collection VAT — ${profile}`, () => {
+      test.use(viewportUse(profile));
+
+      test('distinguishes zero VAT from an unregistered rate in a collection', {
+        tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
+      }, async ({ page }, testInfo) => {
+        // Bug caught: the Sin IVA action was buried in help copy below the value controls.
+        await mockApi(page, accountingHandler([]));
+        await page.goto(`${PANEL_PATH}/incomes`, { waitUntil: 'domcontentloaded' });
+        await page.getByTestId('income-actions-8').click();
+        await page.getByTestId('income-action-generate-collection-8').click();
+        const rate = page.getByTestId('vat-rate');
+
+        await page.getByRole('button', { name: 'Sin IVA', exact: true }).click();
+
+        await expect(rate).toHaveValue('0');
+        await expect(page.getByTestId('vat-breakdown')).toContainText('IVA (0 %)');
+        await expect(page.getByTestId('vat-tax')).toContainText('$0');
+        await page.screenshot({ path: testInfo.outputPath('collection-vat.png'), fullPage: true });
+        await rate.fill('');
+        await expect(page.getByTestId('vat-tax')).toHaveText('IVA sin registrar');
+      });
+    });
+  }
 
   // Bug caught: a company income could silently treat a pre-tax value as a total,
   // understating both its total payable and partner distribution.

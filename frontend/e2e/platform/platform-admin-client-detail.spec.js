@@ -9,6 +9,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PLATFORM_ADMIN_CLIENT_DETAIL } from '../helpers/flow-tags.js';
+import { PANEL_VIEWPORTS } from '../helpers/viewports.js';
 import {
   setPlatformAuth,
   mockPlatformAdmin,
@@ -37,6 +38,29 @@ const mockClientDetail = {
   education_level: 'posgrado',
   avatar: null,
 };
+
+const longClient = {
+  ...mockClientDetail,
+  first_name: 'Cliente ficticio responsive',
+  last_name: 'Apellidos extensos para verificar el espacio disponible en tarjetas y encabezados',
+  company_name: 'Empresa ficticia responsive de investigación, desarrollo y operaciones internacionales con nombre comercial extenso para comprobar tarjetas, tablas y formularios',
+};
+
+async function expectUsableClientEditor(page) {
+  await expect(page.getByText(longClient.company_name, { exact: true })).toBeVisible();
+  for (const name of ['Nombre', 'Apellido', 'Empresa', 'Teléfono']) {
+    const input = page.getByRole('textbox', { name, exact: true });
+    await expect(input).toBeVisible();
+    const box = await input.boundingBox();
+    expect(box.width, `El campo ${name} quedó comprimido`).toBeGreaterThan(150);
+  }
+  const save = page.getByRole('button', { name: 'Guardar cambios', exact: true });
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeInViewport();
+  expect(await save.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  await expect(page.getByRole('button', { name: 'Restablecer', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+}
 
 function setupClientDetailMocks(page, { client = mockClientDetail } = {}) {
   return mockApi(page, async ({ apiPath, method }) => {
@@ -67,6 +91,31 @@ test.describe('Platform Admin Client Detail', () => {
   test.beforeEach(async ({ page }) => {
     await setPlatformAuth(page, { user: mockPlatformAdmin });
   });
+
+  for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+    for (const collapsed of [false, true]) {
+      test(`keeps the long client editor usable at ${profile} with sidebar collapsed=${collapsed}`, {
+        tag: [...PLATFORM_ADMIN_CLIENT_DETAIL, '@role:platform-admin', '@outcome:display'],
+      }, async ({ page }) => {
+        await page.addInitScript((value) => localStorage.setItem('platform_sidebar_collapsed', String(value)), collapsed);
+        await setupClientDetailMocks(page, { client: longClient });
+        // quality: allow-deep-link (PA-237 explicitly requires direct loads of this client detail)
+        await page.setViewportSize(PANEL_VIEWPORTS.wide);
+        await page.goto(`/es-co/platform/clients/${longClient.user_id}`, { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('textbox', { name: 'Apellido', exact: true })).toHaveValue(longClient.last_name);
+
+        await page.setViewportSize(PANEL_VIEWPORTS[profile]);
+
+        await page.getByRole('textbox', { name: 'Nombre', exact: true }).fill('Borrador sin guardar');
+        await page.getByRole('button', { name: 'Restablecer', exact: true }).click();
+        await expect(page.getByRole('textbox', { name: 'Nombre', exact: true })).toHaveValue(longClient.first_name);
+        await expectUsableClientEditor(page);
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('textbox', { name: 'Empresa', exact: true })).toHaveValue(longClient.company_name);
+        await expectUsableClientEditor(page);
+      });
+    }
+  }
 
   test('renders client detail page with profile card and edit form', {
     tag: ['@outcome:display', ...PLATFORM_ADMIN_CLIENT_DETAIL, '@role:platform-admin'],

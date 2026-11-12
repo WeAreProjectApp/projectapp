@@ -74,8 +74,16 @@
             @click.self="isEditOpen = false"
           >
             <Transition name="modal-content" appear>
-              <div v-if="isEditOpen" class="w-full max-w-md rounded-3xl border border-border-default bg-surface p-6 shadow-2xl sm:p-8">
-                <h2 class="mb-5 text-lg font-bold text-text-default">Editar proyecto</h2>
+              <div
+                v-if="isEditOpen"
+                ref="editDialogRef"
+                role="dialog"
+                aria-modal="true"
+                :aria-labelledby="editTitleId"
+                tabindex="-1"
+                class="w-full max-w-md rounded-3xl border border-border-default bg-surface p-6 shadow-2xl focus:outline-none focus:ring-2 focus:ring-focus-ring sm:p-8"
+              >
+                <h2 :id="editTitleId" class="mb-5 text-lg font-bold text-text-default">Editar proyecto</h2>
                 <form class="space-y-4" @submit.prevent="handleEditSubmit">
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Nombre <span class="text-red-400">*</span></label>
@@ -104,7 +112,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, useId, watch } from 'vue'
+import { useFocusTrap } from '~/composables/useFocusTrap'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 import { formatDate as formatDateUtil } from '~/utils/formatDate'
@@ -125,6 +134,9 @@ const phases = ref([])
 const showAddPhase = ref(false)
 
 const isEditOpen = ref(false)
+const editDialogRef = ref(null)
+const editTitleId = `${useId()}-edit-title`
+useFocusTrap(editDialogRef, { active: isEditOpen })
 const editForm = reactive({ name: '', description: '' })
 const editError = ref('')
 

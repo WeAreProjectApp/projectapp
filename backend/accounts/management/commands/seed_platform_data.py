@@ -43,6 +43,7 @@ from accounts.models import (
 from accounts.management.commands._seed_helpers import seed_validation_guides, clear_fake_delivery
 from accounts.services.credential_cipher import encrypt_secret
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
+from content.fake_data_files import fake_data_transaction, sample_file
 
 User = get_user_model()
 
@@ -158,6 +159,7 @@ class Command(BaseCommand):
         )
         add_seed_arguments(parser)
 
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('seed_platform_data')
         self.seed_context = seed_context(options, 'platform')
@@ -1094,7 +1096,7 @@ class Command(BaseCommand):
         ]
 
         for d_data in deliverables:
-            placeholder = ContentFile(b'placeholder content', name=d_data['filename'])
+            placeholder = sample_file(d_data['filename'])
             epic_key = d_data.get('epic_key', '')
             d = Deliverable.objects.create(
                 project=project,
@@ -1109,7 +1111,7 @@ class Command(BaseCommand):
             )
             DeliverableVersion.objects.create(
                 deliverable=d,
-                file=placeholder,
+                file=sample_file(d_data['filename']),
                 version_number=1,
                 uploaded_by=admin_user,
             )
@@ -1143,7 +1145,7 @@ class Command(BaseCommand):
                 'title': 'APK Android beta v0.1',
                 'description': 'Build de prueba para Android con autenticación, listado de inventario y escáner básico de código de barras.',
                 'category': Deliverable.CATEGORY_OTHER,
-                'filename': 'inventarios-beta-v0.1.apk',
+                'filename': 'inventarios-beta-instrucciones.txt',
                 'epic_key': 'BARCODE',
             },
             {
@@ -1156,7 +1158,7 @@ class Command(BaseCommand):
         ]
 
         for d_data in deliverables:
-            placeholder = ContentFile(b'placeholder content', name=d_data['filename'])
+            placeholder = sample_file(d_data['filename'])
             epic_key = d_data.get('epic_key', '')
             d = Deliverable.objects.create(
                 project=project,
@@ -1171,7 +1173,7 @@ class Command(BaseCommand):
             )
             DeliverableVersion.objects.create(
                 deliverable=d,
-                file=placeholder,
+                file=sample_file(d_data['filename']),
                 version_number=1,
                 uploaded_by=admin_user,
             )

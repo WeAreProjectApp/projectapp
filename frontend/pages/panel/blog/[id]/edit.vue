@@ -291,10 +291,10 @@
               Agregar fuente
             </button>
           </div>
-          <div v-for="(source, idx) in form.sources" :key="idx" class="flex gap-2 mb-2">
-            <input v-model="source.name" type="text" class="flex-1 px-3 py-2 rounded-lg border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" placeholder="Nombre de la fuente" />
-            <input v-model="source.url" type="url" class="flex-[2] px-3 py-2 rounded-lg border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" placeholder="https://..." />
-            <BaseActionButton action="remove" variant="danger-ghost" label="Quitar fuente" @click="removeSource(idx)" />
+          <div v-for="(source, idx) in form.sources" :key="idx" class="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 panel-portrait:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]" data-testid="blog-source-row">
+            <input v-model="source.name" type="text" class="min-w-0 w-full px-3 py-2 rounded-lg border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" placeholder="Nombre de la fuente" :aria-label="`Nombre de la fuente ${idx + 1}`" />
+            <input v-model="source.url" type="url" class="col-start-1 min-w-0 w-full px-3 py-2 rounded-lg border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all panel-portrait:col-start-auto" placeholder="https://..." :aria-label="`URL de la fuente ${idx + 1}`" />
+            <BaseActionButton action="remove" variant="danger-ghost" label="Quitar fuente" class="col-start-2 row-start-1 panel-portrait:col-start-auto" @click="removeSource(idx)" />
           </div>
           <p v-if="form.sources.length === 0" class="text-xs text-text-subtle">No hay fuentes agregadas.</p>
         </div>

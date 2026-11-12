@@ -11,7 +11,7 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { expectCompactModal } from '../helpers/modal-layout.js';
-import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
+import { PANEL_BREAKPOINTS, PANEL_VIEWPORTS } from '../../config/responsive.js';
 import {
   ADMIN_PROJECT_LIFECYCLE_STATES,
   ADMIN_PROJECT_STATE_CATALOG,
@@ -570,6 +570,35 @@ test.describe('Admin project state catalog', () => {
       userAuth: { id: 9001, role: 'admin', is_staff: true },
     });
   });
+
+  for (const profile of ['compact', 'desktop', 'wide']) {
+    test(`returns to the project listing without reloading at ${profile}`, {
+      tag: [...ADMIN_PROJECT_STATE_CATALOG, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      const catalog = initialCatalog();
+      const currentState = catalog[1];
+      const messages = [];
+      page.on('console', (message) => messages.push(message.text()));
+      page.on('pageerror', (error) => messages.push(error.message));
+      await page.setViewportSize(PANEL_VIEWPORTS[profile]);
+      await mockApi(page, async ({ apiPath, method }) => baseRoutes(apiPath, method, catalog, currentState));
+      await openProjects(page);
+      const timeOrigin = await page.evaluate(() => performance.timeOrigin);
+
+      await page.getByTestId('projects-manage-states').click();
+      await expect(page.getByTestId('project-state-catalog')).toBeVisible();
+      await page.getByRole('link', { name: 'Volver a proyectos', exact: true }).click();
+
+      const listing = page.getByTestId('projects-page');
+      await expect(page).toHaveURL(/\/panel\/projects$/);
+      await expect(listing.getByRole('heading', { name: 'Proyectos', exact: true })).toBeVisible();
+      await expect(listing.getByTestId('projects-new-button')).toBeVisible();
+      await expect(listing.getByText('Kore', { exact: true }).first()).toBeVisible();
+      await expect(page).toHaveTitle('Proyectos | ProjectApp');
+      expect(await page.evaluate(() => performance.timeOrigin)).toBe(timeOrigin);
+      expect(messages.filter((message) => /NUXT_E4004|non-element root|single root/.test(message))).toEqual([]);
+    });
+  }
 
   test('shows only the six seeded meanings', {
     tag: [...ADMIN_PROJECT_STATE_CATALOG, '@role:admin', '@outcome:display'],
