@@ -29,11 +29,19 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def panel_superuser():
-    return User.objects.create_superuser(
+    from accounts.models import UserProfile
+
+    user = User.objects.create_superuser(
         username='billing-panel-superuser',
         email='billing-panel-superuser@example.test',
         password='panel-password',
     )
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
+    )
+    return user
 
 
 @pytest.fixture

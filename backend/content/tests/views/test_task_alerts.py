@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -16,6 +17,10 @@ User = get_user_model()
 def admin_client(db):
     user = User.objects.create_superuser(
         username='admin', password='pass', email='admin@test.com',
+    )
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': UserProfile.ROLE_ADMIN},
     )
     client = Client()
     client.login(username='admin', password='pass')
@@ -36,6 +41,10 @@ class TestListTaskAlerts(TestCase):
     def setUp(self):
         self.user = User.objects.create_superuser(
             username='admin2', password='pass', email='admin2@test.com',
+        )
+        UserProfile.objects.get_or_create(
+            user=self.user,
+            defaults={'role': UserProfile.ROLE_ADMIN},
         )
         self.client.login(username='admin2', password='pass')
         self.task = Task.objects.create(title='My task', status=Task.Status.TODO)
@@ -66,6 +75,10 @@ class TestCreateTaskAlert(TestCase):
     def setUp(self):
         self.user = User.objects.create_superuser(
             username='admin3', password='pass', email='admin3@test.com',
+        )
+        UserProfile.objects.get_or_create(
+            user=self.user,
+            defaults={'role': UserProfile.ROLE_ADMIN},
         )
         self.client.login(username='admin3', password='pass')
         self.task = Task.objects.create(title='Task B', status=Task.Status.TODO)
@@ -98,6 +111,10 @@ class TestDeleteTaskAlert(TestCase):
     def setUp(self):
         self.user = User.objects.create_superuser(
             username='admin4', password='pass', email='admin4@test.com',
+        )
+        UserProfile.objects.get_or_create(
+            user=self.user,
+            defaults={'role': UserProfile.ROLE_ADMIN},
         )
         self.client.login(username='admin4', password='pass')
         self.task = Task.objects.create(title='Task C', status=Task.Status.TODO)

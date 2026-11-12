@@ -1,21 +1,19 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-surface-muted px-4">
-    <div class="text-center">
-      <h1 class="text-2xl font-light text-text-default mb-4">ProjectApp Admin</h1>
-      <p class="text-text-muted text-sm mb-6">
-        Inicia sesión a través del panel de administración de Django.
-      </p>
-      <a
-        href="/admin/"
-        class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl
-               font-medium text-sm hover:bg-primary-strong transition-colors shadow-sm"
-      >
-        <BaseActionIcon action="open-external" /> Ir al Django Admin
-      </a>
+  <main class="flex min-h-screen items-center justify-center bg-surface-muted px-4 py-10">
+    <div class="w-full max-w-md space-y-6 rounded-2xl border border-border-default bg-surface p-6 shadow-sm">
+      <div><h1 class="text-2xl font-light text-text-default">Acceso al panel</h1><p class="mt-2 text-sm text-text-muted">Inicia sesión con una cuenta habilitada por el equipo.</p></div>
+      <BaseButton as="a" :to="passwordUrl" variant="secondary" class="w-full">Entrar con contraseña</BaseButton>
+      <AlternativeLogin surface="panel" :next="target" @authenticated="enterPanel" />
     </div>
-  </div>
+  </main>
 </template>
-
 <script setup>
+import { computed } from 'vue';
+import AlternativeLogin from '~/components/auth/AlternativeLogin.vue';
 definePageMeta({ layout: false });
+useHead({ title: 'Acceso al panel — ProjectApp' });
+const route = useRoute();
+const target = computed(() => typeof route.query.next === 'string' ? route.query.next : '/panel/');
+const passwordUrl = computed(() => `/admin/login/?next=${encodeURIComponent(target.value)}`);
+function enterPanel(data) { window.location.assign(data.redirect); }
 </script>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, useId, watch } from 'vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BillingContextFields from './BillingContextFields.vue'
 import ContractSourcePicker from './ContractSourcePicker.vue'
@@ -21,6 +21,7 @@ const loading = ref(false)
 const sourceValue = ref('')
 const linking = ref(false)
 const showLinkForm = ref(false)
+const linkFormId = useId()
 const linkError = ref('')
 const sourceOptions = computed(() => options.value?.contract_sources || [])
 let sequence = 0
@@ -124,8 +125,8 @@ watch(() => props.projectId, load, { immediate: true, flush: 'sync' })
       </template>
     </BillingContextFields>
     <div v-if="!loading && !error && !modelValue.document_pending && modelValue.billing_nature === 'contract'" class="space-y-3">
-      <BaseButton variant="link" size="sm" data-testid="billing-link-contract-open" @click="showLinkForm = !showLinkForm">Vincular contrato existente</BaseButton>
-      <section v-if="showLinkForm" class="rounded-xl border border-border-muted p-3 space-y-3" data-testid="billing-link-contract-form">
+      <BaseButton variant="secondary" :aria-expanded="showLinkForm" :aria-controls="linkFormId" data-testid="billing-link-contract-open" @click="showLinkForm = !showLinkForm">Vincular contrato existente</BaseButton>
+      <section v-if="showLinkForm" :id="linkFormId" class="rounded-xl border border-border-muted p-3 space-y-3" data-testid="billing-link-contract-form">
         <p class="text-xs text-text-muted">Elige el documento que corresponde al contrato. Se registrará en el seguimiento del proyecto sin copiarlo ni cambiar su contenido.</p>
         <BaseFormField v-if="sourceOptions.length" label="Contrato existente del proyecto" label-policy="wrap">
           <ContractSourcePicker v-model="sourceValue" :sources="sourceOptions" :disabled="linking" />

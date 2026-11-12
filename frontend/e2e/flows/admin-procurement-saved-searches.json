@@ -1,0 +1,16 @@
+{
+  "id": "admin-procurement-saved-searches",
+  "name": "Admin Procurement Saved Searches",
+  "module": "procurement",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Staff creates, edits, applies, favorites and confirms deletion of named searches. Alert creation copies criteria. Invalid names and failed requests preserve the form.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

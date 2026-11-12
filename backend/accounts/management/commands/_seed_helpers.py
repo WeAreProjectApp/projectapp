@@ -20,20 +20,26 @@ def ensure_phase(project):
         return phase
 
     from content.models import BusinessProposal
+    from content.fake_data import ensure_fake_data_allowed
+
+    ensure_fake_data_allowed('ensure_phase')
 
     client = project.client
+    profile = getattr(client, 'profile', None)
     proposal = None
-    if client is not None:
+    if profile is not None:
+        proposal = BusinessProposal.objects.filter(client=profile).order_by('id').first()
+    if proposal is None and client is not None:
         proposal = (
-            BusinessProposal.objects.filter(client_email__iexact=client.email)
+            BusinessProposal.objects.filter(client__isnull=True, client_email__iexact=client.email)
             .order_by('id').first()
         )
-    proposal = proposal or BusinessProposal.objects.order_by('id').first()
     if proposal is None:
         proposal = BusinessProposal.objects.create(
             title=f'Proyecto {project.name}',
             client_name=getattr(client, 'get_full_name', lambda: '')() or project.name,
             client_email=getattr(client, 'email', '') or '',
+            client=profile,
         )
     return ProjectPhase.objects.create(project=project, business_proposal=proposal, order=0)
 

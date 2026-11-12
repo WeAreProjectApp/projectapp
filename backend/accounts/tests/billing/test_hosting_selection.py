@@ -9,6 +9,7 @@ from accounts.models import (
     HostingEvidence,
     ProjectHosting,
     ProjectHostingAccountingSource,
+    UserProfile,
 )
 from accounts.services.billing_context import associate_account
 from accounts.services.hosting_context import reconcile_evidence, reconcile_hosting
@@ -189,6 +190,9 @@ def test_panel_hosting_selection_returns_existing_identity_without_mutation(
     """Falla si el GET del panel altera el hosting al cargar una opción existente."""
     superuser = User.objects.create_superuser(
         username='selection-superuser', email='selection-superuser@example.test', password='test-password',
+    )
+    UserProfile.objects.create(
+        user=superuser, role=UserProfile.ROLE_ADMIN, is_onboarded=True, profile_completed=True,
     )
     hosting_record.domain_url = 'panel.example'
     hosting_record.payment_modality = HostingRecord.Modality.SEMIANNUAL

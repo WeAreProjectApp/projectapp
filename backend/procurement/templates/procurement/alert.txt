@@ -1,0 +1,9 @@
+{{ subject }}
+{% for item in items %}
+{{ item.title }} — {{ item.entity_name }}
+Departamento entidad: {{ item.department }}. Presupuesto COP: {{ item.budget_label }}
+Cierre: {{ item.closing_label }}
+{% for alert in item.matched_alerts %}Alerta: {{ alert.name }}. Filtros: {% for filter in alert.filter_labels %}{{ filter.label }}: {{ filter.value }}. {% endfor %}
+{% endfor %}{{ item.source_url }}
+{% endfor %}
+ProjectApp · Revisa los documentos oficiales antes de decidir.

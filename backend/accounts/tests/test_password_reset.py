@@ -7,7 +7,7 @@ from freezegun import freeze_time
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-from accounts.models import VerificationCode
+from accounts.models import UserProfile, VerificationCode
 from accounts.services.tokens import (
     PASSWORD_RESET_REQUEST_PURPOSE,
     PASSWORD_RESET_VERIFIED_PURPOSE,
@@ -83,11 +83,17 @@ def _token_with_incorrect_password_version(user):
 @pytest.fixture
 def reset_user(db):
     """Create an account whose original password anchors reset assertions."""
-    return User.objects.create_user(
+    user = User.objects.create_user(
         username='reset@example.com',
         email='reset@example.com',
         password='OldPass123!',
     )
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_CLIENT,
+        is_onboarded=True,
+    )
+    return user
 
 
 @pytest.fixture(autouse=True)
@@ -252,6 +258,22 @@ def test_request_with_nonexistent_email_returns_decoy_token():
     assert token
     decoded = AccessToken(token)
     assert decoded.payload.get('user_id') is None
+    assert len(mail.outbox) == 0
+
+
+def test_request_with_profileless_email_returns_decoy_token():
+    """Fails if an incomplete account can obtain password-reset authority."""
+    user = User.objects.create_user(
+        username='profileless-reset@example.com',
+        email='profileless-reset@example.com',
+        password='OldPass123!',
+    )
+    mail.outbox = []
+
+    token = request_password_reset(user.email)
+
+    assert AccessToken(token).payload.get('user_id') is None
+    assert not VerificationCode.objects.filter(user=user).exists()
     assert len(mail.outbox) == 0
 
 

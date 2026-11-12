@@ -1,0 +1,14 @@
+{
+  "id": "admin-communication-panel-resize",
+  "name": "Admin Communications Navigation Panel Resize",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P3",
+  "description": "Admin resizes the adjacent thread navigation by mouse or keyboard from 240px to 400px, starting at 288px. The thread list reflows during drag; the communications preference persists the width and double-click restores the default. Compact navigation uses the drawer.",
+  "outcomes": [
+    "display",
+    "success"
+  ]
+}

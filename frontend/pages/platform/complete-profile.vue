@@ -9,7 +9,7 @@
         <h1 class="text-2xl font-bold text-text-default">
           Completa tu perfil
         </h1>
-        <p class="mt-2 text-sm text-green-light">
+        <p class="mt-2 text-sm text-text-muted">
           Necesitamos algunos datos antes de continuar.
         </p>
       </div>
@@ -39,7 +39,7 @@
               alt="Avatar"
               class="h-full w-full object-cover"
             />
-            <svg v-else class="h-8 w-8 text-green-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg v-else class="h-8 w-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -51,90 +51,97 @@
             class="hidden"
             @change="handleFileChange"
           />
-          <button
+          <BaseButton unstyled
             type="button"
-            class="text-xs text-green-light transition hover:text-text-default"
+            class="text-xs text-text-muted transition hover:text-text-default"
             @click="triggerFileInput"
           >
             {{ avatarPreview ? 'Cambiar foto' : 'Subir foto (opcional)' }}
-          </button>
+          </BaseButton>
         </div>
 
         <!-- Name row -->
         <div class="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Nombre</label>
+            <label for="profile-first-name" class="mb-1.5 block text-xs font-medium text-esmerald/70">Nombre</label>
             <input
+              id="profile-first-name"
               v-model="form.first_name"
               type="text"
               placeholder="Tu nombre"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Apellido</label>
+            <label for="profile-last-name" class="mb-1.5 block text-xs font-medium text-esmerald/70">Apellido</label>
             <input
+              id="profile-last-name"
               v-model="form.last_name"
               type="text"
               placeholder="Tu apellido"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
         </div>
 
         <!-- Company -->
         <div class="mb-4">
-          <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Empresa <span class="text-red-400">*</span></label>
+          <label for="profile-company" class="mb-1.5 block text-xs font-medium text-esmerald/70">Empresa <span class="text-red-400">*</span></label>
           <input
+            id="profile-company"
             v-model="form.company_name"
             type="text"
             required
             placeholder="Nombre de tu empresa"
-            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
           />
         </div>
 
         <!-- Phone + Cedula row -->
         <div class="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Teléfono <span class="text-red-400">*</span></label>
+            <label for="profile-phone" class="mb-1.5 block text-xs font-medium text-esmerald/70">Teléfono <span class="text-red-400">*</span></label>
             <input
+              id="profile-phone"
               v-model="form.phone"
               type="tel"
               required
               placeholder="+57 300 000 0000"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Cédula <span class="text-red-400">*</span></label>
+            <label for="profile-cedula" class="mb-1.5 block text-xs font-medium text-esmerald/70">Cédula <span class="text-red-400">*</span></label>
             <input
+              id="profile-cedula"
               v-model="form.cedula"
               type="text"
               required
               placeholder="1020304050"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
             />
           </div>
         </div>
 
         <!-- Date of birth -->
         <div class="mb-4">
-          <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Fecha de nacimiento <span class="text-red-400">*</span></label>
+          <label for="profile-birth-date" class="mb-1.5 block text-xs font-medium text-esmerald/70">Fecha de nacimiento <span class="text-red-400">*</span></label>
           <input
+            id="profile-birth-date"
             v-model="form.date_of_birth"
             type="date"
             required
             data-testid="date-of-birth"
-            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default"
+            class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default"
           />
         </div>
 
         <!-- Gender + Education row -->
         <div class="mb-6 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Sexo <span class="text-red-400">*</span></label>
+            <label for="profile-gender" class="mb-1.5 block text-xs font-medium text-esmerald/70">Sexo <span class="text-red-400">*</span></label>
             <select
+              id="profile-gender"
               v-model="form.gender"
               required
               data-testid="gender-select"
@@ -148,8 +155,9 @@
             </select>
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70">Nivel de educación <span class="text-red-400">*</span></label>
+            <label for="profile-education" class="mb-1.5 block text-xs font-medium text-esmerald/70">Nivel de educación <span class="text-red-400">*</span></label>
             <select
+              id="profile-education"
               v-model="form.education_level"
               required
               data-testid="education-select"

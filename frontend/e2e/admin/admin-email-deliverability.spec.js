@@ -2,8 +2,8 @@
  * E2E tests for admin email deliverability dashboard flow.
  *
  * @flow:admin-email-deliverability
- * Covers: dashboard renders with delivery stats, per-proposal email log table,
- *         empty state when no emails sent yet.
+ * Covers: browser history restores delivery stats; the former route renders
+ *         the email status tab for staff without a page transition error.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -34,45 +34,56 @@ const mockDeliverabilityData = {
 };
 
 test.describe('Admin Email Deliverability Dashboard', () => {
+  test.setTimeout(60_000);
+  test.use({ viewport: { width: 1440, height: 900 } });
+
   test.beforeEach(async ({ page }) => {
-    await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 8700, role: 'admin', is_staff: true } });
-  });
-
-  test('renders deliverability dashboard with stats and email log', {
-    tag: [...ADMIN_EMAIL_DELIVERABILITY, '@role:admin', '@outcome:display'],
-  }, async ({ page }) => {
-    // quality: allow-no-interaction (dashboard is populated straight from a GET on load; no action changes what renders)
+    await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 8700, role: 'admin', is_staff: true, is_superuser: false } });
     await mockApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
-      if (apiPath.startsWith('proposals/email-deliverability/') || apiPath.startsWith('email-deliverability/')) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(mockDeliverabilityData) };
-      }
+      if (apiPath === 'email-deliverability/') return { status: 200, contentType: 'application/json', body: JSON.stringify(mockDeliverabilityData) };
+      if (apiPath === 'emails/defaults/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ greeting: 'Hola', footer: 'Equipo', config: {}, defaults: {} }) };
+      if (apiPath === 'emails/history/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], total: 0, page: 1, has_next: false }) };
+      if (apiPath === 'emails/copy-recipients/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], families: [] }) };
       return null;
     });
-    await page.goto('/panel/proposals/email-deliverability');
-
-    // Concrete KPI value from the fixture — catches a broken/renamed stats prop.
-    await expect(page.getByText('42', { exact: true }).first()).toBeVisible({ timeout: 15000 });
-    // Per-template row from the fixture — catches the log table failing to render real rows.
-    // (also matches the recent-failures entry for the same template, hence .first())
-    await expect(page.getByText('proposal_sent', { exact: true }).first()).toBeVisible();
-    await expect(page).toHaveURL(/email-deliverability/);
   });
 
-  test('page is accessible and renders heading', {
+  test('restores email status after returning from the Dashboard', {
     tag: [...ADMIN_EMAIL_DELIVERABILITY, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
-    // quality: allow-no-interaction (accessibility/heading-structure check on load; no action changes the heading)
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === 'auth/check/') return authCheck;
-      if (apiPath.startsWith('proposals/email-deliverability/') || apiPath.startsWith('email-deliverability/')) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(mockDeliverabilityData) };
-      }
-      return null;
-    });
-    await page.goto('/panel/proposals/email-deliverability');
+    // quality: allow-deep-link (Dashboard is the panel entry; reach email statistics through navigation clicks)
+    await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'Emails', exact: true }).click();
+    await page.getByRole('tab', { name: 'Estado de los emails', exact: true }).click();
+    await expect(page.getByText('client@example.com', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await expect(page).toHaveURL(/\/es-co\/panel$/);
+    await page.goBack({ waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/tab=status/);
+    await expect(page.getByText('42', { exact: true }).first()).toHaveText('42');
+    await expect(page.getByText('client@example.com', { exact: true })).toBeVisible();
+  });
 
-    const heading = page.getByRole('heading').first();
-    await expect(heading).toContainText('Email Deliverability', { timeout: 15000 });
+  test.describe('Former deliverability bookmark', () => {
+    test.use({ viewport: { width: 2560, height: 1440 }, colorScheme: 'dark' });
+
+    test('renders usable email status from the former staff bookmark', {
+      tag: [...ADMIN_EMAIL_DELIVERABILITY, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      const pageErrors = [];
+      page.on('pageerror', error => pageErrors.push(error.message));
+
+      // quality: allow-deep-link (the former staff bookmark is the compatibility entry under test)
+      await page.goto('/es-co/panel/proposals/email-deliverability', { waitUntil: 'domcontentloaded' });
+
+      await expect(page).toHaveURL(/\/es-co\/panel\/emails\?tab=status$/);
+      await expect(page.getByRole('tab', { name: 'Estado de los emails', exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByText('42', { exact: true }).first()).toBeVisible();
+      await expect(page.getByText('client@example.com', { exact: true })).toBeVisible();
+      await page.getByRole('tab', { name: 'Historial', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Historial de correos enviados', exact: true })).toBeVisible();
+      expect(pageErrors).toEqual([]);
+    });
   });
 });

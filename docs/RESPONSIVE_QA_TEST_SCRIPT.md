@@ -2,7 +2,7 @@
 
 **Estado:** obligatorio
 
-**Cobertura automatizada:** 132 vistas × 5 perfiles = 660 celdas
+**Cobertura automatizada:** 136 vistas × 5 perfiles = 680 celdas
 
 **Fuente de verdad:** `frontend/config/viewCatalog.js`, `frontend/config/responsive.js` y `frontend/e2e/responsive/catalog-scenarios.js`
 
@@ -21,8 +21,8 @@ pasa el gate de calidad de `$qa`.
 | `desktop` | 1440 × 900 | regresión del portátil habitual |
 | `wide` | 2560 × 1440 | contenido centrado con máximo de 1400 px |
 
-El catálogo vigente contiene 116 vistas renderizables y 16 redirects. Las
-primeras producen 580 resultados visuales; los redirects producen 80 resultados
+El catálogo vigente contiene 119 vistas renderizables y 17 redirects. Las
+primeras producen 595 resultados visuales; los redirects producen 85 resultados
 de compatibilidad y nunca acreditan layout, tablas o modales.
 
 ## Preparación determinista
@@ -147,7 +147,7 @@ Cada batch de matriz contiene como máximo cuatro vistas y, por tanto, veinte
 pruebas (cuatro escenarios × cinco perfiles). Los batches especiales también
 se parten al llegar a veinte casos. Todos corren con cero reintentos; CI ejecuta
 sólo los batches de los módulos afectados en PR, mientras que el comando
-completo y la programación mensual recorren las 660 celdas más los especiales.
+completo y la programación mensual recorren las 680 celdas más los especiales.
 
 ## Reporte y criterio de cierre
 

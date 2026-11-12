@@ -12,3 +12,10 @@ class SessionJWTAuthentication(JWTAuthentication):
         if 'purpose' in token.payload:
             raise InvalidToken('Este token no permite acceder a una sesión.')
         return token
+
+    def get_user(self, validated_token):
+        user = super().get_user(validated_token)
+        profile = getattr(user, 'profile', None)
+        if profile is None or validated_token.get('access_version', 0) != profile.access_version:
+            raise InvalidToken('El acceso fue revocado. Inicia sesión de nuevo.')
+        return user

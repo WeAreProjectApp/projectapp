@@ -38,6 +38,7 @@ describe('BaseResizeHandle', () => {
 
     expect(handle.element.setPointerCapture).toHaveBeenCalledWith(7)
     expect(handle.element.releasePointerCapture).toHaveBeenCalledWith(7)
+    expect(wrapper.emitted('pointer-start')[0][0].defaultPrevented).toBe(true)
     expect(wrapper.emitted('pointer-move')).toHaveLength(1)
   })
 

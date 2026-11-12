@@ -1,3 +1,18 @@
+> **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
+> pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
+> lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant
+> explícito y confirmación. Contrato: `docs/project-lifecycle-deletion.md`.
+
+> **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. La fusión comercial conserva las cinco relaciones personales/de autoría mediante políticas `NEVER`. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
+
+> **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).
+
+## Accesos autorizados — 2026-11-05
+
+Autenticación comparte `accounts.services.access` entre sesión Django, JWT y MCP projects. Desafíos de código separados de recuperación; identidad Google por sub; revocación por versión. El gateway conserva sólo recibos neutros de canales con credenciales.
+
+> **Centro de Emails y disposición del Panel — 2026-11-06:** `/panel/emails?tab=status` reúne la consulta de entregabilidad; la ruta comercial anterior es un redirect de compatibilidad. `email_retry_service` decide la elegibilidad por destinatario y comparte el servicio de copias exactas o los reconstructores contables; éstos conservan el destinatario original y las confirmaciones conservan los hechos históricos del pago. El gateway copia el mensaje manteniendo la conexión SMTP, cuyos candados no son copiables. El menú y el contenido comparten un ancho persistido; Enlaces seguros reutiliza el splitter documental con preferencia independiente.
+
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
 
 `CollectionAccountContext` conserva decisión, autor y fecha sin convertir históricos. Panel/MCP comparten validación y completado con versión; filtro y radar derivan del mismo predicado, con diferencias explícitas de estados. La marca es interna y no altera el PDF ni bloquea por el vínculo. Contrato: [Documento pendiente](../accounting-pending-document.md). Migración accounts.0090; despliegue separado.
@@ -1275,8 +1290,12 @@ centred against the label and help block.
 
 Semantic theme tokens live in `frontend/assets/styles/theme.css` and are exposed
 as Tailwind colors (`bg-surface`, `text-text-default`, `border-input-border`,
-etc.). Light/dark values flip with the `.dark` class on `<html>`, toggled by
-`useDiagnosticDarkMode`. Base components in `frontend/components/base/`
+etc.). Light/dark values flip with the `.dark` class on `<html>`. Panel uses
+`useDiagnosticDarkMode`; Platform applies `usePlatformTheme` from its layout so
+portals under `body` inherit the same tokens. Platform releases its custom CSS
+variables before leaving the layout; the next layout restores its own saved
+preference. Custom palettes choose black/white button foregrounds and a readable
+brand shade independently; cover images keep opaque reading surfaces. Base components in `frontend/components/base/`
 (`BaseInput`, `BaseSelect`, `BaseTextarea`, `BaseButton`, `BaseBadge`,
 `BaseCard`, `BaseDrawer`) wrap native HTML using these tokens, so consumer markup does not
 need `dark:` variants. New views must prefer these tokens and components;
@@ -1287,6 +1306,14 @@ example. El contrato transversal de breakpoints, anchos máximos, tablas, tabs,
 filtros, modales, formularios, acciones y workspaces está en el
 [estándar responsivo del panel](../RESPONSIVE_STANDARD.md). Sus cinco viewports
 de aceptación son obligatorios para todo cambio de UI bajo `/panel/**`.
+
+Platform exposes the saved light/dark preference through labelled controls in
+the desktop sidebar (including its collapsed state) and mobile drawer. Clearing
+an uploaded cover sends an explicit `custom_cover_image: null` to `PATCH me/`;
+omitting that field preserves it. Gallery selection clears the uploaded cover
+in the same request. The UI changes the cover only after a successful profile
+update so a failed request retains the saved image. Markdown preview links use
+the same readable light-mode colors in the friendly and professional templates.
 
 Responsive behavior for the internal panel is a second design-system layer.
 `frontend/config/responsive.js` is the single source for width bands and the

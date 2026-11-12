@@ -218,12 +218,17 @@ def _attention_block(operations, today, now, *, include_finance):
     for kind in TYPES:
         if kind in ('recurring_due', 'collection_documents_pending') and not include_finance:
             continue
-        records = attention_records(kind, today, now)
+        records = attention_records(kind, today, now, include_finance=include_finance)
         count = record_count(records)
         if not count:
             continue
         severity, meta = 'danger', {}
-        if kind == 'tasks_overdue':
+        if kind == 'data_integrity':
+            from content.models import DataIntegrityScan
+            latest = DataIntegrityScan.objects.filter(status='completed').first()
+            severity = 'danger' if records.filter(severity='high').exists() else 'warning'
+            meta = {'last_review_at': latest.finished_at.isoformat() if latest else None}
+        elif kind == 'tasks_overdue':
             high = records.filter(priority=Task.Priority.HIGH).count()
             severity, meta = ('danger' if high else 'warning'), {'high_priority': high}
         elif kind == 'proposals_stale':

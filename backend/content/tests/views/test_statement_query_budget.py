@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.models.signals import post_init
@@ -17,6 +18,12 @@ STATEMENTS_URL = '/api/accounting/statements/'
 
 
 def _statement_client(user):
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            'role': UserProfile.ROLE_ADMIN if user.is_staff else UserProfile.ROLE_CLIENT,
+        },
+    )
     client = APIClient()
     client.force_login(user)
     return client
@@ -34,7 +41,13 @@ def _create_statement_set(total):
 def _count_statement_queries(client):
     with CaptureQueriesContext(connection) as queries:
         response = client.get(STATEMENTS_URL)
-    return response, len(queries)
+    profile_from = f'from "{UserProfile._meta.db_table}"'
+    profile_selects = sum(
+        query['sql'].lstrip().lower().startswith('select')
+        and profile_from in query['sql'].lower()
+        for query in queries
+    )
+    return response, len(queries), profile_selects
 
 
 def _capture_transaction_initializations(client):
@@ -60,18 +73,21 @@ def test_statement_list_query_budget_does_not_grow_with_fifty_statements(record_
     """Falla si el serializer vuelve a consultar transacciones por extracto."""
     superuser = get_user_model().objects.create_superuser(username='statement-budget-admin', email='statement-budget@example.com', password='testpass123')
     _create_statement_set(1)
-    single_response, single_queries = _count_statement_queries(_statement_client(superuser))
+    single_response, single_queries, single_profile_selects = _count_statement_queries(_statement_client(superuser))
     CreditCardStatement.objects.all().delete()
     _create_statement_set(50)
-    many_response, many_queries = _count_statement_queries(_statement_client(superuser))
+    many_response, many_queries, many_profile_selects = _count_statement_queries(_statement_client(superuser))
 
     record_property('statement_queries_one', single_queries)
     record_property('statement_queries_fifty', many_queries)
+    record_property('statement_profile_selects_one', single_profile_selects)
+    record_property('statement_profile_selects_fifty', many_profile_selects)
     assert single_response.status_code == 200
     assert many_response.status_code == 200
     assert len(single_response.data['results']) == 1
     assert len(many_response.data['results']) == 50
     assert single_queries == many_queries
+    assert single_profile_selects == many_profile_selects == 1
     assert many_queries <= MAX_STATEMENT_LIST_QUERIES
 
 

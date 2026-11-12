@@ -1,0 +1,6 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>{{ subject }}</title></head>
+<body><h1>{{ subject }}</h1><p>Oportunidades que cumplen los filtros configurados en ProjectApp. Revisa los documentos y el plazo en la publicación oficial antes de decidir.</p>
+{% for item in items %}<article><h2>{{ item.title }}</h2><p>{{ item.entity_name }} · Departamento de la entidad: {{ item.department }}</p><p>Presupuesto COP: {{ item.budget_label }} · Cierre: {{ item.closing_label }}</p>
+{% for alert in item.matched_alerts %}<p><strong>Alerta: {{ alert.name }}</strong></p><dl>{% for filter in alert.filter_labels %}<dt>{{ filter.label }}</dt><dd>{{ filter.value }}</dd>{% empty %}<dd>Todos los procesos abiertos.</dd>{% endfor %}</dl>{% endfor %}
+{% if item.source_url %}<p><a href="{{ item.source_url }}">Ver publicación oficial en SECOP</a></p>{% endif %}</article>{% endfor %}
+<footer>ProjectApp · Contratación estatal. El análisis de conveniencia corresponde al equipo y a su asistente externo.</footer></body></html>

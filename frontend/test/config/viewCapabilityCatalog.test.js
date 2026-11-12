@@ -46,6 +46,7 @@ describe('viewCapabilityCatalog', () => {
       'Control financiero',
       'Integraciones',
       'Gobierno del sistema',
+      'Contratación estatal',
     ])
   })
 
@@ -93,6 +94,7 @@ describe('viewCapabilityCatalog', () => {
       'panel-finance',
       'panel-integrations',
       'panel-governance',
+      'panel-procurement',
     ])
   })
 
@@ -103,13 +105,11 @@ describe('viewCapabilityCatalog', () => {
         '/panel/proposals/create',
         '/panel/proposals/:id/edit',
         '/panel/diagnostics',
-        '/panel/diagnostics/create',
-        '/panel/diagnostics/:id/edit', '/panel/consulting',
+        '/panel/diagnostics/create', '/panel/diagnostics/:id/edit',
         '/panel/defaults',
         '/panel/proposals/defaults',
         '/panel/diagnostics/defaults',
         '/panel/proposals/email-templates',
-        '/panel/proposals/email-deliverability',
     ]],
     ['panel-offerings', [
         '/panel/hour-packages',
@@ -126,10 +126,25 @@ describe('viewCapabilityCatalog', () => {
         '/panel/financing/:id',
         '/panel/building-with-us',
         '/panel/cells',
+        '/panel/consulting',
     ]],
   ])('assigns %s URLs to the new capability', (capabilityId, expectedUrls) => {
     // Fails if a menu destination remains documented under Comercial after its responsibility moved.
     expect(descendantCapabilityViewUrls(findCapabilityNode(capabilityId))).toEqual(expectedUrls)
+  })
+
+  it('assigns consulting and email delivery to their new panel owners', () => {
+    // Fails if consulting or the legacy deliverability URL is documented under its former owner.
+    expect(findCapabilityNode('panel-programs').children.map((node) => node.id)).toEqual([
+      'panel-financing',
+      'panel-building-with-us',
+      'panel-building-on-demand',
+      'panel-consulting',
+    ])
+    expect(capabilityViewRecords(findCapabilityNode('panel-email-center')).map((view) => view.url)).toEqual([
+      '/panel/emails',
+      '/panel/proposals/email-deliverability',
+    ])
   })
 
   it('resolves the breadcrumb path for a Panel submodule', () => {

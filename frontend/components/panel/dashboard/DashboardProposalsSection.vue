@@ -2,6 +2,7 @@
   <section
     v-if="proposals"
     aria-labelledby="dashboard-proposals-title"
+    class="min-w-0 max-w-full"
     data-testid="dashboard-proposals-section"
   >
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -19,8 +20,8 @@
       </NuxtLink>
     </div>
 
-    <div class="grid gap-4 panel-desktop:grid-cols-2">
-      <div class="flex flex-col gap-4">
+    <div class="grid min-w-0 grid-cols-1 gap-4 panel-desktop:grid-cols-2">
+      <div class="flex min-w-0 flex-col gap-4">
         <div class="grid grid-cols-1 gap-4 panel-portrait:grid-cols-2">
           <DashboardStatTile
             label="Tasa de cierre"
@@ -48,7 +49,7 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-border-muted bg-surface p-4 shadow-card panel-portrait:p-5">
+      <div class="min-w-0 max-w-full rounded-xl border border-border-muted bg-surface p-4 shadow-card panel-portrait:p-5">
         <h3 class="text-sm font-medium text-text-default mb-3">
           Tendencia últimos 6 meses
         </h3>

@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 
 global.useLocalePath = jest.fn(() => (path) => path);
 global.useRoute = jest.fn(() => ({ path: '/' }));
+global.useI18n = jest.fn(() => ({ t: (key) => key }));
 
 import PanelSidebar from '../../components/panel/PanelSidebar.vue';
 

@@ -1,10 +1,12 @@
-"""Data-integrity tools of the projects MCP connector: metadata, confirmation, replay and undo."""
+"""Canonical integrity and preserved Projects contracts: confirmation, replay and undo."""
 import json
+from dataclasses import dataclass, field
 
 import pytest
 from accounts.models import ProjectPhase
 
 from content.mcp.contract_report import CONTRACTS_PATH
+from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG
 from content.mcp.registry import connector_version
 from content.models import DataIntegrityOperation, McpActionIntent, McpConnector
 from content.tests.data_integrity_helpers import (
@@ -15,20 +17,33 @@ from content.tests.data_integrity_helpers import (
     scan,
     selection,
 )
-from content.views.mcp_blog import TOOLS_BY_SLUG
-
 pytestmark = pytest.mark.django_db
 TOOL_NAMES = ('describe_integrity_rules', 'list_integrity_findings', 'preview_integrity_fixes',
               'apply_integrity_fixes', 'list_integrity_operations', 'preview_integrity_operation_undo',
               'undo_integrity_operation')
 
 
-@pytest.fixture
-def token():
-    connector, _ = McpConnector.objects.get_or_create(slug='projects', defaults={'name': 'Projects'})
+@dataclass(frozen=True)
+class _McpTransport:
+    slug: str
+    token: str = field(repr=False)
+
+
+@pytest.fixture(params=[
+    pytest.param(('projects', 'legacy'), id='projects-legacy'),
+    pytest.param(('data-integrity', 'canonical'), id='data-integrity'),
+])
+def token(request):
+    slug, catalog = request.param
+    connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug})
     connector.is_active = True
     connector.save(update_fields=['is_active'])
-    return connector.generate_token()
+    token = connector.generate_token()
+    # Exercise both the canonical owner and the preserved Projects consumer.
+    credential = connector.credentials.get(label='Default')
+    credential.catalog = catalog
+    credential.save(update_fields=['catalog'])
+    return _McpTransport(slug, token)
 
 
 @pytest.fixture
@@ -43,7 +58,7 @@ def gap(make_client_profile):
 
 
 def _call(api_client, token, name, arguments):
-    response = api_client.post(f'/api/mcp/projects/{token}/', {
+    response = api_client.post(f'/api/mcp/{token.slug}/{token.token}/', {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': name, 'arguments': arguments},
     }, format='json')
     return json.loads(response.data['result']['content'][0]['text'])
@@ -61,9 +76,9 @@ def _pending_apply(api_client, token, gap, request_id='mcp-1'):
     })
 
 
-def test_projects_connector_exposes_the_tools_with_the_right_risk():
-    """Fails if a write tool is exposed without confirmation or a read tool is marked as a write."""
-    tools = {tool['name']: tool for tool in TOOLS_BY_SLUG['projects']}
+def test_legacy_projects_credential_exposes_integrity_tools_with_the_right_risk():
+    """Fails if a preserved Projects consumer loses integrity tools or their confirmation contract."""
+    tools = {tool['name']: tool for tool in LEGACY_TOOLS_BY_SLUG['projects']}
 
     assert set(TOOL_NAMES) <= set(tools)
     for name in ('apply_integrity_fixes', 'undo_integrity_operation'):
@@ -101,7 +116,7 @@ def test_confirmation_applies_once_and_replays_after(api_client, token, gap):
 
     assert _orders() == [1, 2]
     operation = DataIntegrityOperation.objects.get()
-    assert operation.source == 'mcp:projects'
+    assert operation.source == f'mcp:{token.slug}'
     assert operation.actor.username.startswith('mcp_')
     assert 'error' not in first
 

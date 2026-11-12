@@ -16,6 +16,7 @@ from content.serializers.accounting import (
 # The keys in neither EMAIL_TEMPLATE_LABELS nor the editable template
 # registry. Without them the "Aviso" column would render raw snake_case.
 EXTRA_TEMPLATE_LABELS = {
+    'login_code': 'Código de acceso',
     'magic_link': 'Acceso directo',
     'team_copy': 'Copia al equipo',
     'diagnostic_initial_sent': 'Diagnóstico inicial',

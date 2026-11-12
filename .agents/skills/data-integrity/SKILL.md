@@ -1,11 +1,11 @@
 ---
 name: data-integrity
-description: "Rastrea datos huérfanos, duplicados e inconsistentes de ProjectApp (clientes, proyectos, documentos, comunicaciones, contabilidad, propuestas y nombres) con el motor de integridad del Gestor de Proyectos, y los corrige por lotes que el operador aprueba, con registro y deshacer. Usar cuando el operador pide revisar, limpiar, ordenar o fusionar datos de un cliente, proyecto o propuesta, o un barrido completo. Por defecto sólo informa."
+description: "Rastrea datos huérfanos, duplicados e inconsistentes de ProjectApp (clientes, proyectos, documentos, comunicaciones, contabilidad, propuestas y nombres) con el motor de integridad del conector Integridad de datos, y los corrige por lotes que el operador aprueba, con registro y deshacer. Usar cuando el operador pide revisar, limpiar, ordenar o fusionar datos de un cliente, proyecto o propuesta, o un barrido completo. Por defecto sólo informa."
 ---
 
 # Data integrity — rastreo y corrección de datos de ProjectApp
 
-Revisa los datos REALES de ProjectApp (producción) a través del Gestor de Proyectos y
+Revisa los datos REALES de ProjectApp (producción) a través del conector Integridad de datos y
 entrega, en lenguaje llano, qué está mal, por qué y cómo se corrige. Las reglas viven en
 el servidor: un catálogo fijo y versionado (`describe_integrity_rules`) que detecta
 datos huérfanos, duplicados e inconsistentes en clientes, proyectos, documentos,
@@ -36,7 +36,7 @@ Referencias de esta skill:
    - Cada llamada MCP graba una fila `McpRequestLog` en producción.
    - Una herramienta sensible crea además una intención de confirmación que vence a los
      10 minutos.
-2. **Conector caído ≠ sin hallazgos.** Si el Gestor de Proyectos no conecta, lo que no se
+2. **Conector caído ≠ sin hallazgos.** Si el conector Integridad de datos no conecta, lo que no se
    pudo medir queda **requiere validación**, con el conector como dato faltante.
 3. **Antes del primer lote de correcciones en producción,** dos condiciones:
    - **La referencia de un respaldo verificado de la base y de la media**, que dispara el
@@ -58,10 +58,11 @@ Referencias de esta skill:
    sesiones; nunca usar nombres con prefijo guardados), las herramientas del Gestor de
    Proyectos: `describe_integrity_rules`, `list_integrity_findings`,
    `preview_integrity_fixes`, `apply_integrity_fixes`, `list_integrity_operations`,
-   `preview_integrity_operation_undo`, `undo_integrity_operation`, `confirm_action` y
+   `preview_integrity_operation_undo`, `undo_integrity_operation`, `start_integrity_scan`,
+   `get_integrity_scan`, `review_integrity_finding`, `confirm_action` y
    `cancel_action` (por ejemplo, query `+integrity` y luego `select:` con los nombres
    encontrados).
-2. Si no aparecen: cerrar con `⏸️ data-integrity — el Gestor de Proyectos no expone el
+2. Si no aparecen: cerrar con `⏸️ data-integrity — el conector Integridad de datos no expone el
    motor de integridad` y explicar las dos causas posibles: el conector no está
    conectado en esta sesión (o falló al conectar), o el cambio todavía no se desplegó.
    Codex no tiene ese conector configurado: misma salida.
@@ -268,3 +269,32 @@ Sigue $output-protocol: el detalle por regla (§3 del flujo) va antes; al final:
    ℹ️ sólo informe, ❌ falló una llamada.
 3. `## Next steps` con los comandos exactos (`/data-integrity --client=<id> --apply`,
    `/data-integrity --undo=<operación>`) y los pasos manuales de los `report_only`.
+
+
+## Revisiones persistentes y alcance contable (catálogo 1.2.0)
+
+El dueño canónico es el conector `data-integrity`. Los accesos anteriores de
+`projects` conservan temporalmente las siete herramientas antiguas, con aviso de
+migración; no contienen las herramientas nuevas de revisión. No ampliar permisos
+ni crear credenciales para esquivar una falta de acceso.
+
+- Para revisar un registro contable usar `scope_kind`/`scope.kind` = `income`,
+  `expense`, `hosting` o `pocket_movement` y su ID. No sustituirlo por una revisión
+  de todos los datos del cliente. Informar las reglas omitidas de `coverage`.
+- `list_integrity_findings` conserva detección en vivo si se omiten `status` y
+  `scan_id`. Para consultar lo guardado usar `status=pending|accepted|resolved|all`
+  y opcionalmente `scan_id`. No presentar un resultado histórico como actual.
+- `start_integrity_scan` recibe `scope`, filtros opcionales y `request_id` estable.
+  Consultar `get_integrity_scan(scan_id)` hasta completed/failed; si falla, informar
+  el código y la fecha de la última revisión válida. Nunca inferir cero hallazgos.
+- Para aceptar un caso intencional, mostrar evidencia y motivo y usar
+  `review_integrity_finding(fingerprint, action=accept, reason, request_id)` más
+  `confirm_action`. Reabrir usa action=reopen. Esto registra una decisión; no corrige
+  el dato. Una huella nueva vuelve a pendientes aunque el caso anterior se aceptó.
+- DC9, DC10 y DC11 admiten `relink` con `params.folder_id` elegido por el operador.
+  Se conserva propietario, proyecto y contenido. El bloqueo de movimiento, destino
+  archivado o procedencia conservada impiden corregir. Las otras reglas sin fixer
+  siguen su vía explícita en `resolution`; no inventar una reparación.
+- El panel ofrece el mismo flujo en `/panel/data-integrity`. Todos los administradores
+  pueden consultar y corregir integridad financiera aquí; esto no otorga acceso a
+  otras pantallas contables. El barrido diario de Bogotá sólo observa: jamás aplica.

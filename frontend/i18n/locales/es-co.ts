@@ -1,5 +1,6 @@
 export default defineI18nLocale(async () => {
   const [
+    panelUsability,
     global,
     richText,
     accountingPocket,
@@ -46,10 +47,15 @@ export default defineI18nLocale(async () => {
     buildingOnDemandAdmin,
     videoResources,
     platformAI,
+    integrity,
     platformHelp,
     documentPdf,
+    documentFolders,
+    procurement,
+
     hostingBilling,
   ] = await Promise.all([
+    import('../../locales/panelUsability/es.js').then(m => m.default),
     import('~/locales/global/es.js'),
     import('~/locales/richText/es.js'),
     import('~/locales/accountingPocket/es.js'),
@@ -96,12 +102,17 @@ export default defineI18nLocale(async () => {
     import('~/locales/buildingOnDemandAdmin/es.js'),
     import('~/locales/videoResources/es.js'),
     import('~/locales/platformAI/es.js'),
+    import('~/locales/integrity/es.js'),
     import('~/locales/platformHelp/es.js'),
     import('~/locales/documentPdf/es.js'),
+    import('~/locales/documentFolders/es.js'),
+    import('~/locales/procurement/es.js'),
+
     import('~/locales/hostingBilling/es.js'),
   ])
 
   return {
+    panelUsability,
     global: global.default,
     richText: richText.default,
     accountingPocket: accountingPocket.default,
@@ -148,8 +159,12 @@ export default defineI18nLocale(async () => {
     buildingOnDemandAdmin: buildingOnDemandAdmin.default,
     videoResources: videoResources.default,
     platformAI: platformAI.default,
+    integrity: integrity.default,
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
+    documentFolders: documentFolders.default,
+    procurement: procurement.default,
+
     hostingBilling: hostingBilling.default,
   }
 })

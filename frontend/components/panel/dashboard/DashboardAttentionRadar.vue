@@ -54,10 +54,10 @@
           </span>
         </button>
         <div v-if="groups[item.type]?.open" :id="`radar-records-${item.type}`" class="mt-2 rounded-xl border border-border-muted bg-surface p-3" :data-testid="`radar-records-${item.type}`" :aria-busy="groups[item.type].loading">
-          <ul class="space-y-2">
-            <li v-for="record in groups[item.type].records" :key="record.id">
+          <ul class="grid min-w-0 grid-cols-1 gap-3 panel-desktop:grid-cols-2">
+            <li v-for="record in groups[item.type].records" :key="record.id" class="min-w-0">
               <!-- design-tokens: allow-raw-button (selectable record opens its preview) -->
-              <button type="button" class="w-full min-w-0 rounded-lg border border-border-muted p-3 text-left hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" :data-testid="`radar-record-${item.type}-${record.id}`" @click="openDetail(record)">
+              <button type="button" class="h-full w-full min-w-0 rounded-lg border border-border-muted p-3 text-left hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" :data-testid="`radar-record-${item.type}-${record.id}`" @click="openDetail(record)">
                 <span class="mb-2 block break-words text-sm font-medium text-text-default">{{ record.title }}</span>
                 <DashboardAttentionFields :record="record" compact />
               </button>
@@ -73,7 +73,7 @@
         </div>
       </li>
     </ul>
-    <BaseModal :model-value="detailOpen" kind="detail" @update:model-value="closeDetail">
+    <BaseModal :model-value="detailOpen" kind="detail-compact" @update:model-value="closeDetail">
       <div class="p-5 panel-portrait:p-6" data-testid="radar-detail-modal">
         <h2 class="mb-4 break-words text-lg font-medium text-text-default">{{ selected?.title || text.loading }}</h2>
         <p v-if="detailLoading" class="text-sm text-text-muted" role="status">{{ text.loading }}</p>
@@ -197,6 +197,7 @@ function plural(count, singular, plural_) {
 }
 
 const TYPE_CONFIG = {
+  data_integrity: { icon: QuestionMarkCircleIcon, module: 'Integridad de datos', route: '/panel/data-integrity', text: ({ count }) => `${count} ${text.value.integrityPending}` },
   collection_documents_pending: {
     icon: DocumentTextIcon, module: 'Contabilidad', route: '/panel/accounting/collections',
     text: ({ count }) => `${count} ${plural(count, 'cuenta con documento pendiente', 'cuentas con documento pendiente')}`,

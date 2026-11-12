@@ -7,7 +7,6 @@ import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/edit
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-const deliverabilityScenario = getResponsiveScenario('frontend/pages/panel/proposals/email-deliverability.vue');
 const composerScenario = getResponsiveScenario('frontend/pages/panel/emails/index.vue');
 const responsiveRecipient = ['client', 'responsive.test'].join('@');
 const historyEntry = { id: 1, subject: 'Seguimiento responsive', recipient: responsiveRecipient, status: 'delivered', sent_at: '2026-08-25T10:00:00Z', has_body: true, metadata: { greeting: 'Hola Ana', sections: ['Contenido fixture para el preview.'], footer: 'Equipo ProjectApp' } };
@@ -53,15 +52,51 @@ async function openComposer(page) {
   return { subjectInput, previewRequest };
 }
 
+async function openEmailStatusThroughPanel(page, profile) {
+  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+  if (['compact', 'portrait'].includes(profile)) {
+    await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
+  }
+  await page.getByRole('link', { name: 'Emails', exact: true }).click();
+  await selectEmailTab(page, profile, 'status', 'Estado de los emails');
+}
+
+async function selectEmailTab(page, profile, id, label) {
+  if (['compact', 'portrait'].includes(profile)) {
+    await page.getByRole('combobox', { name: 'Secciones', exact: true }).selectOption(id);
+    return;
+  }
+  await page.getByRole('tab', { name: label, exact: true }).click();
+}
+
+async function expectEmailTabs(page, profile) {
+  if (['compact', 'portrait'].includes(profile)) {
+    await expect(page.getByRole('combobox', { name: 'Secciones', exact: true }).locator('option')).toHaveCount(4);
+    return;
+  }
+  await expect(page.getByRole('tab')).toHaveCount(4);
+}
+
 for (const profile of RESPONSIVE_PROFILES) {
   test.describe(`emails catalog · ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
     test.use(viewportUse(profile));
-    test('deliverability keeps a concrete failed recipient reachable after exercising panel navigation', { tag: ['@flow:admin-email-deliverability', '@outcome:display', '@responsive:emails', `@responsive-scenario:${deliverabilityScenario.catalogKey}`, `@responsive-batch:${batchForScenario(deliverabilityScenario.catalogKey)}`, `@viewport:${profile}`] }, async ({ page }, testInfo) => {
+    // Bug caught: status was stranded on the former Commercial route, leaving
+    // a responsive Emails screen without the delivery metrics administrators need.
+    test('shows the failed recipient in Email status through panel navigation', { tag: ['@flow:admin-email-deliverability', '@outcome:display', '@responsive:emails', `@responsive-scenario:${composerScenario.catalogKey}`, `@responsive-batch:${batchForScenario(composerScenario.catalogKey)}`, `@viewport:${profile}`] }, async ({ page }, testInfo) => {
       await setupEmails(page);
-      // quality: allow-deep-link (this catalog status route has no panel navigation equivalent)
-      await page.goto(deliverabilityScenario.resolvedUrl, { waitUntil: 'domcontentloaded' });
+      // quality: allow-deep-link (Dashboard is the panel entry; openEmailStatusThroughPanel clicks Emails and its status tab)
+      await openEmailStatusThroughPanel(page, profile);
       const priorityLocator = page.getByText(responsiveRecipient, { exact: true });
       await expect(priorityLocator).toHaveCount(1);
+      await expectEmailTabs(page, profile);
+      await selectEmailTab(page, profile, 'history', 'Historial');
+      await page.getByLabel('Buscar destinatario').fill(responsiveRecipient);
+      await page.getByLabel('Fecha inicial').fill('2026-08-01');
+      await expect(page.getByLabel('Buscar destinatario')).toHaveValue(responsiveRecipient);
+      await expect(page.getByLabel('Fecha inicial')).toHaveValue('2026-08-01');
+      await page.getByRole('button', { name: 'Limpiar', exact: true }).click();
+      await expect(page.getByLabel('Buscar destinatario')).toHaveValue('');
+      await selectEmailTab(page, profile, 'status', 'Estado de los emails');
       const [initialToggleName, toggledToggleName] = shellToggleNamesByProfile[profile];
       const shellToggle = page.getByRole('button', { name: initialToggleName, exact: true });
       await expect(shellToggle).toBeVisible();
@@ -70,13 +105,6 @@ for (const profile of RESPONSIVE_PROFILES) {
       await expect(toggledShell).toBeVisible();
       await toggledShell.click();
       await expect(shellToggle).toBeVisible();
-      await expect(priorityLocator).toHaveCount(1);
-      await assertResponsiveScenario(page, testInfo, deliverabilityScenario, { profile, priorityLocator });
-    });
-
-    test('composer keeps the filled subject after its responsive form interaction', { tag: ['@flow:admin-standalone-email-composer', '@outcome:display', '@responsive:emails', `@responsive-scenario:${composerScenario.catalogKey}`, `@responsive-batch:${batchForScenario(composerScenario.catalogKey)}`, `@viewport:${profile}`] }, async ({ page }, testInfo) => {
-      // quality: allow-deep-link (the standalone composer is entered directly from a contextual action outside this catalog route)
-      const { subjectInput: priorityLocator } = await openComposer(page);
       await expect(priorityLocator).toHaveCount(1);
       await assertResponsiveScenario(page, testInfo, composerScenario, { profile, priorityLocator });
     });

@@ -1,4 +1,4 @@
-"""Read-only AST inventory of the documents/projects MCP-to-Panel boundary.
+"""Read-only AST inventory of document, project and integrity MCP-to-Panel boundaries.
 
 No view, helper or serializer validation is executed. Only serializer field
 construction runs; relational choices are deliberately never evaluated. Opaque

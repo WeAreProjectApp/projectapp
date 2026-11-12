@@ -1,0 +1,31 @@
+{
+  "requirement": "PA-227",
+  "sha": "b01448a2d01a50dfb712f18c14cbc348b875621a",
+  "seed": 227,
+  "anchorDate": "2026-11-06",
+  "viewports": [
+    [
+      412,
+      915
+    ],
+    [
+      835,
+      1195
+    ],
+    [
+      1195,
+      835
+    ],
+    [
+      1440,
+      900
+    ],
+    [
+      2560,
+      1440
+    ]
+  ],
+  "sourcePages": 106,
+  "automation": "CI only",
+  "browser": "Playwright Chromium; version recorded with captures"
+}

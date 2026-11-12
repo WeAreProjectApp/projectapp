@@ -115,7 +115,11 @@ from accounts.views import (
     verify_view,
 )
 
+from accounts.views_access import access_list, access_detail
+
 urlpatterns = [
+    path('access/', access_list, name='access-list'),
+    path('access/<int:user_id>/', access_detail, name='access-detail'),
     path('projects/<int:project_id>/deliverables/<int:resource_id>/files/<str:kind>/',
          platform_resource_file, name='platform-resource-file'),
     path("projects/<int:project_id>/approval-files/<int:file_id>/", platform_approval_file_download, name="platform-approval-file-download"),

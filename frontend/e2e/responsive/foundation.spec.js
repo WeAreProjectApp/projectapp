@@ -47,25 +47,25 @@ async function verifyLongModal(page) {
 for (const profile of RESPONSIVE_PROFILES) {
   test.describe(`foundation catalog · ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
     test.use(viewportUse(profile));
-    test('login keeps the Django Admin entry actionable', {
+    test('login keeps the password entry actionable', {
       tag: ['@flow:admin-login', '@outcome:display', '@responsive:foundation', `@responsive-scenario:${loginScenario.catalogKey}`, `@responsive-batch:${batchForScenario(loginScenario.catalogKey)}`, `@viewport:${profile}`],
     }, async ({ page }, testInfo) => {
       // quality: allow-deep-link (the unauthenticated login surface has no earlier panel route)
-      // Django owns /admin/. The responsive suite only boots Nuxt, so model
+      // Django owns /admin/login/. The responsive suite only boots Nuxt, so model
       // that external handoff endpoint explicitly and assert the clicked
       // navigation reaches it.
-      await page.route(/^https?:\/\/[^/]+\/admin\/$/, (route) => route.fulfill({
+      await page.route(/^https?:\/\/[^/]+\/admin\/login\/\?next=%2Fpanel%2F$/, (route) => route.fulfill({
         status: 200,
         contentType: 'text/html',
         body: '<html><body><h1>Django admin login</h1></body></html>',
       }));
       await page.goto('/panel/login', { waitUntil: 'domcontentloaded' });
       await waitForNuxtApp(page);
-      // quality: allow-flow-tag-mismatch (this catalog route verifies the Django Admin handoff; credential entry belongs to Django's separate login surface)
-      const adminLink = page.getByRole('link', { name: 'Ir al Django Admin' });
-      await expect(adminLink).toHaveAttribute('href', '/admin/');
-      await adminLink.click();
-      await expect(page).toHaveURL(/\/admin\/$/);
+      // quality: allow-flow-tag-mismatch (this catalog route verifies the Django password handoff; credential entry belongs to Django's separate login surface)
+      const passwordLink = page.getByRole('link', { name: 'Entrar con contraseña' });
+      await expect(passwordLink).toHaveAttribute('href', '/admin/login/?next=%2Fpanel%2F');
+      await passwordLink.click();
+      await expect(page).toHaveURL(/\/admin\/login\/\?next=%2Fpanel%2F$/);
       await expect(page.getByRole('heading', { name: 'Django admin login' })).toBeVisible();
       await assertResponsiveScenario(page, testInfo, loginScenario, { profile });
     });
