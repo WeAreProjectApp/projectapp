@@ -166,6 +166,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       label: 'Sistema',
       muted: true,
       items: [
+        { label: 'Integridad de datos', href: lp('/panel/data-integrity'), icon: 'shield' },
         { label: 'Admins del panel', href: lp('/panel/admins'), icon: 'shield' },
         {
           label: 'Django Admin',

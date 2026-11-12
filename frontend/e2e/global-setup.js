@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import { chromium } from '@playwright/test';
 import { mockApi } from './helpers/api.js';
+import { buildDataIntegrityApi } from './helpers/data-integrity-fixture.js';
 import { waitForNuxtApp } from './helpers/navigation.js';
 import { buildingWithUsApiFixture } from './helpers/building-with-us-fixture.js';
 import { consultingApiFixture } from './helpers/consulting-fixture.js';
@@ -19,6 +20,7 @@ const RESPONSIVE_WARMUP_ROUTES = Object.freeze({
     '/es-co/panel/cells?tab=economics',
     '/es-co/panel/cells?tab=contract',
   ],
+  'frontend/pages/panel/data-integrity.vue': ['/es-co/panel', '/es-co/panel/data-integrity'],
   'frontend/pages/panel/documents/index.vue': ['/en-us/panel/documents'],
   'frontend/pages/panel/documents/create.vue': [
     '/en-us/panel/documents',
@@ -140,7 +142,9 @@ const warmupAdminModule = { id: 1, category: 1, slug: 'warmup-module', name_es: 
 const warmupProposalDefaults = { id: 1, language: 'es', sections_json: [], default_slug_pattern: '{client_name}', default_expiration_days: 21, default_reminder_days: 7, default_urgency_reminder_days: 14, created_at: null, updated_at: null };
 const warmupDocument = { id: 1, title: 'Warmup document', status: 'draft', content_markdown: '# Warmup', client: null, project: null, language: 'es', template_style: 'professional', created_at: '2026-01-01T00:00:00Z' };
 
-async function warmupApiFixture({ apiPath, method, route }) {
+const integrityWarmup = buildDataIntegrityApi();
+async function warmupApiFixture({ apiPath, method, route, ...rest }) {
+  if (apiPath.startsWith('data-integrity/')) return integrityWarmup.handler({ apiPath, method, route, ...rest });
   const consulting = consultingApiFixture({ apiPath, method, route });
   if (consulting) return consulting;
   const buildingWithUs = buildingWithUsApiFixture({ apiPath, method, route });

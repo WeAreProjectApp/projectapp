@@ -14,6 +14,7 @@ import { formatMoney } from '~/utils/formatMoney';
 const props = defineProps({ record: { type: Object, required: true }, compact: Boolean });
 const text = useDashboardAttentionText();
 const fields = computed(() => ({
+  data_integrity: ['description'],
   emails_failed: ['recipient', 'sent_at', 'error_message'],
   recurring_due: ['amount', 'due_date', 'payment_method'],
   tasks_overdue: props.compact ? ['assignee', 'due_date', 'priority'] : ['assignee', 'due_date', 'priority', 'description'],
