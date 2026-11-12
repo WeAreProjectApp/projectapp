@@ -1,3 +1,71 @@
+## PA-231 — Contrato de fake data (2026-11-06)
+
+Trabajo backend en `fix/06112026-pa231-fake-data`: el comando canónico incorpora
+Monitoreo y Enlaces seguros con semilla/fecha, casos QA identificables, archivos
+locales válidos y limpieza diferida al commit. Se amplía el contrato a las cuatro
+apps de negocio; las credenciales y evidencias externas siguen exentas.
+Validación automatizada exclusivamente en CI; no se operan servidores DEV ni
+se ejecutan migraciones desde el worktree. Ver `docs/FAKE_DATA_COVERAGE.md`.
+
+
+## 2026-11-06 — PA-206 / PA-207 / PA-210 — en validación
+
+Nueva carpeta desde el encabezado abre el formulario existente con destino visible y contexto de carpeta/proyecto. Gestionar carpetas reutiliza el selector con búsqueda y rutas, y su árbol muestra ancestros. El editor Visual distingue el código en línea mediante tokens del tema, sin alterar su serialización. Sin cambios de esquema. Pruebas automatizadas exclusivamente en CI; DevQA recibió el preaviso para el recorrido Chrome sobre datos aislados. La aprobación visual y el CI se registrarán con SHA en el informe de la sesión.
+
+
+> **PA-211 — editor documental, 2026-11-06, en implementación:** se conserva Tiptap 3.32.0 y Markdown extendido. El cuerpo de Nuevo Documento y edición recibe una barra agrupada y contextual, con enlaces, tablas, avisos e índice. Comparación y alcance en `docs/document-editor-evaluation.md`. Pruebas automatizadas exclusivamente en CI y recorrido manual coordinado con dev-qa; el cierre queda pendiente de sus evidencias. No acredita despliegue.
+
+> **PA211-01 — combinación de color y resaltado, 2026-11-07:** Chrome detectó que un resaltado interior tomaba el negro del navegador aunque su fuente conservara el color explícito. La corrección en la rama de sesión aplica herencia sólo bajo spans editoriales con color, en editor, vista previa y lectores; conserva el resaltado sin color y el vocabulario guardado. Se preparan pruebas de color computado para CI. El entorno de QA sigue congelado en `1b7b761b` hasta acordar la reprueba; esta nota no acredita validación del arreglo.
+
+## 2026-11-06 — PA-226, aviso de cambios al cargar General
+
+Corrección en rama de sesión: General calcula los días de vigencia sin escribir el vencimiento al cargar o recargar el formulario. Sólo editar los días actualiza la fecha; se elimina el circuito de watchers que movía vencimientos pasados y podía producir actualizaciones recursivas cerca de medianoche. Regresiones de componente y E2E para carga asíncrona, edición, reversión y guardado exitoso/fallido. Las pruebas se ejecutan exclusivamente en CI. La aceptación visible de propuestas ficticias 10 y 11 requiere turno de DevQA y Chrome de Backlog ProjectApp; la aceptación para cierre requiere además el SHA integrado de main servido en DEV. Esta nota no acredita CI ni validación funcional aprobados.
+
+## 2026-11-06 — PA-228, desbordes responsive del Panel
+
+Implementación en rama `fix/06112026-pa228-responsive-overflow`: ocho casos de
+Dashboard, Recurrentes, Blog, Propuestas e Ingresos. Calendario horizontal móvil
+elegido por el operador; importes completos mediante ajuste optativo de las
+tarjetas. Sin cambios de datos o cálculos. Automatizadas sólo en CI y recorrido
+Chrome coordinado por DevQA; esta nota no acredita validación ni despliegue.
+Alcance y guion: `docs/audits/2026-11-06-pa228-responsive-overflow.md`.
+
+## PA-219 — Corrección de anclajes durante la ronda DEVQA-008 — 2026-11-07
+
+QA devuelve parcialmente el criterio de controles visibles sobre `d012f9e8`:
+la repetición del proyecto desde Ayuda móvil conserva el cajón por encima del
+destino; un resize deja la geometría antigua; la guía general conserva el nodo
+de escritorio oculto al pasar a móvil. Corrección en el mismo worktree/PR567:
+preparar el cajón según destino y observar la distribución mientras dura la guía,
+seleccionando el nodo visible al cruzar el breakpoint y liberando observadores
+al salir. Nuevas regresiones comprueban el recorte SVG y la tarjeta alrededor del
+control real, la reapertura y los acuses terminales. Pruebas sólo en CI.
+
+La ronda manual continúa en su copia `d012f9e8`; esta sesión no modifica runtime,
+datos, terminales ni prepara DEV. La nueva entrega necesita SHA/CI propios y
+acuerdo de reprueba. Detalle y límites (incluida pausa por mouse no acreditada):
+`docs/audits/2026-11-07-pa219-responsive-anchors.md`. Sin aprobación manual ni
+transferencia de verde entre SHAs por este registro.
+
+## PA-219 — Ayuda y recorridos con la identidad real de sesión — 2026-11-06
+
+Corrección en la rama de sesión `fix/06112026-pa219-platform-help`: Ayuda usa
+`user_id`, el identificador publicado por el perfil, para cargar recorridos,
+observar cambios de cuenta y sincronizar el progreso pendiente sin cruzar usuarios.
+Las pruebas del módulo reproducen el perfil sin el alias `id` que ocultaba el fallo.
+Pruebas automatizadas exclusivamente en CI; validación manual coordinada con
+dev-qa sobre el SHA servido. La entrada no acredita CI aprobado ni despliegue.
+
+# PA-215 — correos de liquidación y remanente (2026-11-06)
+
+Corrección en la rama de sesión: la copia del mensaje conserva por referencia su
+conexión SMTP y el timeout, evitando copiar el RLock. Participaciones muestra
+el remanente positivo de ProjectApp incluso contraída. Se preservan los pagos,
+los avisos únicos y los reintentos de Historial. Regresiones específicas y ficha
+en `docs/audits/2026-11-06-pa215-settlement-email.md`; automatizadas sólo en CI.
+PR, resultado de CI y aceptación DEV se verificarán por separado; esta entrada
+no acredita despliegue ni validación manual.
+
 ## Seguimientos PA-235 / PA-238 / PA-239 / PA-240 — 2026-11-07
 
 Implementación en rama propia sobre main y PR #571. Los encabezados contienen nombres largos; Código y cabeceras HTML TH>P conservan contraste; Gestionar carpetas recibe semántica modal y foco coherente; las tarjetas interpretan escapes Markdown sin alterar la fuente; los historiales comparten estados en español. Vencimiento usa días calendario de la zona del navegador con hora conservada, carga sin escritura y conversión local al reabrir. Sin migraciones ni cambios de API. Automatizadas exclusivamente en CI; reprueba manual solicitada por buzón a Backlog para asignar una única dupla al PR. Este registro no acredita CI verde, aprobación de QA, integración ni deploy. Guion: docs/audits/PA-235-238-239-240-handoff.md.
@@ -3106,3 +3174,11 @@ filtra las mismas fuentes y conserva el enlace confirmado por el servicio actual
 Sin cambios de modelos, migraciones, reglas de pendiente ni emisión; esos cruces
 pertenecen a las otras sesiones. Validación focalizada y PR verde en curso; el
 merge pertenece a «Coordina las sesiones activas».
+# 2026-11-06 — PA-220: acceso al video de Ayuda
+
+La sesión `pa220-help-video` incorpora por merge la corrección común de identidad
+de PA-219 y conserva su autoría. Los casos de video usan el contrato real
+`user_id` sin `id`, verifican reapertura y disponibilidad efectiva por recurso.
+El modal invalida el catálogo anterior al cambiar de cliente. Pruebas sólo en CI;
+DevQA administra el turno manual de clientes 19/20 y la revisión editorial.
+Evidencia y pendientes: `docs/audits/2026-11-06-pa220-help-video.md`.

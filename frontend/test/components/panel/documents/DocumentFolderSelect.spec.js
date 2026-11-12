@@ -74,6 +74,41 @@ afterEach(() => {
 });
 
 describe('DocumentFolderSelect', () => {
+  it('offers an explicit root destination when configured', async () => {
+    const { wrapper, input } = mountSelect({
+      props: { modelValue: 7, rootOptionLabel: 'Ninguna (carpeta raíz)' },
+    });
+    await input.trigger('focus');
+
+    await wrapper.get('[data-testid="folder-option-null"]').trigger('click');
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[null]]);
+    expect(input.element.value).toBe('Ninguna (carpeta raíz)');
+  });
+
+  it('commits the matching subfolder with Enter while offering the root', async () => {
+    const { wrapper, input } = mountSelect({ props: { rootOptionLabel: 'Ninguna (carpeta raíz)' } });
+    await input.trigger('focus');
+
+    await input.setValue('sprint');
+    expect(wrapper.get('[data-testid="folder-detail-17"]').text()).toContain('Vástago / Entregables');
+    await input.trigger('keydown', { key: 'Enter' });
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[17]]);
+    expect(input.element.value).toBe('Vástago / Entregables / Sprint 1');
+  });
+
+  it('explains an unmatched search while retaining the root option', async () => {
+    const { wrapper, input } = mountSelect({ props: { rootOptionLabel: 'Ninguna (carpeta raíz)' } });
+    await input.trigger('focus');
+
+    await input.setValue('inexistente');
+
+    expect(wrapper.get('[data-testid="folder-empty"]').text()).toContain('inexistente');
+    expect(wrapper.get('[data-testid="folder-option-null"]').text()).toBe('Ninguna (carpeta raíz)');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+
   it('names the combobox after its label and lists the whole catalog on focus', async () => {
     const { wrapper, input } = mountSelect();
 

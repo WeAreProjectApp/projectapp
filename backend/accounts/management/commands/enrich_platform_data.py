@@ -35,6 +35,7 @@ from accounts.models import (
     UserProfile,
 )
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
+from content.fake_data_files import fake_data_transaction, sample_pdf
 
 User = get_user_model()
 
@@ -45,6 +46,7 @@ HISTORY_PATHS = {
     Payment.STATUS_FAILED: [('pending', 'processing', 'wompi_link'), ('processing', 'failed', 'webhook')],
     Payment.STATUS_OVERDUE: [('pending', 'overdue', 'system')],
     Payment.STATUS_PENDING: [('pending', 'pending', 'system')],
+    Payment.STATUS_VOIDED: [('pending', 'voided', 'manual')],
 }
 
 NOTIFICATION_SPECS = [
@@ -82,6 +84,7 @@ class Command(BaseCommand):
         )
         add_seed_arguments(parser, count_default=60)
 
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('enrich_platform_data')
         context = seed_context(options, 'platform-enrichment')
@@ -150,7 +153,7 @@ class Command(BaseCommand):
                 description='Entregable lógico sin archivo real para el ambiente demo.',
                 source_epic_key=f'fake-volume-{index + 1:03d}',
                 source_epic_title=f'Módulo representativo {index % 8 + 1}',
-                current_version=index % 4 + 1,
+                current_version=1,
                 uploaded_by=admin,
                 is_archived=index % 19 == 0,
                 archived_at=(
@@ -254,7 +257,7 @@ class Command(BaseCommand):
             if rng.random() < 0.5 and not deliverable.attachment_files.exists():
                 DeliverableFile.objects.create(
                     deliverable=deliverable,
-                    file=f'deliverables/files/{deliverable.pk}/anexo.pdf',
+                    file=sample_pdf('anexo-demo.pdf'),
                     title='Anexo de referencia',
                     category=deliverable.category,
                     uploaded_by=admin,
@@ -273,7 +276,7 @@ class Command(BaseCommand):
                     DeliverableClientUpload.objects.create(
                         deliverable=deliverable,
                         folder=folder,
-                        file=f'deliverables/client/{deliverable.pk}/comprobante-{k + 1}.pdf',
+                        file=sample_pdf(f'comprobante-{k + 1}.pdf'),
                         title=f'Comprobante {k + 1}',
                         uploaded_by=client,
                     )

@@ -45,7 +45,10 @@ const mockFolderStore = {
 // Nuxt auto-import — must be set before the component is required
 global.useDocumentFolderStore = jest.fn(() => mockFolderStore);
 
+jest.mock('../../stores/document_folders', () => ({ useDocumentFolderStore: () => mockFolderStore }));
+
 import { mount } from '@vue/test-utils';
+import { documentFolderI18n } from '../helpers/documentFolderI18n';
 import FolderManagerModal from '../../components/panel/documents/FolderManagerModal.vue';
 import FolderManagerTree from '../../components/panel/documents/FolderManagerTree.vue';
 import BaseFormField from '../../components/base/BaseFormField.vue';
@@ -120,6 +123,7 @@ describe('FolderManagerModal', () => {
     expect(error.text()).toBe(message);
   }
   beforeEach(() => {
+    global.useI18n = documentFolderI18n;
     mockFolderStore.folders = [];
     mockFolderStore.isUpdating = false;
     mockFolderStore.fetchFolders.mockReset().mockResolvedValue({ success: true });
@@ -273,7 +277,7 @@ describe('FolderManagerModal', () => {
       await wrapper.find('[title="Editar carpeta"]').trigger('click');
 
       // Sólo queda el input de crear: la edición vive en el modal compartido.
-      expect(wrapper.findAll('input[type="text"]').length).toBe(1);
+      expect(wrapper.findAll('[data-testid="folder-manager-new-name"]').length).toBe(1);
     });
 
     it('refreshes and emits changed after the form saves', async () => {
@@ -315,7 +319,7 @@ describe('FolderManagerModal', () => {
       const wrapper = mountModal({ modelValue: false, initialParent: 4 });
       await wrapper.setProps({ modelValue: true });
       await flushPromises();
-      await wrapper.find('input[type="text"]').setValue('Diseño');
+      await wrapper.find('[data-testid="folder-manager-new-name"]').setValue('Diseño');
       await wrapper.find('form').trigger('submit');
 
       expect(mockFolderStore.createFolder).toHaveBeenCalledWith(
@@ -328,7 +332,7 @@ describe('FolderManagerModal', () => {
       const wrapper = mountModal({ modelValue: false, initialParent: 4 });
       await wrapper.setProps({ modelValue: true });
       await flushPromises();
-      await wrapper.find('input[type="text"]').setValue('Sub');
+      await wrapper.find('[data-testid="folder-manager-new-name"]').setValue('Sub');
       await wrapper.find('form').trigger('submit');
 
       expect(mockFolderStore.createFolder).toHaveBeenCalledWith(
@@ -452,10 +456,6 @@ describe('FolderManagerModal', () => {
   describe('initialParent prop', () => {
     const parentFolder = { id: 5, name: 'Mis Documentos', parent: null, document_count: 0 };
 
-    function optionByText(wrapper, text) {
-      return wrapper.findAll('option').find((opt) => opt.text().trim() === text);
-    }
-
     async function openWith(props) {
       mockFolderStore.folders = [parentFolder];
       const wrapper = mountModal({ modelValue: false, ...props });
@@ -467,13 +467,13 @@ describe('FolderManagerModal', () => {
     it('pre-selects the initialParent folder in the "Dentro de:" select when opened', async () => {
       const wrapper = await openWith({ initialParent: 5 });
 
-      expect(optionByText(wrapper, 'Mis Documentos').element.selected).toBe(true);
+      expect(wrapper.get('[data-testid="folder-manager-parent"]').element.value).toBe('Mis Documentos');
     });
 
     it('selects the root option when no initialParent is provided', async () => {
       const wrapper = await openWith({});
 
-      expect(optionByText(wrapper, 'Ninguna (carpeta raíz)').element.selected).toBe(true);
+      expect(wrapper.get('[data-testid="folder-manager-parent"]').element.value).toBe('Ninguna (carpeta raíz)');
     });
 
     it('resets the select back to initialParent after a successful create', async () => {
@@ -482,7 +482,7 @@ describe('FolderManagerModal', () => {
       await wrapper.find('form').trigger('submit');
       await flushPromises();
 
-      expect(optionByText(wrapper, 'Mis Documentos').element.selected).toBe(true);
+      expect(wrapper.get('[data-testid="folder-manager-parent"]').element.value).toBe('Mis Documentos');
     });
   });
 

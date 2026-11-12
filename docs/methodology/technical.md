@@ -1517,7 +1517,9 @@ description and preserves its credentials, active state and last-use timestamp.
   Pocket route is the structural exception below `PANEL_BREAKPOINTS.portrait`:
   `useIsMobile` renders exactly one `PocketMovementCards` branch with concept,
   signed amount and labelled facts, while the shared priority table returns at
-  640 px. Both branches reuse `PocketMovementRowActionsButton` and
+  640 px. From landscape up, Pocket uses the shared proportional column layout:
+  spare width is distributed across the six existing data columns instead of
+  being reserved for Concepto. Both branches reuse `PocketMovementRowActionsButton` and
   `PocketMovementActionsModal`; Incomes and Collection Accounts use the same
   `menu-start` contract in classic and grouped modes. `BaseBadge` owns atomic
   direction/link/status text. `withRunningBalance` remains filter-first, so cards

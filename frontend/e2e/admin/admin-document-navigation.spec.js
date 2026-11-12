@@ -485,7 +485,7 @@ test.describe('Admin document project/client navigation', () => {
     await page.getByTestId('documents-navigation-project-41').click();
     await page.getByTestId(`folder-open-${PROJECT_PHASE.id}`).click();
     await expect(page.getByTestId('folder-header-project')).toHaveText(longProjectName);
-    await expect(page.getByTestId(`document-open-${projectPhaseDocument.id}`)).toContainText('Documento de Fase 1.5');
+    await expect(page.locator(`[data-testid="document-open-${projectPhaseDocument.id}"], [data-testid="document-card-open-${projectPhaseDocument.id}"]`).filter({ visible: true })).toContainText('Documento de Fase 1.5');
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     for (const profile of ['compact', 'portrait']) {
@@ -502,10 +502,11 @@ test.describe('Admin document project/client navigation', () => {
         scrollWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
       }));
       expect(loadedCanvas.scrollWidth).toBeLessThanOrEqual(loadedCanvas.clientWidth + 1);
-      await expect(page.getByTestId(`document-open-${projectPhaseDocument.id}`)).toBeVisible();
+      await expect(page.locator(`[data-testid="document-open-${projectPhaseDocument.id}"], [data-testid="document-card-open-${projectPhaseDocument.id}"]`).filter({ visible: true })).toBeVisible();
       await page.getByTestId('folder-drawer-trigger').click();
       const drawer = page.getByTestId('folder-drawer');
-      await expect(drawer).toContainText('Fase 1.5');
+      await expect(drawer.getByTestId('documents-navigation-project-41')).toContainText(longProjectName);
+      await expect(drawer.getByTestId('documents-navigation-project-41')).toHaveAttribute('aria-current', 'page');
       await drawer.getByRole('button', { name: 'Cerrar', exact: true }).click();
     }
     await expect(page.getByTestId('folder-header-name')).toHaveText('Fase 1.5');
