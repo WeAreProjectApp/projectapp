@@ -17,6 +17,14 @@ from content.models import (
 )
 
 pytestmark = pytest.mark.django_db
+CANONICAL_MODULE_SLUGS = (
+    'operations', 'commercial', 'offerings', 'programs', 'projects', 'data-integrity',
+    'documents', 'communications', 'content', 'accounting', 'tasks', 'procurement',
+)
+MCP_CONTROL_TOOLS = {
+    'describe_capabilities', 'confirm_action', 'cancel_action', 'begin_upload',
+    'upload_asset_chunk', 'complete_upload', 'abort_upload',
+}
 
 
 def _rpc(method, params=None):
@@ -164,6 +172,34 @@ def test_operations_capability_groups_publish_their_confirmation_contract(super_
             'tools': ['get_operations_dashboard'],
         },
     }
+
+
+@pytest.mark.parametrize('slug', CANONICAL_MODULE_SLUGS)
+def test_canonical_business_tools_list_appear_once_in_catalog_capabilities(
+    api_client, super_client, slug,
+):
+    """Fails if a public business tool served by MCP is omitted, duplicated, hidden, or treated as a control."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug=slug,
+        defaults={'name': slug, 'is_active': True, 'retired_at': None, 'aliases_retired_at': None},
+    )
+    connector.credentials.all().delete()
+    token = f'{slug}-catalog-capabilities'
+    _credential(connector, 'Catalog capabilities', token)
+
+    listed = _endpoint(api_client, token, 'tools/list', slug=slug)
+    catalog = super_client.get('/api/mcp-connectors/')
+    payload = {item['slug']: item for item in catalog.data}[slug]
+    listed_business = {
+        tool['name'] for tool in _result(listed)['tools'] if tool['name'] not in MCP_CONTROL_TOOLS
+    }
+    capability_names = [
+        tool_name for group in payload['capabilities'] for tool_name in group['tools']
+    ]
+
+    assert listed.status_code == 200
+    assert len(capability_names) == len(set(capability_names))
+    assert set(capability_names) == listed_business
 
 
 def test_catalog_hides_retired_connectors_but_keeps_pending_retirement_visible(super_client):

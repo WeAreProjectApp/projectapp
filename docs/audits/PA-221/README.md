@@ -20,7 +20,7 @@ su acceso, no sustituye evidencias históricas y no acredita un dictamen nuevo.
 | Una raíz segura ausente podía crearse fuera de la vista previa | Bloqueo `managed_root_missing`; no se provisiona durante la corrección | plan de NM1 |
 | Deshacer podía partir de otra composición de raíces | Guarda `project_roots`; el cambio posterior bloquea deshacer | fixer NM1 |
 | Nombres dispares y capacidades sin lista clara | Presentación centralizada, migración de nombres y `capabilities` derivadas de herramientas publicadas | `content/mcp/presentation.py`, API y acordeón MCP |
-| Monitoring no tenía gestión MCP de sus operaciones del Panel | Ocho herramientas administrativas en Operations 3.1.0, compartiendo las FBV, serializers, versiones y autoría del Panel | `content/mcp/monitoring_tools.py`, `monitoring/urls.py` |
+| Monitoring no tenía gestión MCP de sus operaciones del Panel | Ocho herramientas administrativas en Operations 3.1.1, compartiendo las FBV, serializers, versiones y autoría del Panel | `content/mcp/monitoring_tools.py`, `monitoring/urls.py` |
 | El retiro sólo comprobaba reemplazos registrados, uso y consumidores | Matriz de funciones y evidencia QA revisable, obligatoria además de las guardas existentes | `content/mcp/coverage.py`, `mcp_retirement` |
 | Un conector retirado seguía en la lista del Panel | Se excluye de la lista operativa, se desactiva y deja de ofrecer herramientas; conserva rechazo 410 | listado, `tools_for_credential`, comando de retiro |
 

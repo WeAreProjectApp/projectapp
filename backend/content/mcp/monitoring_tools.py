@@ -24,18 +24,18 @@ def _schema(serializer):
     return schema
 
 
-def _tool(name, description, route, method='GET', *, detail=False, serializer=None, confirm=False):
+def _tool(name, description, route, method='GET', *, detail=False, serializer=None, confirm=False,
+          query_fields=None):
     kwargs = {'payload_schema': _schema(serializer)} if serializer and method != 'GET' else {
         'query_schema': _schema(serializer) if serializer else
         {'type': 'object', 'properties': {}, 'additionalProperties': False},
     }
+    if query_fields is not None:
+        query = kwargs['query_schema']
+        query['properties'] = {field: query['properties'][field] for field in query_fields}
     tool = _op(name, description, route, method, ('pk',) if detail else (),
                'sensitive' if confirm else 'read' if method == 'GET' else 'write', confirm,
                envelope_aliases=False, **kwargs)
-    if name == 'get_monitoring_case':
-        schema = {'type': 'object', 'properties': {'page': _schema(FilterSerializer)['properties']['page']},
-                  'additionalProperties': False}
-        tool = _op(name, description, route, path=('pk',), envelope_aliases=False, query_schema=schema)
     if detail:
         tool['input_schema']['properties']['pk'] = {
             'type': 'integer', 'minimum': 1, 'description': 'ID positivo del caso, reporte o recurso indicado por la herramienta.',
@@ -52,10 +52,11 @@ def _tool(name, description, route, method='GET', *, detail=False, serializer=No
 MONITORING_TOOLS = [
     _tool('get_monitoring_catalog', 'Consulta recursos y fuentes observadas, su salud y asociación a proyectos; no revela credenciales de ingestión.', 'monitoring-catalog'),
     _tool('list_monitoring_cases', 'Lista casos operativos con filtros y paginación; la evidencia extensa se consulta en el detalle.', 'monitoring-cases', serializer=FilterSerializer),
-    _tool('get_monitoring_case', 'Consulta un caso operativo con su evidencia, historial y entregas paginadas; conserva el alcance administrativo.', 'monitoring-case', detail=True, serializer=FilterSerializer),
+    _tool('get_monitoring_case', 'Consulta un caso operativo con su evidencia, historial y entregas paginadas; conserva el alcance administrativo.', 'monitoring-case', detail=True, serializer=FilterSerializer, query_fields=('page',)),
     _tool('update_monitoring_case_state', 'Cambia el estado de un caso con su versión vigente y nota; exige confirmación y registra el actor técnico.', 'monitoring-case-state', 'POST', detail=True, serializer=StateSerializer, confirm=True),
     _tool('create_monitoring_case_note', 'Añade una nota interna al caso operativo y la atribuye al actor de la credencial; no modifica evidencia recibida.', 'monitoring-case-note', 'POST', detail=True, serializer=NoteSerializer),
-    _tool('list_monitoring_reports', 'Lista reportes operativos con filtros y paginación; el texto completo se consulta en el detalle.', 'monitoring-reports', serializer=FilterSerializer),
+    _tool('list_monitoring_reports', 'Lista reportes operativos con filtros y paginación; el texto completo se consulta en el detalle.', 'monitoring-reports', serializer=FilterSerializer,
+          query_fields=('page', 'resource', 'source', 'kind', 'search', 'since', 'until')),
     _tool('get_monitoring_report', 'Consulta el texto y contexto de un reporte operativo recibido, sin modificar su evidencia ni origen.', 'monitoring-report', detail=True),
     _tool('link_monitoring_resource_project', 'Asocia o desvincula el proyecto de un recurso observado con confirmación; conserva las observaciones y su evidencia histórica.', 'monitoring-resource-link', 'PATCH', detail=True, serializer=ResourceLinkSerializer, confirm=True),
 ]

@@ -18,7 +18,7 @@ inventario estático y matriz: [PA-221](audits/PA-221/README.md).
    con `tools/list`, permisos y confirmaciones reales. Los pendientes de retiro
    siguen visibles; los retirados se excluyen del catálogo operativo, no ofrecen
    herramientas y rechazan el acceso con 410.
-4. En Operations **3.1.0**, comprobar las ocho acciones de Monitoring para
+4. En Operations **3.1.1**, comprobar las ocho acciones de Monitoring para
    catálogo, casos, notas, estados, reportes y vínculo de recursos. Usan las
    mismas vistas y validaciones administrativas del Panel. Estado y vínculo
    exigen confirmación sensible; el estado exige además versión vigente.

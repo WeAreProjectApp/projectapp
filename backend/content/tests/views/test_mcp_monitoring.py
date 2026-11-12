@@ -118,7 +118,7 @@ def test_operations_discovery_publishes_monitoring_tools(api_client, monitoring_
     tools = {tool['name'] for tool in listed.data['result']['tools']}
     server = discover.data['result']['_meta']['io.modelcontextprotocol/serverInfo']
     assert discover.status_code == 200
-    assert server == {'name': 'projectapp-operations-mcp', 'version': '3.1.0'}
+    assert server == {'name': 'projectapp-operations-mcp', 'version': '3.1.1'}
     assert tools == OPERATIONS_DISCOVERY_TOOL_NAMES
 
 
@@ -161,6 +161,47 @@ def test_monitoring_report_list_returns_the_report(api_client, monitoring_mcp_ca
     payload = _content(response)
     assert response.status_code == 200
     assert payload['results'][0]['id'] == monitoring_mcp_case.report.pk
+
+
+def test_monitoring_report_list_filters_by_an_admitted_source(api_client, monitoring_mcp_case):
+    """Fails if an admitted report source filter is ignored and exposes another source's report."""
+    other_source = Source.objects.create(
+        resource=monitoring_mcp_case.resource, key='other-monitoring', name='Otro monitoreo',
+    )
+    Report.objects.create(
+        source=other_source,
+        title='Reporte de otra fuente',
+        observed_at=timezone.now(),
+        text='Este reporte debe quedar fuera del filtro.',
+    )
+
+    response = _call(
+        api_client, monitoring_mcp_case.token, 'list_monitoring_reports',
+        {'source': monitoring_mcp_case.source.pk},
+    )
+
+    payload = _content(response)
+    result_ids = {item['id'] for item in payload['results']}
+    assert response.status_code == 200
+    assert result_ids == {monitoring_mcp_case.report.pk}
+
+
+@pytest.mark.parametrize(
+    ('forbidden_filter', 'value'),
+    [('state', 'pending'), ('severity', 'critical')],
+)
+def test_monitoring_report_list_rejects_case_only_filters(
+    api_client, monitoring_mcp_case, forbidden_filter, value,
+):
+    """Fails if report listing silently accepts a case-only filter that its REST endpoint ignores."""
+    response = _call(
+        api_client, monitoring_mcp_case.token, 'list_monitoring_reports',
+        {forbidden_filter: value},
+    )
+
+    rejected = _structured(response)
+    assert response.status_code == 200
+    assert rejected['error']['code'] == 'VALIDATION_ERROR'
 
 
 def test_monitoring_report_detail_returns_received_text(api_client, monitoring_mcp_case):
