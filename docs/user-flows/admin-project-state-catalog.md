@@ -16,6 +16,7 @@
 | Intentar fusionar sin destino | error | Confirmar fusión → mensaje junto al selector; elegir destino lo limpia |
 | Retirar un estado usado | error | Confirmar retiro → explicación de proyectos activos → estado permanece |
 | Guardar durante una falla del servidor | failure | Editar nombre → HTTP 5xx visible → borrador permanece para reintentar |
+| Volver a proyectos desde el catálogo | success | Catálogo → listado con encabezado, acciones y registros, título actualizado y sin recarga en móvil, escritorio y monitor amplio (PA-232) |
 
 - **Coverage:** ✅ Las cuatro clases están cubiertas.
 - **E2E Specs:** `e2e/admin/admin-project-lifecycle-states.spec.js`

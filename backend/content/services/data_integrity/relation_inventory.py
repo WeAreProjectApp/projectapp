@@ -142,7 +142,7 @@ _decide(covered('CM5', 'PJ2'), 'secure_links.SecureLink.project')
 _decide(covered('PJ2'), '''
     secure_links.SecureLinkFolder.project secure_links.SecureLinkFolder.managed_project
 ''')
-_decide(exempt('Evento de auditoría de solo-anexar.'), 'accounts.BillingContextEvent.project')
+_decide(exempt('Auditoría conservada por proyecto o contexto de retención; nunca se reasigna automáticamente.'), 'accounts.BillingContextEvent.project')
 _decide(exempt('Historial privado con caducidad, ligado a su actor original: no se reasigna ni se conserva '
                'al borrar el proyecto. Appi revalida la pertenencia antes de mostrarlo.'),
         'accounts.AppiConversation.project')

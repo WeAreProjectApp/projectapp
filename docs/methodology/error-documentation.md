@@ -1,5 +1,19 @@
 > **Formato editorial — 2026-10-23:** compactar con `>\s+<` quitaba espacios entre marcas inline; devolver la versión HTML normalizada al editor de listas reiniciaba su historial. Las entradas conservan un borrador local y sólo codifican saltos físicos al almacenar; las pruebas de continuidad reproducen ambos fallos. Las familias de fuentes PDF registran variantes reales para que negrita/cursiva no se dibujen como regular. Ver `frontend/test/components/editorialListContinuity.spec.js` y `backend/content/tests/services/test_editorial_pdf_integration.py`.
 
+## PA-226 — General muestra cambios pendientes sin editar (2026-11-06)
+
+El formulario compartido se hidrata después de montar General. Su watcher de
+vencimiento recalculaba los días y el watcher de días escribía otra fecha sobre
+el formulario, después de capturar el estado guardado. Una fecha vencida podía
+moverse a mañana; una hora cercana a medianoche podía activar actualizaciones
+recursivas por redondeo. La lectura de días ahora deriva de la fecha mediante un
+`computed`; su setter sólo escribe por una edición del control de días. Cargar,
+recargar o editar la fecha directamente no ejecuta esa escritura. Las
+regresiones viven en `ProposalGeneralTab.spec.js` y
+`admin-proposal-general-dirty-guard.spec.js`; su ejecución corresponde a CI.
+La lección es mantener las proyecciones del formulario sin efectos de escritura
+durante la hidratación, en vez de ocultar diferencias al seguimiento de cambios.
+
 ## Propuesta con entregable conservado de un proyecto eliminado (2026-10-07)
 
 > **Paquetes por talla — 2026-10-23:** Paquetes USD: con tasa 3.900, Ágil y factor1.4, referencia538.46 y total484.62. Reaplicar10% a538.46 produce484.61; PDF y panel deben usar totalPrice servido. Las pruebas de regresión cubren esta frontera.

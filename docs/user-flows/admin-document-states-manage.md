@@ -15,3 +15,4 @@
   - [Failure] Un fallo del servidor conserva el borrador de edición para reintentar.
 - **Cobertura:** ✅ display/success/error/failure.
 - **E2E:** `e2e/admin/admin-document-states-manage.spec.js`
+- **Regresión PA-232:** volver desde el catálogo debe recuperar encabezado, acciones y registros en el Gestor sin recarga. Comparar con la entrada desde el menú a 412×915, 1440×900 y 2560×1440; las nuevas pruebas comprueban también el título del navegador y errores de transición. Ejecución y dictamen manual se registran por SHA, por separado.

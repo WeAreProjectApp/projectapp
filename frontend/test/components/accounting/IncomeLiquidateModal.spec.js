@@ -187,6 +187,46 @@ describe('IncomeLiquidateModal', () => {
     expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').text()).toContain('Gustavo $75');
   });
 
+  it.each([
+    ['119.00', 'ProjectApp $1 COP'],
+    ['119.03', 'ProjectApp $1,03 COP'],
+  ])('shows ProjectApp remainder for %s with participations collapsed', async (amount, expected) => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { total_amount: amount, pending_amount: amount }) });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').attributes('aria-expanded')).toBe('false');
+    expect(wrapper.get('[data-testid="income-liquidate-projectapp-remainder"]').text()).toBe(expected);
+    expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').text()).toContain('Carlos $59 COP');
+    expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').text()).toContain('Gustavo $59 COP');
+  });
+
+  it('removes the remainder after entering an even received amount', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { total_amount: '119.00', pending_amount: '119.00' }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('118');
+
+    expect(wrapper.find('[data-testid="income-liquidate-projectapp-remainder"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').text()).toContain('Carlos $59 COP');
+  });
+
+  it('updates the collapsed summary after editing manual participations', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { total_amount: '119.00', pending_amount: '119.00' }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-participations-toggle"]').trigger('click');
+    await wrapper.get('[data-testid="partner-split-auto"]').trigger('click');
+    await wrapper.get('[data-testid="partner-split-carlos"]').setValue('50.25');
+    await wrapper.get('[data-testid="partner-split-gustavo"]').setValue('60.50');
+    await wrapper.get('[data-testid="income-liquidate-participations-toggle"]').trigger('click');
+
+    expect(wrapper.get('[data-testid="income-liquidate-projectapp-remainder"]').text()).toBe('ProjectApp $8,25 COP');
+    expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').attributes('aria-expanded')).toBe('false');
+  });
+
   // Falla si cada cambio corto vuelve a abrir Diferencia después de que el
   // usuario la cerró para seguir diligenciando las demás secciones.
   it('automatically opens the difference section only on the first shortfall', async () => {

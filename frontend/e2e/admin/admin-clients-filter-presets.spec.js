@@ -146,6 +146,15 @@ const EMAIL_ROW = {
   audience_label: 'Al cliente',
   proposal: null,
 };
+const FAILED_EMAIL_ROW = {
+  ...EMAIL_ROW,
+  id: 5002,
+  recipient: 'fallido@kore.test',
+  status: 'failed',
+  status_label: 'Failed',
+  error_message: 'SMTP temporalmente no disponible',
+  is_retryable: true,
+};
 
 function setupMock(page) {
   return mockApi(page, async ({ route, apiPath }) => {
@@ -166,7 +175,7 @@ function setupMock(page) {
     if (/^proposals\/client-profiles\/\d+\/emails\/$/.test(apiPath)) {
       const audience = new URL(route.request().url())
         .searchParams.get('audience') || 'client';
-      const rows = audience === 'internal' ? [] : [EMAIL_ROW];
+      const rows = audience === 'internal' ? [] : [EMAIL_ROW, FAILED_EMAIL_ROW];
       return {
         status: 200,
         contentType: 'application/json',
@@ -569,6 +578,7 @@ test.describe('Admin Clients Filter Presets', () => {
   });
 
   test('the row shows the contact and opens the history from it', {
+    // Bug caught: raw sent/failed states leaked as English labels in the client email history.
     tag: [...ADMIN_CLIENTS_FILTER_PRESETS, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     await setupMock(page);
@@ -582,6 +592,9 @@ test.describe('Admin Clients Filter Presets', () => {
     await page.getByTestId('client-emails-101').click();
 
     await expect(page.getByTestId('client-emails-modal')).toBeVisible();
-    await expect(page.getByTestId('email-log-row-5001')).toBeVisible();
+    await expect(page.getByTestId('email-log-row-5001')).toContainText('Enviado');
+    await expect(page.getByTestId('email-log-row-5001')).not.toContainText('Sent');
+    await expect(page.getByTestId('email-log-row-5002')).toContainText('Fallido');
+    await expect(page.getByTestId('email-log-row-5002')).not.toContainText('Failed');
   });
 });

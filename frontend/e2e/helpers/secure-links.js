@@ -26,7 +26,6 @@ export const secureLinkTypes = [
     label_es: 'Mensaje o comunicado confidencial',
     label_en: 'Confidential message',
     fields: [
-      { key: 'subject', label_es: 'Asunto', label_en: 'Subject', kind: 'text', required: false, max_length: 200 },
       { key: 'message', label_es: 'Mensaje', label_en: 'Message', kind: 'textarea', required: true, max_length: 15000 },
     ],
   },

@@ -1,8 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import ProjectStateTransitionModal from '../../../components/panel/projects/ProjectStateTransitionModal.vue';
+import ProjectDeleteModal from '../../../components/panel/projects/ProjectDeleteModal.vue';
 import { usePanelProjectsStore } from '../../../stores/panel_projects';
-import { useProjectStateStore } from '../../../stores/project_states';
 import translations from '../../../locales/projectAccess/es';
 
 const PROJECT = {
@@ -33,15 +32,12 @@ const t = (key) => key.split('.').slice(1).reduce((value, part) => value?.[part]
 function mountModal(props = {}) {
   const pinia = createPinia();
   setActivePinia(pinia);
-  useProjectStateStore().states = [{ id: 2, name: 'Activo', is_active: true }];
   const projectStore = usePanelProjectsStore();
   jest.spyOn(projectStore, 'previewDeletion').mockResolvedValue({ success: true, data: PREVIEW_SEVEN });
   jest.spyOn(projectStore, 'deleteProject').mockResolvedValue({ success: true });
-  const wrapper = mount(ProjectStateTransitionModal, {
+  const wrapper = mount(ProjectDeleteModal, {
     props: {
-      open: true,
       project: PROJECT,
-      allowForceDelete: true,
       isSuperuser: true,
       ...props,
     },
@@ -87,19 +83,15 @@ async function enterForceMode(wrapper) {
   await flushPromises();
 }
 
-describe('ProjectStateTransitionModal force deletion', () => {
+describe('ProjectDeleteModal force deletion', () => {
   beforeEach(() => jest.clearAllMocks());
   afterEach(() => jest.restoreAllMocks());
 
-  // Fails if a routine status transition exposes the destructive alternative.
-  it.each([
-    ['a direct state transition', { allowForceDelete: false, isSuperuser: true }],
-    ['a non-superuser transition', { allowForceDelete: true, isSuperuser: false }],
-  ])('hides force deletion for %s', async (_label, props) => {
-    const { wrapper } = mountModal(props);
+  it('hides force deletion for an ordinary administrator', async () => {
+    const { wrapper } = mountModal({ isSuperuser: false });
     await flushPromises();
 
-    expect(wrapper.text()).not.toContain('Forzar eliminación');
+    expect(wrapper.find('[data-testid="project-force-delete-toggle"]').exists()).toBe(false);
   });
 
   // Fails if the authorized recovery path sends a preselected deletion category.
@@ -133,13 +125,14 @@ describe('ProjectStateTransitionModal force deletion', () => {
     const firstPreview = new Promise((resolve) => { resolveFirstPreview = resolve; });
     const { wrapper, projectStore } = mountModal();
     projectStore.previewDeletion
-      .mockReturnValueOnce(firstPreview)
-      .mockResolvedValueOnce({ success: true, data: PREVIEW_EIGHT });
+      .mockImplementation((_id, options) => options?.force
+        ? firstPreview : Promise.resolve({ success: true, data: PREVIEW_EIGHT }));
 
     await wrapper.get('[data-testid="project-force-delete-toggle"]').trigger('click');
     await wrapper.setProps({ project: PROJECT_EIGHT });
     resolveFirstPreview({ success: true, data: PREVIEW_SEVEN });
     await flushPromises();
+    projectStore.previewDeletion.mockResolvedValue({ success: true, data: PREVIEW_EIGHT });
     await enterForceMode(wrapper);
 
     expect(projectStore.previewDeletion).toHaveBeenLastCalledWith(8, { force: true, deleteKeys: [] });
@@ -233,4 +226,17 @@ describe('ProjectStateTransitionModal force deletion', () => {
     resolveDelete({ success: true });
     await flushPromises();
   });
+  it('keeps protected history outside the deletion selection', async () => {
+    const { wrapper, projectStore } = mountModal();
+    projectStore.previewDeletion.mockResolvedValue({ success: true, data: {
+      ...PREVIEW_SEVEN, dependencies: [{ key: 'billing_context_events', label: 'Historial de facturación', count: 1,
+        description: 'Se conserva siempre.', selectable: false }],
+    } });
+    await enterForceMode(wrapper);
+
+    expect(wrapper.get('[data-testid="project-delete-category-billing_context_events"]').element.disabled).toBe(true);
+    await wrapper.get('[data-testid="project-force-delete-confirmation"]').setValue('DELETE');
+    expect(wrapper.get('[data-testid="project-force-delete-confirm"]').element.disabled).toBe(false);
+  });
+
 });

@@ -1557,7 +1557,7 @@ PROJECT_BILLING_CONTRACTS = (
     _contract('accounts.CollectionAccountContext', read_only='id document version updated_at pending_by pending_at', read_write='nature contract amendment hosting document_pending'),
     _contract('accounts.HostingEvidenceGroup', read_only='id hosting created_at', read_write='label'),
     _contract('accounts.HostingEvidence', read_only='id', read_write='group payment cycle document'),
-    _contract('accounts.BillingContextEvent', read_only='id project document actor operation reason before after created_at'),
+    _contract('accounts.BillingContextEvent', read_only='id project retention_context document actor operation reason before after created_at'),
 )
 
 # Lifecycle fields change only through change_hosting_subscription in projects.

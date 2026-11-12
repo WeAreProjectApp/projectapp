@@ -109,10 +109,10 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       superuserOnly: true,
       items: [
         { label: 'Resumen', href: lp('/panel/accounting'), icon: 'credit-card', matchExact: true },
+        { label: 'Bolsillo', href: lp('/panel/accounting/pocket'), icon: 'folder' },
         { label: 'Ingresos', href: lp('/panel/accounting/incomes'), icon: 'plus' },
         { label: 'Gastos', href: lp('/panel/accounting/expenses'), icon: 'file' },
         { label: 'Hostings', href: lp('/panel/accounting/hostings'), icon: 'database' },
-        { label: 'Bolsillo', href: lp('/panel/accounting/pocket'), icon: 'folder' },
         { label: 'Recurrentes', href: lp('/panel/accounting/recurring'), icon: 'refresh' },
         { label: 'Cuentas de cobro', href: lp('/panel/accounting/collections'), icon: 'file' },
         { label: 'Tarjetas', href: lp('/panel/accounting/cards'), icon: 'credit-card' },

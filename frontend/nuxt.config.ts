@@ -122,7 +122,6 @@ export default defineNuxtConfig({
     prerender: {
       fallback: true,
       crawlLinks: true,
-      failOnError: false,
       routes: [
         '/',
         '/en-us',
@@ -260,6 +259,16 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: [
+        'vue-i18n',
+        '@tiptap/core',
+        '@tiptap/vue-3',
+        '@tiptap/pm/model',
+        '@tiptap/starter-kit',
+        '@tiptap/extension-table',
+        '@tiptap/extension-text-style',
+        '@tiptap/extension-text-align',
+        '@tiptap/extension-highlight',
+        '@tiptap/extension-placeholder',
         'apexcharts/core',
         'apexcharts/line',
         'apexcharts/area',

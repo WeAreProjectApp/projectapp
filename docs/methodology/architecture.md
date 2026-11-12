@@ -1,3 +1,8 @@
+> **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
+> pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
+> lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant
+> explícito y confirmación. Contrato: `docs/project-lifecycle-deletion.md`.
+
 > **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. La fusión comercial conserva las cinco relaciones personales/de autoría mediante políticas `NEVER`. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
 
 ## Cuentas de cobro — documento pendiente explícito (2026-10-29)
