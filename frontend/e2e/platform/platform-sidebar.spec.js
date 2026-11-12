@@ -35,6 +35,7 @@ test.describe('Platform initials palette', () => {
       await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
       const sidebar = page.getByRole('complementary');
       await sidebar.getByRole('link', { name: 'Configuración', exact: true }).click();
+      await expect(page).toHaveURL(/\/platform\/profile$/);
 
       const initials = sidebar.getByText('AE', { exact: true });
       await expect(initials).toHaveCSS('background-color', 'rgb(0, 41, 33)');
