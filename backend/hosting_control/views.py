@@ -62,7 +62,7 @@ def events(request, control_id):
 @authentication_classes([RuntimeAuthentication])
 @permission_classes([HasRuntimeCredential])
 def runtime_configs(request):
-    targets = request.auth.targets.filter(lifecycle='active', control__resource__enabled=True,
+    targets = request.auth.targets.filter(lifecycle='active',
                                           control__resource__kind='project', control__resource__environment='production').select_related('control')
     return response({'configs': [services.runtime_payload(target) for target in targets]})
 

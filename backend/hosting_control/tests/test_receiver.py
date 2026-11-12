@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from hosting_guard.receiver import apply_target, atomic_state, cycle, read_enrollment
+from hosting_guard.receiver import apply_target, atomic_state, cycle, fetch_enrolled, read_enrollment
 
 
 def wire(**changes):
@@ -109,3 +109,19 @@ def test_world_readable_credential_is_rejected(tmp_path):
     config.write_text(json.dumps({'endpoint': 'https://central.example', 'token_file': str(token)}))
     with pytest.raises(ValueError, match='private file'):
         read_enrollment(config)
+
+
+def test_canonical_alias_redirect_is_allowed():
+    with patch('hosting_guard.receiver.build_opener') as opener:
+        opener.return_value.open.side_effect = [WireResponse(b'', 301, {'Location': 'https://fixture.example/'}), WireResponse(b'normal')]
+        code, _, body = fetch_enrolled('https://www.fixture.example/', ['https://fixture.example', 'https://www.fixture.example'])
+    assert code == 200
+    assert body == b'normal'
+
+
+def test_foreign_redirect_is_rejected_before_contact():
+    with patch('hosting_guard.receiver.build_opener') as opener:
+        opener.return_value.open.return_value = WireResponse(b'', 301, {'Location': 'https://foreign.example/'})
+        with pytest.raises(ValueError, match='outside'):
+            fetch_enrolled('https://fixture.example/', ['https://fixture.example'])
+        assert opener.return_value.open.call_count == 1

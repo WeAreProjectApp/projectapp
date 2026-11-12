@@ -50,7 +50,8 @@ recuperarse sin iniciar la aplicación. Estado/documentos usan `no-store`.
 MCP Proyectos 5.2.0 publica `list_hosting_controls`, `get_hosting_control`,
 `set_hosting_control_mode`, `update_hosting_control_message` y
 `list_hosting_control_events`. Las escrituras requieren vista previa y
-`confirm_action`, y comparten servicio, permisos y versión con Panel. Secretos
+`confirm_action`, y comparten servicio, permisos y versión con Panel. Las credenciales deben usar el catálogo canónico Proyectos y permitir estas
+operaciones; los catálogos heredados y sus permisos no se amplían automáticamente. Secretos
 del receptor nunca se consultan ni editan por MCP. PA-263 aporta patrones de
 gestión; su disponibilidad por cliente no activa este control por producción.
 

@@ -20,6 +20,10 @@ def test_confirmed_mcp_edit_is_visible_in_canonical_data():
     connector.is_active = True
     connector.save()
     token = connector.generate_token()
+    credential = connector.credentials.get(label='Default')
+    credential.catalog = 'canonical'
+    credential.allowed_tools = [tool['name'] for tool in TOOLS_BY_SLUG['projects']]
+    credential.save(update_fields=['catalog', 'allowed_tools'])
     resource = Resource.objects.create(key='mcp-site', name='MCP sitio', kind='project')
     control = Control.objects.create(resource=resource)
     client = APIClient()

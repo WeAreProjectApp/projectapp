@@ -128,7 +128,7 @@ def events(actor, control_id, page_number=1):
 def receive(credential, data):
     target = get_object_or_404(Target.objects.select_for_update().select_related('control__resource'),
                               key=data['target_key'], runtimecredential=credential, lifecycle='active',
-                              control__resource__environment='production', control__resource__enabled=True)
+                              control__resource__environment='production')
     current = runtime_payload(target)
     if data['version'] != current['version'] or data['digest'] != current['digest']:
         raise Conflict('El recibo no corresponde a la configuración vigente.')

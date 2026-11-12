@@ -167,3 +167,11 @@ def test_runtime_payload_does_not_expose_inactive_message(machine, control):
     result = client.get('/api/hosting-runtime/configs/').json()
     assert result['configs'][0]['message']['text'] == control.banner_text
     assert 'Texto inactivo privado de prueba' not in json.dumps(result)
+
+
+def test_monitoring_switch_does_not_hide_hosting_control(machine, control):
+    client, _ = machine
+    control.resource.enabled = False
+    control.resource.save()
+    result = client.get('/api/hosting-runtime/configs/').json()
+    assert result['configs'][0]['target_key'] == 'site-a'

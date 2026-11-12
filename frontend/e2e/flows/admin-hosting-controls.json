@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Seleccionar producción y verificar destino; cambiar entre tres modos excluyentes; editar mensajes independientes; distinguir intención y recibo; conservar borrador ante conflicto o fallo. Gestión equivalente por MCP cubierta en backend.",
+  "description": "Seleccionar producción y verificar destino; cambiar entre tres modos excluyentes; editar mensajes independientes; distinguir intención y recibo; conservar borrador ante conflicto o fallo. Gestión equivalente por MCP cubierta en backend. Muestra además el último modo y mensaje confirmados sin confundirlos con la intención pendiente; los borradores sobreviven a la consulta periódica.",
   "expectedSpecs": 11,
   "outcomes": [
     "success",
