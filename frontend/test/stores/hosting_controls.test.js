@@ -44,3 +44,16 @@ test('a stale refresh cannot undo a newer saved version', async () => {
   await store.refresh()
   expect(store.selected.mode).toBe('suspended')
 })
+
+test('a missing history leaves the new production available', async () => {
+  const store = useHostingControlsStore()
+  store.selected = { id: 1, version: 0, mode: 'normal' }
+  store.events = [{ id: 15, actor: 'Operador de otro proyecto' }]
+  const production = { id: 2, version: 1, mode: 'banner' }
+  get_request.mockResolvedValueOnce({ data: production })
+  get_request.mockRejectedValueOnce(new Error('fixture history offline'))
+  expect(await store.select(2)).toEqual(production)
+  expect(store.selected.id).toBe(2)
+  expect(store.events).toEqual([])
+  expect(store.error).toContain('no se pudo cargar su historial')
+})

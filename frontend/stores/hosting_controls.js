@@ -18,7 +18,7 @@ export const useHostingControlsStore = defineStore('hosting_controls', {
         this.pages = data.pages
         this.error = ''
       } catch {
-        this.error = 'No se pudo consultar el inventario de producción.'
+        if (serial === this.searchSerial) this.error = 'No se pudo consultar el inventario de producción.'
       } finally { if (serial === this.searchSerial) this.loading = false }
     },
     async select(id) {
@@ -27,7 +27,12 @@ export const useHostingControlsStore = defineStore('hosting_controls', {
       const { data } = await get_request(`hosting-controls/${id}/`)
       if (serial !== this.selectionSerial) return data
       this.selected = data
-      await this.history()
+      this.events = []
+      this.error = ''
+      this.conflict = false
+      try { await this.history() } catch {
+        if (serial === this.selectionSerial) this.error = 'Producción consultada; no se pudo cargar su historial.'
+      }
       return data
     },
     async refresh() {
