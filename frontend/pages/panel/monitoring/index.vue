@@ -29,6 +29,7 @@ const selectedState = ref('pending')
 const actionError = ref('')
 const activityPage = ref(1)
 const deliveryPage = ref(1)
+const detailBounds = ref({})
 const drafts = reactive({})
 const note = computed({ get: () => drafts[activeRecord.value] || '', set: value => { drafts[activeRecord.value] = value } })
 let filterTimer, pollTimer, synchronizing = false, disposed = false, detailRequest = 0, statusRequest = 0, consultation = ''
@@ -124,28 +125,30 @@ function closeDetail() {
 async function openRecord(id, isReport = reports.value, pages = null) {
   const request = ++detailRequest
   const changed = id !== activeRecord.value || isReport !== detailReports.value
-  if (changed) { store.close(); activityPage.value = 1; deliveryPage.value = 1 }
+  if (changed) { store.close(); activityPage.value = 1; deliveryPage.value = 1; detailBounds.value = {} }
   activeRecord.value = id
   detailReports.value = isReport
   detailLoading.value = true
   actionError.value = ''
   try {
-    await store.open(id, isReport, 1, pages || { activities_page: activityPage.value, deliveries_page: deliveryPage.value })
+    const history = pages ? { activities_page: activityPage.value, deliveries_page: deliveryPage.value, ...pages } : { activities_page: activityPage.value, deliveries_page: deliveryPage.value }
+    await store.open(id, isReport, 1, { ...history, history_snapshot: true })
+    if (request === detailRequest) detailBounds.value = store.detail?.history_bounds || {}
     if (request === detailRequest && (changed || !pages)) selectedState.value = store.detail?.state || 'pending'
   } catch { if (request === detailRequest) actionError.value = tr('load') }
   finally { if (request === detailRequest) detailLoading.value = false }
 }
 function detailPagination(kind, number) {
   if (kind === 'activities') activityPage.value = number; else deliveryPage.value = number
-  openRecord(activeRecord.value, false, { activities_page: activityPage.value, deliveries_page: deliveryPage.value })
+  openRecord(activeRecord.value, false, { activities_before: detailBounds.value.activities, deliveries_before: detailBounds.value.deliveries })
 }
 async function save(action) {
   actionError.value = ''
   const id = activeRecord.value
   try {
-    if (action === 'note') { await store.note(note.value.trim()); drafts[id] = '' }
-    else await store.transition(selectedState.value)
-    activityPage.value = 1; deliveryPage.value = 1
+    if (action === 'note') { await store.note(note.value.trim(), { history_snapshot: true }); drafts[id] = '' }
+    else await store.transition(selectedState.value, { history_snapshot: true })
+    activityPage.value = 1; deliveryPage.value = 1; detailBounds.value = store.detail?.history_bounds || {}
     hasUpdates.value = true
   } catch (failure) { actionError.value = failure.response?.status === 409 ? tr('conflict') : tr('saveError') }
 }
@@ -245,8 +248,8 @@ onBeforeUnmount(() => { disposed = true; statusRequest++; detailRequest++; clear
             <form class="flex flex-wrap items-end gap-3" @submit.prevent="save('state')"><MonitoringSelect v-model="selectedState" :label="tr('state')" :options="options(['pending', 'reviewing', 'resolved'])" test-id="monitor-detail-state" /><BaseButton type="submit" :disabled="store.saving" :disabled-reason="tr('busy')">{{ tr('save') }}</BaseButton></form>
             <section><h3 class="mb-3 font-medium text-text-default">{{ tr('evidence') }}</h3><MonitoringEvidence :evidence="store.detail.evidence" /></section>
             <form class="space-y-3" @submit.prevent="save('note')"><BaseFormField :label="tr('note')" for="monitor-note"><BaseTextarea id="monitor-note" v-model="note" maxlength="4000" /></BaseFormField><BaseButton type="submit" :disabled="store.saving || !note.trim()" :disabled-reason="store.saving ? tr('busy') : tr('emptyNote')">{{ tr('addNote') }}</BaseButton></form>
-            <section><h3 class="mb-3 font-medium text-text-default">{{ tr('notes') }}</h3><p v-if="!store.detail.activities.results.length" class="text-sm text-text-subtle">{{ tr('noNotes') }}</p><ol class="space-y-2"><li v-for="item in store.detail.activities.results" :key="item.id" class="rounded-lg border border-border-default p-3 text-sm text-text-default"><p class="text-xs text-text-subtle">{{ item.actor_name || tr('system') }} · {{ formatDate(item.created_at) }}</p><p v-if="item.to_state">{{ tr(item.from_state) }} → {{ tr(item.to_state) }}</p><p class="whitespace-pre-wrap break-words">{{ item.text }}</p></li></ol><BasePagination :current-page="activityPage" :total-pages="Math.ceil(store.detail.activities.count / store.detail.activities.page_size)" :total-items="store.detail.activities.count" :range-from="store.detail.activities.count ? (activityPage - 1) * 25 + 1 : 0" :range-to="Math.min(activityPage * 25, store.detail.activities.count)" always-show @prev="detailPagination('activities', activityPage - 1)" @next="detailPagination('activities', activityPage + 1)" @go="detailPagination('activities', $event)" /></section>
-            <section><h3 class="mb-3 font-medium text-text-default">{{ tr('history') }}</h3><ol class="space-y-3"><li v-for="item in store.detail.deliveries.results" :key="item.id" class="space-y-2 rounded-lg border border-border-default p-3"><p class="text-xs text-text-subtle">{{ tr(item.kind) }} · {{ formatDate(item.observed_at) }}</p><MonitoringEvidence :evidence="item.evidence" /><BaseButton v-if="item.report" variant="ghost" @click="followReport(item.report)">{{ tr('readOnlyReport') }}</BaseButton></li></ol><BasePagination :current-page="deliveryPage" :total-pages="Math.ceil(store.detail.deliveries.count / store.detail.deliveries.page_size)" :total-items="store.detail.deliveries.count" :range-from="store.detail.deliveries.count ? (deliveryPage - 1) * 25 + 1 : 0" :range-to="Math.min(deliveryPage * 25, store.detail.deliveries.count)" always-show @prev="detailPagination('deliveries', deliveryPage - 1)" @next="detailPagination('deliveries', deliveryPage + 1)" @go="detailPagination('deliveries', $event)" /></section>
+            <section><h3 class="mb-3 font-medium text-text-default">{{ tr('notes') }}</h3><p v-if="!store.detail.activities.results.length" class="text-sm text-text-subtle">{{ tr('noNotes') }}</p><ol class="space-y-2"><li v-for="item in store.detail.activities.results" :key="item.id" class="rounded-lg border border-border-default p-3 text-sm text-text-default"><p class="text-xs text-text-subtle">{{ item.actor_name || tr('system') }} · {{ formatDate(item.created_at) }}</p><p v-if="item.to_state">{{ tr(item.from_state) }} → {{ tr(item.to_state) }}</p><p class="whitespace-pre-wrap break-words">{{ item.text }}</p></li></ol><BasePagination :current-page="activityPage" :total-pages="Math.max(1, Math.ceil(store.detail.activities.count / store.detail.activities.page_size))" :total-items="store.detail.activities.count" :range-from="store.detail.activities.count ? (activityPage - 1) * 25 + 1 : 0" :range-to="Math.min(activityPage * 25, store.detail.activities.count)" always-show @prev="detailPagination('activities', activityPage - 1)" @next="detailPagination('activities', activityPage + 1)" @go="detailPagination('activities', $event)" /></section>
+            <section><h3 class="mb-3 font-medium text-text-default">{{ tr('history') }}</h3><ol class="space-y-3"><li v-for="item in store.detail.deliveries.results" :key="item.id" class="space-y-2 rounded-lg border border-border-default p-3"><p class="text-xs text-text-subtle">{{ tr(item.kind) }} · {{ formatDate(item.observed_at) }}</p><MonitoringEvidence :evidence="item.evidence" /><BaseButton v-if="item.report" variant="ghost" @click="followReport(item.report)">{{ tr('readOnlyReport') }}</BaseButton></li></ol><BasePagination :current-page="deliveryPage" :total-pages="Math.max(1, Math.ceil(store.detail.deliveries.count / store.detail.deliveries.page_size))" :total-items="store.detail.deliveries.count" :range-from="store.detail.deliveries.count ? (deliveryPage - 1) * 25 + 1 : 0" :range-to="Math.min(deliveryPage * 25, store.detail.deliveries.count)" always-show @prev="detailPagination('deliveries', deliveryPage - 1)" @next="detailPagination('deliveries', deliveryPage + 1)" @go="detailPagination('deliveries', $event)" /></section>
           </template>
         </template>
       </div></div>

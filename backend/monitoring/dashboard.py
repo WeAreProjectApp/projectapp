@@ -36,12 +36,15 @@ def source_scope(data):
 
 
 def revision():
-    # Indexed dates include notes/status changes, reports and metrics without exporting payloads.
-    stamps = [Delivery.objects.aggregate(value=Max('received_at'))['value'],
-              CaseActivity.objects.aggregate(value=Max('created_at'))['value'],
-              CapacityChange.objects.aggregate(value=Max('created_at'))['value']]
+    # Primary-key maxima use indexes even as histories grow. Source observations
+    # also cover compacted heartbeat receipts whose identity does not change.
+    stamps = [Delivery.objects.aggregate(value=Max('pk'))['value'],
+              CaseActivity.objects.aggregate(value=Max('pk'))['value'],
+              CapacityChange.objects.aggregate(value=Max('pk'))['value']]
     sources = list(Source.objects.values_list('id', 'enabled', 'expected_interval', 'last_seen_at', 'last_error'))
-    return hashlib.sha256(json.dumps([stamps, sources], default=str).encode()).hexdigest()
+    now = timezone.now()
+    freshness = [bool(seen and (now - seen).total_seconds() > interval * 2) for _, _, interval, seen, _ in sources]
+    return hashlib.sha256(json.dumps([stamps, sources, freshness], default=str).encode()).hexdigest()
 
 
 def snapshot_signature(actor, data, reports):
@@ -60,10 +63,13 @@ def frozen_page(query, data, actor, reports=False):
         mark = revision()
         serializer = ReportSerializer if reports else CaseSerializer
         active, states, count, batch, pages, attention = Counter(), Counter(), 0, [], {}, []
+        latest_report = None
         for row in query.iterator(chunk_size=250):
             record = serializer(row).data
             batch.append(record)
             count += 1
+            if reports and latest_report is None:
+                latest_report = record['observed_at']
             if not reports:
                 states[record['state']] += 1
                 if record['condition'] == 'active':
@@ -85,7 +91,7 @@ def frozen_page(query, data, actor, reports=False):
         metadata = {
             'signature': signature, 'count': count, 'revision': mark, 'captured_at': captured.isoformat(),
             'summary': {'total': count, 'active': dict(active), 'followup': states['pending'] + states['reviewing'],
-                        'sources': dict(health), 'latest_report_at': query.first().observed_at.isoformat() if reports and count else None},
+                        'sources': dict(health), 'latest_report_at': latest_report},
             'attention': sorted(attention, key=lambda item: {'critical': 0, 'warning': 1, 'info': 2}[item['severity']]),
             'sources': sources,
         }

@@ -22,14 +22,14 @@ def test_case_mcp_uses_the_complete_filtered_set(dashboard):
 
 
 def test_capacity_mcp_updates_the_informational_record(dashboard):
-    result = tool('update_monitoring_capacity')({'pk': dashboard['project'].pk, 'version': 0, 'cpu_mode': 'shared', 'ram_mode': 'assigned', 'ram_bytes': 1048576, 'storage_mode': 'unknown'})
+    result = tool('update_monitoring_capacity')({'resource_id': dashboard['project'].pk, 'version': 0, 'cpu_mode': 'shared', 'ram_mode': 'assigned', 'ram_bytes': 1048576, 'storage_mode': 'unknown'})
     assert result['allocation']['ram_bytes'] == 1048576
     assert CapacityAllocation.objects.get().version == 1
 
 
 def test_note_mcp_preserves_real_authorship(dashboard):
     case = create_cases(dashboard['source'], 1)[0]
-    tool('add_monitoring_case_note')({'pk': case.pk, 'text': 'Comprobación MCP'})
+    tool('add_monitoring_case_note')({'case_id': case.pk, 'text': 'Comprobación MCP'})
     assert CaseActivity.objects.get().actor == dashboard['actor']
     assert CaseActivity.objects.get().text == 'Comprobación MCP'
 
@@ -38,7 +38,7 @@ def test_mcp_adapter_rejects_a_non_staff_actor(dashboard):
     actor = get_user_model().objects.create_user(username='monitoring-client')
     with use_mcp_context(McpExecutionContext(connector=None, credential=None, request_id='fixture', actor=actor)):
         with pytest.raises(ToolError):
-            tool('get_monitoring_capacity')({'pk': dashboard['project'].pk})
+            tool('get_monitoring_capacity')({'resource_id': dashboard['project'].pk})
     assert CapacityAllocation.objects.count() == 0
 
 
@@ -48,7 +48,7 @@ def test_restricted_mcp_credential_cannot_write_capacity(dashboard):
     connector.save()
     credential = McpCredential.objects.create(connector=connector, label='Monitoring read only', actor=dashboard['actor'], allowed_tools=['get_monitoring_catalog'])
     token = credential.generate_token()
-    response = dashboard['client'].post('/api/mcp/projects/', {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'update_monitoring_capacity', 'arguments': {'pk': dashboard['project'].pk, 'version': 0, 'cpu_mode': 'shared', 'ram_mode': 'shared', 'storage_mode': 'shared'}}}, format='json', HTTP_AUTHORIZATION=f'Bearer {token}')
+    response = dashboard['client'].post('/api/mcp/projects/', {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'update_monitoring_capacity', 'arguments': {'resource_id': dashboard['project'].pk, 'version': 0, 'cpu_mode': 'shared', 'ram_mode': 'shared', 'storage_mode': 'shared'}}}, format='json', HTTP_AUTHORIZATION=f'Bearer {token}')
     assert response.status_code == 200
     assert response.json()['result']['isError'] is True
     assert CapacityAllocation.objects.count() == 0

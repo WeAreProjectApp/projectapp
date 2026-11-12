@@ -69,7 +69,7 @@ def test_combined_filters_match_summary_membership(dashboard):
     assert response['results'][0]['title'] == 'Caso 2'
 
 
-def test_source_coverage_distinguishes_missing_data(dashboard):
+def test_source_health_distinguishes_missing_data(dashboard):
     Source.objects.create(resource=dashboard['project'], key='never', name='Nunca recibió')
     response = dashboard['client'].get(URL, {'snapshot': 'new', 'kind': 'project'}).json()
     assert response['summary']['total'] == 0

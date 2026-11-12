@@ -154,6 +154,9 @@ class FilterSerializer(serializers.Serializer):
     snapshot = serializers.CharField(max_length=64, required=False)
     activities_page = serializers.IntegerField(min_value=1, required=False)
     deliveries_page = serializers.IntegerField(min_value=1, required=False)
+    history_snapshot = serializers.BooleanField(required=False, default=False)
+    activities_before = serializers.IntegerField(min_value=0, required=False)
+    deliveries_before = serializers.IntegerField(min_value=0, required=False)
 
     def validate(self, data):
         if data.get('since') and data.get('until') and data['since'] > data['until']:

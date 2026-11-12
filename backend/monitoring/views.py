@@ -95,23 +95,33 @@ def cases(request):
 
 
 @admin_api(['GET'])
-def case_detail(request, pk):
-    case = get_object_or_404(Case.objects.select_related('source__resource__server'), pk=pk)
+def case_detail(request, case_id):
+    case = get_object_or_404(Case.objects.select_related('source__resource__server'), pk=case_id)
     data = validated(FilterSerializer, request.query_params)
+    activities, deliveries = case.activities.all(), case.deliveries.all()
+    bounds = {}
+    if data['history_snapshot']:
+        for key, query in [('activities', activities), ('deliveries', deliveries)]:
+            bounds[key] = data.get(f'{key}_before')
+            if bounds[key] is None:
+                bounds[key] = query.order_by('-pk').values_list('pk', flat=True).first() or 0
+        activities = activities.filter(pk__lte=bounds['activities'])
+        deliveries = deliveries.filter(pk__lte=bounds['deliveries'])
     return Response({**CaseSerializer(case).data, 'evidence': case.evidence,
-                     'activities': paginated(case.activities.all(), ActivitySerializer, data.get('activities_page', data['page'])),
-                     'deliveries': paginated(case.deliveries.all(), DeliverySerializer, data.get('deliveries_page', data['page']))})
+                     'history_bounds': bounds,
+                     'activities': paginated(activities, ActivitySerializer, data.get('activities_page', data['page'])),
+                     'deliveries': paginated(deliveries, DeliverySerializer, data.get('deliveries_page', data['page']))})
 
 
 @admin_api(['POST'])
-def case_state(request, pk):
-    case = change_state(pk, request.user, validated(StateSerializer, request.data))
+def case_state(request, case_id):
+    case = change_state(case_id, request.user, validated(StateSerializer, request.data))
     return Response(CaseSerializer(case).data)
 
 
 @admin_api(['POST'])
-def case_note(request, pk):
-    case = get_object_or_404(Case, pk=pk)
+def case_note(request, case_id):
+    case = get_object_or_404(Case, pk=case_id)
     data = validated(NoteSerializer, request.data)
     activity = CaseActivity.objects.create(case=case, actor=request.user, actor_name=request.user.get_username(), kind='note', text=data['text'])
     return Response(ActivitySerializer(activity).data, status=201)
@@ -127,15 +137,15 @@ def reports(request):
 
 
 @admin_api(['GET'])
-def report_detail(request, pk):
-    report = get_object_or_404(Report.objects.select_related('source__resource__server'), pk=pk)
+def report_detail(request, report_id):
+    report = get_object_or_404(Report.objects.select_related('source__resource__server'), pk=report_id)
     return Response({**ReportSerializer(report).data, 'text': report.text})
 
 
 @admin_api(['PATCH'])
-def resource_link(request, pk):
+def resource_link(request, resource_id):
     data = validated(ResourceLinkSerializer, request.data)
-    resource = link_resource(pk, data['project'])
+    resource = link_resource(resource_id, data['project'])
     return Response(ResourceSerializer(resource).data)
 
 
@@ -146,15 +156,15 @@ def dashboard_status(request):
 
 
 @admin_api(['GET'])
-def server_series(request, pk):
-    resource = get_object_or_404(Resource, pk=pk, kind='server')
+def server_series(request, server_id):
+    resource = get_object_or_404(Resource, pk=server_id, kind='server')
     data = validated(SeriesFilterSerializer, request.query_params)
     return Response(series(resource, data['period']))
 
 
 @admin_api(['GET', 'PUT'])
-def resource_capacity(request, pk):
-    resource = get_object_or_404(Resource.objects.select_related('server'), pk=pk, kind='project')
+def resource_capacity(request, resource_id):
+    resource = get_object_or_404(Resource.objects.select_related('server'), pk=resource_id, kind='project')
     if request.method == 'PUT':
         data = validated(CapacitySerializer, request.data)
         allocation = save_capacity(resource, request.user, data)
@@ -167,8 +177,8 @@ def resource_capacity(request, pk):
 
 
 @admin_api(['GET'])
-def capacity_history(request, pk):
-    resource = get_object_or_404(Resource, pk=pk, kind='project')
+def capacity_history(request, resource_id):
+    resource = get_object_or_404(Resource, pk=resource_id, kind='project')
     allocation = get_object_or_404(CapacityAllocation, resource=resource)
     page = validated(FilterSerializer, request.query_params)['page']
     return Response(paginated(allocation.changes.all(), CapacityChangeSerializer, page))

@@ -61,22 +61,22 @@ export const useMonitoringStore = defineStore('monitoring', {
       this.detailId += 1
       this.detail = null
     },
-    async transition(state) {
+    async transition(state, pages = {}) {
       this.saving = true
       try {
         const { id, version } = this.detail
         const detailId = this.detailId
         await create_request(`monitoring/cases/${id}/state/`, { state, version })
-        if (detailId === this.detailId) await this.open(id)
+        if (detailId === this.detailId) await this.open(id, false, 1, pages)
       } finally { this.saving = false }
     },
-    async note(text) {
+    async note(text, pages = {}) {
       this.saving = true
       try {
         const id = this.detail.id
         const detailId = this.detailId
         await create_request(`monitoring/cases/${id}/notes/`, { text })
-        if (detailId === this.detailId) await this.open(id)
+        if (detailId === this.detailId) await this.open(id, false, 1, pages)
       } finally { this.saving = false }
     },
   },
