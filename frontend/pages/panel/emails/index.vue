@@ -476,6 +476,7 @@
 </template>
 
 <script setup>
+import { emailStatusLabel as statusLabel } from '~/utils/emailStatus';
 import { useRadarFocus } from '~/composables/useRadarFocus';
 import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
 import { ref, computed, watch, onMounted } from 'vue';
@@ -840,10 +841,6 @@ function sectionIsMarkdown(section) {
   return typeof section === 'object' && !!section?.markdown;
 }
 
-const STATUS_LABELS = { sent: 'Enviado', delivered: 'Entregado', bounced: 'Rebotado', failed: 'Fallido', skipped: 'Omitida' };
-function statusLabel(s) {
-  return STATUS_LABELS[s] || s;
-}
 
 function copyStatusClass(status) {
   if (status === 'failed' || status === 'bounced') return 'text-danger-strong';

@@ -1,8 +1,10 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, useId } from 'vue'
+import { useI18n } from '#imports'
 import { useMarkdownPreview } from '~/composables/useMarkdownPreview'
 import { oneOf } from '~/components/base/propValidators'
-import { sourceToHtml } from '~/utils/editorialFormat'
+import { escapeHtml, sourceToHtml } from '~/utils/editorialFormat'
+import { documentEditorialPreview } from '~/utils/documentEditorialPreview'
 
 /**
  * Renders document markdown as sanitized HTML. Single owner of the
@@ -29,6 +31,8 @@ const props = defineProps({
 })
 
 const { parseMarkdown } = useMarkdownPreview()
+const { t } = useI18n()
+const headingPrefix = `document-${useId()}`
 
 const purify = ref(null)
 const standardParser = ref(null)
@@ -43,7 +47,8 @@ onMounted(async () => {
 
 const safeHtml = computed(() => {
   if (!props.markdown?.trim() || !purify.value) return ''
-  const extended = props.format === 'markdown_html_v1' || /<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b/i.test(props.markdown)
+  if (props.format === 'plain') return `<p class="md-p">${escapeHtml(props.markdown).replace(/\n/g, '<br>')}</p>`
+  const extended = props.format === 'markdown_html_v1' || /^\[TOC\]\s*$/m.test(props.markdown) || /<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b/i.test(props.markdown)
   let html = extended ? sourceToHtml(props.markdown, 'document', { strict: false }) : props.standardMarkdown
     ? standardParser.value?.parse(props.markdown, { gfm: true }).replace(
       /<(h[1-6]|p|ul|ol|li|blockquote|table|thead|tr|th|td|a|hr|pre)(?=[\s>])/g,
@@ -51,11 +56,10 @@ const safeHtml = computed(() => {
     ) || ''
     : parseMarkdown(props.markdown)
   if (extended) {
-    const host = document.createElement('div'); host.innerHTML = html;
-    host.querySelectorAll('h1,h2,h3,h4,h5,h6,p,ul,ol,li,blockquote,table,thead,tr,th,td,a,hr,pre').forEach((el) => {
-      el.classList.add({ pre: 'md-code-block', a: 'md-link' }[el.localName] || `md-${el.localName}`);
-    });
-    html = host.innerHTML;
+    html = documentEditorialPreview(html, headingPrefix, Object.fromEntries([
+      ...['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].map(kind => [kind, t(`richText.callout${kind}`)]),
+      ['toc', t('richText.toc')], ['emptyToc', t('richText.emptyToc')],
+    ]));
   }
   return purify.value.sanitize(html, { ADD_ATTR: ['target'] })
 })
@@ -189,6 +193,8 @@ const safeHtml = computed(() => {
 .markdown-preview :deep(strong) { font-weight: 600; }
 .markdown-preview :deep(em) { font-style: italic; }
 .markdown-preview :deep(del) { text-decoration: line-through; color: #6b7280; }
+/* An explicit text color takes precedence over the muted strike style. */
+.markdown-preview :deep(span[style] del) { color: inherit; }
 .markdown-preview :deep(code) {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.85em;
@@ -364,4 +370,10 @@ const safeHtml = computed(() => {
   background-color: rgba(250, 243, 224, 0.08);
   color: #e5e7eb;
 }
+/* HTML emitted by Visual puts paragraphs inside header cells. Keep their
+   default text on the cell's palette, including Professional and dark mode. */
+.markdown-preview :deep(.md-table th .md-p) { color: inherit; }
+.markdown-preview--professional :deep(.md-table th .md-p) { color: inherit; }
+:global(.dark) .markdown-preview :deep(.md-table th .md-p),
+:global(.dark) .markdown-preview--professional :deep(.md-table th .md-p) { color: inherit; }
 </style>

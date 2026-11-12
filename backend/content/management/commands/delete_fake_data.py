@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django.db import transaction
 from django.db.models import Q
 
 from accounts.models import (
@@ -42,6 +41,7 @@ from content.models import (
     WebAppDiagnostic,
 )
 from content.fake_data import ensure_fake_data_allowed
+from content.fake_data_files import fake_data_transaction
 
 User = get_user_model()
 
@@ -65,7 +65,7 @@ class Command(BaseCommand):
             help='Confirm that you want to delete all fake data',
         )
 
-    @transaction.atomic
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('delete_fake_data')
         if not options['confirm']:
@@ -81,6 +81,14 @@ class Command(BaseCommand):
         project_ids = list(Project.objects.values_list('pk', flat=True))
         retention_context_ids = list(ProjectRetentionContext.objects.values_list('pk', flat=True))
         projects = Project.objects.filter(pk__in=project_ids)
+        from monitoring.fake_data import clear_fake_monitoring
+        clear_fake_monitoring()
+        from monitoring.models import Resource
+        Resource.objects.filter(
+            Q(project_id__in=project_ids) | Q(retention_context_id__in=retention_context_ids),
+        ).update(project=None, retention_context=None)
+        from secure_links.fake_data import clear_fake_secure_links
+        clear_fake_secure_links()
         from accounts.management.commands._billing_seed_helpers import clear_fake_billing
         clear_fake_billing(projects, retention_context_ids=retention_context_ids)
         from accounts.management.commands._seed_helpers import clear_fake_delivery
@@ -114,11 +122,8 @@ class Command(BaseCommand):
         # then proposals. Catalog/configuration rows remain in place.
         # Break only the self-reply pointers inside the dataset being removed;
         # message deletion then cascades attachments and date corrections.
-        signed_documents = FinancingAgreement.objects.exclude(
-            signed_document='',
-        ).exclude(signed_document__isnull=True)
-        for agreement in signed_documents.iterator():
-            agreement.signed_document.delete(save=False)
+        # File removal is captured by the shared tracker and deferred until
+        # the complete reset/reseed commits, including signed financing PDFs.
         # A full development reset removes both financing cycles together.
         # Dissolve their protected self-reference before deleting the roots.
         FinancingAgreement.objects.update(previous_agreement=None)

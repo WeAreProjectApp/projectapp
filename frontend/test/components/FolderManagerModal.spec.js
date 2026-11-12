@@ -45,7 +45,10 @@ const mockFolderStore = {
 // Nuxt auto-import — must be set before the component is required
 global.useDocumentFolderStore = jest.fn(() => mockFolderStore);
 
+jest.mock('../../stores/document_folders', () => ({ useDocumentFolderStore: () => mockFolderStore }));
+
 import { mount } from '@vue/test-utils';
+import { documentFolderI18n } from '../helpers/documentFolderI18n';
 import FolderManagerModal from '../../components/panel/documents/FolderManagerModal.vue';
 import FolderManagerTree from '../../components/panel/documents/FolderManagerTree.vue';
 import BaseFormField from '../../components/base/BaseFormField.vue';
@@ -91,6 +94,26 @@ function mountModal(props = {}) {
   });
 }
 
+async function mountFocusableModal(opener) {
+  const wrapper = mount(FolderManagerModal, {
+    attachTo: document.body,
+    props: { modelValue: false },
+    global: {
+      stubs: {
+        Teleport: { template: '<div><slot /></div>' },
+        Transition: { template: '<div><slot /></div>' },
+        draggable: DraggableStub,
+        FolderFormModal: FolderFormModalStub,
+      },
+      components: { BaseFormField, BaseInput, BaseSelect },
+    },
+  });
+  opener.focus();
+  await wrapper.setProps({ modelValue: true });
+  await flushPromises();
+  return wrapper;
+}
+
 describe('FolderManagerModal', () => {
   function expectDescribedError(wrapper, control, message) {
     const errorId = control.attributes('aria-describedby');
@@ -100,6 +123,7 @@ describe('FolderManagerModal', () => {
     expect(error.text()).toBe(message);
   }
   beforeEach(() => {
+    global.useI18n = documentFolderI18n;
     mockFolderStore.folders = [];
     mockFolderStore.isUpdating = false;
     mockFolderStore.fetchFolders.mockReset().mockResolvedValue({ success: true });
@@ -112,6 +136,16 @@ describe('FolderManagerModal', () => {
   // ── Rendering ──────────────────────────────────────────────────────────────
 
   describe('rendering', () => {
+    it('exposes the manager as a named modal dialog', () => {
+      // Falla si Gestionar carpetas vuelve a abrirse como contenido sin semántica modal.
+      const wrapper = mountModal();
+      const dialog = wrapper.get('[role="dialog"]');
+
+      expect(dialog.attributes('aria-modal')).toBe('true');
+      expect(dialog.attributes('aria-labelledby')).toMatch(/-folder-manager-title$/);
+      expect(wrapper.text()).toContain('Gestionar carpetas');
+    });
+
     it('renders the modal heading when modelValue is true', () => {
       const wrapper = mountModal();
 
@@ -243,7 +277,7 @@ describe('FolderManagerModal', () => {
       await wrapper.find('[title="Editar carpeta"]').trigger('click');
 
       // Sólo queda el input de crear: la edición vive en el modal compartido.
-      expect(wrapper.findAll('input[type="text"]').length).toBe(1);
+      expect(wrapper.findAll('[data-testid="folder-manager-new-name"]').length).toBe(1);
     });
 
     it('refreshes and emits changed after the form saves', async () => {
@@ -285,7 +319,7 @@ describe('FolderManagerModal', () => {
       const wrapper = mountModal({ modelValue: false, initialParent: 4 });
       await wrapper.setProps({ modelValue: true });
       await flushPromises();
-      await wrapper.find('input[type="text"]').setValue('Diseño');
+      await wrapper.find('[data-testid="folder-manager-new-name"]').setValue('Diseño');
       await wrapper.find('form').trigger('submit');
 
       expect(mockFolderStore.createFolder).toHaveBeenCalledWith(
@@ -298,7 +332,7 @@ describe('FolderManagerModal', () => {
       const wrapper = mountModal({ modelValue: false, initialParent: 4 });
       await wrapper.setProps({ modelValue: true });
       await flushPromises();
-      await wrapper.find('input[type="text"]').setValue('Sub');
+      await wrapper.find('[data-testid="folder-manager-new-name"]').setValue('Sub');
       await wrapper.find('form').trigger('submit');
 
       expect(mockFolderStore.createFolder).toHaveBeenCalledWith(
@@ -367,6 +401,36 @@ describe('FolderManagerModal', () => {
   // ── Close ──────────────────────────────────────────────────────────────────
 
   describe('close', () => {
+    it('focuses the new folder name when the manager opens', async () => {
+      // Falla si el foco inicial vuelve al fondo en vez de entrar al primer control del diálogo.
+      const opener = document.createElement('button');
+      opener.type = 'button';
+      document.body.appendChild(opener);
+      const wrapper = await mountFocusableModal(opener);
+
+      expect(document.activeElement.getAttribute('data-testid')).toBe('folder-manager-new-name');
+
+      wrapper.unmount();
+      opener.remove();
+    });
+
+    it('returns focus to the opener after the manager closes', async () => {
+      // Falla si cerrar Gestionar carpetas abandona el foco en BODY.
+      const opener = document.createElement('button');
+      opener.type = 'button';
+      opener.setAttribute('data-testid', 'folder-manager-opener');
+      document.body.appendChild(opener);
+      const wrapper = await mountFocusableModal(opener);
+
+      await wrapper.setProps({ modelValue: false });
+      await flushPromises();
+
+      expect(document.activeElement.getAttribute('data-testid')).toBe('folder-manager-opener');
+
+      wrapper.unmount();
+      opener.remove();
+    });
+
     it('emits update:modelValue with false when Cerrar is clicked', async () => {
       const wrapper = mountModal();
       await wrapper.findAll('button').find((btn) => btn.text() === 'Cerrar').trigger('click');
@@ -392,10 +456,6 @@ describe('FolderManagerModal', () => {
   describe('initialParent prop', () => {
     const parentFolder = { id: 5, name: 'Mis Documentos', parent: null, document_count: 0 };
 
-    function optionByText(wrapper, text) {
-      return wrapper.findAll('option').find((opt) => opt.text().trim() === text);
-    }
-
     async function openWith(props) {
       mockFolderStore.folders = [parentFolder];
       const wrapper = mountModal({ modelValue: false, ...props });
@@ -407,13 +467,13 @@ describe('FolderManagerModal', () => {
     it('pre-selects the initialParent folder in the "Dentro de:" select when opened', async () => {
       const wrapper = await openWith({ initialParent: 5 });
 
-      expect(optionByText(wrapper, 'Mis Documentos').element.selected).toBe(true);
+      expect(wrapper.get('[data-testid="folder-manager-parent"]').element.value).toBe('Mis Documentos');
     });
 
     it('selects the root option when no initialParent is provided', async () => {
       const wrapper = await openWith({});
 
-      expect(optionByText(wrapper, 'Ninguna (carpeta raíz)').element.selected).toBe(true);
+      expect(wrapper.get('[data-testid="folder-manager-parent"]').element.value).toBe('Ninguna (carpeta raíz)');
     });
 
     it('resets the select back to initialParent after a successful create', async () => {
@@ -422,7 +482,7 @@ describe('FolderManagerModal', () => {
       await wrapper.find('form').trigger('submit');
       await flushPromises();
 
-      expect(optionByText(wrapper, 'Mis Documentos').element.selected).toBe(true);
+      expect(wrapper.get('[data-testid="folder-manager-parent"]').element.value).toBe('Mis Documentos');
     });
   });
 

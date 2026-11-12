@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin expands any primary outbound-email history row and sees every internal BCC recipient, including sent, failed and deduplicated/skipped attempts with independent detail. The primary result remains separate and is not duplicated as another top-level history row.",
+  "description": "Admin expands any primary outbound-email history row and sees every internal BCC recipient, including sent, failed and deduplicated/skipped attempts with independent detail. The primary result remains separate and is not duplicated as another top-level history row. El historial del cliente y el global comparten las etiquetas Enviado/Fallido para sent/failed sin alterar el estado real.",
   "expectedSpecs": 1,
   "outcomes": [
     "display"

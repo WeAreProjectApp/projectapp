@@ -445,7 +445,8 @@ class Command(BaseCommand):
             title='Anexo legal de prueba',
             is_generated=False,
         )
-        doc.file.save('anexo-legal.pdf', ContentFile(b'%PDF-1.4 fake annex'), save=True)
+        from content.fake_data_files import sample_pdf
+        doc.file.save('anexo-legal.pdf', sample_pdf('anexo-legal.pdf'), save=True)
 
     def _create_engagement_data(self, proposal, now):
         """Generate ViewEvents, SectionViews, ChangeLogs, and ShareLinks."""
