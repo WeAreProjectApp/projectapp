@@ -62,6 +62,9 @@ def retained_record_payload(row):
             fields[field.name] = display() if display else getattr(row, field.name)
     title = next((fields.get(key) for key in ('title', 'name', 'concept', 'label') if fields.get(key)), '')
     category = CATEGORIES[row._meta.label_lower]
+    if row._meta.label_lower == 'accounts.billingcontextevent':
+        fields.update(operation=row.operation, reason=row.reason,
+                      before=row.before, after=row.after, actor_id=row.actor_id)
     return {'id': str(row.pk), 'key': category['key'], 'title': title or category['label'],
             'fields': fields, 'files': files,
             'can_reveal': row._meta.label_lower in ('accounts.projectadminaccess', 'accounts.projectaccessnote')}

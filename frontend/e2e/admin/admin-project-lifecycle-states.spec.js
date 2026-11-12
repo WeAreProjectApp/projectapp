@@ -259,6 +259,11 @@ function verticalGap(first, second) {
   return second.y - (first.y + first.height);
 }
 
+async function chooseStateOption(page, testid, value) {
+  await page.getByTestId(testid).click();
+  await page.getByTestId(`${testid}-${value}`).click();
+}
+
 test.describe('Admin project lifecycle states', () => {
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, {
@@ -317,7 +322,7 @@ test.describe('Admin project lifecycle states', () => {
     );
     expect(previewCalls).toBe(0);
 
-    await target.selectOption('4');
+    await chooseStateOption(page, 'project-state-target', '4');
     await expect(target).not.toHaveAttribute('aria-invalid', 'true');
   });
 
@@ -351,7 +356,7 @@ test.describe('Admin project lifecycle states', () => {
 
     await openProjects(page);
     await openStateTransition(page);
-    await page.getByTestId('project-state-target').selectOption('4');
+    await chooseStateOption(page, 'project-state-target', '4');
     await page.getByTestId('project-state-preview').click();
 
     await expect(page.getByTestId('project-state-impact')).toContainText(
@@ -392,7 +397,7 @@ test.describe('Admin project lifecycle states', () => {
 
     await openProjects(page);
     await openStateTransition(page);
-    await page.getByTestId('project-state-target').selectOption('7');
+    await chooseStateOption(page, 'project-state-target', '7');
     await expect(page.getByTestId('project-state-selected-help')).toContainText(
       'Está en producción mientras se desarrolla una ampliación.',
     );
@@ -429,7 +434,7 @@ test.describe('Admin project lifecycle states', () => {
 
     await openProjects(page);
     await openStateTransition(page);
-    await page.getByTestId('project-state-target').selectOption('6');
+    await chooseStateOption(page, 'project-state-target', '6');
     await page.getByTestId('project-state-preview').click();
 
     const apply = page.getByTestId('project-state-apply');
@@ -448,7 +453,7 @@ test.describe('Admin project lifecycle states', () => {
     );
     await expect(page.getByTestId('base-modal-actions').getByRole('alert')).toHaveCount(0);
 
-    await incomeDecision.selectOption('keep_receivable');
+    await chooseStateOption(page, 'project-state-income-41', 'keep_receivable');
     await expect(incomeDecision).not.toHaveAttribute('aria-invalid', 'true');
     await expect(apply).toBeDisabled();
     await note.fill('Baja directa confirmada.');
@@ -485,7 +490,7 @@ test.describe('Admin project lifecycle states', () => {
 
     await openProjects(page);
     await openStateTransition(page);
-    await page.getByTestId('project-state-target').selectOption('4');
+    await chooseStateOption(page, 'project-state-target', '4');
     await page.getByTestId('project-state-preview').click();
     await page.getByTestId('project-state-apply').click();
 
@@ -528,7 +533,7 @@ test.describe('Admin project lifecycle states', () => {
 
     await openProjects(page);
     await openStateTransition(page);
-    await page.getByTestId('project-state-target').selectOption('6');
+    await chooseStateOption(page, 'project-state-target', '6');
     await page.getByTestId('project-state-preview').click();
 
     const modal = page.getByRole('dialog').filter({ has: page.getByTestId('project-state-transition-modal') });
