@@ -63,7 +63,7 @@
               @click="$emit('close')"
             />
             <PlatformHelpMenu />
-            <BaseButton variant="secondary" size="md" class="w-full" @click="$emit('close'); $emit('openThemePicker')">
+            <BaseButton unstyled class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-text-muted hover:bg-primary-soft hover:text-text-brand" @click="$emit('close'); $emit('openThemePicker')">
               <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="10.5" r="2.5" /><circle cx="8.5" cy="7.5" r="2.5" /><circle cx="6.5" cy="12.5" r="2.5" />
                 <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
@@ -96,7 +96,7 @@
                 alt="Avatar"
                 class="h-full w-full object-cover"
               />
-              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary dark:bg-accent dark:text-on-accent">
+              <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary">
                 {{ authStore.userInitials }}
               </div>
             </div>

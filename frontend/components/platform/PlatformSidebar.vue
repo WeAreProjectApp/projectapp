@@ -64,10 +64,10 @@
           :disabled="item.disabled"
         />
         <PlatformHelpMenu :collapsed="isCollapsed" />
-        <!-- Personaliza button (opens theme picker, not a route) -->
+        <!-- A labelled row must keep icon and text as flex siblings. -->
         <BaseButton
           unstyled
-          icon-only
+          :icon-only="isCollapsed"
           type="button"
           aria-label="Personalizar apariencia"
           :class="[
@@ -120,7 +120,7 @@
             alt="Avatar"
             class="h-full w-full object-cover"
           />
-          <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary dark:bg-accent dark:text-on-accent">
+          <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary">
             {{ authStore.userInitials }}
           </div>
         </div>
