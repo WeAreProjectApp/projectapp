@@ -85,7 +85,9 @@ describe('SecureLinkFormModal', () => {
 
     expect(wrapper.get('[data-testid="secure-link-type"]').text()).toContain('Mensaje confidencial');
     expect(wrapper.get('[data-testid="secure-link-field-message"]').attributes('required')).toBeDefined();
-    expect(wrapper.get('[data-testid="secure-link-configuration"]').attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('[data-testid="secure-link-configuration"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="client-stub"]').isVisible()).toBe(true);
+    expect(wrapper.get('[data-testid="project-stub"]').isVisible()).toBe(true);
   });
 
   it('asks for a title before calling the server', async () => {
@@ -276,6 +278,22 @@ describe('SecureLinkFormModal', () => {
     expect(wrapper.get('[data-testid="secure-link-cancel"]').element.disabled).toBe(true);
     complete({ data: { id: 1 } });
     await flushPromises();
+  });
+
+  it('sends only catalog fields when editing a historical message', async () => {
+    const wrapper = await mountForm({
+      link: { id: 7, title: 'Referencia', secret_type: 'confidential_message' },
+      initialFields: { subject: 'Historical reference', message: 'Message to preserve' },
+    });
+    patch_request.mockResolvedValueOnce({ data: { id: 7 } });
+
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="secure-link-field-subject"]').exists()).toBe(false);
+    expect(patch_request).toHaveBeenCalledWith('secure-links/7/', expect.objectContaining({
+      fields: { message: 'Message to preserve' },
+    }));
   });
 
 });
