@@ -58,6 +58,18 @@ describe('FolderManagerTree', () => {
     expect(wrapper.emitted('archive')).toEqual([[folder]]);
   });
 
+  it('identifies the branch of a subfolder with its ancestors', () => {
+    const wrapper = mountTree({
+      siblings: [{ ...folder, parent: 3 }],
+      parentId: 3,
+      depth: 2,
+      ancestorNames: ['Proyecto', 'Entregables'],
+    });
+
+    expect(wrapper.get('[data-testid="folder-manager-branch-4"]').text())
+      .toBe('Proyecto / Entregables');
+  });
+
   it('emits delete with the folder', async () => {
     const wrapper = mountTree();
 
