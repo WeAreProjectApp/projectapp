@@ -15,13 +15,16 @@ function formatterFor(decimals) {
  *
  * `decimals` exists for prorated values: a USD subscription billed yearly can
  * come out below $1/month, and rounding that to zero decimals would erase the
- * figure instead of showing it.
+ * figure instead of showing it. `decimals: 'auto'` preserves cents while
+ * keeping whole amounts compact; callers opt in explicitly.
  */
 export function formatMoney(amount, currency = '', { decimals = 0 } = {}) {
   if (amount === null || amount === undefined) return '';
   const n = Number(amount);
   if (!Number.isFinite(n)) return '';
-  const formatted = formatterFor(decimals).format(n);
+  // Choose precision only for display; never round the value used by callers.
+  const precision = decimals === 'auto' ? (Number.isInteger(n) ? 0 : 2) : decimals;
+  const formatted = formatterFor(precision).format(n);
   return currency ? `$${formatted} ${currency}` : `$${formatted}`;
 }
 
