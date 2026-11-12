@@ -20,6 +20,15 @@ describe('DocumentMarkdownBody', () => {
     expect(wrapper.element.innerHTML).toBe('')
   })
 
+  // Catches plain legacy documents gaining rich formatting or interpreting stored HTML as markup.
+  it('renders plain source syntax literally', async () => {
+    const wrapper = await mountBody({ markdown: '**literal** <u>visible</u>', format: 'plain' })
+
+    expect(wrapper.text()).toBe('**literal** <u>visible</u>')
+    expect(wrapper.html()).toContain('&lt;u&gt;visible&lt;/u&gt;')
+    expect(wrapper.html()).not.toContain('<strong>literal</strong>')
+  })
+
   it('strips script tags injected through markdown', async () => {
     const wrapper = await mountBody({ markdown: 'hola\n\n<script>window.hacked = true<\/script>' })
     expect(wrapper.html()).not.toContain('<script')
