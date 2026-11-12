@@ -347,6 +347,7 @@ describe('IncomeDetailModal collection status (PA-259)', () => {
     get_request.mockResolvedValue({ data: detail({ collection_account: account({ issue_date: null }) }) });
     const wrapper = await open();
 
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).toContain('Borrador');
     expect(wrapper.get('[data-testid="income-detail-collection"]').text()).not.toContain('Fecha');
     wrapper.unmount();
   });
@@ -354,6 +355,7 @@ describe('IncomeDetailModal collection status (PA-259)', () => {
   it('omits the collection block without a linked account', async () => {
     const wrapper = await open();
 
+    expect(wrapper.get('[data-testid="income-detail-total"]').text()).toContain('900.000');
     expect(wrapper.find('[data-testid="income-detail-collection"]').exists()).toBe(false);
     wrapper.unmount();
   });

@@ -116,7 +116,7 @@ test('an unavailable project preserves English in the exit (PA-252)', {
   tag: [...PLATFORM_PROJECT_DETAIL, '@role:platform-client', '@outcome:error'],
 }, async ({ page }) => {
   // quality: allow-deep-link (the 404 direct-access recovery is the behavior under test)
-  await mockOwnerBoundary(page, accessCases[0], { status: 404 });
+  const { own } = await mockOwnerBoundary(page, accessCases[0], { status: 404 });
 
   await page.goto(`/en-us/platform/projects/${accessCases[0].foreignId}`, { waitUntil: 'domcontentloaded' });
 
@@ -124,4 +124,7 @@ test('an unavailable project preserves English in the exit (PA-252)', {
   const back = page.getByRole('link', { name: 'Back to projects', exact: true });
   await expect(back).toHaveAttribute('href', '/en-us/platform/projects');
   await expect(page.getByRole('button', { name: 'Try again', exact: true })).toHaveCount(0);
+  await back.click();
+  await expect(page).toHaveURL(/\/en-us\/platform\/projects$/);
+  await expect(page.getByTestId(`project-row-${own.id}`)).toContainText(own.name);
 });
