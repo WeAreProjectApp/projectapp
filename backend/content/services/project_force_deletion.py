@@ -144,7 +144,10 @@ class ProjectDeletionPlan:
                 self._conflict(project, f"«{category['label']}» se conserva siempre y no se puede eliminar.")
         for (model, _), row in self.inventory.items():
             if model is not Project and model._meta.label_lower not in CATEGORIES:
-                self._conflict(row, 'Hay información relacionada aún no clasificada. No se puede eliminar de forma segura.')
+                message = ('El historial de paquetes por tallas, compras y consentimiento se conserva y bloquea la eliminación automática.'
+                           if model._meta.label_lower.startswith('accounts.package') else
+                           'Hay información relacionada aún no clasificada. No se puede eliminar de forma segura.')
+                self._conflict(row, message)
         self.rows = {key: row for key, row in self.inventory.items()
                      if key[0] is Project or (
                          CATEGORIES.get(key[0]._meta.label_lower, {}).get('selectable', True)

@@ -424,6 +424,10 @@ export const PLATFORM_PROJECT_HOSTING_CONTEXT = ['@flow:platform-project-hosting
 export const PLATFORM_PROJECT_IDEAS = ['@flow:platform-project-ideas', '@module:platform', '@priority:P1'];
 export const PLATFORM_PROJECT_LIST = ['@flow:platform-project-list', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROPOSAL_AUTO_ONBOARDING = ['@flow:platform-proposal-auto-onboarding', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGE_DECISION = ['@flow:platform-requirement-package-decision', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGES_ACCESS = ['@flow:platform-requirement-packages-access', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGES_PURCHASE = ['@flow:platform-requirement-packages-purchase', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGES_REQUEST = ['@flow:platform-requirement-packages-request', '@module:platform', '@priority:P1'];
 export const PLATFORM_SECURE_LINK_CREATE = ['@flow:platform-secure-link-create', '@module:platform', '@priority:P1'];
 export const PLATFORM_SECURE_LINK_MANAGE = ['@flow:platform-secure-link-manage', '@module:platform', '@priority:P1'];
 export const PLATFORM_SECURE_LINK_REPLACE = ['@flow:platform-secure-link-replace', '@module:platform', '@priority:P1'];
@@ -443,6 +447,10 @@ export const ADMIN_PROCUREMENT_SETTINGS_SYNC = ['@flow:admin-procurement-setting
 // ── projects ──
 export const ADMIN_PROJECT_REQUIREMENT_CALCULATOR_APPROVE = ['@flow:admin-project-requirement-calculator-approve', '@module:projects', '@priority:P1'];
 export const ADMIN_PROJECT_REQUIREMENT_CALCULATOR_DRAFT = ['@flow:admin-project-requirement-calculator-draft', '@module:projects', '@priority:P1'];
+export const ADMIN_REQUIREMENT_PACKAGE_COMMERCE = ['@flow:admin-requirement-package-commerce', '@module:projects', '@priority:P1'];
+export const ADMIN_REQUIREMENT_PACKAGE_EVALUATION = ['@flow:admin-requirement-package-evaluation', '@module:projects', '@priority:P1'];
+export const ADMIN_REQUIREMENT_PACKAGE_EXAMPLES = ['@flow:admin-requirement-package-examples', '@module:projects', '@priority:P2'];
+export const ADMIN_REQUIREMENT_PACKAGES_QUEUE = ['@flow:admin-requirement-packages-queue', '@module:projects', '@priority:P1'];
 
 // ── proposal ──
 export const PROPOSAL_CLOSING_CONTACT = ['@flow:proposal-closing-contact', '@module:proposal', '@priority:P2'];

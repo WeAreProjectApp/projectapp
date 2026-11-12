@@ -1,0 +1,16 @@
+{
+  "id": "platform-requirement-packages-access",
+  "name": "Respetar acceso y consentimiento de paquetes",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Aislar proyectos y exigir sesión personal del cliente; la administración no sustituye su consentimiento.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

@@ -1,3 +1,13 @@
+## PA-254 — Paquetes por tallas y solicitudes (2026-11-12)
+
+En implementación en `feat/12112026-pa254-requirement-packages`: ejemplos
+genéricos y específicos por proyecto administrables por Panel/MCP; compra online
+COP o pago externo confirmado, saldos por proyecto y talla, evaluación manual,
+objeciones y aceptación expresa del cliente con consumo atómico. Los acuerdos
+previos y las bolsas horarias de Células se conservan. Calibración económica
+provisional hasta reunir esfuerzo real. Automatizadas exclusivamente en CI;
+la coordinación manual requiere el buzón de QA, ausente en este host.
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.

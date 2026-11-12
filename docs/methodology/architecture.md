@@ -1,3 +1,5 @@
+> **PA-254 — 2026-11-12:** órdenes únicas por proyecto, libro de cupos y consentimiento del cliente separados de hosting. Servicios compartidos por Panel, JWT y MCP; ejemplos versionados independientes de parámetros económicos. La aceptación reemplaza consumos de forma atómica. Contrato: `docs/PA254_REQUIREMENT_PACKAGES.md`. Implementación sin acreditar despliegue ni calibración económica.
+
 > **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
 > pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
 > lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant

@@ -1,0 +1,16 @@
+{
+  "id": "platform-requirement-packages-purchase",
+  "name": "Consultar y comprar paquetes de requerimientos",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Revisar ejemplos, condiciones y precio total; solicitar pago externo o continuar checkout COP sin acreditar anticipadamente.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

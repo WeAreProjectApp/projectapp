@@ -1703,6 +1703,21 @@ MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)
 
 # Authentication secrets are never part of the administrative MCP surface.
 MCP_MODEL_CONTRACTS['projects'] += (
+    _contract('accounts.PackageExampleRevision', read_only='id project language examples author note created_at'),
+    _contract('accounts.PackageProjectSettings', read_only='id project nationality tax_rate version'),
+    _contract('accounts.PackageOrder', read_only='id project client created_at package snapshot currency subtotal tax_rate total method status payment_reference checkout_url paid_at expires_at recorded_by',
+              excluded=_excluded('Identidad del proveedor asignada únicamente por verificación del pago; no se expone ni edita por MCP.', 'payment_link_id transaction_id')),
+    _contract('accounts.PackageRequest', read_only='id project client created_at ticket status version current_proposal updated_at'),
+    _contract('accounts.PackageSizingProposal', read_only='id request estimate public_snapshot warranty author created_at'),
+    _contract('accounts.PackageDecision', read_only='id proposal actor decision message created_at'),
+    _contract('accounts.PackageMovement', read_only='id order size quantity kind decision reverses reason actor created_at'),
+    _contract('accounts.PackageOperation', excluded=_excluded('Recibo interno de idempotencia y auditoría; no permite CRUD ni alteración de los efectos registrados.', 'id project actor request_id fingerprint receipt created_at')),
+)
+MCP_MODEL_CONTRACTS['commercial'] += (
+    _contract('accounts.PackageExampleRevision', read_only='id project language examples author note created_at'),
+)
+
+MCP_MODEL_CONTRACTS['projects'] += (
     _contract('accounts.LoginChallenge', excluded=_excluded('Estado efímero de autenticación; nunca se expone por MCP.', 'id user surface browser_digest identity_digest code_digest access_version expires_at attempts closed device created_at')),
     _contract('accounts.AccessRateBucket', excluded=_excluded('Contadores internos contra abuso; nunca se exponen por MCP.', 'key requests updated_at')),
     _contract('accounts.GoogleIdentity', read_only='user created_at', excluded=_excluded('Identidad del proveedor privada; sólo se expone si está vinculado.', 'id subject')),

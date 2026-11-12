@@ -3544,6 +3544,22 @@ def wompi_webhook_view(request):
     if not isinstance(transaction, dict) or transaction.get('id') != transaction_id:
         return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
 
+    # One-time package orders have their own ownership and amount binding;
+    # they never create or mutate hosting subscriptions.
+    from accounts.models_requirement_packages import PackageOrder
+    package_order = PackageOrder.objects.filter(payment_link_id=transaction.get('payment_link_id')).exclude(payment_link_id=None).first()
+    if package_order:
+        from uuid import NAMESPACE_URL, uuid5
+        from accounts.services.package_commerce import apply_transaction
+        from rest_framework.exceptions import APIException
+        try:
+            apply_transaction(package_order.project_id, package_order.recorded_by, package_order.pk,
+                {'request_id': uuid5(NAMESPACE_URL, f'package:{transaction_id}:{transaction.get("status")}'),
+                 'transaction_id': transaction_id}, transaction)
+        except APIException:
+            return Response({'status': 'invalid package transaction'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'status': 'ok'})
+
     payment_link_id = transaction.get('payment_link_id')
     reference = transaction.get('reference')
     if payment_link_id is not None and payment_link_id != '':

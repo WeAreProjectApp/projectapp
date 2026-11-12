@@ -6366,6 +6366,10 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-requirement-calculator-calibration` | commercial | P2 | display,success,error,failure | — |
 | `admin-requirement-calculator-definition` | commercial | P1 | display,success,error,failure | — |
 | `admin-requirement-calculator-revision-restore` | commercial | P2 | display,success,failure | — |
+| `admin-requirement-package-commerce` | projects | P1 | display,success,error,failure | — |
+| `admin-requirement-package-evaluation` | projects | P1 | display,success,error,failure | — |
+| `admin-requirement-package-examples` | projects | P2 | display,success,error,failure | — |
+| `admin-requirement-packages-queue` | projects | P1 | display,success,error,failure | — |
 | `admin-secure-link-create` | admin | P1 | success,error,failure,display | — |
 | `admin-secure-link-folder-panel-resize` | admin | P3 | display,success | — |
 | `admin-secure-link-manage` | admin | P1 | success,error,failure,display | — |
@@ -6448,6 +6452,10 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
+| `platform-requirement-package-decision` | platform | P1 | display,success,error,failure | — |
+| `platform-requirement-packages-access` | platform | P1 | display,success,error,failure | — |
+| `platform-requirement-packages-purchase` | platform | P1 | display,success,error,failure | — |
+| `platform-requirement-packages-request` | platform | P1 | display,success,error,failure | — |
 | `platform-secure-link-create` | platform | P1 | display,success,error,failure | — |
 | `platform-secure-link-manage` | platform | P1 | display,success,error,failure | — |
 | `platform-secure-link-replace` | platform | P1 | display,success,error,failure | — |
@@ -8485,6 +8493,113 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Steps:** Abrir documento de una versión → comprobar doc-calculator-alert y contenido → seguir enlace a la calculadora → comprobar contexto de proyecto.
 - **Branches:** Los errores de carga y permiso pertenecen a los flujos existentes del editor documental.
 - **Coverage:** ✅ Covered — `display`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-managed-calculator-document.spec.js`.
+
+
+## Section 41 — Paquetes por tallas (PA-254)
+
+### FLOW: `admin-requirement-packages-queue`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P1
+- **Ruta:** `/panel/requirement-packages`
+- **Interacción:** Buscar y filtrar solicitudes, consultar pendientes y abrir el proyecto correcto.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `admin-requirement-package-examples`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P2
+- **Ruta:** `/panel/requirement-packages`
+- **Interacción:** Publicar ejemplos con motivo, consultar historial y restaurar el genérico al vaciar una talla propia.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `admin-requirement-package-evaluation`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P1
+- **Ruta:** `/panel/requirement-packages?project=:id`
+- **Interacción:** Publicar una propuesta manual de talla y agenda sin consumir; responder objeciones conservando revisiones.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `admin-requirement-package-commerce`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P1
+- **Ruta:** `/panel/requirement-packages?project=:id`
+- **Interacción:** Confirmar pagos externos, revisar saldo, revertir consumos con motivo y configurar futuras compras.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-packages-purchase`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Revisar ejemplos, condiciones y precio total; solicitar pago externo o continuar checkout COP sin acreditar anticipadamente.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-packages-request`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Describir un resultado nuevo, enviarlo sin entrega previa obligatoria y consultar su estado.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-package-decision`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Objetar con motivo o aceptar con consentimiento y consumo único de un cupo vigente; garantías no consumen.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-packages-access`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Aislar proyectos y exigir sesión personal del cliente; la administración no sustituye su consentimiento.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
 
 
 ## Unsectioned flows

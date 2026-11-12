@@ -60,6 +60,9 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Preparar, publicar y revisar guías de entrega sin perder las conformidades anteriores.',
   ]),
   projects: module('projects', [
+    'frontend/pages/panel/requirement-packages/',
+    'frontend/components/RequirementPackages/',
+    'frontend/services/requirementPackagesApi.js',
     'frontend/components/panel/projects/',
     'frontend/pages/panel/projects/',
     'frontend/pages/panel/monitoring/',
@@ -305,6 +308,7 @@ export function modulesForChangedFiles(files) {
 
 /** Every catalog view has one accountable responsive module or dependency. */
 export function responsiveOwnerForView(sectionId, view) {
+  if (view.url.startsWith('/panel/requirement-packages')) return 'projects';
   if (view.url.startsWith('/panel/procurement')) return 'projects';
   if (view.url === '/panel/platform/ai') return 'projects';
   if (view.url === '/platform/projects/:id/secure-links') return 'communications';

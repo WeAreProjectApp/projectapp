@@ -1,0 +1,16 @@
+{
+  "id": "admin-requirement-packages-queue",
+  "name": "Administrar bandeja de solicitudes por talla",
+  "module": "projects",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Buscar y filtrar solicitudes, consultar pendientes y abrir el proyecto correcto.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

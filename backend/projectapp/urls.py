@@ -52,6 +52,7 @@ urlpatterns = [
     path('manifest.webmanifest', serve_pwa_file, {'filename': 'manifest.webmanifest'}, name='pwa-manifest'),
     path('sw.js', serve_pwa_file, {'filename': 'sw.js'}, name='pwa-worker'),
     path('api/procurement/', include('procurement.urls')),
+    path('api/requirement-packages/', include('accounts.requirement_package_urls')),
     path('api/monitoring/', include('monitoring.urls')),
     path('api/secure-links/', include('secure_links.urls')),
     path('api/health/', health_check, name='health-check'),
