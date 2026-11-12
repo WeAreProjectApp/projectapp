@@ -9,13 +9,15 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 
 from .authentication import IngestAuthentication
-from .models import Case, CaseActivity, Report, Resource, Source
+from .models import CapacityAllocation, Case, CaseActivity, Report, Resource, Source
 from .serializers import (
     ActivitySerializer, CaseSerializer, DeliverySerializer, FilterSerializer,
     IngestSerializer, NoteSerializer, ReportSerializer, ResourceLinkSerializer, ResourceSerializer,
     SourceSerializer, StateSerializer,
+    CapacitySerializer, CapacityChangeSerializer, SeriesFilterSerializer,
 )
 from .services import change_state, ingest, link_resource
+from .dashboard import frozen_page, host_status, revision, save_capacity, series
 
 
 def admin_api(methods):
@@ -86,14 +88,19 @@ def filtered(request, model):
 @admin_api(['GET'])
 def cases(request):
     query, page = filtered(request, Case)
+    data = validated(FilterSerializer, request.query_params)
+    if data.get('snapshot'):
+        return Response(frozen_page(query, data, request.user))
     return Response(paginated(query, CaseSerializer, page))
 
 
 @admin_api(['GET'])
 def case_detail(request, pk):
     case = get_object_or_404(Case.objects.select_related('source__resource__server'), pk=pk)
-    page = validated(FilterSerializer, request.query_params)['page']
-    return Response({**CaseSerializer(case).data, 'evidence': case.evidence, 'activities': paginated(case.activities.all(), ActivitySerializer, page), 'deliveries': paginated(case.deliveries.all(), DeliverySerializer, page)})
+    data = validated(FilterSerializer, request.query_params)
+    return Response({**CaseSerializer(case).data, 'evidence': case.evidence,
+                     'activities': paginated(case.activities.all(), ActivitySerializer, data.get('activities_page', data['page'])),
+                     'deliveries': paginated(case.deliveries.all(), DeliverySerializer, data.get('deliveries_page', data['page']))})
 
 
 @admin_api(['POST'])
@@ -113,6 +120,9 @@ def case_note(request, pk):
 @admin_api(['GET'])
 def reports(request):
     query, page = filtered(request, Report)
+    data = validated(FilterSerializer, request.query_params)
+    if data.get('snapshot'):
+        return Response(frozen_page(query, data, request.user, reports=True))
     return Response(paginated(query, ReportSerializer, page))
 
 
@@ -127,3 +137,38 @@ def resource_link(request, pk):
     data = validated(ResourceLinkSerializer, request.data)
     resource = link_resource(pk, data['project'])
     return Response(ResourceSerializer(resource).data)
+
+
+@admin_api(['GET'])
+def dashboard_status(request):
+    data = validated(FilterSerializer, request.query_params)
+    return Response({'revision': revision(), 'hosts': host_status(data), 'checked_at': timezone.now()})
+
+
+@admin_api(['GET'])
+def server_series(request, pk):
+    resource = get_object_or_404(Resource, pk=pk, kind='server')
+    data = validated(SeriesFilterSerializer, request.query_params)
+    return Response(series(resource, data['period']))
+
+
+@admin_api(['GET', 'PUT'])
+def resource_capacity(request, pk):
+    resource = get_object_or_404(Resource.objects.select_related('server'), pk=pk, kind='project')
+    if request.method == 'PUT':
+        data = validated(CapacitySerializer, request.data)
+        allocation = save_capacity(resource, request.user, data)
+    else:
+        allocation = CapacityAllocation.objects.filter(resource=resource).first()
+    return Response({'resource': ResourceSerializer(resource).data,
+                     'server_name': resource.server.name if resource.server else None,
+                     'allocation': CapacitySerializer(allocation).data if allocation else None,
+                     'consumption': None, 'consumption_status': 'unavailable'})
+
+
+@admin_api(['GET'])
+def capacity_history(request, pk):
+    resource = get_object_or_404(Resource, pk=pk, kind='project')
+    allocation = get_object_or_404(CapacityAllocation, resource=resource)
+    page = validated(FilterSerializer, request.query_params)['page']
+    return Response(paginated(allocation.changes.all(), CapacityChangeSerializer, page))

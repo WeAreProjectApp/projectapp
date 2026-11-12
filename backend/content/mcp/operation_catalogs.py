@@ -25,6 +25,7 @@ from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
 from content.mcp.project_force_delete_tools import PROJECT_FORCE_DELETE_TOOLS
 from content.mcp.data_integrity_tools import LEGACY_DATA_INTEGRITY_TOOLS
+from content.mcp.monitoring_tools import MONITORING_TOOLS
 from content.mcp.proposal_schemas import writable_schema
 from content.serializers.additional_modules import AdditionalModuleAdminSerializer
 from content.serializers.hour_packages import HourPackageCreateUpdateSerializer
@@ -166,6 +167,7 @@ def _project_create_tool():
 
 
 PROJECT_TOOLS = [
+    *MONITORING_TOOLS,
     *PLATFORM_HELP_TOOLS,
     _op('list_projects', 'Lista proyectos y sus indicadores por estado; client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_projects']),
     _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['get_project']),

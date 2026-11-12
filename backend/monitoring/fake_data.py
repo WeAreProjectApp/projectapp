@@ -1,14 +1,16 @@
 """Ownership boundary of the local monitoring examples."""
 from content.fake_data import ensure_fake_data_allowed
 
-from monitoring.models import Case, CaseActivity, Delivery, Report, Resource, Source
+from monitoring.models import CapacityAllocation, CapacityChange, Case, CaseActivity, Delivery, Report, Resource, Source
 
 RESOURCE_KEYS = ('demo-server', 'demo-project')
 
 
 def clear_fake_monitoring():
     ensure_fake_data_allowed('clear_fake_monitoring')
-    sources = Source.objects.filter(resource__key__in=RESOURCE_KEYS, key='demo')
+    sources = Source.objects.filter(resource__key__in=RESOURCE_KEYS, key__in=['demo', 'telemetry', 'demo-no-data', 'demo-stale', 'demo-disabled'])
+    CapacityChange.objects.filter(allocation__resource__key__in=RESOURCE_KEYS).delete()
+    CapacityAllocation.objects.filter(resource__key__in=RESOURCE_KEYS).delete()
     Delivery.objects.filter(source__in=sources).delete()
     CaseActivity.objects.filter(case__source__in=sources).delete()
     Case.objects.filter(source__in=sources).delete()

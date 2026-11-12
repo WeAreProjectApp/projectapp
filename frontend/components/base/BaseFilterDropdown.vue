@@ -97,6 +97,7 @@ const props = defineProps({
   options: { type: Array, required: true },
   modelValue: { type: Array, default: () => [] },
   searchable: { type: Boolean, default: true },
+  single: { type: Boolean, default: false },
   testId: { type: String, default: '' },
 });
 
@@ -142,6 +143,11 @@ async function openAndFocusOptions() {
 }
 
 function toggle(value) {
+  if (props.single) {
+    emit('update:modelValue', [value]);
+    isOpen.value = false;
+    return;
+  }
   if (props.modelValue.includes(value)) {
     emit('update:modelValue', props.modelValue.filter((item) => item !== value));
   } else {

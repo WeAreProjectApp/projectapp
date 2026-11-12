@@ -7,6 +7,7 @@ export const useMonitoringStore = defineStore('monitoring', {
   state: () => ({
     resources: [], sources: [], records: [], count: 0, pageSize: 25,
     detail: null, loading: false, saving: false, error: '', requestId: 0, detailId: 0,
+    snapshot: '', revision: '', capturedAt: '', summary: null, attention: [], currentPage: 1, expired: false,
   }),
   actions: {
     async catalog() {
@@ -23,25 +24,37 @@ export const useMonitoringStore = defineStore('monitoring', {
       const requestId = ++this.requestId
       this.loading = true
       this.error = ''
+      this.expired = false
       try {
         const { data } = await get_request(`monitoring/${reports ? 'reports' : 'cases'}/`, { params })
         if (requestId !== this.requestId) return
         this.records = data.results
         this.count = data.count
         this.pageSize = data.page_size
+        this.currentPage = data.page || params.page || 1
+        this.snapshot = data.snapshot || ''
+        this.revision = data.revision || ''
+        this.capturedAt = data.captured_at || ''
+        this.summary = data.summary || null
+        this.attention = data.attention || []
+        return true
       } catch (error) {
         if (requestId === this.requestId) {
           this.error = error.response?.data?.detail || 'load'
           this.records = []
           this.count = 0
+          this.summary = null
+          this.attention = []
+          this.expired = error.response?.status === 409
         }
+        return false
       } finally {
         if (requestId === this.requestId) this.loading = false
       }
     },
-    async open(id, reports = false, page = 1) {
+    async open(id, reports = false, page = 1, pages = {}) {
       const detailId = ++this.detailId
-      const { data } = await get_request(`monitoring/${reports ? 'reports' : 'cases'}/${id}/`, { params: { page } })
+      const { data } = await get_request(`monitoring/${reports ? 'reports' : 'cases'}/${id}/`, { params: { page, ...pages } })
       if (detailId === this.detailId) this.detail = data
     },
     close() {

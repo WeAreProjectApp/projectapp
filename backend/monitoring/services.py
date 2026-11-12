@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import APIException, PermissionDenied
 
-from .models import Case, CaseActivity, Delivery, Report, Resource, Source
+from .models import Case, CaseActivity, Delivery, Report, Resource, Source, TelemetrySample
 
 
 class Conflict(APIException):
@@ -29,6 +29,8 @@ def ingest(credential, data):
     server_key = resource.server.key if resource.server_id else resource.key
     if resource.retention_context_id or server_key != data['server'] or not resource.enabled or not credential.resources.filter(pk=resource.pk).exists():
         raise PermissionDenied('Recurso fuera del alcance de la credencial.')
+    if data['kind'] == 'metric' and (resource.kind != 'server' or source.key != 'telemetry'):
+        raise PermissionDenied('Las mediciones corresponden a la fuente de telemetría del servidor.')
     digest = hashlib.sha256(json.dumps(data, cls=DjangoJSONEncoder, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     previous = Delivery.objects.filter(source=source, external_id=data['external_id']).first()
     if previous:
@@ -43,12 +45,14 @@ def ingest(credential, data):
     source.last_received_at = timezone.now()
     if not source.last_seen_at or observed >= source.last_seen_at:
         source.last_seen_at = observed
-        if data['kind'] == 'heartbeat':
-            source.enabled = data['enabled']
+        if data['kind'] in ('heartbeat', 'metric'):
+            source.enabled = data.get('enabled', True)
             source.last_error = data.get('error', '')
     source.save()
     if data['kind'] == 'report':
         receipt.report = Report.objects.create(source=source, title=data['title'], text=data['text'], observed_at=observed, resource_snapshot=snapshot(resource))
+    elif data['kind'] == 'metric':
+        TelemetrySample.objects.create(delivery=receipt, resource=resource, observed_at=observed, **data['metrics'])
     elif data['kind'] in ('detection', 'recovery'):
         _observe_case(source, data, receipt)
     if data['kind'] != 'heartbeat':
@@ -103,6 +107,7 @@ def _observe_case(source, data, receipt):
         if data['kind'] == 'detection':
             case.title = data['title']
             case.severity = data['severity']
+            case.summary = str(data.get('evidence', {}).get('message') or '')[:500]
     case.version += 1
     case.save()
 
