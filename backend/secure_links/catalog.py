@@ -108,7 +108,6 @@ SECRET_TYPES = {
         'label_es': 'Mensaje o comunicado confidencial',
         'label_en': 'Confidential message',
         'fields': [
-            _field('subject', 'Asunto', 'Subject'),
             _field('message', 'Mensaje', 'Message', TEXTAREA, required=True, max_length=15_000),
         ],
     },

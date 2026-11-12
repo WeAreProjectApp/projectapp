@@ -19,8 +19,8 @@
       No encontramos el cliente solicitado.
     </div>
 
-    <div v-else class="grid grid-cols-1 gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-      <section class="space-y-6" data-enter>
+    <div v-else class="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+      <section class="min-w-0 space-y-6" data-enter>
         <article class="rounded-3xl border border-border-default bg-surface p-6 shadow-sm">
           <div class="flex items-center gap-4">
             <div class="h-14 w-14 shrink-0 overflow-hidden rounded-full">
@@ -43,11 +43,11 @@
           <dl class="mt-6 grid gap-3">
             <div class="rounded-xl border border-border-default p-4">
               <dt class="text-xs uppercase tracking-[0.16em] text-green-light/60">Empresa</dt>
-              <dd class="mt-2 text-sm font-medium text-text-default">{{ form.company_name || '—' }}</dd>
+              <dd class="mt-2 text-sm font-medium text-text-default [overflow-wrap:anywhere]">{{ form.company_name || '—' }}</dd>
             </div>
             <div class="rounded-xl border border-border-default p-4">
               <dt class="text-xs uppercase tracking-[0.16em] text-green-light/60">Teléfono</dt>
-              <dd class="mt-2 text-sm font-medium text-text-default">{{ form.phone || '—' }}</dd>
+              <dd class="mt-2 text-sm font-medium text-text-default [overflow-wrap:anywhere]">{{ form.phone || '—' }}</dd>
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="rounded-xl border border-border-default p-4">
@@ -84,14 +84,14 @@
         </article>
       </section>
 
-      <section data-enter>
+      <section class="min-w-0" data-enter>
         <article class="rounded-3xl border border-border-default bg-surface p-6 shadow-sm">
           <h2 class="text-base font-medium text-text-default">Editar cliente</h2>
           <p class="mt-2 text-sm leading-6 text-green-light">
             Ajusta la información visible para el equipo y el cliente dentro del portal.
           </p>
 
-          <form class="mt-6 grid gap-5 sm:grid-cols-2" @submit.prevent="handleSave">
+          <form class="mt-6 grid min-w-0 gap-5 sm:grid-cols-2 [&>div]:min-w-0" @submit.prevent="handleSave">
             <div>
               <label for="client-first-name" class="mb-2 block text-sm font-medium text-esmerald/70 dark:text-white/70">Nombre</label>
               <input id="client-first-name" v-model="form.first_name" type="text" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/60 focus:border-border-default focus:ring-1 focus:ring-esmerald/10 dark:bg-primary-strong dark:text-white dark:placeholder:text-green-light/40 dark:focus:border-lemon/40 dark:focus:ring-lemon/20">
@@ -125,7 +125,7 @@
               <input v-model="form.is_active" type="checkbox" class="h-5 w-5 rounded border-border-default bg-surface-muted/40 text-text-default focus:ring-esmerald/30 dark:bg-primary-strong dark:text-accent dark:focus:ring-lemon/30">
             </label>
 
-            <div class="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:justify-end">
+            <div class="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap sm:justify-end">
               <BaseButton variant="secondary" size="md" @click="syncFormFromClient">
                 Restablecer
               </BaseButton>

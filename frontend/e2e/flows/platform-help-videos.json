@@ -6,7 +6,7 @@
     "client"
   ],
   "priority": "P2",
-  "description": "Abrir Ayuda desde el menú y elegir un tutorial disponible en un modal con subtítulos. Al completar un recorrido ofrece una invitación sin abrir el video automáticamente. La reproducción empieza sólo a petición; cerrar devuelve el foco a Ayuda. Permite reintentar un fallo de reproducción e identifica el contenido español también en la interfaz inglesa.",
+  "description": "Abrir Ayuda desde el menú y elegir un tutorial disponible en un modal con subtítulos. Al completar un recorrido ofrece una invitación sin abrir el video automáticamente. La reproducción empieza sólo a petición; cerrar devuelve el foco a Ayuda y permite volver a consultarlo. Revalida la disponibilidad al recuperar foco, conserva los recorridos si sólo se desactiva el video y ofrece los clips autorizados por separado. Permite reintentar un fallo de reproducción e identifica el contenido español también en la interfaz inglesa.",
   "outcomes": [
     "display",
     "success",
