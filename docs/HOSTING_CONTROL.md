@@ -23,7 +23,8 @@ comerciales, cobros, permisos de negocio, procesos ni datos.
 Una versión guardada queda pendiente. El receptor del toolkit consulta cada
 10 s, valida destino, entorno, orígenes, revisión y huella; escribe localmente
 por reemplazo atómico. Cada origen debe servir el estado y un documento con
-la misma versión/huella y sus recursos de presentación antes de confirmar.
+la misma versión/huella; sus archivos de presentación también deben responder
+y corresponder al adaptador antes de confirmar.
 El navegador consulta el adaptador cada 10 s y al recuperar visibilidad.
 Objetivo: aplicación en hasta 30 s para una producción conectada.
 

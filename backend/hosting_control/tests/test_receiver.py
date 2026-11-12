@@ -72,7 +72,8 @@ def test_receipt_requires_document_adapter(tmp_path):
     assert sent[0]['applied'] is False
 
 
-def test_matching_document_is_acknowledged(tmp_path):
+@pytest.mark.parametrize(('asset_status', 'acknowledged'), [(200, True), (404, False)])
+def test_document_assets_control_acknowledgement(tmp_path, asset_status, acknowledged):
     value = wire()
     row = {'key': 'fixture', 'origins': value['origins'], 'state_file': str(tmp_path / 'state.json')}
     sent = []
@@ -82,13 +83,17 @@ def test_matching_document_is_acknowledged(tmp_path):
         if request.full_url.endswith('/receipts/'):
             sent.append(json.loads(request.data))
             return WireResponse(b'{}')
+        if request.full_url.endswith('notice.js'):
+            return WireResponse(b'window.__hostingControl = true', status=asset_status)
+        if request.full_url.endswith('notice.css'):
+            return WireResponse(b'html[data-hosting-suspended] {}', status=asset_status)
         return WireResponse(b'<head><link href="/__hosting/notice.css"><script src="/__hosting/notice.js"></script></head>', headers={
             'X-Hosting-Version': '1', 'X-Hosting-Digest': value['digest'],
         })
     with patch('hosting_guard.receiver.build_opener') as opener:
         opener.return_value.open.side_effect = respond
         apply_target({'endpoint': 'https://central.example/api/hosting-runtime', 'token': 'fixture-only'}, row, value)
-    assert sent[0]['applied'] is True
+    assert sent[0]['applied'] is acknowledged
 
 
 def test_central_failure_preserves_local_state(tmp_path):
