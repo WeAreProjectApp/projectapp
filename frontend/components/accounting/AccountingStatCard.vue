@@ -5,6 +5,7 @@ import BaseIndicatorCard from '~/components/base/BaseIndicatorCard.vue';
 const props = defineProps({
   label: { type: String, required: true },
   value: { type: String, default: '' },
+  valueWrap: { type: Boolean, default: false },
   sub: { type: String, default: '' },
   layout: {
     type: String,
@@ -36,6 +37,7 @@ const resolvedActionLabel = computed(() => (
   <BaseIndicatorCard
     :label="label"
     :value="value"
+    :value-wrap="valueWrap"
     :support="sub"
     :layout="layout"
     :tone="tone"
