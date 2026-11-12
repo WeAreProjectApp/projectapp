@@ -177,7 +177,7 @@ def test_revision_list_paginates_without_exposing_definition(
         "author_id": result[0]["author_id"],
     } == {
         "id": calculator_state["revision_id"],
-        "digest": calculator_state["digest"],
+        "digest": calculator_state["revision"]["digest"],
         "note": "Initial definition",
         "author_id": calculator_admin.pk,
     }
@@ -299,7 +299,7 @@ def test_context_rejects_invalid_project_identifiers(
     )
 
     assert response.status_code == 400
-    assert response.json() == {"project_id": ["Indica un identificador positivo."]}
+    assert response.json() == {"project_id": "Indica un identificador positivo."}
 
 
 def test_context_rejects_requirement_longer_than_limit_without_estimate(
