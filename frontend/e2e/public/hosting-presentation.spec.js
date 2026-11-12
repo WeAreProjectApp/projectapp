@@ -53,7 +53,7 @@ test('a long mobile notice fits the viewport', { tag: [...tags, '@outcome:displa
   await page.setViewportSize({ width: 360, height: 740 })
   const state = await setup(page, 'banner')
   state.message.text = 'Mensaje largo de prueba '.repeat(35); state.version = 2
-  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+  await page.getByRole('link', { name: 'Página interna' }).click()
   await expect(page.locator('#hosting-notice')).toContainText('Mensaje largo de prueba')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
