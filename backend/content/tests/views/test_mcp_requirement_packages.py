@@ -9,12 +9,14 @@ from accounts.models_requirement_packages import (
     PackageMovement,
     PackageRequest,
 )
+from accounts.tests.requirement_package_test_support import paid_order
 
 from content.mcp.principal import service_actor_for_connector
 from content.models import McpConnector
 from content.tests.mcp_confirmation_helpers import call_confirmed, confirmed_payload
 
 pytestmark = pytest.mark.django_db
+pytest_plugins = ('accounts.tests.requirement_package_test_support',)
 
 
 def tools_by_name(response):
@@ -225,12 +227,12 @@ def test_mcp_project_examples_reject_stale_revision_without_history_change(
     }
 
 
-def test_mcp_created_package_request_has_detail_without_debit(
+def test_mcp_created_package_request_has_detail(
     api_client,
     package_project,
     projects_token,
 ):
-    """Fails if creating a request through MCP consumes an allowance before consent."""
+    """Fails if an MCP-created request cannot be read back with its description."""
     created = call_project_tool(
         api_client,
         projects_token,
@@ -260,7 +262,38 @@ def test_mcp_created_package_request_has_detail_without_debit(
     assert detail_payload['description'] == (
         'Mostrar el estado del requerimiento en la vista existente.'
     )
-    assert PackageMovement.objects.filter(
-        order__project=package_project,
-        kind='debit',
-    ).count() == 0
+
+
+def test_mcp_created_package_request_preserves_a_paid_xs_allowance(
+    api_client,
+    package_context,
+    projects_token,
+):
+    """Fails if creating an MCP request debits an already paid XS allowance."""
+    order = paid_order(package_context)
+    before = list(
+        PackageMovement.objects.filter(order=order)
+        .order_by('pk')
+        .values_list('kind', 'size', 'quantity')
+    )
+
+    created = call_project_tool(
+        api_client,
+        projects_token,
+        'create_package_request',
+        {
+            'project_id': package_context.project.pk,
+            'request_id': str(uuid4()),
+            'title': 'Agregar un filtro al tablero',
+            'description': 'Filtrar la lista actual por estado.',
+        },
+    )
+
+    after = list(
+        PackageMovement.objects.filter(order=order)
+        .order_by('pk')
+        .values_list('kind', 'size', 'quantity')
+    )
+    assert created.data['result']['isError'] is False
+    assert before == [('credit', 'XS', 1)]
+    assert after == before

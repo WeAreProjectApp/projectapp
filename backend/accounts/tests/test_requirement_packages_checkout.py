@@ -1,14 +1,20 @@
 """Online package checkout coverage at the Wompi provider boundary."""
 
+from decimal import Decimal
 from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 import requests
+from content.models import HourPackageSettings
 from django.test import override_settings
 from rest_framework.exceptions import ValidationError
 
-from accounts.models_requirement_packages import PackageMovement, PackageOrder
+from accounts.models_requirement_packages import (
+    PackageMovement,
+    PackageOrder,
+    PackageProjectSettings,
+)
 from accounts.services import package_commerce as commerce
 
 pytestmark = pytest.mark.django_db
@@ -31,6 +37,18 @@ def online_order(context):
         },
     )
     return PackageOrder.objects.get(pk=created['id'])
+
+
+def literal_cop_online_order(context):
+    """Create an online order with a real catalog price fixed at COP 25,000."""
+    pricing = HourPackageSettings.load()
+    pricing.xs_price_cop = Decimal(25000)
+    pricing.save(update_fields=['xs_price_cop'])
+    PackageProjectSettings.objects.update_or_create(
+        project=context.project,
+        defaults={'nationality': 'COL', 'tax_rate': Decimal('0.00')},
+    )
+    return online_order(context)
 
 
 def unavailable_provider_post():
@@ -56,7 +74,7 @@ def test_online_checkout_sends_a_single_use_cop_link_request(
     package_context,
 ):
     """Fails if an online package checkout sends a non-COP or reusable provider link."""
-    order = online_order(package_context)
+    order = literal_cop_online_order(package_context)
     provider_response = Mock()
     provider_response.raise_for_status.return_value = None
     provider_response.json.return_value = {'data': {'id': 'wpl_checkout_001'}}
@@ -73,13 +91,14 @@ def test_online_checkout_sends_a_single_use_cop_link_request(
     order.refresh_from_db()
     sent = provider_post.call_args.kwargs['json']
     provider_post.assert_called_once()
+    assert order.total == Decimal(25000)
     assert sent == {
         'name': order.snapshot['name'][:100],
         'description': f'Paquete {order.pk}',
         'single_use': True,
         'collect_shipping': False,
         'currency': 'COP',
-        'amount_in_cents': int(order.total * 100),
+        'amount_in_cents': 2500000,
         'redirect_url': (
             f'https://platform.example.test/es-co/platform/projects/{package_context.project.pk}/packages?order={order.pk}'
         ),
