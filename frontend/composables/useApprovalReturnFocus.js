@@ -3,7 +3,6 @@ import { nextTick, onBeforeUnmount, watch } from 'vue';
 /** Approval can remove its Review trigger. Resolve a surviving destination after closing. */
 export function useApprovalReturnFocus(visible, returnFocus) {
   let opener = null;
-  let fallback = null;
   let location = '';
   let generation = 0;
   let frame = null;
@@ -26,7 +25,6 @@ export function useApprovalReturnFocus(visible, returnFocus) {
     cancelPending();
     if (open) {
       opener = document.activeElement;
-      fallback = returnFocus.value;
       location = window.location.href;
       return;
     }
@@ -41,7 +39,7 @@ export function useApprovalReturnFocus(visible, returnFocus) {
       const anotherDialog = [...document.querySelectorAll('[role="dialog"]')]
         .some((dialog) => dialog !== closingDialog && available(dialog));
       if (anotherDialog) return;
-      const target = available(opener) ? opener : fallback?.();
+      const target = available(opener) ? opener : returnFocus.value?.();
       if (available(target)) target.focus({ preventScroll: true });
     });
   }, { immediate: true, flush: 'sync' });

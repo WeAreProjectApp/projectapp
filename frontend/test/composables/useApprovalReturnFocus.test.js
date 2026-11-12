@@ -7,6 +7,7 @@ let visible;
 let frames;
 let opener;
 let destination;
+let destinationResolver;
 
 function button(text) {
   const node = document.createElement('button');
@@ -15,13 +16,13 @@ function button(text) {
   return node;
 }
 
-function openReview() {
+function openReview(returnTo = () => destination) {
   opener.focus();
   visible = ref(true);
-  const fallback = ref(() => destination);
+  destinationResolver = ref(returnTo);
   wrapper = mount(defineComponent({
     setup() {
-      useApprovalReturnFocus(visible, fallback);
+      useApprovalReturnFocus(visible, destinationResolver);
       return {};
     },
     template: '<div />',
@@ -73,6 +74,16 @@ describe('Approval return focus (PA-260/D1)', () => {
   ])('focuses the same record destination when Review is %s', async (_reason, change) => {
     openReview();
     change(opener);
+
+    await closeReview();
+
+    expect(document.activeElement).toBe(destination);
+  });
+
+  it('uses the destination delivered with the opening render', async () => {
+    openReview(null);
+    destinationResolver.value = () => destination;
+    opener.remove();
 
     await closeReview();
 
