@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Dashboard attention accordions list five records at a time, open current details and navigate to exact records with visual focus. Counts represent pending elements; missing records, permission denials and network retries have explicit feedback. Incluye cuentas con documento vinculado pendiente como alerta financiera exclusiva de superusuarios, con destino al detalle exacto de la cuenta; excluye anuladas y archivadas y se retira al completar.",
+  "description": "Dashboard attention accordions list five records at a time, open current details and navigate to exact records with visual focus. Counts represent pending elements; missing records, permission denials and network retries have explicit feedback. Incluye cuentas con documento vinculado pendiente como alerta financiera exclusiva de superusuarios, con destino al detalle exacto de la cuenta; excluye anuladas y archivadas y se retira al completar. También muestra hallazgos persistidos de integridad para los administradores y abre el fingerprint exacto, con regreso al listado completo. Desktop expanded records use two compact columns with independently selectable cards; the detail dialog is capped at 48rem.",
   "expectedSpecs": 2,
   "outcomes": [
     "display",

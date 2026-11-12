@@ -1,4 +1,9 @@
 export default {
+  commercialRecord: {
+    label: 'Commercial record',
+    title: 'Open the commercial record in the panel (new tab)',
+    changeState: 'Change status in the commercial record',
+  },
   retention: {
   "title": "Data without a project",
   "hint": "Read and download retained data. Editing is unavailable here.",

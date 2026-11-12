@@ -23,6 +23,12 @@ OCCURRED_AT = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
 
 
 def _tab_client(user):
+    UserProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            'role': UserProfile.ROLE_ADMIN if user.is_staff else UserProfile.ROLE_CLIENT,
+        },
+    )
     client = APIClient()
     client.force_login(user)
     return client
@@ -141,7 +147,13 @@ def _tab_count_response(client, tabs):
             {"tabs": tabs},
             format="json",
         )
-    return response, len(queries)
+    profile_from = f'from "{UserProfile._meta.db_table}"'
+    profile_selects = sum(
+        query["sql"].lstrip().lower().startswith("select")
+        and profile_from in query["sql"].lower()
+        for query in queries
+    )
+    return response, len(queries), profile_selects
 
 
 def test_tab_counts_query_budget_does_not_grow_from_one_tab_to_twenty_four(
@@ -155,20 +167,23 @@ def test_tab_counts_query_budget_does_not_grow_from_one_tab_to_twenty_four(
     )
     folder, correlated, unmatched = _communication_fixture(superuser)
     client = _tab_client(superuser)
-    one_tab_response, one_tab_queries = _tab_count_response(
+    one_tab_response, one_tab_queries, one_tab_profile_selects = _tab_count_response(
         client,
         [{"id": "visible", "filters": {}}],
     )
-    response, many_tab_queries = _tab_count_response(
+    response, many_tab_queries, many_tab_profile_selects = _tab_count_response(
         client,
         _tab_specs(folder, correlated, unmatched),
     )
 
     record_property("communication_tab_queries_one", one_tab_queries)
     record_property("communication_tab_queries_twenty_four", many_tab_queries)
+    record_property("communication_tab_profile_selects_one", one_tab_profile_selects)
+    record_property("communication_tab_profile_selects_twenty_four", many_tab_profile_selects)
     assert one_tab_response.status_code == 200
     assert response.status_code == 200
     assert one_tab_queries == many_tab_queries
+    assert one_tab_profile_selects == many_tab_profile_selects == 1
     assert many_tab_queries <= MAX_COMMUNICATION_TAB_COUNT_QUERIES
 
 

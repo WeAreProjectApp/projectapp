@@ -136,7 +136,7 @@
                 aria-label="Activar propuesta"
                 @update:model-value="emit('toggle-active')"
               />
-              <span class="text-xs" :class="proposal.is_active ? 'text-primary' : 'text-text-subtle'">
+              <span class="text-xs" :class="proposal.is_active ? 'text-text-brand' : 'text-text-subtle'">
                 {{ proposal.is_active ? 'Activa' : 'Inactiva' }}
               </span>
             </div>
@@ -160,7 +160,7 @@
                 aria-label="Activar automatizaciones"
                 @update:model-value="emit('toggle-automations')"
               />
-              <span class="text-xs" :class="form.automations_paused ? 'text-warning-strong' : 'text-primary'">
+              <span class="text-xs" :class="form.automations_paused ? 'text-warning-strong' : 'text-text-brand'">
                 {{ form.automations_paused ? '⏸ Pausadas' : 'Activas' }}
               </span>
             </div>
@@ -188,7 +188,7 @@
               />
               <span
                 class="text-xs"
-                :class="form.show_contract_terms && form.language === 'es' ? 'text-primary' : 'text-text-subtle'"
+                :class="form.show_contract_terms && form.language === 'es' ? 'text-text-brand' : 'text-text-subtle'"
               >
                 {{ form.language !== 'es' ? 'No disponible en inglés' : (form.show_contract_terms ? 'Visible' : 'Oculto') }}
               </span>
@@ -280,7 +280,7 @@
         <span class="text-sm text-text-muted">%</span>
       </div>
       <div v-if="form.hosting_percent > 0 && form.total_investment > 0" class="mt-3 bg-info-soft border border-info-strong/30 rounded-xl overflow-hidden">
-        <div class="px-4 py-2 text-[11px] uppercase tracking-wider text-info-strong/70 border-b border-info-strong/20">
+        <div class="px-4 py-2 text-[11px] uppercase tracking-wider text-info-strong border-b border-info-strong/20">
           Precio que verá el cliente (por mes)
         </div>
         <div class="grid grid-cols-[1fr_auto_auto] gap-x-4 text-sm divide-y divide-info-strong/20">
@@ -288,7 +288,7 @@
           <div class="px-4 py-2 text-info-strong font-semibold text-right whitespace-nowrap">
             ${{ hostingMonthlyBase.toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">referencia</div>
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">referencia</div>
 
           <div class="px-4 py-2 text-info-strong font-medium">
             Cada 9 meses
@@ -298,7 +298,7 @@
                :class="form.hosting_discount_nine_month ? 'text-text-brand' : 'text-info-strong'">
             ${{ hostingMonthlyWithDiscount(form.hosting_discount_nine_month).toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">
             total ${{ hostingPeriodTotal(form.hosting_discount_nine_month, 9).toLocaleString() }} {{ form.currency }} / 9 meses
           </div>
 
@@ -310,7 +310,7 @@
                :class="form.hosting_discount_semiannual ? 'text-text-brand' : 'text-info-strong'">
             ${{ hostingMonthlyWithDiscount(form.hosting_discount_semiannual).toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">
             total ${{ hostingPeriodTotal(form.hosting_discount_semiannual, 6).toLocaleString() }} / 6 meses
           </div>
 
@@ -322,7 +322,7 @@
                :class="form.hosting_discount_quarterly ? 'text-text-brand' : 'text-info-strong'">
             ${{ hostingMonthlyWithDiscount(form.hosting_discount_quarterly).toLocaleString() }} {{ form.currency }}/mes
           </div>
-          <div class="px-4 py-2 text-[11px] text-info-strong/70 text-right whitespace-nowrap">
+          <div class="px-4 py-2 text-[11px] text-info-strong text-right whitespace-nowrap">
             total ${{ hostingPeriodTotal(form.hosting_discount_quarterly, 3).toLocaleString() }} / 3 meses
           </div>
         </div>
@@ -474,11 +474,13 @@
       <div class="flex items-center gap-2">
         <BaseInput
           v-model="form.expires_at"
+          data-testid="proposal-expiry-date"
           type="datetime-local"
           class="flex-1"
         />
         <BaseInput
           v-model.number="expiryDaysInput"
+          data-testid="proposal-expiry-days"
           type="number"
           min="1"
           max="365"
@@ -585,6 +587,7 @@ import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useTooltipTexts } from '~/composables/useTooltipTexts';
 import { toSlug } from '~/utils/slugify';
+import { getExpiryDays, expiryFromDays } from '~/utils/proposalExpiry';
 
 const props = defineProps({
   proposal: { type: Object, required: true },
@@ -735,23 +738,11 @@ async function saveSlug() {
   }
 }
 
-const DEFAULT_EXPIRY_DAYS = 21;
-const padDate = (n) => String(n).padStart(2, '0');
-function getExpiryDaysFromStr(datetimeStr) {
-  if (!datetimeStr) return DEFAULT_EXPIRY_DAYS;
-  const diff = new Date(datetimeStr) - Date.now();
-  return Math.max(1, Math.round(diff / (24 * 60 * 60 * 1000)));
-}
-const expiryDaysInput = ref(getExpiryDaysFromStr(form.expires_at));
-watch(() => form.expires_at, (val) => {
-  expiryDaysInput.value = getExpiryDaysFromStr(val);
-});
-watch(expiryDaysInput, (days) => {
-  const safeDays = Number.isInteger(days) && days > 0 ? days : DEFAULT_EXPIRY_DAYS;
-  const expiry = new Date(Date.now() + safeDays * 24 * 60 * 60 * 1000);
-  const dateStr = `${expiry.getFullYear()}-${padDate(expiry.getMonth() + 1)}-${padDate(expiry.getDate())}`;
-  const timeStr = form.expires_at ? form.expires_at.slice(11, 16) : `${padDate(expiry.getHours())}:${padDate(expiry.getMinutes())}`;
-  form.expires_at = `${dateStr}T${timeStr}`;
+const expiryDaysInput = computed({
+  get: () => getExpiryDays(form.expires_at),
+  set: (days) => {
+    form.expires_at = expiryFromDays(days, form.expires_at);
+  },
 });
 
 // Must match Investment.vue's hostingTwelveMonthReference / computedBillingTiers so admin preview

@@ -26,6 +26,9 @@ export function usePlatformGuidedTour() {
   let runProject = null
   let runToken = 0
   let unregister = null
+  let layoutObserver = null
+  let layoutFrame = null
+  let observedTarget = null
 
   const language = computed(() => locale.value.startsWith('en') ? 'en' : 'es')
 
@@ -46,6 +49,7 @@ export function usePlatformGuidedTour() {
     const step = currentStep.value
     if (status === 'completed') completedTour.value = tour
     activeTour.value = null
+    stopTrackingLayout()
     driver?.destroy()
     driver = null
     surface.releaseSurface('tour')
@@ -64,14 +68,64 @@ export function usePlatformGuidedTour() {
 
   async function prepareTarget(key) {
     const globalNav = ['projects', 'documents', 'collection-accounts', 'hosting', 'notifications', 'profile', 'help'].includes(key)
-    if (globalNav) {
-      if (window.matchMedia('(max-width: 767px)').matches) sidebar.isMobileOpen.value = true
-      else sidebar.isCollapsed.value = false
-    } else if (snapshot) sidebar.isMobileOpen.value = snapshot.mobile
+    const mobile = window.matchMedia('(max-width: 767px)').matches
+    // A project/form destination must be exposed, even when Help opened in the drawer.
+    sidebar.isMobileOpen.value = globalNav && mobile
+    if (globalNav && !mobile) sidebar.isCollapsed.value = false
     await nextTick()
     const target = visibleTourTarget(key)
     target?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' })
     return target
+  }
+
+  function observeTarget(element) {
+    if (observedTarget === element) return
+    if (observedTarget) layoutObserver?.unobserve(observedTarget)
+    observedTarget = element
+    if (element) layoutObserver?.observe(element)
+  }
+
+  function refreshLayout() {
+    if (!driver || !activeTour.value || layoutFrame !== null) return
+    const token = runToken
+    layoutFrame = window.requestAnimationFrame(async () => {
+      layoutFrame = null
+      if (!driver || !activeTour.value || token !== runToken) return
+      const instance = driver
+      const key = currentStep.value
+      const element = await prepareTarget(key)
+      if (driver !== instance || token !== runToken || currentStep.value !== key) return
+      if (!element && key !== 'welcome') { await pause(); return }
+      observeTarget(element)
+      const index = instance.getActiveIndex()
+      const step = instance.getConfig().steps?.[index]
+      if (element && step && step.element !== element) {
+        // Driver resolves an active-step copy; drive() reads the configured step.
+        step.element = element
+        instance.drive(index)
+      } else instance.refresh()
+    })
+  }
+
+  function stopTrackingLayout() {
+    window.removeEventListener('resize', refreshLayout)
+    document.removeEventListener('transitionend', refreshLayout)
+    layoutObserver?.disconnect()
+    layoutObserver = null
+    observedTarget = null
+    if (layoutFrame !== null) window.cancelAnimationFrame(layoutFrame)
+    layoutFrame = null
+  }
+
+  function trackLayout(element) {
+    if (typeof ResizeObserver !== 'undefined') {
+      layoutObserver = new ResizeObserver(refreshLayout)
+      const content = document.querySelector('main')
+      if (content) layoutObserver.observe(content)
+    }
+    observeTarget(element)
+    window.addEventListener('resize', refreshLayout)
+    document.addEventListener('transitionend', refreshLayout)
   }
 
   async function start(tourId, { projectId = null, manual = true } = {}) {
@@ -124,6 +178,7 @@ export function usePlatformGuidedTour() {
         if (available.has(key) && (key === 'welcome' || element)) {
           steps[index].element = element || undefined
           currentStep.value = key
+          observeTarget(element)
           driver.drive(index)
           return
         }
@@ -143,6 +198,8 @@ export function usePlatformGuidedTour() {
       onDestroyStarted: () => { if (!ending) void finish('skipped') },
       onHighlighted: (_element, step) => {
         if (token !== runToken || !activeTour.value) return
+        // Refresh next frame, after Driver commits its settled element internally.
+        refreshLayout()
         void store.acknowledge(tour, 'in_progress', step.targetKey, projectId, manual)
       },
       onPopoverRender: ({ wrapper, closeButton, nextButton, previousButton }) => {
@@ -158,10 +215,13 @@ export function usePlatformGuidedTour() {
       },
     })
     const resumeIndex = ['paused', 'in_progress'].includes(tour.status) ? steps.findIndex((step) => step.targetKey === tour.last_step) : 0
-    await prepareTarget(steps[Math.max(0, resumeIndex)].targetKey)
+    const index = Math.max(0, resumeIndex)
+    const element = await prepareTarget(steps[index].targetKey)
     if (token !== runToken || !driver) return false
-    currentStep.value = steps[Math.max(0, resumeIndex)].targetKey
-    driver.drive(Math.max(0, resumeIndex))
+    steps[index].element = element || undefined
+    currentStep.value = steps[index].targetKey
+    driver.drive(index)
+    trackLayout(element)
     return true
   }
 

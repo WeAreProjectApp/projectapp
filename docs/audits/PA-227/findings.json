@@ -1,0 +1,1080 @@
+[
+  {
+    "id": "C01",
+    "type": "contrast",
+    "component": "Textos secundarios de Plataforma",
+    "source": "frontend/pages/platform y frontend/components/platform",
+    "change": "Se sustituyeron colores fijos con opacidad por los tokens secundarios del tema.",
+    "observedRoutes": [
+      "/es-co/platform/access",
+      "/es-co/platform/admin-login",
+      "/es-co/platform/board",
+      "/es-co/platform/bugs",
+      "/es-co/platform/changes",
+      "/es-co/platform/clients",
+      "/es-co/platform/clients/13",
+      "/es-co/platform/collection-accounts",
+      "/es-co/platform/collection-accounts/1",
+      "/es-co/platform/complete-profile",
+      "/es-co/platform/dashboard",
+      "/es-co/platform/deliverables",
+      "/es-co/platform/documents",
+      "/es-co/platform/login",
+      "/es-co/platform/notifications",
+      "/es-co/platform/payments",
+      "/es-co/platform/profile",
+      "/es-co/platform/projects",
+      "/es-co/platform/projects/31",
+      "/es-co/platform/projects/31/access",
+      "/es-co/platform/projects/31/board",
+      "/es-co/platform/projects/31/bugs",
+      "/es-co/platform/projects/31/changes",
+      "/es-co/platform/projects/31/collection-accounts",
+      "/es-co/platform/projects/31/data-model",
+      "/es-co/platform/projects/31/deliverables",
+      "/es-co/platform/projects/31/deliverables/1",
+      "/es-co/platform/projects/31/delivery",
+      "/es-co/platform/projects/31/ideas",
+      "/es-co/platform/projects/31/payments",
+      "/es-co/platform/projects/31/secure-links",
+      "/es-co/platform/verify"
+    ],
+    "roles": [
+      "platform-admin",
+      "platform-client"
+    ],
+    "states": [
+      "bugs-form-focus",
+      "initial",
+      "phase-selector",
+      "project-editor",
+      "theme-picker"
+    ],
+    "minimumRawRatio": 1.67,
+    "examples": [
+      {
+        "text": "Navegación",
+        "ratio": 2.85,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "Cuenta",
+        "ratio": 2.85,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "1",
+        "ratio": 2.63,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "Es un error recurrente",
+        "ratio": 3.2,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "Arrastra o haz clic para subir",
+        "ratio": 1.67,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "Navegación",
+        "ratio": 2.85,
+        "route": "/es-co/platform/access",
+        "role": "platform-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/platform-admin-platform-access-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C02",
+    "type": "contrast",
+    "component": "Miga de navegación del Panel",
+    "source": "frontend/layouts/admin.vue",
+    "change": "Se retiró la opacidad fija de la sección y se conserva el texto secundario del tema.",
+    "observedRoutes": [
+      "/es-co/panel",
+      "/es-co/panel/accounting",
+      "/es-co/panel/accounting/ads",
+      "/es-co/panel/accounting/cards",
+      "/es-co/panel/accounting/collection-context/1",
+      "/es-co/panel/accounting/collections",
+      "/es-co/panel/accounting/expenses",
+      "/es-co/panel/accounting/history",
+      "/es-co/panel/accounting/hostings",
+      "/es-co/panel/accounting/incomes",
+      "/es-co/panel/accounting/pocket",
+      "/es-co/panel/accounting/project-hosting/1",
+      "/es-co/panel/accounting/recurring",
+      "/es-co/panel/accounting/settings",
+      "/es-co/panel/accounting/statements",
+      "/es-co/panel/additional-modules",
+      "/es-co/panel/admins",
+      "/es-co/panel/blog",
+      "/es-co/panel/blog/1/edit",
+      "/es-co/panel/blog/calendar",
+      "/es-co/panel/blog/create",
+      "/es-co/panel/building-with-us",
+      "/es-co/panel/cells",
+      "/es-co/panel/clients",
+      "/es-co/panel/communications",
+      "/es-co/panel/consulting",
+      "/es-co/panel/defaults",
+      "/es-co/panel/diagnostics",
+      "/es-co/panel/diagnostics/1/edit",
+      "/es-co/panel/diagnostics/create",
+      "/es-co/panel/diagnostics/defaults",
+      "/es-co/panel/documents",
+      "/es-co/panel/documents/1/edit",
+      "/es-co/panel/documents/create",
+      "/es-co/panel/documents/statuses",
+      "/es-co/panel/emails",
+      "/es-co/panel/financing",
+      "/es-co/panel/financing/1",
+      "/es-co/panel/financing/new",
+      "/es-co/panel/hour-packages",
+      "/es-co/panel/hour-packages/1/edit",
+      "/es-co/panel/hour-packages/create",
+      "/es-co/panel/linkedin",
+      "/es-co/panel/linktrees",
+      "/es-co/panel/linktrees/50fe7b8b-343e-51e8-949b-6c6c1caba1d0/edit",
+      "/es-co/panel/mcps",
+      "/es-co/panel/monitoring",
+      "/es-co/panel/partnership-program",
+      "/es-co/panel/partnership-program/1",
+      "/es-co/panel/partnership-program/new",
+      "/es-co/panel/platform/ai",
+      "/es-co/panel/platform/help",
+      "/es-co/panel/portfolio",
+      "/es-co/panel/portfolio/1/edit",
+      "/es-co/panel/portfolio/create",
+      "/es-co/panel/projects",
+      "/es-co/panel/projects/31/ideas",
+      "/es-co/panel/projects/statuses",
+      "/es-co/panel/proposals",
+      "/es-co/panel/proposals/1/edit",
+      "/es-co/panel/proposals/create",
+      "/es-co/panel/proposals/defaults",
+      "/es-co/panel/proposals/email-deliverability",
+      "/es-co/panel/proposals/email-templates",
+      "/es-co/panel/qr-cards",
+      "/es-co/panel/secure-links",
+      "/es-co/panel/views"
+    ],
+    "roles": [
+      "panel-admin",
+      "panel-super"
+    ],
+    "states": [
+      "button-Acciones de Agentes de IA: La próxima frontera del desarrollo de software",
+      "button-Acciones de Anthropic presenta Claude 4 con razonamiento extendido",
+      "button-Acciones de Cómo la IA está transformando la educación en Latinoamérica",
+      "button-Acciones de El auge de los modelos de IA pequeños y eficientes",
+      "button-Acciones de GPT-5 y el futuro de la IA generativa",
+      "button-Acciones de GPT-5 y el futuro de la IA generativa — Parte 2",
+      "button-Acciones de Google DeepMind revoluciona la predicción de proteínas",
+      "button-Acciones de Google DeepMind revoluciona la predicción de proteínas — Parte 2",
+      "button-Acciones de IA y ciberseguridad: Amenazas y defensas en 2025",
+      "button-Acciones de Meta lanza Llama 4: IA de código abierto más potente",
+      "button-Acciones de Midjourney V7: La generación de imágenes alcanza un nuevo nivel",
+      "button-Acciones de Regulación de IA en 2025: ¿Qué nos espera?",
+      "button-Filtros",
+      "button-Filtros 2",
+      "button-Nuevo cliente",
+      "button-Nuevo gasto",
+      "button-Nuevo hilo",
+      "button-Nuevo ingreso",
+      "button-Nuevo movimiento",
+      "button-Nuevo pago recurrente",
+      "button-Ver detalle operativo de ingresos",
+      "initial",
+      "search-empty",
+      "tab-Actividad",
+      "tab-Activos",
+      "tab-Agrupado",
+      "tab-Analytics",
+      "tab-Antiguos",
+      "tab-Archivados",
+      "tab-A–Z",
+      "tab-Categoría",
+      "tab-Clientes",
+      "tab-Clásico",
+      "tab-Contabilidad",
+      "tab-Contrato",
+      "tab-Correos",
+      "tab-Det. técnico",
+      "tab-Diagnóstico",
+      "tab-Documentos",
+      "tab-Emails",
+      "tab-English",
+      "tab-Español",
+      "tab-Evolución",
+      "tab-Frecuencia",
+      "tab-General",
+      "tab-Hosting",
+      "tab-Huérfanos",
+      "tab-JSON",
+      "tab-Márgenes",
+      "tab-Método",
+      "tab-Plantillas de Email",
+      "tab-Programa",
+      "tab-Prompt Proposal",
+      "tab-Prompt diagnóstico",
+      "tab-Propuestas",
+      "tab-Proyectos",
+      "tab-Recientes",
+      "tab-Secciones",
+      "tab-Socios",
+      "tab-Solo activos",
+      "tab-Todos",
+      "tab-Vigentes",
+      "tab-Vista General"
+    ],
+    "minimumRawRatio": 2.85,
+    "examples": [
+      {
+        "text": "Programas",
+        "ratio": 2.85,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Programa",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Programa-1440.jpg"
+      },
+      {
+        "text": "Programas",
+        "ratio": 2.85,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      },
+      {
+        "text": "Comercial",
+        "ratio": 2.85,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "button-Nuevo cliente",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-button-Nuevo-cliente-1440.jpg"
+      },
+      {
+        "text": "Comercial",
+        "ratio": 2.85,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "tab-Todos",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-tab-Todos-1440.jpg"
+      },
+      {
+        "text": "Comercial",
+        "ratio": 2.85,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "tab-Propuestas",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-tab-Propuestas-1440.jpg"
+      },
+      {
+        "text": "Comercial",
+        "ratio": 2.85,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "tab-Diagnóstico",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-tab-Diagn-stico-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C03",
+    "type": "contrast",
+    "component": "Rótulos de secciones de los menús",
+    "source": "frontend/components/panel y frontend/components/platform",
+    "change": "Se aplican tonos secundarios legibles, incluido el menú móvil.",
+    "observedRoutes": [
+      "/es-co/panel",
+      "/es-co/panel/accounting",
+      "/es-co/panel/accounting/ads",
+      "/es-co/panel/accounting/cards",
+      "/es-co/panel/accounting/collection-context/1",
+      "/es-co/panel/accounting/collections",
+      "/es-co/panel/accounting/expenses",
+      "/es-co/panel/accounting/history",
+      "/es-co/panel/accounting/hostings",
+      "/es-co/panel/accounting/incomes",
+      "/es-co/panel/accounting/pocket",
+      "/es-co/panel/accounting/project-hosting/1",
+      "/es-co/panel/accounting/recurring",
+      "/es-co/panel/accounting/settings",
+      "/es-co/panel/accounting/statements",
+      "/es-co/panel/additional-modules",
+      "/es-co/panel/admins",
+      "/es-co/panel/blog",
+      "/es-co/panel/blog/1/edit",
+      "/es-co/panel/blog/calendar",
+      "/es-co/panel/blog/create",
+      "/es-co/panel/building-with-us",
+      "/es-co/panel/cells",
+      "/es-co/panel/clients",
+      "/es-co/panel/communications",
+      "/es-co/panel/consulting",
+      "/es-co/panel/defaults",
+      "/es-co/panel/diagnostics",
+      "/es-co/panel/diagnostics/1/edit",
+      "/es-co/panel/diagnostics/create",
+      "/es-co/panel/diagnostics/defaults",
+      "/es-co/panel/documents",
+      "/es-co/panel/documents/1/edit",
+      "/es-co/panel/documents/create",
+      "/es-co/panel/documents/statuses",
+      "/es-co/panel/emails",
+      "/es-co/panel/financing",
+      "/es-co/panel/financing/1",
+      "/es-co/panel/financing/new",
+      "/es-co/panel/hour-packages",
+      "/es-co/panel/hour-packages/1/edit",
+      "/es-co/panel/hour-packages/create",
+      "/es-co/panel/linkedin",
+      "/es-co/panel/linktrees",
+      "/es-co/panel/linktrees/50fe7b8b-343e-51e8-949b-6c6c1caba1d0/edit",
+      "/es-co/panel/mcps",
+      "/es-co/panel/monitoring",
+      "/es-co/panel/partnership-program",
+      "/es-co/panel/partnership-program/1",
+      "/es-co/panel/partnership-program/new",
+      "/es-co/panel/platform/ai",
+      "/es-co/panel/platform/help",
+      "/es-co/panel/portfolio",
+      "/es-co/panel/portfolio/1/edit",
+      "/es-co/panel/portfolio/create",
+      "/es-co/panel/projects",
+      "/es-co/panel/projects/31/ideas",
+      "/es-co/panel/projects/statuses",
+      "/es-co/panel/proposals",
+      "/es-co/panel/proposals/1/edit",
+      "/es-co/panel/proposals/create",
+      "/es-co/panel/proposals/defaults",
+      "/es-co/panel/proposals/email-deliverability",
+      "/es-co/panel/proposals/email-templates",
+      "/es-co/panel/qr-cards",
+      "/es-co/panel/secure-links",
+      "/es-co/panel/styleguide",
+      "/es-co/panel/tasks",
+      "/es-co/panel/views"
+    ],
+    "roles": [
+      "panel-admin",
+      "panel-super"
+    ],
+    "states": [
+      "button-Acciones de Agentes de IA: La próxima frontera del desarrollo de software",
+      "button-Acciones de Anthropic presenta Claude 4 con razonamiento extendido",
+      "button-Acciones de Cómo la IA está transformando la educación en Latinoamérica",
+      "button-Acciones de El auge de los modelos de IA pequeños y eficientes",
+      "button-Acciones de GPT-5 y el futuro de la IA generativa",
+      "button-Acciones de GPT-5 y el futuro de la IA generativa — Parte 2",
+      "button-Acciones de Google DeepMind revoluciona la predicción de proteínas",
+      "button-Acciones de Google DeepMind revoluciona la predicción de proteínas — Parte 2",
+      "button-Acciones de IA y ciberseguridad: Amenazas y defensas en 2025",
+      "button-Acciones de Meta lanza Llama 4: IA de código abierto más potente",
+      "button-Acciones de Midjourney V7: La generación de imágenes alcanza un nuevo nivel",
+      "button-Acciones de Regulación de IA en 2025: ¿Qué nos espera?",
+      "button-Filtros",
+      "button-Filtros 2",
+      "button-Nuevo cliente",
+      "button-Nuevo gasto",
+      "button-Nuevo hilo",
+      "button-Nuevo ingreso",
+      "button-Nuevo movimiento",
+      "button-Nuevo pago recurrente",
+      "button-Ver detalle operativo de ingresos",
+      "initial",
+      "search-empty",
+      "tab-Actividad",
+      "tab-Activos",
+      "tab-Agrupado",
+      "tab-Analytics",
+      "tab-Antiguos",
+      "tab-Archivados",
+      "tab-A–Z",
+      "tab-Categoría",
+      "tab-Clientes",
+      "tab-Clásico",
+      "tab-Contabilidad",
+      "tab-Contrato",
+      "tab-Correos",
+      "tab-Det. técnico",
+      "tab-Diagnóstico",
+      "tab-Documentos",
+      "tab-Emails",
+      "tab-English",
+      "tab-Español",
+      "tab-Evolución",
+      "tab-Frecuencia",
+      "tab-General",
+      "tab-Hosting",
+      "tab-Huérfanos",
+      "tab-JSON",
+      "tab-Márgenes",
+      "tab-Método",
+      "tab-Plantillas de Email",
+      "tab-Programa",
+      "tab-Prompt Proposal",
+      "tab-Prompt diagnóstico",
+      "tab-Propuestas",
+      "tab-Proyectos",
+      "tab-Recientes",
+      "tab-Secciones",
+      "tab-Socios",
+      "tab-Solo activos",
+      "tab-Todos",
+      "tab-Vigentes",
+      "tab-Vista General"
+    ],
+    "minimumRawRatio": 3.37,
+    "examples": [
+      {
+        "text": "Sistema",
+        "ratio": 3.37,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Programa",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Programa-1440.jpg"
+      },
+      {
+        "text": "Sistema",
+        "ratio": 3.37,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      },
+      {
+        "text": "Sistema",
+        "ratio": 3.37,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "button-Nuevo cliente",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-button-Nuevo-cliente-1440.jpg"
+      },
+      {
+        "text": "Sistema",
+        "ratio": 3.37,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "tab-Todos",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-tab-Todos-1440.jpg"
+      },
+      {
+        "text": "Sistema",
+        "ratio": 3.37,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "tab-Propuestas",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-tab-Propuestas-1440.jpg"
+      },
+      {
+        "text": "Sistema",
+        "ratio": 3.37,
+        "route": "/es-co/panel/clients",
+        "role": "panel-super",
+        "state": "tab-Diagnóstico",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-clients-tab-Diagn-stico-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C04",
+    "type": "contrast",
+    "component": "Número de página seleccionado",
+    "source": "frontend/components/base/BasePagination.vue",
+    "change": "Se empareja el fondo de selección con su color de texto correspondiente.",
+    "observedRoutes": [
+      "/es-co/panel/accounting/expenses",
+      "/es-co/panel/accounting/pocket",
+      "/es-co/panel/communications",
+      "/es-co/panel/diagnostics",
+      "/es-co/panel/documents",
+      "/es-co/panel/portfolio",
+      "/es-co/panel/projects"
+    ],
+    "roles": [
+      "panel-admin",
+      "panel-super"
+    ],
+    "states": [
+      "button-Filtros",
+      "button-Nuevo gasto",
+      "button-Nuevo hilo",
+      "button-Nuevo movimiento",
+      "initial",
+      "tab-Antiguos",
+      "tab-A–Z",
+      "tab-Clientes",
+      "tab-Proyectos",
+      "tab-Recientes",
+      "tab-Solo activos",
+      "tab-Todos"
+    ],
+    "minimumRawRatio": 1.45,
+    "examples": [
+      {
+        "text": "1",
+        "ratio": 1.45,
+        "route": "/es-co/panel/communications",
+        "role": "panel-super",
+        "state": "button-Nuevo hilo",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-communications-button-Nuevo-hilo-1440.jpg"
+      },
+      {
+        "text": "1",
+        "ratio": 1.45,
+        "route": "/es-co/panel/communications",
+        "role": "panel-super",
+        "state": "button-Filtros",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-communications-button-Filtros-1440.jpg"
+      },
+      {
+        "text": "1",
+        "ratio": 1.45,
+        "route": "/es-co/panel/communications",
+        "role": "panel-super",
+        "state": "tab-Recientes",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-communications-tab-Recientes-1440.jpg"
+      },
+      {
+        "text": "1",
+        "ratio": 1.45,
+        "route": "/es-co/panel/communications",
+        "role": "panel-super",
+        "state": "tab-Antiguos",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-communications-tab-Antiguos-1440.jpg"
+      },
+      {
+        "text": "1",
+        "ratio": 1.45,
+        "route": "/es-co/panel/communications",
+        "role": "panel-super",
+        "state": "tab-A–Z",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-communications-tab-A-Z-1440.jpg"
+      },
+      {
+        "text": "1",
+        "ratio": 1.45,
+        "route": "/es-co/panel/communications",
+        "role": "panel-super",
+        "state": "tab-Proyectos",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-communications-tab-Proyectos-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C05",
+    "type": "contrast",
+    "component": "Propuestas: estado, calor y precios de hosting",
+    "source": "frontend/components/panel/proposal/ProposalGeneralTab.vue;frontend/pages/panel/proposals/index.vue",
+    "change": "Se usan pares de colores de estado y se retira la opacidad de las ayudas.",
+    "observedRoutes": [
+      "/es-co/panel/proposals",
+      "/es-co/panel/proposals/1/edit"
+    ],
+    "roles": [
+      "panel-admin",
+      "panel-super"
+    ],
+    "states": [
+      "initial"
+    ],
+    "minimumRawRatio": 1.07,
+    "examples": [
+      {
+        "text": "Activa",
+        "ratio": 1.07,
+        "route": "/es-co/panel/proposals/1/edit",
+        "role": "panel-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-admin-panel-proposals--id-edit-1440.jpg"
+      },
+      {
+        "text": "Activas",
+        "ratio": 1.07,
+        "route": "/es-co/panel/proposals/1/edit",
+        "role": "panel-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-admin-panel-proposals--id-edit-1440.jpg"
+      },
+      {
+        "text": "Visible",
+        "ratio": 1.07,
+        "route": "/es-co/panel/proposals/1/edit",
+        "role": "panel-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-admin-panel-proposals--id-edit-1440.jpg"
+      },
+      {
+        "text": "Precio que verá el cliente (por mes)",
+        "ratio": 4.34,
+        "route": "/es-co/panel/proposals/1/edit",
+        "role": "panel-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-admin-panel-proposals--id-edit-1440.jpg"
+      },
+      {
+        "text": "referencia",
+        "ratio": 4.34,
+        "route": "/es-co/panel/proposals/1/edit",
+        "role": "panel-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-admin-panel-proposals--id-edit-1440.jpg"
+      },
+      {
+        "text": "total $1,485,000 COP / 9 meses",
+        "ratio": 4.34,
+        "route": "/es-co/panel/proposals/1/edit",
+        "role": "panel-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-admin-panel-proposals--id-edit-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C06",
+    "type": "contrast",
+    "component": "Paletas personalizadas y primer plano de acciones",
+    "source": "frontend/composables/usePlatformCustomTheme.js;frontend/utils/themeContrast.js",
+    "change": "Se calcula la luminancia WCAG para separar el color de fondo, el texto y los enlaces.",
+    "observedRoutes": [
+      "/es-co/platform/projects/31"
+    ],
+    "roles": [
+      "platform-admin"
+    ],
+    "states": [
+      "Blue-4",
+      "Esmerald-0",
+      "Esmerald-8",
+      "Purple-5",
+      "Yellow-4"
+    ],
+    "minimumRawRatio": 1.17,
+    "examples": [
+      {
+        "text": "Navegación",
+        "ratio": 2.85,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "Esmerald-0",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-Esmerald-0-dark-1440.jpg"
+      },
+      {
+        "text": "Cuenta",
+        "ratio": 2.85,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "Esmerald-0",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-Esmerald-0-dark-1440.jpg"
+      },
+      {
+        "text": "Administración",
+        "ratio": 2.85,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "Esmerald-0",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-Esmerald-0-dark-1440.jpg"
+      },
+      {
+        "text": "QP",
+        "ratio": 1.45,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "Esmerald-0",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-Esmerald-0-dark-1440.jpg"
+      },
+      {
+        "text": "Modelo de datos",
+        "ratio": 1.17,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "Esmerald-0",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-Esmerald-0-dark-1440.jpg"
+      },
+      {
+        "text": "Pronto",
+        "ratio": 2.95,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "Esmerald-0",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-Esmerald-0-dark-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C07",
+    "type": "contrast",
+    "component": "Portadas claras y oscuras",
+    "source": "frontend/assets/styles/platform-cover.css",
+    "change": "Se conservan superficies opacas del tema y se elimina la regla que forzaba texto blanco.",
+    "observedRoutes": [
+      "/es-co/platform/projects/31"
+    ],
+    "roles": [
+      "platform-admin"
+    ],
+    "states": [
+      "cover-dark",
+      "cover-light"
+    ],
+    "minimumRawRatio": 1.03,
+    "examples": [
+      {
+        "text": "Navegación",
+        "ratio": 1.5,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "cover-light",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-cover-light-dark-1440.jpg"
+      },
+      {
+        "text": "Notificaciones",
+        "ratio": 4.16,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "cover-light",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-cover-light-dark-1440.jpg"
+      },
+      {
+        "text": "Cuentas de cobro",
+        "ratio": 4.16,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "cover-light",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-cover-light-dark-1440.jpg"
+      },
+      {
+        "text": "Hosting",
+        "ratio": 4.16,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "cover-light",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-cover-light-dark-1440.jpg"
+      },
+      {
+        "text": "Clientes",
+        "ratio": 4.16,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "cover-light",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-cover-light-dark-1440.jpg"
+      },
+      {
+        "text": "Cuenta",
+        "ratio": 1.5,
+        "route": "/es-co/platform/projects/31",
+        "role": "platform-admin",
+        "state": "cover-light",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-cover-light-dark-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C08",
+    "type": "contrast",
+    "component": "Ayudas y placeholders de formularios de Plataforma",
+    "source": "frontend/pages/platform/projects y frontend/assets/styles/theme.css",
+    "change": "Se sustituyen blancos de baja opacidad por el token de texto secundario.",
+    "observedRoutes": [
+      "/es-co/platform/projects/31/bugs"
+    ],
+    "roles": [
+      "platform-client"
+    ],
+    "states": [
+      "bugs-form-focus"
+    ],
+    "minimumRawRatio": 1.66,
+    "examples": [
+      {
+        "text": "¿Qué está fallando?",
+        "ratio": 1.66,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "Describe el error con detalle...",
+        "ratio": 1.66,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "Paso 1",
+        "ratio": 1.66,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "¿Qué debería pasar?",
+        "ratio": 1.66,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "¿Qué pasa realmente?",
+        "ratio": 1.66,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "Chrome / iOS",
+        "ratio": 1.66,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C09",
+    "type": "contrast",
+    "component": "Contadores de pestañas de bugs y solicitudes",
+    "source": "frontend/pages/platform/projects/[id]/bugs.vue;frontend/pages/platform/projects/[id]/changes.vue",
+    "change": "Se elimina la opacidad adicional sobre el contador del filtro activo.",
+    "observedRoutes": [
+      "/es-co/platform/projects/31/bugs",
+      "/es-co/platform/projects/31/changes"
+    ],
+    "roles": [
+      "platform-admin",
+      "platform-client"
+    ],
+    "states": [
+      "bugs-form-focus",
+      "initial"
+    ],
+    "minimumRawRatio": 1.02,
+    "examples": [
+      {
+        "text": "0",
+        "ratio": 1.02,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "0",
+        "ratio": 2.63,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "0",
+        "ratio": 2.63,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "0",
+        "ratio": 2.63,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "0",
+        "ratio": 2.63,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-client",
+        "state": "bugs-form-focus",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/custom-bugs-form-focus-dark-1440.jpg"
+      },
+      {
+        "text": "0",
+        "ratio": 1.02,
+        "route": "/es-co/platform/projects/31/bugs",
+        "role": "platform-admin",
+        "state": "initial",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/platform/platform-admin-platform-projects--id-bugs-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "T01",
+    "type": "theme-inheritance",
+    "component": "Diálogos y menús bajo body",
+    "source": "frontend/layouts/platform.vue;frontend/components/platform/projects/PhaseSelectorModal.vue",
+    "change": "El layout aplica el modo a html para que los portales hereden los tokens; retira sus colores al salir.",
+    "observedRoutes": [
+      "/es-co/platform/projects/31"
+    ],
+    "roles": [
+      "platform-admin"
+    ],
+    "states": [
+      "phase-selector",
+      "project-editor",
+      "theme-picker"
+    ],
+    "minimumRawRatio": null,
+    "examples": [],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "T02",
+    "type": "theme-inheritance",
+    "component": "Renderer Markdown del Panel",
+    "source": "frontend/components/panel/documents/DocumentMarkdownBody.vue",
+    "change": "Se corrige el selector CSS de oscuro para que alcance el contenido del renderer.",
+    "observedRoutes": [
+      "/es-co/panel/building-with-us"
+    ],
+    "roles": [
+      "panel-super"
+    ],
+    "states": [
+      "tab-Contrato"
+    ],
+    "minimumRawRatio": 1.52,
+    "examples": [
+      {
+        "text": "CONTRATO DE ALIANZA COMERCIAL BUILDING WITH US",
+        "ratio": 2.86,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      },
+      {
+        "text": "Entre los suscritos, PROJECTAPP, casa de software cuya razón social es XXX-XXX-XXX, identificada con NIT XXX-XXX-XXX, representada legalmente por XXX-XXX-XXX, quien actúa con facul",
+        "ratio": 1.52,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      },
+      {
+        "text": "ANTECEDENTES",
+        "ratio": 2.86,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      },
+      {
+        "text": "PROJECTAPP dispone de una cadena de producción de software que comprende levantamiento de requerimientos, diseño, desarrollo, implementación, entrega, lanzamiento y operación en pr",
+        "ratio": 1.52,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      },
+      {
+        "text": "CLÁUSULA PRIMERA — OBJETO",
+        "ratio": 2.86,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      },
+      {
+        "text": "Las partes acuerdan incubar el producto de software descrito en el Anexo A, en adelante el PRODUCTO, bajo el modelo de alianza elegido en las Condiciones particulares. La alianza c",
+        "ratio": 1.52,
+        "route": "/es-co/panel/building-with-us",
+        "role": "panel-super",
+        "state": "tab-Contrato",
+        "screenshot": "/home/dev-env/.local/state/projectapp-qa/PA-227/evidence/captures/before/panel/panel-super--es-co-panel-building-with-us-tab-Contrato-1440.jpg"
+      }
+    ],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C10",
+    "type": "contrast",
+    "component": "Textos de extractos sin aplicación",
+    "source": "frontend/components/accounting/StatementMonthGrid.vue",
+    "change": "Se elimina la opacidad de los textos No aplica y Antes del inicio de extractos.",
+    "observedRoutes": [
+      "/es-co/panel/accounting/statements"
+    ],
+    "roles": [
+      "panel-super"
+    ],
+    "states": [
+      "initial"
+    ],
+    "minimumRawRatio": null,
+    "examples": [],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  },
+  {
+    "id": "C11",
+    "type": "contrast",
+    "component": "Textos secundarios y placeholders en modo claro",
+    "source": "frontend/assets/styles/theme.css",
+    "change": "Se refuerzan los tokens de texto sobre fondos claros para conservar la legibilidad al comparar modos.",
+    "observedRoutes": [
+      "/es-co/panel/login",
+      "/es-co/platform/projects"
+    ],
+    "roles": [
+      "panel-super",
+      "platform-admin"
+    ],
+    "states": [
+      "light-comparison"
+    ],
+    "minimumRawRatio": null,
+    "examples": [],
+    "finalRevalidation": "pending-DevQA",
+    "notes": "El mínimo crudo es orientativo: el reporte conserva el contexto y puede incluir estados en transición. El triaje original de Resumen y miga se detalla en README.md."
+  }
+]

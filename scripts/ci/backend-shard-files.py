@@ -30,10 +30,10 @@ from pathlib import Path
 BACKEND = Path(__file__).resolve().parents[2] / 'backend'
 WEIGHTS = BACKEND / 'ci-shard-weights.json'
 
-# Los cuatro roots de tests. `backend/tests/` y `backend/projectapp/tests/` son
+# Los roots de tests. `backend/tests/` y `backend/projectapp/tests/` son
 # faciles de olvidar — el propio test-quality-gate del repo los omitio y reporto
 # 379 archivos en vez de 381. Listarlos aca es lo que hace ese olvido imposible.
-ROOTS = ('accounts/tests', 'content/tests', 'tests', 'projectapp/tests', 'monitoring/tests', 'secure_links/tests')
+ROOTS = ('accounts/tests', 'content/tests', 'tests', 'projectapp/tests', 'monitoring/tests', 'secure_links/tests', 'procurement/tests')
 
 
 def discover() -> list[str]:

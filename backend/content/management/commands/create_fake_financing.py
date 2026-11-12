@@ -19,6 +19,7 @@ from content.models import (
     FinancingAgreement,
     FinancingAgreementTemplate,
 )
+from content.fake_data_files import fake_data_transaction, sample_pdf
 from content.services.financing_agreement_service import (
     DEFAULT_FINANCING_TEMPLATE_MARKDOWN,
     add_months,
@@ -45,6 +46,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         add_seed_arguments(parser, count_default=8)
 
+    @fake_data_transaction()
     def handle(self, *args, **options):
         ensure_fake_data_allowed('create_fake_financing')
         context = seed_context(options, 'financing')
@@ -169,10 +171,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def _signed_pdf(index):
-        return ContentFile(
-            b'%PDF-1.4\n% ProjectApp financing demo\n%%EOF',
-            name=f'otrosi-financiacion-demo-{index + 1}.pdf',
-        )
+        return sample_pdf(f'otrosi-financiacion-demo-{index + 1}.pdf')
 
     def _advance_lifecycle(self, agreement, *, lifecycle, actor, index):
         if lifecycle == 'draft':

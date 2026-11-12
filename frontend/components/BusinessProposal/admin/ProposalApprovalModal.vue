@@ -103,7 +103,7 @@ async function load(reset = false) {
     createProject.value = !result.data.linked_project;
     project.value = { name: props.proposal.title || result.data.commercial_summary?.title || '', description: '', state_id: states.stateByKey('development')?.id || '' };
     useContracts.value = result.data.use_proposal_contracts !== false;
-    optionalIds.value = (result.data.optional_documents || []).map(item => item.id);
+    optionalIds.value = result.data.selected_document_ids || [];
     documents.value = [];
   }
 }
@@ -207,7 +207,7 @@ function close() { if (!saving.value) emit('close'); }
                 <BaseButton type="button" variant="secondary" size="sm" :aria-label="`${text.remove} ${item.file.name}`" @click="documents.splice(index,1)">{{ text.remove }}</BaseButton>
               </div>
             </div>
-            <fieldset v-if="preview.optional_documents?.length" class="space-y-2 text-sm text-text-default"><legend class="font-medium">{{ text.optional }}</legend><label v-for="document in preview.optional_documents" :key="document.id" class="flex items-start gap-2 break-words"><span aria-hidden="true">✓</span>{{ document.title }}</label></fieldset>
+            <fieldset v-if="preview.optional_documents?.length" class="space-y-2 text-sm text-text-default"><legend class="font-medium">{{ text.optional }}</legend><label v-for="document in preview.optional_documents" :key="document.id" class="flex items-start gap-2 break-words"><input v-model="optionalIds" type="checkbox" :value="document.id" :data-testid="`approval-optional-${document.id}`" class="mt-1 shrink-0" />{{ document.title }}</label></fieldset>
           </div>
         </template>
         <section class="space-y-2 text-sm text-text-default" data-testid="approval-packet-preview">
@@ -220,6 +220,7 @@ function close() { if (!saving.value) emit('close'); }
     <template #footer><BaseModalActions>
       <BaseButton type="button" variant="secondary" :disabled="saving" :disabled-reason="text.processing" @click="close">{{ text.cancel }}</BaseButton>
 
+      <BaseButton v-if="!linked && !isRevision && !confirmed" type="button" variant="secondary" :disabled="saving || loading || !preview" :disabled-reason="saving ? text.processing : loading ? text.loading : text.loadError" data-testid="approval-defer" @click="submit('defer')">{{ acceptProposal && proposal.status !== 'accepted' ? text.defer : text.later }}</BaseButton>
       <BaseButton v-if="confirmed" type="button" variant="primary" :loading="saving" :disabled="loading || !preview || retained" :disabled-reason="retained ? text.retainedProject : loading ? text.loading : text.loadError" data-testid="approval-retry" @click="submit('retry')">{{ text.retry }}</BaseButton>
       <BaseButton v-else type="button" variant="primary" :loading="saving" :disabled="loading || !preview || retained" :disabled-reason="retained ? text.retainedProject : loading ? text.loading : text.loadError" data-testid="approval-confirm" @click="submit('confirm')">{{ isRevision ? text.confirmRevision : acceptProposal ? text.confirm : text.link }}</BaseButton>
     </BaseModalActions></template>

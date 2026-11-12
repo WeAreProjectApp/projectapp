@@ -1,4 +1,12 @@
 export default {
+    theme: {
+      enableLight: "Activar modo claro",
+      enableDark: "Activar modo oscuro",
+    },
+    clientRegister: {
+      loadError: 'No se pudieron cargar los clientes. Vuelve a intentar.',
+      retry: 'Reintentar',
+    },
     navbar: {
       menu_button: "Menú",
       get_in_touch: "Contacto",
@@ -62,4 +70,3 @@ export default {
       sign_in: "Iniciar Sesión",
     },
   };
-  

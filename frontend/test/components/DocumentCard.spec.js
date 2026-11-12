@@ -71,6 +71,25 @@ async function mountCard(props = {}) {
 }
 
 describe('DocumentCard', () => {
+  it('renders escaped punctuation without leaking its Markdown escape in the mini preview', async () => {
+    // Falla si el resumen de tarjeta vuelve a mostrar la barra de escape antes del punto final.
+    const wrapper = await mountCard({
+      document: { ...baseDocument, content_excerpt: 'Texto de control sin formato\\.' },
+    })
+
+    expect(wrapper.text()).toContain('Texto de control sin formato.')
+    expect(wrapper.text()).not.toContain('Texto de control sin formato\\.')
+  })
+
+  it('keeps literal backslashes inside mini-preview code', async () => {
+    // Falla si corregir escapes borra barras que son contenido válido de un bloque de código.
+    const wrapper = await mountCard({
+      document: { ...baseDocument, content_excerpt: '```txt\nC:\\clientes\\contrato.pdf\n```' },
+    })
+
+    expect(wrapper.text()).toContain('C:\\clientes\\contrato.pdf')
+  })
+
   it('renders title, active state, meta and mini-preview', async () => {
     const wrapper = await mountCard()
 

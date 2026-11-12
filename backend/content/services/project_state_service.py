@@ -260,6 +260,7 @@ def _impact(project, target_state, effective_at):
 
     blockers = []
     effect = target_state.operational_effect
+    cancels_future_billing = effect in TERMINAL_EFFECTS or effect == DocumentState.OperationalEffect.SUSPENDED
     if effect == DocumentState.OperationalEffect.COMPLETED:
         if pending_incomes:
             blockers.append({
@@ -287,7 +288,7 @@ def _impact(project, target_state, effective_at):
         'target_effect': effect,
         'effective_at': effective_at.isoformat(),
         'pending_incomes': pending_incomes,
-        'future_incomes': future_incomes,
+        'future_incomes': future_incomes if cancels_future_billing else [],
         'open_payments': [
             {
                 'id': item.pk,
@@ -297,7 +298,7 @@ def _impact(project, target_state, effective_at):
             }
             for item in open_payments
         ],
-        'future_payments': [item.pk for item in future_payments],
+        'future_payments': [item.pk for item in future_payments] if cancels_future_billing else [],
         'active_hostings': [
             {
                 'id': item['id'],

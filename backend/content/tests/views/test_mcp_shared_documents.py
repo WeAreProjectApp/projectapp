@@ -38,7 +38,9 @@ def missing_annex_identity(reviewed_proposal, approval_client, admin_user):
     )
     annex.file.save('mcp-annex.pdf', ContentFile(b'%PDF-1.4 mcp annex'))
     from content.tests.views.test_proposal_approval import confirm as confirm_proposal
-    confirm_proposal(reviewed_proposal, approval_client, admin_user)
+    confirm_proposal(
+        reviewed_proposal, approval_client, admin_user, selected_document_ids=[annex.pk],
+    )
     proposal = load_proposal(reviewed_proposal.pk)
     binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
     approved = binding.current_file
@@ -116,6 +118,40 @@ def test_revision_confirmation_retains_previous_contract_evidence(api_client, ac
     assert approved.package.number == 1
     assert approved.binding.document_id == binding.document_id
     assert confirmed_proposal.approval_packages.count() == 2
+
+
+def test_mcp_revision_empty_selection_retires_the_current_annex(
+    api_client, access, reviewed_proposal, approval_client, admin_user,
+):
+    """Falla si una revisión MCP con selección vacía mantiene un anexo vigente."""
+    annex = ProposalDocument.objects.create(
+        proposal=reviewed_proposal, document_type='legal_annex', title='MCP retired annex',
+    )
+    annex.file.save('mcp-retired-annex.pdf', ContentFile(b'%PDF-1.4 mcp retired annex'))
+    from content.tests.views.test_proposal_approval import confirm as confirm_proposal
+    confirm_proposal(
+        reviewed_proposal, approval_client, admin_user, selected_document_ids=[annex.pk],
+    )
+    proposal = load_proposal(reviewed_proposal.pk)
+    binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
+    original = binding.current_file
+    token, _ = access
+    preview = rpc(api_client, token, 'confirm_proposal_document_revision', {
+        'proposal_id': proposal.pk,
+        'request_id': 'mcp-empty-selection-revision',
+        'source_hash': source_hash(load_proposal(proposal.pk)),
+        'selected_document_ids': [],
+    })
+
+    result = confirm(api_client, token, preview)
+
+    binding.refresh_from_db()
+    original.refresh_from_db()
+    assert result['isError'] is False
+    assert result['structuredContent']['result']['confirmed_package'] == 2
+    assert (binding.is_current, original.package.number, original.file.read()) == (
+        False, 1, b'%PDF-1.4 mcp retired annex',
+    )
 
 
 def test_document_mcp_reconciliation_requires_confirmation(

@@ -1,12 +1,12 @@
 """Contract tests for administrators following up monitoring cases."""
 
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from monitoring.models import Case, CaseActivity, Resource, Source
-
 
 CASES_URL = '/api/monitoring/cases/'
 
@@ -31,16 +31,28 @@ def monitoring_case(db):
 
 @pytest.fixture
 def staff_user(db):
-    return get_user_model().objects.create_user(
+    user = get_user_model().objects.create_user(
         username='monitoring-staff', password='test-password', is_staff=True,
     )
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
+    )
+    return user
 
 
 @pytest.fixture
 def regular_user(db):
-    return get_user_model().objects.create_user(
+    user = get_user_model().objects.create_user(
         username='monitoring-regular', password='test-password', is_staff=False,
     )
+    UserProfile.objects.create(
+        user=user,
+        role=UserProfile.ROLE_CLIENT,
+        is_onboarded=True,
+    )
+    return user
 
 
 @pytest.fixture

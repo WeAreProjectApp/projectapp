@@ -49,7 +49,7 @@ METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 # Other connectors opt in here or with strict_arguments=True on a tool.
-STRICT_ARGUMENT_CONNECTORS = frozenset({'documents', 'projects'})
+STRICT_ARGUMENT_CONNECTORS = frozenset({'documents', 'projects', 'data-integrity'})
 
 
 class ToolError(Exception):

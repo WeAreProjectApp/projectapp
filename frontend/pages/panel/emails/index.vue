@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl mx-auto space-y-8">
+  <div class="min-w-0 space-y-8">
 
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -13,7 +13,7 @@
     <BaseTabs v-model="activeTab" :tabs="PAGE_TABS" variant="underline" />
 
     <!-- ── Email composer ── -->
-    <section v-if="activeTab === 'compose'" class="rounded-xl border border-border-muted bg-surface p-4 sm:p-5">
+    <section v-if="activeTab === 'compose'" class="mx-auto w-full max-w-4xl rounded-xl border border-border-muted bg-surface p-4 sm:p-5">
       <div class="flex items-center gap-2 mb-5">
         <svg class="w-5 h-5 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -151,7 +151,7 @@
     </section>
 
     <!-- ── Defaults config ── -->
-    <section v-else-if="activeTab === 'defaults'" class="rounded-xl border border-border-muted bg-surface p-4 sm:p-5">
+    <section v-else-if="activeTab === 'defaults'" class="mx-auto w-full max-w-4xl rounded-xl border border-border-muted bg-surface p-4 sm:p-5">
       <div class="flex items-center gap-2 mb-2">
         <svg class="w-5 h-5 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -212,7 +212,7 @@
     </section>
 
     <!-- ── History ── -->
-    <section v-else class="rounded-xl border border-border-muted bg-surface p-4 sm:p-5">
+    <section v-else-if="activeTab === 'history'" class="rounded-xl border border-border-muted bg-surface p-4 sm:p-5">
       <div class="flex items-center gap-2 mb-4">
         <svg class="w-5 h-5 text-info-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -220,15 +220,29 @@
         <h3 class="text-sm font-semibold text-text-default">Historial de correos enviados</h3>
       </div>
 
-      <form class="mb-4 grid gap-3 rounded-lg border border-border-muted bg-surface-muted p-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7" data-testid="email-history-filters" @submit.prevent="applyHistoryFilters">
-        <BaseInput v-model="historyFilters.recipient" type="search" placeholder="Buscar destinatario" aria-label="Buscar destinatario" />
-        <BaseSelect v-model="historyFilters.family" :options="familyFilterOptions" aria-label="Filtrar por familia" />
-        <BaseSelect v-model="historyFilters.status" :options="statusFilterOptions" aria-label="Filtrar por estado" />
-        <BaseSelect v-model="historyFilters.has_attachments" :options="attachmentPresenceOptions" aria-label="Filtrar por presencia de adjuntos" />
-        <BaseSelect v-model="historyFilters.attachment_type" :options="attachmentTypeFilterOptions" aria-label="Filtrar por tipo de adjunto" />
-        <BaseInput v-model="historyFilters.date_from" type="date" aria-label="Fecha inicial" />
-        <BaseInput v-model="historyFilters.date_to" type="date" aria-label="Fecha final" />
-        <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4 xl:col-span-7 xl:justify-end">
+      <form class="mb-4 grid gap-3 rounded-lg border border-border-muted bg-surface-muted p-3 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))]" data-testid="email-history-filters" @submit.prevent="applyHistoryFilters">
+        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.recipient') }}
+          <BaseInput v-model="historyFilters.recipient" type="search" placeholder="Buscar destinatario" aria-label="Buscar destinatario" />
+        </label>
+        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.family') }}
+          <BaseSelect v-model="historyFilters.family" :options="familyFilterOptions" aria-label="Filtrar por familia" />
+        </label>
+        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.status') }}
+          <BaseSelect v-model="historyFilters.status" :options="statusFilterOptions" aria-label="Filtrar por estado" />
+        </label>
+        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.attachments') }}
+          <BaseSelect v-model="historyFilters.has_attachments" :options="attachmentPresenceOptions" aria-label="Filtrar por presencia de adjuntos" />
+        </label>
+        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.attachmentType') }}
+          <BaseSelect v-model="historyFilters.attachment_type" :options="attachmentTypeFilterOptions" aria-label="Filtrar por tipo de adjunto" />
+        </label>
+        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.dateFrom') }}
+          <BaseInput v-model="historyFilters.date_from" type="date" aria-label="Fecha inicial" />
+        </label>
+        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.dateTo') }}
+          <BaseInput v-model="historyFilters.date_to" type="date" aria-label="Fecha final" />
+        </label>
+        <div class="flex flex-wrap gap-2 col-span-full justify-end">
           <BaseButton type="button" variant="ghost" size="sm" @click="clearHistoryFilters">Limpiar</BaseButton>
           <BaseButton type="submit" variant="secondary" size="sm">Aplicar filtros</BaseButton>
         </div>
@@ -236,8 +250,8 @@
 
       <div v-if="emailStore.isLoadingHistory" class="text-xs text-text-subtle py-4 text-center">Cargando historial...</div>
 
-      <div v-else-if="!emailStore.history.length" class="text-xs text-text-subtle py-4 text-center">
-        No se han enviado correos aún.
+      <div v-else-if="!emailStore.history.length" class="text-xs text-text-subtle py-4 text-center" data-testid="email-history-empty">
+        {{ hasAppliedHistoryFilters ? 'Ningún correo coincide con los filtros aplicados.' : 'No se han enviado correos aún.' }}
       </div>
 
       <div v-else class="space-y-2">
@@ -286,6 +300,8 @@
                 Reenviar exacto
               </BaseButton>
             </div>
+            <EmailRetryAction v-if="!entry.to_recipients?.length && !entry.cc_recipients?.length" :entry="entry" :subject="entry.subject" @attempted="handleRetried" />
+            <p v-if="entry.error_message" class="text-xs text-danger-strong">{{ entry.error_message }}</p>
             <div v-if="entry.to_recipients?.length || entry.cc_recipients?.length">
               <p class="mb-1 text-[10px] uppercase tracking-wide text-text-subtle">Destinatarios</p>
               <div class="space-y-1">
@@ -300,6 +316,7 @@
                   <span class="text-[10px] font-medium" :class="copyStatusClass(recipientEntry.status)">
                     {{ statusLabel(recipientEntry.status) }}
                   </span>
+                  <EmailRetryAction :entry="recipientEntry" :subject="entry.subject" @attempted="handleRetried" />
                 </div>
               </div>
             </div>
@@ -435,6 +452,8 @@
       </div>
     </section>
 
+    <EmailDeliveryStatus v-else-if="activeTab === 'status'" ref="statusPanel" />
+
     <ConfirmModal
       v-model="confirmState.open"
       :title="confirmState.title"
@@ -476,6 +495,7 @@
 </template>
 
 <script setup>
+import { emailStatusLabel as statusLabel } from '~/utils/emailStatus';
 import { useRadarFocus } from '~/composables/useRadarFocus';
 import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
 import { ref, computed, watch, onMounted } from 'vue';
@@ -485,6 +505,8 @@ import ClientEmailCopySettings from '~/components/emails/ClientEmailCopySettings
 import EmailRecipientFields from '~/components/emails/EmailRecipientFields.vue';
 import EmailBodyModal from '~/components/accounting/EmailBodyModal.vue';
 import EmailResendModal from '~/components/emails/EmailResendModal.vue';
+import EmailDeliveryStatus from '~/components/emails/EmailDeliveryStatus.vue';
+import EmailRetryAction from '~/components/emails/EmailRetryAction.vue';
 import PdfPreviewModal from '~/components/base/PdfPreviewModal.vue';
 import { useEmailStore } from '~/stores/emails';
 import { validateEmailAttachments } from '~/utils/emailAttachments';
@@ -498,6 +520,8 @@ import { appendEmailRecipients, recipientSummary } from '~/utils/emailRecipients
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
+const { t } = useI18n();
+const statusPanel = ref(null);
 const emailStore = useEmailStore();
 const notify = usePanelNotify();
 const localePath = useLocalePath();
@@ -510,6 +534,7 @@ const router = useRouter();
 const PAGE_TABS = [
   { id: 'compose', label: 'Redactar' },
   { id: 'history', label: 'Historial' },
+  { id: 'status', label: t('panelUsability.emailStatus') },
   { id: 'defaults', label: 'Configuración' },
 ];
 const TAB_IDS = PAGE_TABS.map(t => t.id);
@@ -522,9 +547,14 @@ watch(activeTab, (tab) => {
   // El default no se escribe: la URL limpia es la vista de reposo, y un
   // `?tab=compose` colgado es estado que el usuario no puede ver ni corregir.
   const query = { ...route.query };
+  if (tab !== 'history') delete query.email;
   if (tab === 'compose') delete query.tab;
   else query.tab = tab;
   router.replace({ query });
+});
+
+watch(() => route.query.tab, tab => {
+  activeTab.value = route.query.email ? 'history' : (TAB_IDS.includes(tab) ? tab : 'compose');
 });
 
 let sectionIdSeq = 0;
@@ -553,6 +583,7 @@ const expandedIds = ref({});
 const selectedBodyEntry = ref(null);
 const selectedPdfAttachment = ref(null);
 const selectedResendEntry = ref(null);
+const hasAppliedHistoryFilters = computed(() => Object.values(emailStore.historyFilters).some(Boolean));
 const historyFilters = ref({
   recipient: '',
   family: '',
@@ -818,6 +849,16 @@ async function handleResent(result) {
   await emailStore.fetchHistory(1, historyFilters.value);
 }
 
+async function handleRetried(result) {
+  const attemptId = result.data?.id;
+  notify[result.success ? 'success' : 'error']({
+    title: t(result.success ? 'panelUsability.retrySent' : 'panelUsability.retryFailed'),
+    detail: result.message,
+    action: attemptId ? { label: t('panelUsability.viewAttempt'), to: localePath(`/panel/emails?tab=history&email=${attemptId}`) } : null,
+  });
+  await emailStore.fetchHistory(1, historyFilters.value);
+}
+
 function fetchEmailBody(logId) {
   return emailStore.fetchEmailBody(logId);
 }
@@ -839,10 +880,6 @@ function sectionIsMarkdown(section) {
   return typeof section === 'object' && !!section?.markdown;
 }
 
-const STATUS_LABELS = { sent: 'Enviado', delivered: 'Entregado', bounced: 'Rebotado', failed: 'Fallido', skipped: 'Omitida' };
-function statusLabel(s) {
-  return STATUS_LABELS[s] || s;
-}
 
 function copyStatusClass(status) {
   if (status === 'failed' || status === 'bounced') return 'text-danger-strong';
@@ -881,6 +918,7 @@ async function refreshEmails() {
     loadDefaults(),
     emailStore.fetchCopyRecipients(),
     emailStore.fetchHistory(1, historyFilters.value),
+    activeTab.value === 'status' ? statusPanel.value?.refresh() : Promise.resolve(),
   ]);
   const emailId = Number(route.query.email);
   if (emailId) {

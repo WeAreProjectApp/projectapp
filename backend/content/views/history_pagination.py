@@ -45,6 +45,9 @@ def paginated_history_response(
 
 def email_body_response(log):
     """The message as delivered, or the 404 that says why there is none."""
+    from content.services.email_privacy_policy import credential_email
+    if credential_email(log.template_key):
+        return error_response('El contenido de acceso no está disponible.', code='credential_content_protected', status=403)
     if log.body is None:
         return error_response(
             'Este envío es anterior a que se guardara el cuerpo de los '

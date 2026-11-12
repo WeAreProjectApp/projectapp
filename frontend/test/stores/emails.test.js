@@ -299,6 +299,33 @@ describe('useEmailStore', () => {
     });
   });
 
+  describe('retryEmail', () => {
+    it('posts an empty retry action for the original history record', async () => {
+      // Fails if retrying sends a recipient override or targets another history record.
+      const retried = { id: 23, retry_of: 12, status: 'sent' };
+      create_request.mockResolvedValue({ data: retried });
+
+      const result = await store.retryEmail(12);
+
+      expect(create_request).toHaveBeenCalledWith('emails/history/12/retry/', {});
+      expect(result).toEqual({ success: true, data: retried });
+    });
+
+    it('returns the server retry detail when reconstruction is unavailable', async () => {
+      // Fails if the detail explaining why a historical email cannot be rebuilt is hidden.
+      const failure = { detail: 'El pago original ya no está disponible.' };
+      create_request.mockRejectedValue({ response: { data: failure } });
+
+      const result = await store.retryEmail(12);
+
+      expect(result).toEqual({
+        success: false,
+        data: failure,
+        message: 'El pago original ya no está disponible.',
+      });
+    });
+  });
+
   // ── sendEmail ──────────────────────────────────────────────────────────────
 
   describe('sendEmail', () => {

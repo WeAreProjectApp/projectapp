@@ -10,3 +10,5 @@
 - **Failure outcome:** A failed detail request renders a retry action in the modal; retry replaces the error with the project data.
 - **Success / error:** n/a — opening the modal is a read/display action with no user input.
 - **Coverage:** `e2e/admin/admin-project-access-detail.spec.js` plus the five responsive project profiles.
+
+- **PA-225:** El detalle ofrece Abrir espacio en la plataforma por ID en nueva pestaña.

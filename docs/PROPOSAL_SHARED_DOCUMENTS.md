@@ -1,6 +1,6 @@
 # Aprobación y documentos compartidos
 
-La aprobación interna requiere confirmar cliente, proyecto y contrato real. Se reutiliza el modal existente; cancelar no modifica el estado. Se retiró la aceptación pública, incluida su condición opcional; siguen rechazo y solicitud de negociación. Las rutas genéricas y MCP de estado no pueden aprobar.
+La aprobación interna permite confirmar cliente, proyecto y contrato real o aprobar y revisar después sin crear entidades ni paquete documental. La vinculación pendiente se retoma desde la propuesta aceptada. Se reutiliza el modal existente; cancelar no modifica el estado. Se retiró la aceptación pública, incluida su condición opcional; siguen rechazo y solicitud de negociación. Las rutas genéricas y MCP de estado no pueden aprobar.
 
 ## Fuente y versiones
 
@@ -12,12 +12,14 @@ Las escrituras estructuradas compartidas exigen la huella capturada al editar. E
 
 ## Carpetas y API
 
-Bajo la raíz gestionada del proyecto se crean Contratos y Anexos mediante claves estables. Se hereda proyecto/cliente. Los detalles comercial y técnico provienen de la generación curada de PA-143; entran todos los anexos activos. Una raíz histórica sin conciliar bloquea la operación e indica completar PA-108. No se convierten raíces por coincidencia de nombre.
+Bajo la raíz gestionada del proyecto se crean Contratos y Anexos mediante claves estables. Se hereda proyecto/cliente. Los detalles comercial y técnico provienen de la generación curada de PA-143 y se incluyen siempre. Los anexos activos entran sólo por selección explícita; en el primer cierre ninguno comienza marcado. Una revisión recupera únicamente la selección confirmada que siga siendo elegible, sin incorporar anexos nuevos automáticamente. Una raíz histórica sin conciliar bloquea la operación e indica completar PA-108. No se convierten raíces por coincidencia de nombre.
 
-- `GET/POST proposals/:id/approval/`: revisar y confirmar el cierre inicial.
+- `GET/POST proposals/:id/approval/`: revisar, confirmar el cierre inicial o posponer con `action=defer`. Con `accept_proposal=true` acepta sin aprovisionar; `false` conserva el estado. Repetir sobre una propuesta aceptada no genera otro cambio de estado.
 - `POST proposals/:id/approval/revisions/`: confirmar otro paquete con la misma identidad documental.
 - `GET/POST documents/:id/proposal-source/`: consultar revisiones o sustituir el adjunto en borrador.
 - Las descargas de archivos de cierre conservan sus rutas e identificadores. Una cuenta o entrega firmada nunca cambia de revisión por reconfirmar.
+
+La consulta devuelve `selected_document_ids`; cada manifiesto nuevo conserva la selección exacta. En el cierre inicial omitirla equivale a `[]`. Al reconfirmar, omitirla conserva la selección elegible anterior y `[]` la retira del nuevo paquete. Los cierres antiguos recuperan la selección desde los archivos `original-<id>` ya confirmados. No se alteran sus bytes ni manifiestos.
 
 Los conectores Comercial y Documentos utilizan esos servicios. La lectura devuelve identidad, revisión, capacidades y versión; las escrituras sensibles requieren la confirmación MCP existente. Los editores genéricos de Markdown rechazan documentos con fuente estructurada. Se actualizan también los adaptadores anteriores de propuestas.
 

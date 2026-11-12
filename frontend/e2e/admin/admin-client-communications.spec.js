@@ -5,7 +5,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
-import { ADMIN_CLIENT_COMMUNICATIONS } from '../helpers/flow-tags.js';
+import { ADMIN_CLIENT_COMMUNICATIONS, ADMIN_COMMUNICATION_PANEL_RESIZE } from '../helpers/flow-tags.js';
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { fillRichTextSource } from '../helpers/editorial.js';
@@ -904,6 +904,46 @@ test.describe('Admin Client Communications', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('communications-navigation-resize-handle'))
       .toHaveAttribute('aria-valuenow', '400');
+  });
+
+  // Bug caught: the communications divider accepted keyboard values but mouse
+  // dragging did not reflow the adjacent thread list in both directions.
+  test('reflows the thread list after mouse resizing communications navigation', {
+    tag: [...ADMIN_COMMUNICATION_PANEL_RESIZE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await setupCommunicationsApi(page);
+    await enterCommunicationsThroughPanel(page);
+
+    const handle = page.getByTestId('communications-navigation-resize-handle');
+    const navigation = page.getByTestId('communications-navigation-panel');
+    const thread = page.getByTestId('communication-thread-row-41');
+    await expect(handle).toHaveAttribute('aria-valuenow', '288');
+    const [initialPanel, initialThread, handleBox] = await Promise.all([
+      navigation.boundingBox(), thread.boundingBox(), handle.boundingBox(),
+    ]);
+    const y = handleBox.y + (handleBox.height / 2);
+    await page.mouse.move(handleBox.x + (handleBox.width / 2), y);
+    await page.mouse.down();
+    await page.mouse.move(handleBox.x + 80, y, { steps: 5 });
+    await page.mouse.up();
+
+    const widenedPanel = await navigation.boundingBox();
+    const widenedThread = await thread.boundingBox();
+    expect(widenedPanel.width).toBeGreaterThan(initialPanel.width + 70);
+    expect(widenedThread.x).toBeGreaterThan(initialThread.x + 70);
+
+    const widenedHandle = await handle.boundingBox();
+    await page.mouse.move(widenedHandle.x + (widenedHandle.width / 2), y);
+    await page.mouse.down();
+    await page.mouse.move(widenedHandle.x - 48, y, { steps: 5 });
+    await page.mouse.up();
+
+    const narrowedPanel = await navigation.boundingBox();
+    const narrowedThread = await thread.boundingBox();
+    expect(narrowedPanel.width).toBeLessThan(widenedPanel.width - 40);
+    expect(narrowedThread.x).toBeLessThan(widenedThread.x - 40);
+    await expect(thread).toContainText('Aprobación de alcance');
   });
 
   test('uses persisted settings for a new message', {

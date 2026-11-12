@@ -363,15 +363,15 @@
           </div>
         </div>
         <!-- Tab: Executive & Detallado -->
-        <div v-show="funnelTab === 'exec_detail'" class="px-4 sm:px-6 py-4 space-y-3">
-          <div v-for="(step, idx) in funnelExecDetail" :key="step.section_type" class="flex items-center gap-3">
-            <span class="text-xs text-text-subtle w-5 text-right">{{ idx + 1 }}</span>
-            <div class="flex-1">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-sm text-text-default font-medium truncate">{{ step.section_title }}</span>
-                <div class="flex items-center gap-2">
+        <div v-show="funnelTab === 'exec_detail'" class="px-4 sm:px-6 py-4 space-y-3" data-testid="proposal-funnel-exec">
+          <div v-for="(step, idx) in funnelExecDetail" :key="step.section_type" class="flex min-w-0 items-center gap-3" data-testid="proposal-funnel-row">
+            <span class="w-5 shrink-0 text-right text-xs text-text-subtle">{{ idx + 1 }}</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex min-w-0 flex-col gap-1 panel-portrait:flex-row panel-portrait:items-start panel-portrait:justify-between panel-portrait:gap-3">
+                <span class="min-w-0 text-sm text-text-default font-medium [overflow-wrap:anywhere]" data-testid="proposal-funnel-title">{{ step.section_title }}</span>
+                <div class="flex flex-wrap items-center gap-2">
                   <span v-if="step.in_executive_mode === false" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 font-medium flex-shrink-0">solo detallado</span>
-                  <span class="text-xs text-text-muted">{{ step.reached_count }} sesiones</span>
+                  <span class="whitespace-nowrap text-xs text-text-muted" data-testid="proposal-funnel-count">{{ step.reached_count }} sesiones</span>
                   <span v-if="step.drop_off_percent > 0" class="text-xs text-red-500 font-medium">
                     -{{ step.drop_off_percent }}%
                   </span>
@@ -389,15 +389,15 @@
           <p v-if="!funnelExecDetail.length" class="text-xs text-text-subtle italic">Sin datos para este modo.</p>
         </div>
         <!-- Tab: Técnico -->
-        <div v-show="funnelTab === 'technical'" class="px-4 sm:px-6 py-4 space-y-3">
-          <div v-for="(step, idx) in funnelTechnical" :key="step.subsection_key || step.section_title" class="flex items-center gap-3" :class="{ 'opacity-45': step.reached_count === 0 }">
-            <span class="text-xs text-text-subtle w-5 text-right">{{ idx + 1 }}</span>
-            <div class="flex-1">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-sm text-text-default font-medium truncate">{{ step.section_title }}</span>
-                <div class="flex items-center gap-2">
+        <div v-show="funnelTab === 'technical'" class="px-4 sm:px-6 py-4 space-y-3" data-testid="proposal-funnel-technical">
+          <div v-for="(step, idx) in funnelTechnical" :key="step.subsection_key || step.section_title" class="flex min-w-0 items-center gap-3" :class="{ 'opacity-45': step.reached_count === 0 }" data-testid="proposal-funnel-row">
+            <span class="w-5 shrink-0 text-right text-xs text-text-subtle">{{ idx + 1 }}</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex min-w-0 flex-col gap-1 panel-portrait:flex-row panel-portrait:items-start panel-portrait:justify-between panel-portrait:gap-3">
+                <span class="min-w-0 text-sm text-text-default font-medium [overflow-wrap:anywhere]" data-testid="proposal-funnel-title">{{ step.section_title }}</span>
+                <div class="flex flex-wrap items-center gap-2">
                   <span v-if="step.reached_count === 0" class="text-[10px] px-1.5 py-0.5 rounded bg-surface-raised text-text-subtle font-medium flex-shrink-0">no visto</span>
-                  <span class="text-xs text-text-muted">{{ step.reached_count }} sesiones</span>
+                  <span class="whitespace-nowrap text-xs text-text-muted" data-testid="proposal-funnel-count">{{ step.reached_count }} sesiones</span>
                   <span v-if="step.drop_off_percent > 0 && step.reached_count > 0" class="text-xs text-red-500 font-medium">
                     -{{ step.drop_off_percent }}%
                   </span>

@@ -74,6 +74,37 @@ for (const width of [412, 835, 1440]) {
   });
 }
 
+// Bug caught: recurring-payment alerts used the entire dashboard width for each
+// row and their preview dialog grew far beyond the information it contained.
+test('opens each compact detail from the desktop recurring grid', {
+  tag: [...ADMIN_DASHBOARD_ATTENTION_RADAR, '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await setup(page, { recurringCount: 2 });
+
+  await expect(page.getByTestId('attention-item-recurring_due')).toContainText('2 pagos recurrentes');
+  await page.getByTestId('attention-item-recurring_due').click();
+  const first = page.getByTestId('radar-record-recurring_due-42');
+  const second = page.getByTestId('radar-record-recurring_due-43');
+  await expect(first).toContainText('Pendiente recurring_due 42');
+  await expect(first).toContainText('$123.000 COP');
+  await expect(second).toContainText('Pendiente recurring_due 43');
+
+  const [firstBox, secondBox] = await Promise.all([first.boundingBox(), second.boundingBox()]);
+  expect(secondBox.x).toBeGreaterThan(firstBox.x + firstBox.width);
+  expect(Math.abs(firstBox.y - secondBox.y)).toBeLessThanOrEqual(2);
+
+  await first.click();
+  const firstDetail = page.getByTestId('radar-detail-modal');
+  await expect(firstDetail).toContainText('Pendiente recurring_due 42');
+  expect((await firstDetail.boundingBox()).width).toBeLessThanOrEqual(768);
+  await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
+
+  await second.click();
+  await expect(page.getByTestId('radar-detail-modal')).toContainText('Pendiente recurring_due 43');
+  await expect(page.getByTestId('radar-detail-destination')).toHaveAttribute('href', /recurring=43/);
+});
+
 test('restores the exact recurrent through browser history', { tag: [...ADMIN_DASHBOARD_ATTENTION_RADAR, '@role:admin', '@outcome:success'] }, async ({ page }) => {
   await setup(page);
   await openDetail(page, 'recurring_due');

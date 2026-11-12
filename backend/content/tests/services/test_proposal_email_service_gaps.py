@@ -182,42 +182,39 @@ class TestSendMagicLinkEmail:
 
         assert result is False
 
-    @patch('content.services.proposal_email_service.EmailMultiAlternatives')
-    def test_sends_magic_link_with_one_proposal(self, mock_email_cls, proposal):
-        mock_email = stub_email_message()
-        mock_email_cls.return_value = mock_email
-
+    def test_sends_magic_link_with_one_proposal(self, proposal, mailoutbox):
         result = ProposalEmailService.send_magic_link_email(
             'user@x.com', [proposal],
         )
 
         assert result is True
-        mock_email.send.assert_called_once()
+        assert len(mailoutbox) == 1
+        assert mailoutbox[0].to == ['user@x.com']
+        assert proposal.title in mailoutbox[0].body
 
-    @patch('content.services.proposal_email_service.EmailMultiAlternatives')
-    def test_sends_magic_link_with_multiple_proposals(self, mock_email_cls, proposal, db):
+    def test_sends_magic_link_with_multiple_proposals(self, proposal, db, mailoutbox):
         second = BusinessProposal.objects.create(
             title='Second Proposal',
             client_name='Gap Client',
             client_email='gapclient@example.com',
             status='sent',
         )
-        mock_email = stub_email_message()
-        mock_email_cls.return_value = mock_email
-
         result = ProposalEmailService.send_magic_link_email(
             'user@x.com', [proposal, second],
         )
 
         assert result is True
-        mock_email_cls.assert_called_once()
-        mock_email.send.assert_called_once_with()
+        assert len(mailoutbox) == 1
+        assert mailoutbox[0].to == ['user@x.com']
+        assert proposal.title in mailoutbox[0].body
+        assert second.title in mailoutbox[0].body
 
-    @patch('content.services.proposal_email_service.EmailMultiAlternatives', side_effect=Exception('smtp error'))
-    def test_returns_false_on_send_exception(self, mock_email_cls, proposal):
+    @patch('content.services.proposal_email_service.EmailMultiAlternatives.send', side_effect=Exception('smtp error'))
+    def test_returns_false_on_send_exception(self, mock_send, proposal):
         result = ProposalEmailService.send_magic_link_email('user@x.com', [proposal])
 
         assert result is False
+        mock_send.assert_called_once()
 
 
 # ===========================================================================

@@ -195,7 +195,7 @@
             class="text-text-subtle"
             title="Sin proyecto vinculado"
             :data-testid="`hosting-no-project-${row.id}`"
-          >—</span>
+          >Sin proyecto</span>
         </template>
         <!-- El conteo de ciclos es la dirección del histórico: un enlace de
              verdad, no sólo la entrada «Ciclos de pago» del menú de la fila. -->
@@ -397,16 +397,19 @@
     />
 
     <HostingAccountEmissionModal
+      :resume-draft="billingReturn.resumeDraft.value"
+      @reconcile="billingReturn.reconcile"
       v-model="billingConfirmOpen"
       :record="billingRow"
       :message="billingConfirmMessage"
       @confirm="sendBilling"
-      @cancel="billingRow = null"
+      @cancel="billingReturn.clear(); billingRow = null"
     />
   </BasePageShell>
 </template>
 
 <script setup>
+import { useBillingDraftReturn } from '~/composables/useBillingDraftReturn';
 import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
@@ -953,6 +956,7 @@ async function onCyclesChanged() {
 
 const billingConfirmOpen = ref(false);
 const billingRow = ref(null);
+const billingReturn = useBillingDraftReturn({ kind: 'hosting-emission', open: billingConfirmOpen, record: billingRow });
 const billingId = ref(null);
 
 const billingConfirmMessage = computed(() => {
@@ -966,11 +970,13 @@ const billingConfirmMessage = computed(() => {
 });
 
 function askSendBilling(row) {
+  billingReturn.clear();
   billingRow.value = row;
   billingConfirmOpen.value = true;
 }
 
 async function sendBilling(context = {}) {
+  billingReturn.clear();
   const row = billingRow.value;
   billingRow.value = null;
   if (!row) return;

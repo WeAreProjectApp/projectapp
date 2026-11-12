@@ -93,6 +93,7 @@ OUTBOUND_EMAIL_CHANNELS = {
     'task_deadline_notification': TASKS_OPERATIONS,
     'task_alert_notification': TASKS_OPERATIONS,
     'generic_internal_notification': TASKS_OPERATIONS,
+    'procurement_alert': TASKS_OPERATIONS,
     # Only the in-app (inline, local development) frontend build sends it;
     # production asks the ops toolkit to regenerate instead.
     'frontend_build_failure': TASKS_OPERATIONS,
@@ -100,7 +101,8 @@ OUTBOUND_EMAIL_CHANNELS = {
     'proposal_notification_diagnostic': TASKS_OPERATIONS,
 
     # Authentication and credential-bearing messages. Product policy
-    # explicitly requires these to be copied and retained in full.
+    # excludes credentials from copies and retains a neutral receipt only.
+    'login_code': SECURITY,
     'client_invitation': SECURITY,
     'admin_invitation': SECURITY,
     'password_changed': SECURITY,

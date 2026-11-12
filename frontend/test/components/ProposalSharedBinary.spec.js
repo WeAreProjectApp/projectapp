@@ -6,13 +6,17 @@ import { create_request, get_request } from '../../stores/services/request_http'
 jest.mock('../../stores/services/request_http', () => ({ create_request: jest.fn(), get_request: jest.fn() }));
 
 let wrapper;
+function sourceMetadata(sourceHash) {
+  return { document_id: 91, proposal_id: 71, source_key: 'original-81', source_hash: sourceHash, can_replace_binary: true, has_pending_changes: true };
+}
+
 async function selectFile() {
   const input = wrapper.get('[data-testid="shared-binary-file"]');
   Object.defineProperty(input.element, 'files', { value: [new File(['new annex'], 'anexo-nuevo.pdf', { type: 'application/pdf' })], configurable: true });
   await input.trigger('change');
 }
 function open() {
-  wrapper = mount(ProposalSharedBinary, { props: { source: { document_id: 91, source_hash: 'version-opened', can_replace_binary: true } }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } });
+  wrapper = mount(ProposalSharedBinary, { props: { source: sourceMetadata('version-opened') }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } });
 }
 
 beforeEach(() => { jest.clearAllMocks(); global.useI18n = () => ({ locale: ref('es-co') }); });
@@ -21,7 +25,7 @@ afterEach(() => { wrapper?.unmount(); delete global.useI18n; });
 describe('ProposalSharedBinary', () => {
   // Falla si el gestor sustituye el archivo vigente en vez de guardar una revisión pendiente con su versión de origen.
   it('saves the selected attachment as a pending draft', async () => {
-    create_request.mockResolvedValue({ data: { document: { source_hash: 'version-saved' } } });
+    create_request.mockResolvedValue({ data: { document: sourceMetadata('version-saved') } });
     open();
     await selectFile();
     await wrapper.get('[data-testid="shared-binary-save"]').trigger('click');
@@ -32,7 +36,7 @@ describe('ProposalSharedBinary', () => {
     expect(body.get('source_hash')).toBe('version-opened');
     expect(body.get('file').name).toBe('anexo-nuevo.pdf');
     expect(wrapper.get('[role="status"]').text()).toBe('Borrador guardado. Revisa el nuevo paquete para hacerlo vigente.');
-    expect(wrapper.emitted('updated')).toEqual([[]]);
+    expect(wrapper.emitted('updated')).toEqual([[sourceMetadata('version-saved')]]);
     expect(wrapper.get('[data-testid="shared-binary-save"]').element.disabled).toBe(true);
   });
 
@@ -69,8 +73,8 @@ describe('ProposalSharedBinary', () => {
   });
   // Falla si consultar explícitamente el conflicto pierde el archivo o reintenta con una versión obsoleta.
   it('saves the retained file after reviewing the current revision', async () => {
-    create_request.mockRejectedValueOnce({ response: { status: 409 } }).mockResolvedValueOnce({ data: { document: { source_hash: 'version-saved' } } });
-    get_request.mockResolvedValue({ data: { document: { source_hash: 'version-reviewed' } } });
+    create_request.mockRejectedValueOnce({ response: { status: 409 } }).mockResolvedValueOnce({ data: { document: sourceMetadata('version-saved') } });
+    get_request.mockResolvedValue({ data: { document: sourceMetadata('version-reviewed') } });
     open();
     await selectFile();
     await wrapper.get('[data-testid="shared-binary-save"]').trigger('click');await flushPromises();
@@ -85,6 +89,30 @@ describe('ProposalSharedBinary', () => {
     expect([firstBody.get('source_hash'), nextBody.get('source_hash')]).toEqual(['version-opened', 'version-reviewed']);
     expect(nextBody.get('file')).toBe(firstBody.get('file'));
     expect(wrapper.get('[role="status"]').text()).toBe('Borrador guardado. Revisa el nuevo paquete para hacerlo vigente.');
+    expect(wrapper.emitted('updated')).toEqual([
+      [sourceMetadata('version-reviewed')], [sourceMetadata('version-saved')],
+    ]);
+  });
+
+  // Falla si una consulta fallida de la versión actual borra el archivo o adelanta la huella del reintento.
+  it('retains the attachment when the current revision cannot be loaded', async () => {
+    create_request.mockRejectedValue({ response: { status: 409 } });
+    get_request.mockRejectedValue({ response: { status: 503 } });
+    open();
+    await selectFile();
+    await wrapper.get('[data-testid="shared-binary-save"]').trigger('click');
+    await flushPromises();
+
+    await wrapper.get('[data-testid="shared-binary-review"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('No se pudo consultar la versión actual. Conservamos tu archivo.');
+    expect(wrapper.get('[data-testid="shared-binary-save"]').element.disabled).toBe(false);
+    expect(wrapper.emitted('updated')).toBeUndefined();
+    await wrapper.get('[data-testid="shared-binary-save"]').trigger('click');
+    await flushPromises();
+    expect(create_request.mock.calls.map(([, body]) => body.get('source_hash'))).toEqual(['version-opened', 'version-opened']);
+    expect(create_request.mock.calls[1][1].get('file')).toBe(create_request.mock.calls[0][1].get('file'));
   });
 
 });

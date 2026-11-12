@@ -1,0 +1,16 @@
+{
+  "id": "admin-procurement-settings-sync",
+  "name": "Admin Procurement Synchronization Settings",
+  "module": "procurement",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Staff requests public synchronization and configures Bogotá schedules, lookback, automatic updates and global email activation. Invalid settings and failures are explicit.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

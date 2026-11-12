@@ -38,13 +38,12 @@ def test_historical_annex_keeps_its_descriptive_title(admin_client, reviewed_pro
     annex = ProposalDocument.objects.create(proposal=reviewed_proposal,
         document_type='legal_annex', title='Anexo descriptivo conservado')
     annex.file.save('annex.pdf', ContentFile(b'%PDF-1.4 historical annex'))
-    confirm(reviewed_proposal, approval_client, admin_user)
+    confirm(reviewed_proposal, approval_client, admin_user, selected_document_ids=[annex.pk])
     proposal = load_proposal(reviewed_proposal.pk)
     binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
     file_id = binding.current_file_id
     document_id = binding.document_id
-    # The base branch retires annexes by archiving their source. The PA-216
-    # checkbox flow is verified separately on its integrated delivery cut.
+    # Retiring a selected annex preserves its shared title and approved bytes.
     annex.is_archived = True
     annex.save(update_fields=['is_archived'])
 
@@ -207,7 +206,7 @@ def test_reconciliation_restores_a_missing_annex_identity(admin_client, reviewed
         proposal=reviewed_proposal, document_type='legal_annex', title='Signed annex',
     )
     annex.file.save('annex.pdf', ContentFile(b'%PDF-1.4 annex'))
-    confirm(reviewed_proposal, approval_client, admin_user)
+    confirm(reviewed_proposal, approval_client, admin_user, selected_document_ids=[annex.pk])
     proposal = load_proposal(reviewed_proposal.pk)
     binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
     contract_document_id = proposal.document_bindings.get(source_key='custom-contract').document_id

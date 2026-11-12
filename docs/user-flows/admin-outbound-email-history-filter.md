@@ -11,3 +11,5 @@
   3. **error:** n/a; los valores pertenecen a catálogos o controles de fecha y no existe una validación editable independiente.
   4. **failure:** la falla de carga se cubre en la frontera del store; esta interacción sólo registra la consulta exitosa con datos.
 - **E2E Spec:** `e2e/admin/admin-client-email-copy-settings.spec.js`
+
+Los siete filtros muestran sus etiquetas, se distribuyen según el ancho real y dejan Limpiar y Aplicar filtros en una fila propia. La validación incluye móvil, tableta vertical, tableta horizontal, escritorio y monitor grande.

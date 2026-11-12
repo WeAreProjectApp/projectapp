@@ -633,6 +633,43 @@ async function visibleIncomeIds(page) {
     rows.map((row) => Number(row.getAttribute('data-testid').replace('accounting-row-', ''))));
 }
 
+const LONG_GROUPED_INCOME = incomeRow({
+  client: 5,
+  client_name: 'Cliente QA',
+  project: 91,
+  project_name: 'QA PA-225 Proyecto con nombre largo y espacios',
+  concept: 'QA PA-225 Referencia comercial que necesita ancho de lectura',
+});
+
+async function expectReadableGroupedIncome(page, hasProjectHeader) {
+  const row = page.getByTestId('accounting-row-1');
+  await expect(row).toContainText(LONG_GROUPED_INCOME.concept);
+  await expect(row).toContainText(LONG_GROUPED_INCOME.project_name);
+  const action = page.getByTestId('income-actions-1');
+  const actionBox = await action.boundingBox();
+  expect(actionBox.width).toBeGreaterThanOrEqual(44);
+  if (hasProjectHeader) {
+    const conceptHeader = page.getByRole('columnheader', { name: 'Concepto', exact: true });
+    const projectHeader = page.getByRole('columnheader', { name: 'Proyecto', exact: true });
+    const [concept, project, conceptLabel, projectLabel] = await Promise.all([
+      conceptHeader.boundingBox(), projectHeader.boundingBox(),
+      conceptHeader.getByText('Concepto', { exact: true }).boundingBox(),
+      projectHeader.getByText('Proyecto', { exact: true }).boundingBox(),
+    ]);
+    expect(concept.width).toBeGreaterThan(conceptLabel.width + 20);
+    expect(project.width).toBeGreaterThan(projectLabel.width + 20);
+    expect(concept.x + concept.width).toBeLessThanOrEqual(project.x + 1);
+  }
+  expect(await page.evaluate(() => Math.max(
+    document.documentElement.scrollWidth, document.body.scrollWidth,
+  ) <= document.documentElement.clientWidth + 1)).toBe(true);
+  await action.click();
+  await expect(page.getByTestId('income-actions-modal').getByTestId('income-action-edit-1'))
+    .toHaveCount(1);
+  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await expect(page.getByTestId('income-actions-modal')).toHaveCount(0);
+}
+
 async function openIncomeMute(page, incomeId = 1) {
   await page.getByTestId(`income-actions-${incomeId}`).click();
   await page.getByTestId(`income-action-toggle-mute-${incomeId}`).click();
@@ -833,6 +870,27 @@ test.describe('Admin Accounting Incomes CRUD', () => {
       userAuth: { id: 9001, role: 'admin', is_staff: true },
     });
   });
+
+  for (const viewMode of ['classic', 'grouped']) {
+    test(`identifies an unassigned project in the ${viewMode} income view`, {
+      tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await mockApi(page, buildHandler({
+        rows: [incomeRow({ project: null, project_name: null })],
+        calls: [],
+        incomeViewMode: viewMode,
+      }));
+      await navigateToIncomesFromPanel(page);
+
+      await expect(page.getByTestId('income-no-project-1').filter({ visible: true }))
+        .toHaveText('Sin proyecto');
+      await expect(page.getByTestId('income-project-space-1')).toHaveCount(0);
+      await page.getByTestId('income-open-1').filter({ visible: true }).click();
+
+      await expect(page.getByTestId('income-detail-project')).toContainText('Proyecto: Sin proyecto');
+    });
+  }
 
   test('renders the mocked income rows', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
@@ -2282,7 +2340,7 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
   for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
     test(`linking an existing project contract unlocks its collection preview (${profile})`, {
       tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
-    }, async ({ page }) => {
+    }, async ({ page }, testInfo) => {
       await page.setViewportSize(viewportUse(profile).viewport);
       const calls = [];
       const project = { id: 10, name: 'Litigio' };
@@ -2315,7 +2373,11 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
       await page.getByTestId('income-actions-1').click();
       await page.getByTestId('income-action-generate-collection-1').click();
       await page.getByTestId('billing-nature').selectOption('contract');
-      await page.getByTestId('billing-link-contract-open').click();
+      const linkAction = page.getByRole('button', { name: 'Vincular contrato existente', exact: true });
+      await expect(linkAction).toHaveAttribute('aria-expanded', 'false');
+      await linkAction.click();
+      await expect(linkAction).toHaveAttribute('aria-expanded', 'true');
+      await page.screenshot({ path: testInfo.outputPath('collection-contract.png'), fullPage: true });
       const search = page.getByRole('combobox', { name: 'Contrato existente del proyecto' });
       await search.click();
       const options = page.getByRole('listbox', { name: 'Documentos del proyecto' });
@@ -3097,6 +3159,33 @@ test.describe('Admin Accounting Incomes — vista agrupada por cliente', () => {
     await action.click();
     await expect(page.getByTestId('income-actions-modal')).toBeVisible();
   });
+
+  for (const { alias, hasProjectHeader } of [
+    { alias: 'compact', hasProjectHeader: false },
+    { alias: 'portrait', hasProjectHeader: false },
+    { alias: 'landscape', hasProjectHeader: false },
+    { alias: 'desktop', hasProjectHeader: true },
+    { alias: 'wide', hasProjectHeader: true },
+  ]) {
+    test.describe(`grouped long names at ${alias}`, () => {
+      test.use(viewportUse(alias));
+
+      test('keeps Concepto legible across themes (PA-242)', {
+        tag: [...ADMIN_ACCOUNTING_INCOME_CLIENT, '@role:admin', '@outcome:success', `@viewport:${alias}`],
+      }, async ({ page }) => {
+        // quality: allow-duplicate (per-viewport contract: grouped income readability at ${alias})
+        // Catches a narrow Concepto track, overlapping headers, or inaccessible row actions.
+        await mockApi(page, buildHandler({
+          rows: [LONG_GROUPED_INCOME], calls: [], incomeViewMode: 'grouped',
+        }));
+        await navigateToIncomesFromPanel(page);
+        await expectReadableGroupedIncome(page, hasProjectHeader);
+        await page.getByRole('button', { name: 'Cambiar a modo oscuro' }).click();
+        await expect(page.getByRole('button', { name: 'Cambiar a modo claro' })).toHaveCount(1);
+        await expectReadableGroupedIncome(page, hasProjectHeader);
+      });
+    });
+  }
 
   test('the in-page toggle is session-only: classic appears, nothing persists', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CLIENT, '@role:admin', '@outcome:success'],

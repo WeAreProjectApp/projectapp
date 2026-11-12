@@ -1,0 +1,29 @@
+{
+  "createdAt": "2026-11-06T14:36:17.352536+00:00",
+  "baselineSha": "b01448a2d01a50dfb712f18c14cbc348b875621a",
+  "runtimeReviewSha": "0c52d09c72c73e8bd02cdb4b54c707e92b86ebc7",
+  "sourcePages": 106,
+  "matrixRows": 2385,
+  "screenshotsRetained": 2393,
+  "curatedScreenshots": 27,
+  "statuses": {
+    "no-solid-text-finding": 840,
+    "redirect": 438,
+    "blocked": 192,
+    "contrast-observation": 903,
+    "background-review-required": 12
+  },
+  "perPhase": {
+    "after": 808,
+    "before": 1577
+  },
+  "finalChromeQA": "pending-DevQA",
+  "automatedTests": "CI only",
+  "notes": [
+    "Raw before measurements use an immutable copy of the initial main SHA.",
+    "After captures are intermediate observations during implementation, not approval of the final SHA.",
+    "The interrupted broad sweep and missing captures remain pending in coverage.csv.",
+    "Gradient/image backgrounds and transient rendering require review; raw counterexamples are retained.",
+    "Complete raw reports/captures remain on the shared host; curated evidence is versioned."
+  ]
+}

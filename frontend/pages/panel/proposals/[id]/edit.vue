@@ -23,7 +23,7 @@
       :proposal="approvalProposal || {}"
       :accept-proposal="approvalAccept"
       @close="approvalProposal = null"
-      @completed="approvalCompleted"
+      @completed="onApprovalCompleted"
     />
     <ContractParamsModal
       :visible="showContractModal"
@@ -363,18 +363,18 @@
     </BaseModal>
 
     <BaseModal v-model="isPreviewOpen" kind="workspace" padding="none">
-      <div class="flex flex-col h-[85vh]">
-        <div class="flex items-center justify-between gap-4 p-4 border-b border-input-border">
-          <div>
+      <div class="flex min-w-0 flex-col h-[85vh]">
+        <div class="flex min-w-0 shrink-0 flex-col gap-3 p-4 border-b border-input-border panel-landscape:flex-row panel-landscape:items-center panel-landscape:justify-between" data-testid="edit-email-preview-header">
+          <div class="min-w-0">
             <h3 class="text-base font-medium text-text-default">Vista previa del correo</h3>
             <p class="text-xs text-text-muted mt-0.5">
               Render real usando los datos guardados de la propuesta + los cambios actuales de la sección de configuración de correo.
             </p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="grid min-w-0 grid-cols-2 gap-2 panel-portrait:flex panel-portrait:flex-wrap panel-portrait:items-center panel-landscape:shrink-0">
             <select
               v-model="previewTemplateKey"
-              class="px-3 py-2 border border-input-border bg-input-bg text-input-text rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
+              class="col-span-2 w-full min-w-0 max-w-full px-3 py-2 border border-input-border bg-input-bg text-input-text rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none panel-portrait:w-auto"
               data-testid="edit-email-preview-select"
             >
               <option v-for="tpl in PREVIEWABLE_EMAIL_TEMPLATES" :key="tpl.key" :value="tpl.key">
@@ -390,7 +390,7 @@
             </BaseButton>
           </div>
         </div>
-        <div class="flex-1 overflow-hidden bg-surface-muted">
+        <div class="min-h-0 min-w-0 flex-1 overflow-hidden bg-surface-muted">
           <div v-if="previewLoading" class="flex items-center justify-center h-full text-text-muted text-sm">
             Generando vista previa…
           </div>
@@ -463,6 +463,7 @@
 </template>
 
 <script setup>
+import { toLocalDatetime } from '~/utils/proposalExpiry';
 import DashboardRadarDestination from '~/components/panel/dashboard/DashboardRadarDestination.vue';
 import { normalizeEditorialFeatures, remapEditorialArrayFormats } from '~/utils/editorialMetadata';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
@@ -683,6 +684,17 @@ async function handleStatusChange(newStatus) {
 // Header status select (admin mode): shared confirm + PATCH + notify flow.
 // The store updates currentProposal on success, so no local assignment needed.
 const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
+
+function onApprovalCompleted(result) {
+  approvalCompleted(result);
+  if (!result.draft_client || result.action !== 'confirm') return;
+  const refreshed = clientFormValues();
+  // Only the fields this operation committed get a new baseline. Other tabs
+  // can still hold unsaved work and must keep their existing dirty state.
+  Object.assign(form, refreshed);
+  Object.assign(savedForm.value, refreshed);
+  creatingNewClient.value = false;
+}
 
 const { updatingId: statusUpdatingId, changeStatus } = useProposalStatusChange({
   requestConfirm,
@@ -1064,16 +1076,26 @@ async function syncInvestmentPercentagesFromGeneral() {
   return result.success ? { success: true } : { success: false };
 }
 
+function clientFormValues() {
+  const client = proposal.value.client;
+  // A linked project's owner is authoritative even when a legacy proposal
+  // still carries contact snapshots from its previous client.
+  const linked = Boolean(proposal.value.linked_project && client);
+  return {
+    source_hash: proposal.value.proposal_source_hash,
+    client_id: client?.id ?? null,
+    client_name: linked ? client.name ?? '' : proposal.value.client_name,
+    client_email: client?.is_email_placeholder ? '' : linked ? client.email ?? '' : proposal.value.client_email || '',
+    client_phone: linked ? client.phone ?? '' : proposal.value.client_phone || '',
+    client_company: client?.company ?? '',
+  };
+}
+
 function hydrateFormFromProposal() {
   if (!proposal.value) return;
   Object.assign(form, {
-    source_hash: proposal.value.proposal_source_hash,
+    ...clientFormValues(),
     title: proposal.value.title,
-    client_id: proposal.value.client?.id ?? null,
-    client_name: proposal.value.client_name,
-    client_email: proposal.value.client_email || '',
-    client_phone: proposal.value.client_phone || '',
-    client_company: proposal.value.client?.company || '',
     project_type: proposal.value.project_type || '',
     market_type: proposal.value.market_type || '',
     project_type_custom: proposal.value.project_type_custom || '',
@@ -1085,9 +1107,7 @@ function hydrateFormFromProposal() {
     hosting_discount_nine_month: proposal.value.hosting_discount_nine_month ?? 40,
     hosting_discount_semiannual: proposal.value.hosting_discount_semiannual ?? 20,
     hosting_discount_quarterly: proposal.value.hosting_discount_quarterly ?? 10,
-    expires_at: proposal.value.expires_at
-      ? proposal.value.expires_at.slice(0, 16)
-      : '',
+    expires_at: toLocalDatetime(proposal.value.expires_at),
     reminder_days: proposal.value.reminder_days,
     urgency_reminder_days: proposal.value.urgency_reminder_days ?? 15,
     discount_percent: proposal.value.discount_percent ?? 0,

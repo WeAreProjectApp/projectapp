@@ -82,6 +82,7 @@ class FixPlan:
     params: dict
     closure: list = field(default_factory=list)
     changes: list = field(default_factory=list)
+    dependencies: list = field(default_factory=list)
     blockers: list = field(default_factory=list)
     guards: dict = field(default_factory=dict)
     warnings: list = field(default_factory=list)

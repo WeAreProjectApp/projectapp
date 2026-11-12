@@ -555,8 +555,27 @@ export const useProposalStore = defineStore('proposals', {
           files.forEach((file) => body.append('custom_files[]', file));
         }
         const response = await create_request(`proposals/${id}/approval/${revision ? "revisions/" : ""}`, body);
-        const proposal = response.data.proposal;
-        if (proposal) {
+        const proposal = { ...response.data.proposal };
+        const client = response.data.draft_client;
+        // draft_client is the persisted association; client belongs to the frozen
+        // approval packet and can legitimately describe an earlier revision.
+        if (client && response.data.action !== 'defer') {
+          Object.assign(proposal, {
+            client: {
+              id: client.profile_id,
+              name: client.name ?? '',
+              email: client.email ?? '',
+              phone: client.phone ?? '',
+              company: client.company ?? '',
+              is_email_placeholder: client.is_email_placeholder ?? false,
+            },
+            client_name: client.name ?? '',
+            client_email: client.email ?? '',
+            client_phone: client.phone ?? '',
+          });
+        }
+        if (response.data.source_hash) proposal.proposal_source_hash = response.data.source_hash;
+        if (response.data.proposal) {
           if (this.currentProposal?.id === id) {
             this.currentProposal = { ...this.currentProposal, ...proposal };
           }

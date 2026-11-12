@@ -1,8 +1,10 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, useId } from 'vue'
+import { useI18n } from '#imports'
 import { useMarkdownPreview } from '~/composables/useMarkdownPreview'
 import { oneOf } from '~/components/base/propValidators'
-import { sourceToHtml } from '~/utils/editorialFormat'
+import { escapeHtml, sourceToHtml } from '~/utils/editorialFormat'
+import { documentEditorialPreview } from '~/utils/documentEditorialPreview'
 
 /**
  * Renders document markdown as sanitized HTML. Single owner of the
@@ -29,6 +31,8 @@ const props = defineProps({
 })
 
 const { parseMarkdown } = useMarkdownPreview()
+const { t } = useI18n()
+const headingPrefix = `document-${useId()}`
 
 const purify = ref(null)
 const standardParser = ref(null)
@@ -43,7 +47,8 @@ onMounted(async () => {
 
 const safeHtml = computed(() => {
   if (!props.markdown?.trim() || !purify.value) return ''
-  const extended = props.format === 'markdown_html_v1' || /<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b/i.test(props.markdown)
+  if (props.format === 'plain') return `<p class="md-p">${escapeHtml(props.markdown).replace(/\n/g, '<br>')}</p>`
+  const extended = props.format === 'markdown_html_v1' || /^\[TOC\]\s*$/m.test(props.markdown) || /<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b/i.test(props.markdown)
   let html = extended ? sourceToHtml(props.markdown, 'document', { strict: false }) : props.standardMarkdown
     ? standardParser.value?.parse(props.markdown, { gfm: true }).replace(
       /<(h[1-6]|p|ul|ol|li|blockquote|table|thead|tr|th|td|a|hr|pre)(?=[\s>])/g,
@@ -51,11 +56,10 @@ const safeHtml = computed(() => {
     ) || ''
     : parseMarkdown(props.markdown)
   if (extended) {
-    const host = document.createElement('div'); host.innerHTML = html;
-    host.querySelectorAll('h1,h2,h3,h4,h5,h6,p,ul,ol,li,blockquote,table,thead,tr,th,td,a,hr,pre').forEach((el) => {
-      el.classList.add({ pre: 'md-code-block', a: 'md-link' }[el.localName] || `md-${el.localName}`);
-    });
-    html = host.innerHTML;
+    html = documentEditorialPreview(html, headingPrefix, Object.fromEntries([
+      ...['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].map(kind => [kind, t(`richText.callout${kind}`)]),
+      ['toc', t('richText.toc')], ['emptyToc', t('richText.emptyToc')],
+    ]));
   }
   return purify.value.sanitize(html, { ADD_ATTR: ['target'] })
 })
@@ -97,7 +101,7 @@ const safeHtml = computed(() => {
   line-height: 1.4;
   margin-top: 1rem;
   margin-bottom: 0.4rem;
-  color: #059669;
+  color: #047857;
 }
 .markdown-preview :deep(.md-h4),
 .markdown-preview :deep(.md-h5),
@@ -107,7 +111,7 @@ const safeHtml = computed(() => {
   line-height: 1.4;
   margin-top: 0.85rem;
   margin-bottom: 0.35rem;
-  color: #059669;
+  color: #047857;
 }
 .markdown-preview :deep(.md-p) {
   margin-bottom: 0.75rem;
@@ -181,14 +185,16 @@ const safeHtml = computed(() => {
   margin: 1.25rem 0;
 }
 .markdown-preview :deep(.md-link) {
-  color: #059669;
+  color: #047857;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.markdown-preview :deep(.md-link:hover) { color: #047857; }
+.markdown-preview :deep(.md-link:hover) { color: #065f46; }
 .markdown-preview :deep(strong) { font-weight: 600; }
 .markdown-preview :deep(em) { font-style: italic; }
 .markdown-preview :deep(del) { text-decoration: line-through; color: #6b7280; }
+/* An explicit text color takes precedence over the muted strike style. */
+.markdown-preview :deep(span[style] del) { color: inherit; }
 .markdown-preview :deep(code) {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.85em;
@@ -228,41 +234,41 @@ const safeHtml = computed(() => {
 .markdown-preview :deep(.callout-caution .callout-label) { color: #f43f5e; }
 
 /* Dark mode */
-:global(.dark) .markdown-preview :deep(.md-h1) { color: #6ee7b7; border-bottom-color: #374151; }
-:global(.dark) .markdown-preview :deep(.md-h2) { color: #6ee7b7; }
-:global(.dark) .markdown-preview :deep(.md-h3) { color: #a7f3d0; }
-:global(.dark) .markdown-preview :deep(.md-h4),
-:global(.dark) .markdown-preview :deep(.md-h5),
-:global(.dark) .markdown-preview :deep(.md-h6) { color: #a7f3d0; }
-:global(.dark) .markdown-preview :deep(.md-p),
-:global(.dark) .markdown-preview :deep(.md-ul),
-:global(.dark) .markdown-preview :deep(.md-ol) { color: #d1d5db; }
-:global(.dark) .markdown-preview :deep(.md-ul li),
-:global(.dark) .markdown-preview :deep(.md-ol li) { color: #d1d5db; }
-:global(.dark) .markdown-preview :deep(.md-blockquote) {
+.dark .markdown-preview :deep(.md-h1) { color: #6ee7b7; border-bottom-color: #374151; }
+.dark .markdown-preview :deep(.md-h2) { color: #6ee7b7; }
+.dark .markdown-preview :deep(.md-h3) { color: #a7f3d0; }
+.dark .markdown-preview :deep(.md-h4),
+.dark .markdown-preview :deep(.md-h5),
+.dark .markdown-preview :deep(.md-h6) { color: #a7f3d0; }
+.dark .markdown-preview :deep(.md-p),
+.dark .markdown-preview :deep(.md-ul),
+.dark .markdown-preview :deep(.md-ol) { color: #d1d5db; }
+.dark .markdown-preview :deep(.md-ul li),
+.dark .markdown-preview :deep(.md-ol li) { color: #d1d5db; }
+.dark .markdown-preview :deep(.md-blockquote) {
   background-color: rgba(16, 185, 129, 0.1);
   border-left-color: #10b981;
   color: #9ca3af;
 }
-:global(.dark) .markdown-preview :deep(.md-code-block) { background-color: #1f2937; border-color: #374151; }
-:global(.dark) .markdown-preview :deep(.md-code-block code) { color: #e5e7eb; }
-:global(.dark) .markdown-preview :deep(.md-table th) { background-color: #1f2937; border-color: #374151; color: #d1d5db; }
-:global(.dark) .markdown-preview :deep(.md-table td) { border-color: #374151; color: #9ca3af; }
-:global(.dark) .markdown-preview :deep(.md-table tbody tr:nth-child(even)) { background-color: rgba(31, 41, 55, 0.5); }
-:global(.dark) .markdown-preview :deep(.md-hr) { border-top-color: #374151; }
-:global(.dark) .markdown-preview :deep(.md-link) { color: #6ee7b7; }
-:global(.dark) .markdown-preview :deep(.md-link:hover) { color: #a7f3d0; }
-:global(.dark) .markdown-preview :deep(del) { color: #9ca3af; }
-:global(.dark) .markdown-preview :deep(code) { background-color: #374151; color: #d1d5db; border-color: #4b5563; }
-:global(.dark) .markdown-preview :deep(.callout-note) { background-color: #0d2b24; border-color: #809490; }
-:global(.dark) .markdown-preview :deep(.callout-tip) { background-color: #052e16; border-color: #4ade80; }
-:global(.dark) .markdown-preview :deep(.callout-tip .callout-label) { color: #4ade80; }
-:global(.dark) .markdown-preview :deep(.callout-important) { background-color: #1e1b4b; border-color: #818cf8; }
-:global(.dark) .markdown-preview :deep(.callout-important .callout-label) { color: #818cf8; }
-:global(.dark) .markdown-preview :deep(.callout-warning) { background-color: #1c1400; border-color: #fbbf24; }
-:global(.dark) .markdown-preview :deep(.callout-warning .callout-label) { color: #fbbf24; }
-:global(.dark) .markdown-preview :deep(.callout-caution) { background-color: #200a0e; border-color: #fb7185; }
-:global(.dark) .markdown-preview :deep(.callout-caution .callout-label) { color: #fb7185; }
+.dark .markdown-preview :deep(.md-code-block) { background-color: #1f2937; border-color: #374151; }
+.dark .markdown-preview :deep(.md-code-block code) { color: #e5e7eb; }
+.dark .markdown-preview :deep(.md-table th) { background-color: #1f2937; border-color: #374151; color: #d1d5db; }
+.dark .markdown-preview :deep(.md-table td) { border-color: #374151; color: #9ca3af; }
+.dark .markdown-preview :deep(.md-table tbody tr:nth-child(even)) { background-color: rgba(31, 41, 55, 0.5); }
+.dark .markdown-preview :deep(.md-hr) { border-top-color: #374151; }
+.dark .markdown-preview :deep(.md-link) { color: #6ee7b7; }
+.dark .markdown-preview :deep(.md-link:hover) { color: #a7f3d0; }
+.dark .markdown-preview :deep(del) { color: #9ca3af; }
+.dark .markdown-preview :deep(code) { background-color: #374151; color: #d1d5db; border-color: #4b5563; }
+.dark .markdown-preview :deep(.callout-note) { background-color: #0d2b24; border-color: #809490; }
+.dark .markdown-preview :deep(.callout-tip) { background-color: #052e16; border-color: #4ade80; }
+.dark .markdown-preview :deep(.callout-tip .callout-label) { color: #4ade80; }
+.dark .markdown-preview :deep(.callout-important) { background-color: #1e1b4b; border-color: #818cf8; }
+.dark .markdown-preview :deep(.callout-important .callout-label) { color: #818cf8; }
+.dark .markdown-preview :deep(.callout-warning) { background-color: #1c1400; border-color: #fbbf24; }
+.dark .markdown-preview :deep(.callout-warning .callout-label) { color: #fbbf24; }
+.dark .markdown-preview :deep(.callout-caution) { background-color: #200a0e; border-color: #fb7185; }
+.dark .markdown-preview :deep(.callout-caution .callout-label) { color: #fb7185; }
 
 /* Card thumbnail (gallery mini-preview) */
 .markdown-preview--mini { font-size: 0.65rem; }
@@ -349,19 +355,24 @@ const safeHtml = computed(() => {
 .markdown-preview--professional :deep(.md-table tbody tr:nth-child(even)) {
   background-color: #e6efef;
 }
-.markdown-preview--professional :deep(.md-link) { color: #059669; }
 .markdown-preview--professional :deep(.md-code-block) {
   background-color: #e5e7eb;
   border-color: #d1d5db;
 }
-:global(.dark) .markdown-preview--professional :deep(.md-h1),
-:global(.dark) .markdown-preview--professional :deep(.md-h2),
-:global(.dark) .markdown-preview--professional :deep(.md-h3) { color: #a7f3d0; }
-:global(.dark) .markdown-preview--professional :deep(.md-p),
-:global(.dark) .markdown-preview--professional :deep(.md-ul),
-:global(.dark) .markdown-preview--professional :deep(.md-ol) { color: #d1d5db; }
-:global(.dark) .markdown-preview--professional :deep(.md-blockquote) {
+.dark .markdown-preview--professional :deep(.md-h1),
+.dark .markdown-preview--professional :deep(.md-h2),
+.dark .markdown-preview--professional :deep(.md-h3) { color: #a7f3d0; }
+.dark .markdown-preview--professional :deep(.md-p),
+.dark .markdown-preview--professional :deep(.md-ul),
+.dark .markdown-preview--professional :deep(.md-ol) { color: #d1d5db; }
+.dark .markdown-preview--professional :deep(.md-blockquote) {
   background-color: rgba(250, 243, 224, 0.08);
   color: #e5e7eb;
 }
+/* HTML emitted by Visual puts paragraphs inside header cells. Keep their
+   default text on the cell's palette, including Professional and dark mode. */
+.markdown-preview :deep(.md-table th .md-p) { color: inherit; }
+.markdown-preview--professional :deep(.md-table th .md-p) { color: inherit; }
+:global(.dark) .markdown-preview :deep(.md-table th .md-p),
+:global(.dark) .markdown-preview--professional :deep(.md-table th .md-p) { color: inherit; }
 </style>

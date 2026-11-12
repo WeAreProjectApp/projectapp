@@ -14,6 +14,20 @@ export const VIEW_TYPES = Object.freeze([
 
 export const viewCatalogSections = [
   {
+    id: 'panel-procurement', label: 'Contratación estatal',
+    description: 'Consulta SECOP II y administra alertas y seguimiento interno con análisis externo.',
+    views: [
+      { label: 'Oportunidades SECOP', url: '/panel/procurement', group: 'Contratación estatal',
+        file: 'frontend/pages/panel/procurement/index.vue', reference: 'listado de contratación estatal',
+        notes: 'Procesos y Mis clasificados, búsquedas guardadas con favorito, alertas con destinatarios y frecuencias, entregas con reintento y configuración de horarios Bogotá. Modales de búsqueda, alerta, confirmación y contenido enviado. Exportación Excel, filtros únicos y sincronización manual. MCP propio; el correo y análisis externo no se ejecutan dentro del módulo.',
+        audience: 'admin', viewType: 'list' },
+      { label: 'Detalle de oportunidad SECOP', url: '/panel/procurement/:id', group: 'Contratación estatal',
+        file: 'frontend/pages/panel/procurement/[id].vue', reference: 'seguimiento de una oportunidad de contratación',
+        notes: 'Datos oficiales, fecha de cierre, días restantes y vínculo SECOP. Clasificación personal con notas, descarte con motivo y restauración. Notas del equipo e historial inmutable de decisiones; sin IA interna.',
+        audience: 'admin', viewType: 'detail' },
+    ],
+  },
+  {
     id: 'public-site',
     label: 'Sitio publico',
     description: 'Vistas publicas de marketing, contenido y paginas legales.',
@@ -491,7 +505,7 @@ export const viewCatalogSections = [
         group: 'Propuestas',
         file: 'frontend/pages/panel/proposals/index.vue',
         reference: 'vista listado de propuestas del panel',
-        notes: 'Contratos y Anexos comparten sus recursos con el gestor. Los cambios preparan borradores; los paquetes aprobados se conservan hasta reconfirmar. Aprobar abre una revisión compartida de cliente, proyecto y documentos; permite seleccionar existentes o crear al confirmar, confirmar obligatoriamente antes de aprobar y retomar propuestas históricas pendientes. Los contratos del paquete pueden ser los de la propuesta o varios archivos personalizados, conservando siempre los detalles comercial y técnico. Configuraciones administra las opciones numéricas y las tres preselecciones del contrato de servicio: duración en meses y una lista compartida para ambos preavisos. Los contratos existentes conservan sus valores. Incluye carga, sustitución, eliminación, restauración y previsualización del video de bienvenida por idioma, con su control general de visibilidad.',
+        notes: 'Aprobar permite confirmar el cierre o revisar después sin crear entidades. Los anexos se seleccionan explícitamente y las revisiones recuperan la selección confirmada. Contratos y Anexos comparten sus recursos con el gestor. Los cambios preparan borradores; los paquetes aprobados se conservan hasta reconfirmar. Aprobar abre una revisión compartida de cliente, proyecto y documentos; permite seleccionar existentes o crear al confirmar, aprobar y revisar después sin aprovisionar y retomar propuestas históricas pendientes. Los contratos del paquete pueden ser los de la propuesta o varios archivos personalizados, conservando siempre los detalles comercial y técnico. Configuraciones administra las opciones numéricas y las tres preselecciones del contrato de servicio: duración en meses y una lista compartida para ambos preavisos. Los contratos existentes conservan sus valores. Incluye carga, sustitución, eliminación, restauración y previsualización del video de bienvenida por idioma, con su control general de visibilidad.',
         audience: 'admin',
         viewType: 'list',
       },
@@ -511,7 +525,7 @@ export const viewCatalogSections = [
         group: 'Propuestas',
         file: 'frontend/pages/panel/proposals/[id]/edit.vue',
         reference: 'vista de edicion/detalle de propuesta del panel',
-        notes: 'Aprobar y vincular usan el mismo modal de revisión interna, con resumen comercial de lectura, selección o creación de cliente/proyecto, contratos originales o personalizados múltiples y confirmación obligatoria. Reabrir conserva el vínculo y ofrece el mismo recurso que el gestor, paquete vigente, borrador pendiente e historial descargable. Editor organizado en General, Propuesta, Comunicación, Documentos, Proyecto y Seguimiento, con subpestañas visibles y disponibilidad según el estado. Conserva enlaces anteriores y ediciones pendientes entre grupos. Proyecto > Datos muestra cliente, contactos y proyecto en todos los estados, con guardado independiente; una propuesta vinculada conserva su cliente y permite revisar una reasignación al mismo cliente con motivo, impacto y confirmación, también desde un proyecto eliminado y con decisión de hosting cuando la fase ya debería cobrarse. Comunicación > Correos reúne la firma, funcionalidades y fases del email, con guardado independiente. General muestra módulos de interés y fecha; el equipo incorpora alcance e inversión manualmente. Se retiraron los recargos porcentuales por módulos. Propuesta > Recursos permite cargar, sustituir y quitar el video personalizado que aparece dentro de Vista Ejecutiva y Propuesta Completa. General permite mostrar u ocultar el video de bienvenida para esta propuesta e informa por qué puede no estar disponible. Usa el id interno de la propuesta. Documentos permite cambiar contrato único o producto y servicio en todos los estados. En contratos separados, Servicio aprobado decide si la próxima confirmación incluye sólo producto o también servicio; conserva siempre los anexos activos y la evidencia anterior hasta reconfirmar. Fuera de negociación exige nota, vista previa y confirmación o cancelación. Conserva literalmente personalizados, documentos enviados y firmas; exige los tres plazos del servicio sin completar valores globales. Seguimiento > Historial permite consultar, descargar y restaurar instantáneas permanentes con una nueva confirmación. En la modalidad separada, el anexo comercial conserva producto y pagos; hosting, cobertura, cortesía, precios y renovación se incorporan al contrato de servicio, también personalizado. Un aviso permite regenerarlo si cambian sus condiciones y bloquea su formalización mientras esté obsoleto. Crear y editar contratos usan formularios compactos que se apilan en móvil. Los datos del servicio ofrecen desplegables visuales navegables con teclado, opciones configurables y Personalizar con texto libre editable; al reabrir se conserva la redacción guardada. Si el guardado falla, el modal conserva el borrador y permite corregir o reintentar. Permite copiar en Markdown los contratos y los anexos con el contenido original (el comercial conserva diez capítulos y el técnico sólo stack, modelo de datos y módulos, con orden y numeración propios), visualizar y descargar adjuntos sin salir del editor, descargar contratos y PDF formales sin abrir ventanas y reintentar descargas fallidas, copiar PDF con texto/DOCX/XLSX y preparar un correo con los contratos de la modalidad, adjuntos seleccionables y revisión previa de los archivos exactos. Seguimiento carga Actividad de veinte en veinte con Cargar más y reintento, sin perder notas nuevas; el Historial muestra rango, total y navegación por páginas arriba y abajo, y conserva comparación y descarga de versiones. Seguimiento reúne Actividad, Historial por registro con fecha, autor, valores anteriores y consulta de versiones, y Analítica; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye secciones, detalle técnico y composición del correo.',
+        notes: 'Aprobar y vincular usan el mismo modal de revisión interna, con resumen comercial de lectura, selección o creación de cliente/proyecto, contratos originales o personalizados múltiples y confirmación obligatoria. Reabrir conserva el vínculo y ofrece el mismo recurso que el gestor, paquete vigente, borrador pendiente e historial descargable. Editor organizado en General, Propuesta, Comunicación, Documentos, Proyecto y Seguimiento, con subpestañas visibles y disponibilidad según el estado. Conserva enlaces anteriores y ediciones pendientes entre grupos. Proyecto > Datos muestra cliente, contactos y proyecto en todos los estados, con guardado independiente; una propuesta vinculada conserva su cliente y permite revisar una reasignación al mismo cliente con motivo, impacto y confirmación, también desde un proyecto eliminado y con decisión de hosting cuando la fase ya debería cobrarse. Comunicación > Correos reúne la firma, funcionalidades y fases del email, con guardado independiente. General calcula el vencimiento por días calendario locales, conserva la hora y abre sin cambios artificiales. General muestra módulos de interés y fecha; el equipo incorpora alcance e inversión manualmente. Se retiraron los recargos porcentuales por módulos. Propuesta > Recursos permite cargar, sustituir y quitar el video personalizado que aparece dentro de Vista Ejecutiva y Propuesta Completa. General permite mostrar u ocultar el video de bienvenida para esta propuesta e informa por qué puede no estar disponible. Usa el id interno de la propuesta. Documentos permite cambiar contrato único o producto y servicio en todos los estados. En contratos separados, Servicio aprobado decide si la próxima confirmación incluye sólo producto o también servicio; conserva siempre los anexos activos y la evidencia anterior hasta reconfirmar. Fuera de negociación exige nota, vista previa y confirmación o cancelación. Conserva literalmente personalizados, documentos enviados y firmas; exige los tres plazos del servicio sin completar valores globales. Seguimiento > Historial permite consultar, descargar y restaurar instantáneas permanentes con una nueva confirmación. En la modalidad separada, el anexo comercial conserva producto y pagos; hosting, cobertura, cortesía, precios y renovación se incorporan al contrato de servicio, también personalizado. Un aviso permite regenerarlo si cambian sus condiciones y bloquea su formalización mientras esté obsoleto. Crear y editar contratos usan formularios compactos que se apilan en móvil. Los datos del servicio ofrecen desplegables visuales navegables con teclado, opciones configurables y Personalizar con texto libre editable; al reabrir se conserva la redacción guardada. Si el guardado falla, el modal conserva el borrador y permite corregir o reintentar. Permite copiar en Markdown los contratos y los anexos con el contenido original (el comercial conserva diez capítulos y el técnico sólo stack, modelo de datos y módulos, con orden y numeración propios), visualizar y descargar adjuntos sin salir del editor, descargar contratos y PDF formales sin abrir ventanas y reintentar descargas fallidas, copiar PDF con texto/DOCX/XLSX y preparar un correo con los contratos de la modalidad, adjuntos seleccionables y revisión previa de los archivos exactos. Seguimiento carga Actividad de veinte en veinte con Cargar más y reintento, sin perder notas nuevas; el Historial muestra rango, total y navegación por páginas arriba y abajo, y conserva comparación y descarga de versiones. Seguimiento reúne Actividad, Historial por registro con fecha, autor, valores anteriores y consulta de versiones, y Analítica; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye secciones, detalle técnico y composición del correo. Al confirmar la aprobación y al recargar refleja el cliente real del proyecto vinculado, sin perder borradores de otras áreas.',
         audience: 'admin',
         viewType: 'edit',
       },
@@ -533,6 +547,7 @@ export const viewCatalogSections = [
         reference: 'catálogo visual de tokens semánticos y componentes base (BaseInput, BaseButton, BaseModal, etc.) en light y dark',
         audience: 'admin',
         viewType: 'config',
+        notes: 'El selector de la guía y el control general aplican el mismo tema claro/oscuro; la elección se conserva al recargar.',
       },
       {
         label: 'Plantillas de email de propuestas',
@@ -549,9 +564,10 @@ export const viewCatalogSections = [
         url: '/panel/proposals/email-deliverability',
         group: 'Propuestas',
         file: 'frontend/pages/panel/proposals/email-deliverability.vue',
-        reference: 'vista de entregabilidad de email de propuestas',
+        reference: 'compatibilidad del acceso anterior al estado de emails',
+        notes: 'Redirige a /panel/emails?tab=status; las estadísticas y los fallos recientes se consultan en Comunicaciones > Emails.',
         audience: 'admin',
-        viewType: 'config',
+        viewType: 'redirect',
       },
       {
         label: 'Defaults de propuestas',
@@ -571,7 +587,7 @@ export const viewCatalogSections = [
         reference: 'vista de clientes del panel',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Ficha compartida con facturación: nombre, empresa, correo, contacto, dirección y tipo de identificación NIT o C.C. Los datos se completan en nuevas cuentas de cobro y se pueden actualizar desde su preparación. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y exige confirmar cliente, proyecto y contratos antes de aprobar. Datos sin proyecto permite consultar y descargar información conservada de proyectos eliminados; para trasladarla a un proyecto vigente del mismo cliente se usa Asignar registros sin proyecto en ese proyecto.',
+        notes: 'La búsqueda por nombre completo publica lista y contadores coherentes; sin coincidencias muestra vacío y ante fallo permite reintentar. Ficha compartida con facturación: nombre, empresa, correo, contacto, dirección y tipo de identificación NIT o C.C. Los datos se completan en nuevas cuentas de cobro y se pueden actualizar desde su preparación. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y permite confirmar cliente, proyecto y contratos o aprobar y revisar después sin crear entidades. Los anexos se seleccionan explícitamente. Datos sin proyecto permite consultar y descargar información conservada de proyectos eliminados; para trasladarla a un proyecto vigente del mismo cliente se usa Asignar registros sin proyecto en ese proyecto.',
       },
       {
         label: 'Blog del panel',
@@ -714,7 +730,7 @@ export const viewCatalogSections = [
         reference: 'vista principal del gestor documental',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Contratos y Anexos de cada proyecto comparten identidad con las propuestas y conservan sus revisiones aprobadas. ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Mantiene las tres plantillas contractuales en Contratos con contenido y ubicación de solo lectura y rechaza carpetas duplicadas en el mismo nivel. Las notas, borradores de correo y WhatsApp admiten formato y copia al canal correspondiente.',
+        notes: 'Contratos y Anexos de cada proyecto comparten identidad con las propuestas y conservan sus revisiones aprobadas. ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Mantiene las tres plantillas contractuales en Contratos con contenido y ubicación de solo lectura y rechaza carpetas duplicadas en el mismo nivel. Las notas, borradores de correo y WhatsApp admiten formato y copia al canal correspondiente. Nueva carpeta abre el formulario directo con destino visible y propone la carpeta abierta o la raíz del proyecto. Gestionar carpetas permite buscar destinos por fragmento y reconocer su rama en los resultados y el árbol.',
       },
       {
         label: 'Crear documento',
@@ -724,7 +740,7 @@ export const viewCatalogSections = [
         reference: 'vista de creación de documento',
         audience: 'admin',
         viewType: 'create',
-        notes: 'Crea documentos desde Markdown o PDF de hasta 25 MiB. El PDF conserva título, notas, cliente, proyecto y carpeta, se ve como archivo original y no se edita como texto. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar.',
+        notes: 'El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Crea documentos desde Markdown o PDF de hasta 25 MiB. El PDF conserva título, notas, cliente, proyecto y carpeta, se ve como archivo original y no se edita como texto. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar.',
       },
       {
         label: 'Editar documento',
@@ -734,7 +750,7 @@ export const viewCatalogSections = [
         reference: 'vista de edición de documento',
         audience: 'admin',
         viewType: 'edit',
-        notes: 'Los PDF subidos conservan identificación editable, descarga original y reemplazo versionado con historial. El reemplazo se bloquea cuando sustenta evidencia firmada o publicada. La búsqueda del gestor incluye únicamente texto extraído del PDF vigente, sin OCR. Los documentos de cierre abren la fuente estructurada compartida o permiten sustituir adjuntos habilitados en borrador. El paquete vigente y su historial se conservan hasta confirmar otra versión; los conflictos conservan el archivo elegido. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; los tres espejos contractuales se abren en solo lectura con versión, sincronización, PDF y Markdown en vivo; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Notas y borradores comparten el editor; WhatsApp ofrece sus formatos nativos.',
+        notes: 'El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Los PDF subidos conservan identificación editable, descarga original y reemplazo versionado con historial. El reemplazo se bloquea cuando sustenta evidencia firmada o publicada. La búsqueda del gestor incluye únicamente texto extraído del PDF vigente, sin OCR. Los documentos de cierre abren la fuente estructurada compartida o permiten sustituir adjuntos habilitados en borrador. El paquete vigente y su historial se conservan hasta confirmar otra versión; los conflictos conservan el archivo elegido. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; los tres espejos contractuales se abren en solo lectura con versión, sincronización, PDF y Markdown en vivo; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Notas y borradores comparten el editor; WhatsApp ofrece sus formatos nativos.',
       },
       {
         label: 'Estados de documentos',
@@ -770,7 +786,7 @@ export const viewCatalogSections = [
         group: 'Comunicaciones',
         file: 'frontend/pages/panel/secure-links/index.vue',
         reference: 'enlaces de un solo uso para compartir información sensible',
-        notes: 'Formulario inicial de Mensaje confidencial, dropdown con nombre condicional para Personalizado, Más detalles y Configuración plegables; URL automática sin exigir cliente ni proyecto. Estados Listo para compartir, Enviado (marca manual), Abierto, Vencido y Revocado, con conteos e historial. Los tres puntos al inicio de cada fila abren un modal con detalle, editar contenido, copiar, marcar enviado, revocar o reactivar y eliminar con confirmación; el detalle renombra el título en línea y tiene una sola opción de editar; reactivar limpia la marca de envío y conserva el historial. Actualizar datos recarga la tabla. Recibidos reúne lo que envían los clientes; ?link=<id> abre el detalle. Carpetas propias y subcarpetas separadas de raíces automáticas de proyecto; navegación por proyecto o cliente, búsqueda y estados dentro del subárbol, movimiento sin reasignación y archivo reversible sin revocar enlaces.',
+        notes: 'Formulario inicial de Mensaje confidencial, dropdown con nombre condicional para Personalizado, campos opcionales y configuración visibles desde el inicio, sin Asunto; URL automática sin exigir cliente ni proyecto. Estados Listo para compartir, Enviado (marca manual), Abierto, Vencido y Revocado, con conteos e historial. Los tres puntos al inicio de cada fila abren un modal con detalle, editar contenido, copiar, marcar enviado, revocar o reactivar y eliminar con confirmación; el detalle renombra el título en línea y tiene una sola opción de editar; reactivar limpia la marca de envío y conserva el historial. Actualizar datos recarga la tabla. Recibidos reúne lo que envían los clientes; ?link=<id> abre el detalle. Carpetas propias y subcarpetas separadas de raíces automáticas de proyecto; navegación por proyecto o cliente, búsqueda y estados dentro del subárbol, movimiento sin reasignación y archivo reversible sin revocar enlaces.',
         audience: 'admin',
         viewType: 'list',
       },
@@ -779,10 +795,10 @@ export const viewCatalogSections = [
         url: '/panel/emails',
         group: 'Comunicaciones',
         file: 'frontend/pages/panel/emails/index.vue',
-        reference: 'vista de envío de emails con branding del panel, varios destinatarios y copias',
+        reference: 'centro de emails: redacción, historial, estado y configuración',
         audience: 'admin',
         viewType: 'config',
-        notes: 'Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. La vista previa y el envío usan el mismo contenido.',
+        notes: 'Reúne Redactar, Historial, Estado de los emails y Configuración. El historial filtra destinatario, familia, estado, adjuntos y fechas; permite reintentar un destinatario fallido con su evidencia exacta o desde el origen contable disponible, y explica los bloqueos. Estado reúne estadísticas, tendencia y fallos recientes. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. La vista previa y el envío usan el mismo contenido.',
       },
       {
         label: 'Diagnosticos de aplicaciones',
@@ -832,6 +848,16 @@ export const viewCatalogSections = [
         viewType: 'list',
       },
       {
+        label: 'Accesos',
+        url: '/panel/access',
+        group: 'Plataforma',
+        file: 'frontend/pages/panel/access/index.vue',
+        reference: 'cuentas habilitadas de clientes y equipo con historial de acceso',
+        audience: 'admin',
+        viewType: 'config',
+        notes: 'Búsqueda por nombre, correo o empresa; filtros combinables, vistas guardadas, conteos y dropdowns. Crear cliente sin proyecto ni acceso; habilitar, bloquear o desvincular Google con confirmación. El equipo administra clientes y sólo los superusuarios administran equipo. Actividad paginada por cuenta sin códigos ni tokens.',
+      },
+      {
         label: 'Proyectos (Plataforma)',
         url: '/panel/projects',
         group: 'Plataforma',
@@ -839,7 +865,7 @@ export const viewCatalogSections = [
         reference: 'modulo de proyectos: acciones por tres puntos al inicio, ciclo real, filtros, creacion, edicion, historico, accesos, marca, eliminacion de proyectos vacios y eliminacion selectiva exclusiva de superusuarios con DELETE, interruptores apagados y dependencias explícitas',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Cambiar cliente muestra el impacto antes de confirmar. Si la historia financiera, las entregas o los tickets bloquean el cambio, muestra los motivos y orienta a crear un proyecto nuevo para el cliente destino; oculta la elección de Mover o Desvincular y deshabilita la confirmación. Desde Eliminar → Cambiar estado, un superusuario elige las categorías a eliminar, apagadas por defecto, y confirma DELETE. Lo conservado queda sin proyecto bajo el cliente; las dependencias se eligen manualmente y las evidencias protegidas bloquean. Asignar registros sin proyecto ofrece además, sin marcar, los ingresos, documentos e hilos conservados del cliente con su proyecto de origen y posibles duplicados; trasladarlos queda auditado y se puede deshacer.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Listado y detalle abren el espacio del mismo proyecto por ID en una pestaña nueva, también desde Hosting, Ingresos y Cuentas de cobro. Cada proyecto vigente tiene espacio; las referencias sin proyecto no ofrecen enlace. Cambiar cliente muestra el impacto antes de confirmar. Si la historia financiera, las entregas o los tickets bloquean el cambio, muestra los motivos y orienta a crear un proyecto nuevo para el cliente destino; oculta la elección de Mover o Desvincular y deshabilita la confirmación. Desde el encabezado de Eliminar, un superusuario elige las categorías a eliminar, apagadas por defecto, y confirma DELETE. Lo conservado queda sin proyecto bajo el cliente; las dependencias se eligen manualmente y el historial de facturación se conserva siempre y no puede seleccionarse; borrar una fuente protegida bloquea. Asignar registros sin proyecto ofrece además, sin marcar, los ingresos, documentos e hilos conservados del cliente con su proyecto de origen y posibles duplicados; trasladarlos queda auditado y se puede deshacer.',
       },
       {
         label: 'Ideas del proyecto',
@@ -914,7 +940,7 @@ export const viewCatalogSections = [
         reference: 'vista de ingresos esperados y liquidos del modulo contable con estado de cobro por ingreso',
         audience: 'admin',
         viewType: 'list',
-        notes: 'El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Liquidar permite registrar un abono individual o colectivo sin cuenta emitida. La selección muestra el valor total y el saldo pendiente por separado; el reparto llena los más antiguos, permite ajustes manuales y conserva un único movimiento del bolsillo. Uno o varios ingresos se liquidan en el mismo modal con Participaciones globales, Diferencia que se abre al recibir menos y IVA configurable por ingreso desde el encabezado: interruptor Sin IVA, porcentaje, captura antes de IVA o total incluido y desglose de base, impuesto y total; guarda en el original y respeta bloqueos por pagos, deducciones o cuentas emitidas. Las deducciones son proporcionales y el saldo puede conservarse pendiente o reprogramarse. Cuando el ingreso queda pagado sin cuenta emitida, muestra Cuenta pendiente de emitir y permite crear la cuenta o completar su borrador; el equipo recibe un aviso interno único, consultable y reintentable desde Historial. La cuenta posterior conserva el importe completo y se emite pagada. La confirmación opcional del pago al cliente conserva el correo de su cuenta emitida; su revisión ocurre dentro del mismo modal. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Liquidar permite registrar un abono individual o colectivo sin cuenta emitida. La selección muestra el valor total y el saldo pendiente por separado; el reparto llena los más antiguos, permite ajustes manuales y conserva un único movimiento del bolsillo. Uno o varios ingresos se liquidan en el mismo modal con Participaciones globales, Diferencia que se abre al recibir menos y IVA configurable por ingreso desde el encabezado: interruptor Sin IVA, porcentaje, captura antes de IVA o total incluido y desglose de base, impuesto y total; guarda en el original y respeta bloqueos por pagos, deducciones o cuentas emitidas. Las deducciones son proporcionales y el saldo puede conservarse pendiente o reprogramarse. Cuando el ingreso queda pagado sin cuenta emitida, muestra Cuenta pendiente de emitir y permite crear la cuenta o completar su borrador; el equipo recibe un aviso interno único, consultable y reintentable desde Historial. La cuenta posterior conserva el importe completo y se emite pagada. La confirmación opcional del pago al cliente conserva el correo de su cuenta emitida; su revisión ocurre dentro del mismo modal. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Participaciones muestra los importes de cada socio y el remanente positivo de ProjectApp incluso contraída, con centavos cuando corresponda.',
       },
       {
         label: 'Contabilidad — Gastos',
@@ -934,7 +960,7 @@ export const viewCatalogSections = [
         reference: 'vista de hostings activos por cliente del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa.',
+        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa.',
       },
       {
         label: 'Contabilidad — Bolsillo',
@@ -994,7 +1020,7 @@ export const viewCatalogSections = [
         reference: 'centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite buscar y seleccionar un contrato existente del proyecto o de sus propuestas sin copiar el documento: coincidencias sin distinguir mayúsculas, tildes ni guiones bajos, resaltado, contratos y otrosíes primero y todas las versiones con fecha y carpeta o propuesta. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. Las cuentas de proyecto permiten dejar explícitamente el tipo o vínculo pendiente mediante interruptor: registra autor y fecha, muestra aviso amarillo en fila y detalle, ofrece filtro con conteo y alerta en el radar, y se completa después con razón y versión. El pendiente es interno y no bloquea emisión, envío ni liquidación por ese vínculo; históricos sin asociación conservan su criterio. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir. Marcar pagada una cuenta de un ingreso esperado abre el mismo modal unificado de liquidación con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión de la confirmación de pago al cliente.',
+        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite buscar y seleccionar un contrato existente del proyecto o de sus propuestas sin copiar el documento: coincidencias sin distinguir mayúsculas, tildes ni guiones bajos, resaltado, contratos y otrosíes primero y todas las versiones con fecha y carpeta o propuesta. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. Las cuentas de proyecto permiten dejar explícitamente el tipo o vínculo pendiente mediante interruptor: registra autor y fecha, muestra aviso amarillo en fila y detalle, ofrece filtro con conteo y alerta en el radar, y se completa después con razón y versión. El pendiente es interno y no bloquea emisión, envío ni liquidación por ese vínculo; históricos sin asociación conservan su criterio. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir. Marcar pagada una cuenta de un ingreso esperado abre el mismo modal unificado de liquidación con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión de la confirmación de pago al cliente.',
       },
       {
         label: 'Contabilidad — Asociación de cuenta',
@@ -1014,7 +1040,7 @@ export const viewCatalogSections = [
         reference: 'inventario, previsualización y asociación del único hosting del proyecto y sus evidencias',
         audience: 'admin',
         viewType: 'edit',
-        notes: 'Sólo superusuarios mediante sesión y CSRF. Relaciona orígenes verificados y elige el operativo sin borrar historia ni registrar pagos o ciclos nuevos.',
+        notes: 'Sólo superusuarios mediante sesión y CSRF. Explica referencias pendientes y contradictorias, presenta la decisión en un resumen legible y ofrece volver a la cuenta con el formulario conservado. Separa la asociación de las cuentas históricas, equivalencias y trazabilidad sin registrar dinero ni reemplazar PDF.',
       },
       {
         label: 'Contabilidad — Historial',
@@ -1037,6 +1063,17 @@ export const viewCatalogSections = [
         notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
     ],
+  },
+  {
+    id: 'panel-data-integrity',
+    label: 'Integridad de datos',
+    views: [{
+      label: 'Integridad de datos', url: '/panel/data-integrity', group: 'Sistema',
+      file: 'frontend/pages/panel/data-integrity.vue',
+      reference: 'revisión transversal de inconsistencias y correcciones auditadas',
+      audience: 'admin', viewType: 'list',
+      notes: 'Administradores, incluida integridad financiera: revisiones diarias y a demanda, hallazgos pendientes/aceptados/resueltos, vista previa de lotes, motivo, historial y deshacer condicionado. No modifica la autorización del resto de Contabilidad.',
+    }],
   },
   {
     id: 'panel-mcps',
@@ -1216,7 +1253,7 @@ export const viewCatalogSections = [
         reference: 'perfil de plataforma y Ayuda compartida con videos y recorridos',
         audience: 'client',
         viewType: 'config',
-        notes: 'Ayuda está disponible en el menú de clientes y abre los videos a petición, también después de completar un recorrido. Indica el idioma español y los subtítulos en ambas interfaces; los clips de Appi y voz sólo aparecen con su capacidad disponible.',
+        notes: 'Ayuda está disponible en el menú de clientes y abre los videos a petición, también después de completar un recorrido. Indica el idioma español y los subtítulos en ambas interfaces; los clips de Appi y voz sólo aparecen con su capacidad disponible. La navegación permite activar modo claro u oscuro en escritorio y móvil y conserva la elección al recargar. Personalizar apariencia permite cambiar el color y la portada o quitar la imagen guardada.',
       },
       {
         label: 'Proyectos',
@@ -1234,7 +1271,7 @@ export const viewCatalogSections = [
         group: 'Proyectos',
         file: 'frontend/pages/platform/projects/[id]/index.vue',
         reference: 'vista de detalle de proyecto de plataforma',
-        notes: 'Appi permite consultar estado y salud del proyecto, revisar fuentes y seguir guías de uso; la consulta no modifica el proyecto ni registra reportes.',
+        notes: 'El retorno administrativo a Ficha comercial conserva idioma, proyecto resaltado y pestaña nueva. Appi permite consultar estado y salud del proyecto, revisar fuentes y seguir guías de uso; la consulta no modifica el proyecto ni registra reportes. Acceso denegado o proyecto no disponible muestra una explicación sin datos ni navegación interna. La vuelta a la ficha comercial está reservada a administradores.',
         audience: 'client',
         viewType: 'detail',
       },

@@ -145,7 +145,10 @@ test.describe('Panel project billing context', () => {
     await page.getByLabel('Origen contable operativo').selectOption('30');
     await page.getByLabel('Razón').first().fill('Se verificó el origen operativo');
     await page.getByRole('button', { name: 'Previsualizar asociación' }).click();
-    await expect(page.getByTestId('hosting-reconciliation-preview').getByText('"decision": "ready"')).toHaveCount(1);
+    const decision = page.getByTestId('hosting-reconciliation-preview').getByTestId('hosting-decision-summary');
+    await expect(decision).toContainText('Subscription');
+    await expect(decision).toContainText('#90 · semiannual');
+    await expect(decision).toContainText('#30 · aurora.test');
     await page.getByRole('button', { name: 'Aplicar conciliación' }).click();
     await expect(page.getByRole('heading', { name: 'Conciliación del hosting del proyecto', exact: true })).toHaveText('Conciliación del hosting del proyecto');
     const apply = calls.find(call => call.method === 'POST' && call.preview === null);
@@ -164,7 +167,9 @@ test.describe('Panel project billing context', () => {
     await page.getByLabel('Origen contable operativo').selectOption('30');
     await page.getByLabel('Razón').first().fill('Solo revisar asociación');
     await page.getByRole('button', { name: 'Previsualizar asociación' }).click();
-    await expect(page.getByTestId('hosting-reconciliation-preview').getByText('"decision": "ready"')).toHaveCount(1);
+    const decision = page.getByTestId('hosting-reconciliation-preview').getByTestId('hosting-decision-summary');
+    await expect(decision).toContainText('Accounting records to link');
+    await expect(decision).toContainText('#30 · aurora.test');
     const posts = calls.filter(call => call.method === 'POST');
     expect(posts).toHaveLength(1);
     expect(posts[0]).toMatchObject({ apiPath: 'admin/billing-context/projects/7/hosting/', preview: '1' });
@@ -185,7 +190,7 @@ test.describe('Panel project billing context', () => {
     await expect(page.getByRole('alert')).toHaveText('El inventario cambió; actualiza antes de aplicar.');
     await page.getByLabel('Razón').first().fill('Revisión actualizada');
     await page.getByRole('button', { name: 'Previsualizar asociación' }).click();
-    await expect(page.getByTestId('hosting-reconciliation-preview').getByText('"decision": "ready"')).toHaveCount(1);
+    await expect(page.getByTestId('hosting-reconciliation-preview').getByTestId('hosting-decision-summary')).toContainText('Revisión actualizada');
   });
 
   test('admin displays the hosting inventory without reconciling it', {
@@ -197,6 +202,7 @@ test.describe('Panel project billing context', () => {
     await page.getByRole('button', { name: 'Actualizar inventario' }).click();
     await expect(page.getByText('Proyecto Aurora · versión 4', { exact: true })).toHaveCount(1);
     await expect(page.getByRole('checkbox', { name: '#30 · aurora.test', exact: true })).toHaveCount(1);
+    await page.getByTestId('hosting-reconciliation-history').locator('summary').click();
     await expect(page.getByRole('link', { name: 'Cuenta #42', exact: true })).toHaveCount(1);
   });
 

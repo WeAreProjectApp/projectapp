@@ -848,7 +848,10 @@ class ChangeRequestDetailSerializer(_SourceRequirementVisibilityMixin, IssueDeta
 
 
 class CreateChangeRequestSerializer(IssueCreateFields):
-    title = serializers.CharField(max_length=300)
+    title = serializers.CharField(
+        max_length=300,
+        error_messages={'max_length': 'El título admite hasta 300 caracteres.'},
+    )
     description = serializers.CharField(required=False, default='', allow_blank=True)
     module_or_screen = serializers.CharField(max_length=200, required=False, default='', allow_blank=True)
     suggested_priority = serializers.ChoiceField(

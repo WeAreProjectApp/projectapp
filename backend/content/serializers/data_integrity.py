@@ -41,6 +41,9 @@ class ScopeSerializer(StrictSerializer):
 
 
 class FindingsQuerySerializer(StrictSerializer):
+    fingerprint = serializers.RegexField(HASH, required=False)
+    scan_id = serializers.IntegerField(min_value=1, required=False)
+    status = serializers.ChoiceField(choices=('pending', 'accepted', 'resolved', 'all'), required=False)
     scope_kind = serializers.ChoiceField(choices=SCOPE_KINDS, default='all')
     scope_id = serializers.IntegerField(min_value=1, required=False)
     scope_query = serializers.CharField(max_length=200, required=False, trim_whitespace=True)
@@ -58,6 +61,32 @@ class FindingsQuerySerializer(StrictSerializer):
         if kind != 'all' and not (attrs.get('scope_id') or attrs.get('scope_query')):
             raise serializers.ValidationError({'scope_id': 'Indica el registro que delimita la revisión.'})
         return attrs
+
+
+class ScanStartSerializer(StrictSerializer):
+    scope = ScopeSerializer()
+    domains = CommaSeparatedField(choices=DOMAINS, required=False)
+    rule_ids = CommaSeparatedField(required=False)
+    severity = CommaSeparatedField(choices=SEVERITIES, required=False)
+    request_id = serializers.CharField(max_length=100, trim_whitespace=True)
+
+    def validate_request_id(self, value):
+        if value.startswith(('integrity-daily:', 'integrity-recovery:')):
+            raise serializers.ValidationError('Este identificador está reservado a tareas internas.')
+        return value
+
+    def validate_rule_ids(self, value):
+        from content.services.data_integrity import catalog
+        if any(catalog.get_rule(key) is None for key in value):
+            raise serializers.ValidationError('Hay reglas desconocidas.')
+        return value
+
+
+class FindingReviewSerializer(StrictSerializer):
+    fingerprint = serializers.RegexField(HASH)
+    action = serializers.ChoiceField(choices=('accept', 'reopen'))
+    reason = serializers.CharField(max_length=2000, trim_whitespace=True)
+    request_id = serializers.CharField(max_length=100, trim_whitespace=True)
 
 
 class FixSelectionSerializer(StrictSerializer):

@@ -1,5 +1,5 @@
 <script setup>
-import { useId } from 'vue';
+import { computed, useId } from 'vue';
 import PartnerSplitInput from './PartnerSplitInput.vue';
 import PeriodDateField from './PeriodDateField.vue';
 import SettlementHostingPeriod from './SettlementHostingPeriod.vue';
@@ -26,6 +26,9 @@ const {
   submit, confirm, back,
 } = useIncomeSettlementForm(props, emit);
 const formId = useId();
+const projectAppRemainder = computed(() => Math.max(0, Math.round((
+  Number(form.value.total_amount || 0) - Number(form.value.carlos_amount || 0) - Number(form.value.gustavo_amount || 0)
+) * 100) / 100));
 const sectionId = (name) => `${formId}-${name}`;
 const money = (value) => {
   const amount = Number(value ?? 0);
@@ -94,7 +97,11 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
       <section v-if="!personal" class="rounded-lg border border-border-muted">
         <button type="button" class="flex w-full min-w-0 flex-col items-start justify-between gap-2 p-4 text-left text-sm font-medium text-text-default panel-portrait:flex-row panel-portrait:items-center" :aria-expanded="participantsOpen" :aria-controls="sectionId('participants')" data-testid="income-liquidate-participations-toggle" @click="participantsOpen = !participantsOpen">
           <span>Participaciones</span>
-          <span class="flex min-w-0 max-w-full flex-wrap gap-x-2 text-xs text-text-muted"><span>Carlos {{ money(form.carlos_amount) }}</span><span>Gustavo {{ money(form.gustavo_amount) }}</span></span>
+          <span class="flex min-w-0 max-w-full flex-wrap gap-x-2 text-xs text-text-muted">
+            <span>Carlos {{ money(form.carlos_amount) }}</span>
+            <span>Gustavo {{ money(form.gustavo_amount) }}</span>
+            <span v-if="projectAppRemainder > 0" data-testid="income-liquidate-projectapp-remainder">ProjectApp {{ money(projectAppRemainder) }}</span>
+          </span>
         </button>
         <BaseCollapse :id="sectionId('participants')" :open="participantsOpen">
           <div class="px-4 pb-4"><PartnerSplitInput compact hide-total :decimals="2" v-model:total="form.total_amount" v-model:gustavoAmount="form.gustavo_amount" v-model:carlosAmount="form.carlos_amount" /></div>
