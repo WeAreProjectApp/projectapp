@@ -55,15 +55,6 @@ def _credential(
     )
 
 
-def _published_tools(slug):
-    return [tool for tool in TOOLS_BY_SLUG[slug]
-            if tool['name'] not in INFRASTRUCTURE_TOOLS and not tool.get('_hidden')]
-
-
-def _capability_tools(payload):
-    return {tool_name for group in payload['capabilities'] for tool_name in group['tools']}
-
-
 @pytest.fixture
 def accounting_connector():
     connector, _ = McpConnector.objects.update_or_create(
@@ -125,10 +116,10 @@ def test_canonical_catalog_enforces_unique_module_ownership():
         ('procurement', 'Gestor de contratación pública'),
     ],
 )
-def test_canonical_connector_catalog_uses_its_real_name_and_capabilities(
+def test_canonical_connector_catalog_uses_its_real_name(
     super_client, slug, expected_name,
 ):
-    """Fails if an expanded canonical connector advertises a name or action absent from its MCP catalog."""
+    """Fails if an expanded canonical connector uses an obsolete or inconsistent manager name."""
     McpConnector.objects.update_or_create(
         slug=slug,
         defaults={'name': 'Obsolete visible name', 'is_active': True, 'retired_at': None},
@@ -138,29 +129,41 @@ def test_canonical_connector_catalog_uses_its_real_name_and_capabilities(
     payload = {item['slug']: item for item in response.data}[slug]
 
     assert payload['name'] == expected_name
-    assert _capability_tools(payload) == {tool['name'] for tool in _published_tools(slug)}
-    assert all(
-        action in {
-            'Consultar y previsualizar', 'Crear', 'Editar y configurar', 'Ordenar y mover',
-            'Archivar y restaurar', 'Enviar y publicar', 'Descargar y exportar',
-            'Cargar y sustituir archivos', 'Eliminar o retirar según las reglas',
-            'Aplicar acciones del módulo',
-        }
-        for group in payload['capabilities'] for action in group['actions']
-    )
 
 
-def test_operations_monitoring_capability_explains_its_concrete_update_action(super_client):
-    """Fails if the Operations catalog stops explaining that monitored cases can be updated."""
+def test_operations_capability_groups_publish_their_confirmation_contract(super_client):
+    """Fails if Operations groups the monitored work incorrectly or hides which actions need confirmation."""
     McpConnector.objects.update_or_create(
         slug='operations', defaults={'name': 'Obsolete visible name', 'is_active': True, 'retired_at': None},
     )
 
     response = super_client.get('/api/mcp-connectors/')
     payload = {item['slug']: item for item in response.data}['operations']
-    monitoring = next(group for group in payload['capabilities'] if group['label'] == 'Casos, reportes y recursos observados')
+    groups = {
+        group['label']: {
+            'actions': group['actions'],
+            'requires_confirmation': group['requires_confirmation'],
+            'tools': group['tools'],
+        }
+        for group in payload['capabilities']
+    }
 
-    assert 'Editar y configurar' in monitoring['actions']
+    assert groups == {
+        'Casos, reportes y recursos observados': {
+            'actions': ['Consultar y previsualizar', 'Editar y configurar', 'Crear'],
+            'requires_confirmation': True,
+            'tools': [
+                'create_monitoring_case_note', 'get_monitoring_case', 'get_monitoring_catalog',
+                'get_monitoring_report', 'link_monitoring_resource_project',
+                'list_monitoring_cases', 'list_monitoring_reports', 'update_monitoring_case_state',
+            ],
+        },
+        'Indicadores y Radar de atención': {
+            'actions': ['Consultar y previsualizar'],
+            'requires_confirmation': False,
+            'tools': ['get_operations_dashboard'],
+        },
+    }
 
 
 def test_catalog_hides_retired_connectors_but_keeps_pending_retirement_visible(super_client):

@@ -348,7 +348,7 @@ def test_retirement_command_dry_run_does_not_persist_candidate_evidence(tmp_path
     ('field', 'value'),
     [('revision', '0' * 40), ('contracts', [])],
 )
-def test_retirement_status_blocks_stale_or_corrupt_coverage_evidence(field, value):
+def test_retirement_status_blocks_stale_or_corrupt_replacement_evidence(field, value):
     """Fails if stale or malformed stored coverage evidence is accepted after the original report is gone."""
     connector, _ = _ready_connector(NOW)
     stale_evidence = _coverage_summary()

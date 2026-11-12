@@ -191,9 +191,8 @@ def test_project_name_preview_includes_stale_managed_root_relations(make_client_
     CommunicationThread.objects.filter(pk=thread.pk).update(client=other)
     SecureLinkFolder.objects.filter(pk=secure_root.pk).update(client=other)
 
-    preview = engine.preview_fixes(
-        resolve_scope('all'), [selection(nm1_finding('accounts.project', project.pk))], actor=superuser,
-    )
+    finding = nm1_finding('accounts.project', project.pk)
+    preview = engine.preview_fixes(resolve_scope('all'), [selection(finding)], actor=superuser)
 
     assert {
         ('content.documentfolder', root.pk, 'client_user_id', other.user_id, profile.user_id),
@@ -205,6 +204,10 @@ def test_project_name_preview_includes_stale_managed_root_relations(make_client_
         CommunicationThread.objects.get(pk=thread.pk).client_id,
         SecureLinkFolder.objects.get(pk=secure_root.pk).client_id,
     ) == (other.user_id, other.pk, other.pk)
+
+    operation_id = fix(superuser, finding)
+
+    assert planned_changes(preview) == recorded_changes(operation_id)
 
 
 def test_project_name_preview_blocks_when_the_secure_root_is_missing(make_client_profile, superuser):

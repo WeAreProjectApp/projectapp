@@ -26,6 +26,9 @@ MONITORING_TOOL_NAMES = {
     'get_monitoring_report',
     'link_monitoring_resource_project',
 }
+OPERATIONS_DISCOVERY_TOOL_NAMES = MONITORING_TOOL_NAMES | {
+    'get_operations_dashboard', 'describe_capabilities', 'confirm_action', 'cancel_action',
+}
 
 
 def _rpc(method, params=None):
@@ -116,7 +119,7 @@ def test_operations_discovery_publishes_monitoring_tools(api_client, monitoring_
     server = discover.data['result']['_meta']['io.modelcontextprotocol/serverInfo']
     assert discover.status_code == 200
     assert server == {'name': 'projectapp-operations-mcp', 'version': '3.1.0'}
-    assert MONITORING_TOOL_NAMES <= tools
+    assert tools == OPERATIONS_DISCOVERY_TOOL_NAMES
 
 
 def test_monitoring_catalog_returns_the_observed_inventory(api_client, monitoring_mcp_case):
@@ -262,6 +265,7 @@ def test_monitoring_resource_link_changes_only_its_project(api_client, monitorin
     ))
 
     monitoring_mcp_case.resource.refresh_from_db()
+    assert monitoring_mcp_case.resource.project_id is None
     _content(_call(
         api_client, monitoring_mcp_case.token, 'confirm_action',
         {'confirmation_id': preview['confirmation_id']},

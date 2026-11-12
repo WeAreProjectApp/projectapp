@@ -17,7 +17,7 @@ const LONG_REQUEST_ID = 'request-123e4567-e89b-12d3-a456-426614174000-with-a-lon
 const LONG_CAPABILITY_LABEL = 'Gestión-documental-y-editorial-con-alcance-deliberadamente-extenso-para-medición:';
 const connector = {
   slug: 'content',
-  name: 'Contenido',
+  name: 'Gestor de contenido',
   description: 'Publica contenido fixture.',
   is_active: false,
   has_token: false,
@@ -82,7 +82,7 @@ async function navigateToMcps(page) {
   await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
   await expect(page.getByTestId('mcp-card-content')).toBeVisible();
-  await expect(page.getByTestId('mcp-card-content')).toContainText('Contenido');
+  await expect(page.getByTestId('mcp-card-content')).toContainText('Gestor de contenido');
 }
 
 async function expectInsideViewport(page, locator, expectedText) {
