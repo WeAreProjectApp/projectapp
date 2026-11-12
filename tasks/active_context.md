@@ -3160,3 +3160,11 @@ filtra las mismas fuentes y conserva el enlace confirmado por el servicio actual
 Sin cambios de modelos, migraciones, reglas de pendiente ni emisión; esos cruces
 pertenecen a las otras sesiones. Validación focalizada y PR verde en curso; el
 merge pertenece a «Coordina las sesiones activas».
+# 2026-11-06 — PA-220: acceso al video de Ayuda
+
+La sesión `pa220-help-video` incorpora por merge la corrección común de identidad
+de PA-219 y conserva su autoría. Los casos de video usan el contrato real
+`user_id` sin `id`, verifican reapertura y disponibilidad efectiva por recurso.
+El modal invalida el catálogo anterior al cambiar de cliente. Pruebas sólo en CI;
+DevQA administra el turno manual de clientes 19/20 y la revisión editorial.
+Evidencia y pendientes: `docs/audits/2026-11-06-pa220-help-video.md`.
