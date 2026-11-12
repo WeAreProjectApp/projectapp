@@ -2,6 +2,7 @@
 from content.mcp.module_catalog import CANONICAL_FOR, SECTION_NOTES
 
 DESCRIPTIONS = {
+    'data-integrity': 'Revisa inconsistencias entre clientes, proyectos, documentos, comunicaciones, contabilidad y propuestas. Consulta hallazgos, ejecuta revisiones, acepta casos intencionales y corrige por lotes con vista previa, motivo, historial y deshacer. No reescribe evidencia emitida.',
     'operations': 'Consulta el panorama general del negocio: indicadores, alertas y prioridades del dashboard. Sirve para decidir qué atender; las acciones sobre un registro se realizan en el conector de su sección.',
     'commercial': 'Gestiona la relación con clientes y el proceso de venta: fichas, propuestas, diagnósticos, documentos contractuales, seguimiento, correos y valores predeterminados. Organiza sus funciones en Clientes, Propuestas y Diagnósticos, y Configuración. Para paquetes de requerimientos y módulos adicionales usa Nuestra oferta; para alianzas y células usa Programas.',
     'offerings': 'Administra lo que ofrecemos al cliente: paquetes de requerimientos, precios y configuración; y módulos adicionales, categorías, orden, enlaces compartidos, PDFs y videos. Las propuestas y los diagnósticos se gestionan en Comercial. Las condiciones, contratos y versiones de las alianzas y células se gestionan en Programas.',
@@ -27,7 +28,7 @@ LEGACY_DESCRIPTIONS = {
     'accounting-billing': 'Conserva las herramientas anteriores de cuentas de cobro, hosting y facturación.',
     'accounting-cards': 'Conserva las herramientas anteriores de tarjetas, extractos, transacciones y conciliación.',
 }
-LABELS = {'commercial': 'Comercial', 'offerings': 'Nuestra oferta', 'programs': 'Programas',
+LABELS = {'data-integrity': 'Integridad de datos', 'commercial': 'Comercial', 'offerings': 'Nuestra oferta', 'programs': 'Programas',
           'content': 'Contenido ProjectApp', 'accounting': 'Contabilidad'}
 
 

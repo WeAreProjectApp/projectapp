@@ -1,0 +1,16 @@
+{
+  "id": "admin-procurement-classification",
+  "name": "Admin Procurement Opportunity Classification",
+  "module": "procurement",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

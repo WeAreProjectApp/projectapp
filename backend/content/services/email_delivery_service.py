@@ -67,6 +67,18 @@ class DeliveryTrace:
 _CURRENT_DELIVERY = ContextVar('projectapp_current_email_delivery', default=None)
 
 
+def _clone_message(message):
+    """Copy message content while retaining its transport and timeout.
+
+    SMTP connections contain locks and sockets that cannot be deep-copied.
+    Memoizing the connection also keeps it out of nested content copies,
+    without temporarily changing the caller's message.
+    """
+    connection = message.connection
+    memo = {id(connection): connection} if connection is not None else {}
+    return copy.deepcopy(message, memo)
+
+
 def _normalized_recipients(values):
     return tuple(sorted({
         (value or '').strip().lower() for value in values or () if value
@@ -297,11 +309,12 @@ class EmailDeliveryGateway:
         if credential_email(template_key) and (len(primary_recipients) != 1 or cc_recipients or direct_bcc_recipients):
             _CURRENT_DELIVERY.set(None)
             raise ValueError('Credential emails require exactly one primary recipient.')
-        copy_source = history_message(copy.deepcopy(message), template_key)
         from content.services.email_snapshot_service import (
             capture_delivery_snapshot,
         )
         try:
+            # Preserve content before a backend can mutate it to prepare MIME.
+            copy_source = history_message(_clone_message(message), template_key)
             trace.snapshot = capture_delivery_snapshot(
                 copy_source,
                 delivery_id=trace.delivery_id,
@@ -395,13 +408,13 @@ class EmailDeliveryGateway:
                 )
                 trace.copy_attempts.append(attempt)
                 continue
-            copy_message = copy.deepcopy(copy_source)
-            # BCC-only envelope: the internal address is absent from visible
-            # headers and the client is not sent the same message twice.
-            copy_message.to = []
-            copy_message.cc = []
-            copy_message.bcc = [normalized]
             try:
+                copy_message = _clone_message(copy_source)
+                # BCC-only envelope: the internal address is absent from visible
+                # headers and the client is not sent the same message twice.
+                copy_message.to = []
+                copy_message.cc = []
+                copy_message.bcc = [normalized]
                 copy_sent = copy_message.send()
                 if not copy_sent:
                     attempt.status = 'failed'

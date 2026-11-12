@@ -41,12 +41,13 @@
       <p class="text-[11px] text-text-muted">
         Inserta un módulo con texto neutro y vínculo al alcance comercial. Si el vínculo apunta a alcance opcional, solo será visible cuando el cliente lo incluya.
       </p>
-      <div class="flex flex-wrap items-end gap-2">
-        <label class="text-xs text-text-muted/60 flex flex-col gap-1">
+      <div class="flex min-w-0 flex-col items-stretch gap-2 panel-portrait:flex-row panel-portrait:flex-wrap panel-portrait:items-end">
+        <label class="flex min-w-0 max-w-full flex-col gap-1 text-xs text-text-muted/60 panel-portrait:flex-1">
           <span>Módulo</span>
           <select
             v-model="stubModuleId"
-            class="px-2 py-1.5 border dark:border-white/[0.08] rounded-lg text-sm min-w-[12rem] bg-surface dark:text-white"
+            class="w-full min-w-0 max-w-full px-2 py-1.5 border dark:border-white/[0.08] rounded-lg text-sm bg-surface dark:text-white"
+            data-testid="technical-stub-module"
           >
             <option value="">— Elegir —</option>
             <option v-for="opt in moduleLinkOptions" :key="'stub-'+opt.id" :value="opt.id">

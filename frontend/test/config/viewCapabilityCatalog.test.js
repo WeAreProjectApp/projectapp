@@ -46,6 +46,7 @@ describe('viewCapabilityCatalog', () => {
       'Control financiero',
       'Integraciones',
       'Gobierno del sistema',
+      'Contratación estatal',
     ])
   })
 
@@ -93,6 +94,7 @@ describe('viewCapabilityCatalog', () => {
       'panel-finance',
       'panel-integrations',
       'panel-governance',
+      'panel-procurement',
     ])
   })
 

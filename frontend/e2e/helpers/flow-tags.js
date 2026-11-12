@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.105.0
+// Registry version: 2.105.3
 
 // ── admin ──
 export const ADMIN_ACCESS_MANAGEMENT = ['@flow:admin-access-management', '@module:admin', '@priority:P1'];
@@ -110,6 +110,10 @@ export const ADMIN_DASHBOARD_FINANCE_GATE = ['@flow:admin-dashboard-finance-gate
 export const ADMIN_DASHBOARD_PIPELINE_VALUE = ['@flow:admin-dashboard-pipeline-value', '@module:admin', '@priority:P2'];
 export const ADMIN_DASHBOARD_QUICK_CREATE = ['@flow:admin-dashboard-quick-create', '@module:admin', '@priority:P3'];
 export const ADMIN_DASHBOARD_STATS_MODALS = ['@flow:admin-dashboard-stats-modals', '@module:admin', '@priority:P2'];
+export const ADMIN_DATA_INTEGRITY_FINDINGS = ['@flow:admin-data-integrity-findings', '@module:admin', '@priority:P1'];
+export const ADMIN_DATA_INTEGRITY_FIX = ['@flow:admin-data-integrity-fix', '@module:admin', '@priority:P1'];
+export const ADMIN_DATA_INTEGRITY_HISTORY = ['@flow:admin-data-integrity-history', '@module:admin', '@priority:P1'];
+export const ADMIN_DATA_INTEGRITY_REVIEW = ['@flow:admin-data-integrity-review', '@module:admin', '@priority:P1'];
 export const ADMIN_DEFAULTS_UNIFIED = ['@flow:admin-defaults-unified', '@module:admin', '@priority:P2'];
 export const ADMIN_DIAGNOSTIC_ACTIVITY = ['@flow:admin-diagnostic-activity', '@module:admin', '@priority:P2'];
 export const ADMIN_DIAGNOSTIC_ADVANCED_FILTERS = ['@flow:admin-diagnostic-advanced-filters', '@module:admin', '@priority:P2'];
@@ -415,6 +419,15 @@ export const PLATFORM_SECURE_LINK_REPLACE = ['@flow:platform-secure-link-replace
 export const PLATFORM_SIDEBAR_NAVIGATION = ['@flow:platform-sidebar-navigation', '@module:platform', '@priority:P2'];
 export const PLATFORM_VERIFY_ONBOARDING = ['@flow:platform-verify-onboarding', '@module:platform', '@priority:P1'];
 export const PLATFORM_VOICE_REPORT = ['@flow:platform-voice-report', '@module:platform', '@priority:P1'];
+
+// ── procurement ──
+export const ADMIN_PROCUREMENT_ALERTS = ['@flow:admin-procurement-alerts', '@module:procurement', '@priority:P1'];
+export const ADMIN_PROCUREMENT_CLASSIFICATION = ['@flow:admin-procurement-classification', '@module:procurement', '@priority:P1'];
+export const ADMIN_PROCUREMENT_DELIVERIES = ['@flow:admin-procurement-deliveries', '@module:procurement', '@priority:P2'];
+export const ADMIN_PROCUREMENT_FILTERS_EXPORT = ['@flow:admin-procurement-filters-export', '@module:procurement', '@priority:P1'];
+export const ADMIN_PROCUREMENT_OPPORTUNITY_LIST = ['@flow:admin-procurement-opportunity-list', '@module:procurement', '@priority:P1'];
+export const ADMIN_PROCUREMENT_SAVED_SEARCHES = ['@flow:admin-procurement-saved-searches', '@module:procurement', '@priority:P2'];
+export const ADMIN_PROCUREMENT_SETTINGS_SYNC = ['@flow:admin-procurement-settings-sync', '@module:procurement', '@priority:P2'];
 
 // ── proposal ──
 export const PROPOSAL_CLOSING_CONTACT = ['@flow:proposal-closing-contact', '@module:proposal', '@priority:P2'];

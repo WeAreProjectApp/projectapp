@@ -105,6 +105,10 @@ _decide(exempt('Confirmación de corta vida del administrador que revisó un cam
         'content.ProposalContractChangeIntent.owner')
 _decide(exempt('Identidad técnica del conector MCP, no un dato del cliente.'), 'content.McpCredential.actor')
 _decide(exempt('Asignación interna de tareas del equipo.'), 'content.Task.assignee')
+_decide(exempt('Decisiones y búsquedas personales del equipo: se conservan en su usuario original, '
+               'sin limpiarse ni reasignarse como relaciones comerciales.'), '''
+    procurement.Classification.owner procurement.SavedSearch.owner
+''')
 
 # ── accounts.Project ─────────────────────────────────────────────────────────
 
@@ -140,7 +144,7 @@ _decide(covered('CM5', 'PJ2'), 'secure_links.SecureLink.project')
 _decide(covered('PJ2'), '''
     secure_links.SecureLinkFolder.project secure_links.SecureLinkFolder.managed_project
 ''')
-_decide(exempt('Evento de auditoría de solo-anexar.'), 'accounts.BillingContextEvent.project')
+_decide(exempt('Auditoría conservada por proyecto o contexto de retención; nunca se reasigna automáticamente.'), 'accounts.BillingContextEvent.project')
 _decide(exempt('Historial privado con caducidad, ligado a su actor original: no se reasigna ni se conserva '
                'al borrar el proyecto. Appi revalida la pertenencia antes de mostrarlo.'),
         'accounts.AppiConversation.project')

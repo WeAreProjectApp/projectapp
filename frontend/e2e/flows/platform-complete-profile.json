@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P1",
-  "description": "Mandatory profile completion form with company, phone, cedula, date of birth, gender, education level, and optional avatar upload. Middleware gates dashboard access until completed.",
+  "description": "Mandatory profile completion form with company, phone, cedula, date of birth, gender, education level, and optional avatar upload. Middleware gates dashboard access until completed. All eight profile labels are associated with their controls, including date of birth, gender and education, without changing completion validation (PA-234).",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

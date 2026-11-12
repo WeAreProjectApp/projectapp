@@ -9,6 +9,7 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction } from '../helpers/bulk-actions.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import { ADMIN_ACCOUNTING_INCOME_BULK_SETTLE } from '../helpers/flow-tags.js';
 import { vatBreakdown } from '../../utils/accountingVat.js';
 
@@ -76,6 +77,16 @@ async function gotoIncomes(page) {
   await expect(page.getByRole('heading', { name: 'Ingresos', exact: true })).toHaveText('Ingresos');
 }
 
+async function navigateToIncomesFromPanel(page) {
+  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  }
+  await page.getByRole('link', { name: 'Ingresos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ingresos', exact: true })).toBeVisible();
+}
+
 async function openBulkSettlement(page, ids) {
   for (const id of ids) await page.getByTestId(`accounting-select-${id}`).check();
   await bulkAction(page, 'incomes', 'Liquidar');
@@ -92,6 +103,28 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
   });
+
+  for (const selection of [
+    { name: 'individual', rows: [incomeRow({ id: 11, total_amount: '119.00', pending_amount: '119.00' })], ids: [11] },
+    { name: 'multiple', rows: [incomeRow({ id: 11, total_amount: '59.00', pending_amount: '59.00' }), incomeRow({ id: 12, total_amount: '60.00', pending_amount: '60.00' })], ids: [11, 12] },
+  ]) {
+    test(`shows ProjectApp remainder in collapsed ${selection.name} participations`, {
+      tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      const calls = [];
+      await mockApi(page, buildHandler({ rows: selection.rows, calls }));
+      await navigateToIncomesFromPanel(page);
+      await openBulkSettlement(page, selection.ids);
+
+      const participants = page.getByTestId('income-liquidate-participations-toggle');
+      await expect(participants).toHaveAttribute('aria-expanded', 'false');
+      await expect(participants).toContainText('Carlos $59 COP');
+      await expect(participants).toContainText('Gustavo $59 COP');
+      await expect(page.getByTestId('income-liquidate-projectapp-remainder')).toHaveText('ProjectApp $1 COP');
+      await page.getByTestId('income-liquidate-paid').fill('118');
+      await expect(page.getByTestId('income-liquidate-projectapp-remainder')).toHaveCount(0);
+    });
+  }
 
   test('keeps manual allocations, participation and a proportional deduction in one settlement dialog', {
     tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],

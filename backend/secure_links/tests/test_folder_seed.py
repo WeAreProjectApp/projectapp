@@ -41,13 +41,13 @@ def test_fake_secure_link_seed_represents_filing_states():
     )
 
 
-def test_fake_reset_preserves_independently_associated_link():
+def test_fake_reset_preserves_independently_associated_link(make_link):
     """Falla si el reset deja el árbol protegido o elimina un enlace sin proyecto movido dentro de él."""
     run_command('create_fake_secure_links')
     project = Project.objects.get(name='Secure links demo 1')
     root = project.secure_link_root_folder
     destination = SecureLinkFolder.objects.get(name='[Demo] Accesos', parent=root)
-    standalone = SecureLink.objects.filter(folder__isnull=True, project__isnull=True).order_by('pk').first()
+    standalone, _ = make_link(title='Enlace independiente conservado')
     filing.move_link(standalone, destination)
 
     run_command('delete_fake_data', '--confirm')

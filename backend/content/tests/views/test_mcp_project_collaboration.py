@@ -16,11 +16,14 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def call():
+def call(request):
     connector, _ = McpConnector.objects.get_or_create(slug='projects', defaults={'name': 'Projects'})
     connector.is_active = True
     connector.save()
     token = connector.generate_token()
+    credential = connector.credentials.get(label='Default')
+    credential.catalog = getattr(request, 'param', 'canonical')
+    credential.save(update_fields=['catalog'])
     client = APIClient()
 
     def invoke(name, arguments, *, error=False):
@@ -141,7 +144,7 @@ def test_project_mcp_registers_administrative_project_and_history_tools():
         'reorder_project_commercial_phases', 'get_project_brand',
         'upload_project_brand_asset', 'download_project_brand_asset',
         'delete_project_brand_asset',
-        'link_project_billing_contract', 'list_project_history',
+        'list_project_history',
         'get_project_history_version', 'compare_project_history',
     } <= names
 
@@ -287,6 +290,7 @@ def test_project_mcp_reorder_rejects_a_phase_set_that_does_not_exactly_match_the
     assert (foreign.project_id, foreign.order) == (c.other_project.pk, 1)
 
 
+@pytest.mark.parametrize('call', ['legacy'], indirect=True)
 def test_project_mcp_billing_link_rejects_a_document_from_another_project(call):
     """Fails if MCP starts a billing-link confirmation for a document owned by another project."""
     c = context()
@@ -308,6 +312,7 @@ def test_project_mcp_billing_link_rejects_a_document_from_another_project(call):
     assert ProjectContract.objects.filter(project=c.project).count() == 0
 
 
+@pytest.mark.parametrize('call', ['legacy'], indirect=True)
 def test_project_mcp_billing_link_rejects_a_stale_delivery_version(call):
     """Fails if MCP starts a billing-link confirmation with an outdated delivery version."""
     c = context()
@@ -327,6 +332,7 @@ def test_project_mcp_billing_link_rejects_a_stale_delivery_version(call):
     assert ProjectContract.objects.filter(project=c.project).count() == 0
 
 
+@pytest.mark.parametrize('call', ['legacy'], indirect=True)
 def test_project_mcp_reuses_a_confirmed_billing_contract_source(call):
     """Fails if confirming the same MCP billing source twice creates duplicate project contracts."""
     c = context()

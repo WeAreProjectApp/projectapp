@@ -1,0 +1,16 @@
+{
+  "id": "admin-procurement-filters-export",
+  "name": "Admin Procurement Filters and Export",
+  "module": "procurement",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Staff applies keyword OR UNSPSC filters with other criteria, uses URL state, clears and exports the same query. Invalid ranges and request failures remain visible.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

@@ -54,7 +54,7 @@ content.FinancingAgreement.archived_by content.FinancingAgreement.created_by con
 content.FinancingAgreementEvent.actor content.ProposalFormalization.created_by
 content.VideoResource.updated_by content.ProposalApprovalFile.created_by content.ProposalApprovalPackage.created_by
 content.ProjectRetentionContext.created_by content.ProjectRetentionOperation.actor
-content.ProposalProjectReassignment.actor content.DataIntegrityOperation.actor
+content.ProposalProjectReassignment.actor content.DataIntegrityOperation.actor content.DataIntegrityScan.actor content.DataIntegrityReview.actor
 content.DocumentOwnershipOperation.actor
 accounts.UserProfile.archived_by accounts.UserProfile.created_by
 accounts.AccessEvent.actor accounts.AccessEvent.user
@@ -75,6 +75,7 @@ accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
 monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
 secure_links.SecureLinkFolder.created_by
 secure_links.SecureLinkEvent.actor
+procurement.Activity.actor procurement.Alert.created_by procurement.SyncRun.requested_by
 ''')
 
 RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
@@ -83,6 +84,11 @@ RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
 accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor
+'''), NEVER))
+# Procurement decisions and saved searches belong to the original person, not
+# the commercial client. Relinking could also collide with their per-user keys.
+RELATION_POLICIES.update(dict.fromkeys(_keys('''
+procurement.Classification.owner procurement.SavedSearch.owner
 '''), NEVER))
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 content.CommunicationFolder.client content.CommunicationThread.client

@@ -19,7 +19,7 @@ class McpCredential(models.Model):
     catalog = models.CharField(
         max_length=12, default='canonical',
         choices=[('canonical', 'Canonical'), ('legacy', 'Legacy catalog'),
-                 ('pre_split', 'Commercial before segmentation')],
+                 ('pre_split', 'Before module segmentation')],
     )
     migrated_at = models.DateTimeField(null=True, blank=True)
     income_kinds = models.JSONField(default=list, blank=True)
@@ -81,7 +81,8 @@ class McpCredential(models.Model):
 
     def allows(self, tool_name):
         # General connector access must never silently acquire secret reads.
-        if tool_name in {'reveal_secure_link_content', 'get_secure_link_url'}:
+        if tool_name in {'reveal_secure_link_content', 'get_secure_link_url',
+                         'preview_project_force_delete', 'force_delete_project'}:
             return tool_name in self.allowed_tools
         control_tools = {'describe_capabilities', 'confirm_action', 'cancel_action'}
         return (

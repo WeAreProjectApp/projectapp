@@ -1,3 +1,7 @@
+## Integridad de datos — 2026-11-05
+
+El registro añade el módulo transversal `data-integrity`, dueño único de las herramientas de integridad. Proyectos conserva temporalmente sus catálogos previos; sus credenciales canónicas existentes pasan a `pre_split` con permisos efectivos congelados. Las nuevas no adquieren integridad mediante alias. La migración y retiro se verifican por catálogo, también con `mcp_retirement --slug projects --catalog pre_split`; aplica las ventanas 30/14 y no retira el conector de Proyectos.
+
 # MCP por módulo: contrato y migración
 
 Esta entrega consolida el registro en diez conectores: `operations`,

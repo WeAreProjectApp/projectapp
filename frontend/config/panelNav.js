@@ -109,10 +109,10 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       superuserOnly: true,
       items: [
         { label: 'Resumen', href: lp('/panel/accounting'), icon: 'credit-card', matchExact: true },
+        { label: 'Bolsillo', href: lp('/panel/accounting/pocket'), icon: 'folder' },
         { label: 'Ingresos', href: lp('/panel/accounting/incomes'), icon: 'plus' },
         { label: 'Gastos', href: lp('/panel/accounting/expenses'), icon: 'file' },
         { label: 'Hostings', href: lp('/panel/accounting/hostings'), icon: 'database' },
-        { label: 'Bolsillo', href: lp('/panel/accounting/pocket'), icon: 'folder' },
         { label: 'Recurrentes', href: lp('/panel/accounting/recurring'), icon: 'refresh' },
         { label: 'Cuentas de cobro', href: lp('/panel/accounting/collections'), icon: 'file' },
         { label: 'Tarjetas', href: lp('/panel/accounting/cards'), icon: 'credit-card' },
@@ -121,6 +121,9 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Configuración', href: lp('/panel/accounting/settings'), icon: 'settings' },
       ],
     },
+    { id: 'procurement', label: 'Contratación estatal', items: [
+      { label: 'Oportunidades SECOP', href: lp('/panel/procurement'), icon: 'search' },
+    ] },
     {
       // After `accounting` on purpose: the Hostings entry below points at
       // the accounting page, and the breadcrumb resolver walks sections in
@@ -164,6 +167,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       label: 'Sistema',
       muted: true,
       items: [
+        { label: 'Integridad de datos', href: lp('/panel/data-integrity'), icon: 'shield' },
         { label: 'Admins del panel', href: lp('/panel/admins'), icon: 'shield', superuserOnly: true },
         {
           label: 'Django Admin',

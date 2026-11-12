@@ -62,6 +62,9 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/panel/projects/',
     'frontend/pages/panel/projects/',
     'frontend/pages/panel/monitoring/',
+    'frontend/pages/panel/procurement/',
+    'frontend/components/Procurement/',
+    'frontend/stores/procurement.js',
     'frontend/pages/panel/platform/ai.vue',
   ], [
     'Buscar y cambiar el alcance del listado.',
@@ -143,6 +146,8 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/panel/dashboard/',
     'frontend/components/stats/',
     'frontend/pages/panel/admins/',
+    'frontend/pages/panel/data-integrity.vue',
+
     'frontend/pages/panel/access/',
     'frontend/pages/panel/index.vue',
     'frontend/pages/panel/tasks/',
@@ -293,11 +298,13 @@ export function modulesForChangedFiles(files) {
 
 /** Every catalog view has one accountable responsive module or dependency. */
 export function responsiveOwnerForView(sectionId, view) {
+  if (view.url.startsWith('/panel/procurement')) return 'projects';
   if (view.url === '/panel/platform/ai') return 'projects';
   if (view.url === '/platform/projects/:id/secure-links') return 'communications';
   const { file, url } = view;
   if (sectionId.startsWith('public-') || view.audience === 'public') return 'public';
   if (sectionId === 'panel-accounting') return 'accounting';
+  if (sectionId === 'panel-data-integrity') return 'dashboard';
   if (sectionId === 'panel-mcps') return 'mcp';
   if (sectionId === 'client-platform') return 'clients';
 

@@ -59,7 +59,7 @@ describe('ViewOperationalExplorer', () => {
     expect(wrapper.text()).toContain('Panel interno')
     expect(wrapper.text()).toContain('Plataforma de clientes')
     expect(wrapper.text()).toContain('Experiencias públicas')
-    expect(wrapper.text()).toContain('137 vistas relacionadas')
+    expect(wrapper.text()).toContain('140 vistas relacionadas')
   })
 
   it('selects a space from the orbit', async () => {
@@ -74,7 +74,7 @@ describe('ViewOperationalExplorer', () => {
     // Fails if the operational explorer omits either new top-level menu grouping.
     const wrapper = mountExplorer({ selectedNodeId: 'panel-internal' })
 
-    expect(wrapper.findAll('[data-testid^="view-explorer-node-"]')).toHaveLength(10)
+    expect(wrapper.findAll('[data-testid^="view-explorer-node-"]')).toHaveLength(11)
     expect(wrapper.text()).toContain('Panorama y tareas')
     expect(wrapper.text()).toContain('Nuestra oferta')
     expect(wrapper.text()).toContain('Programas')
@@ -162,13 +162,13 @@ describe('ViewOperationalExplorer', () => {
   })
 
   it('advances and exits an active guided tour', async () => {
-    // Fails if the guided tour keeps the former eight-module navigation after the split.
+    // Fails if the guided tour omits a module from the current panel navigation.
     const wrapper = mountExplorer({
       selectedNodeId: 'panel-overview-work',
       selectedTourId: 'panel-internal',
     })
 
-    expect(wrapper.get('[data-testid="view-explorer-tour-controls"]').text()).toContain('Paso 1 de 10')
+    expect(wrapper.get('[data-testid="view-explorer-tour-controls"]').text()).toContain('Paso 1 de 11')
     await wrapper.get('[data-testid="view-explorer-tour-next"]').trigger('click')
     expect(wrapper.emitted('select')).toEqual([['panel-commercial']])
 

@@ -74,6 +74,16 @@ def _internal_sample():
 
 
 EMAIL_TEMPLATE_REGISTRY = {
+    'procurement_alert': {
+        'name': 'Contratación estatal — oportunidades',
+        'description': 'Coincidencias de alertas SECOP, con filtros y publicación oficial.',
+        'category': 'internal',
+        'html_template': 'procurement/alert.html',
+        'txt_template': 'procurement/alert.txt',
+        'editable_fields': [],
+        'available_variables': ['subject', 'items'],
+        'sample_context': {'subject': 'Oportunidades SECOP', 'items': []},
+    },
     # -----------------------------------------------------------------------
     # Client-facing emails (sent to client_email)
     # -----------------------------------------------------------------------
