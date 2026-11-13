@@ -38,6 +38,23 @@ describe('Platform availability per identity', () => {
     expect(store.routeAllowed('/platform/documents')).toBe(true)
   })
 
+  it('blocks packages independently from change requests', async () => {
+    api.get.mockResolvedValue(evaluation({ 'platform.requirement_packages': false }))
+
+    await store.refresh()
+
+    expect(store.routeAllowed('/es-co/platform/projects/5/packages')).toBe(false)
+    expect(store.routeAllowed('/platform/projects/5/changes')).toBe(true)
+  })
+
+  it('retains packages when change requests are disabled', async () => {
+    api.get.mockResolvedValue(evaluation({ 'platform.change_requests': false }))
+
+    await store.refresh()
+
+    expect(store.routeAllowed('/platform/projects/5/packages')).toBe(true)
+  })
+
   it('discards a response from the previous client', async () => {
     let finish
     api.get.mockReturnValue(new Promise(resolve => { finish = resolve }))

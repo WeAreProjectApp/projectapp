@@ -11,7 +11,7 @@ API_FILES = (
     'accounts/urls.py', 'accounts/project_collaboration_urls.py', 'accounts/delivery_urls.py',
     'accounts/billing_urls.py', 'accounts/issue_report_urls.py', 'secure_links/platform_urls.py',
     'accounts/ai_urls.py', 'accounts/appi_urls.py', 'accounts/platform_help_urls.py',
-    'accounts/feature_flags_urls.py',
+    'accounts/feature_flags_urls.py', 'accounts/requirement_package_urls.py',
 )
 
 

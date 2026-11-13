@@ -368,7 +368,7 @@ const platformCapabilities = [
         'Permite recordar necesidades futuras sin incorporarlas al contrato vigente.', ['/platform/projects/:id/ideas'],
         { icon: 'file', actors: ['client', 'team'], stage: 'Proyecto' }),
       feature('platform-requirement-packages', 'Comprar y utilizar paquetes por talla',
-        'Explica las tallas con ejemplos propios o genéricos. Permite comprar, solicitar cambios, objetar propuestas o aceptarlas con cargo a un cupo vigente y consultar su historial.',
+        'Explica las tallas con ejemplos propios o genéricos. Permite comprar, solicitar cambios, objetar propuestas o aceptarlas con cargo a un cupo vigente y consultar su historial. Su disponibilidad se controla de forma independiente desde Feature flags.',
         'El cliente conoce la talla y el resultado antes de confirmar el consumo.', ['/platform/projects/:id/packages'],
         { icon: 'package', actors: ['client', 'team'], stage: 'Ejecución' }),
       feature('platform-client-administration', 'Administrar clientes',

@@ -1419,7 +1419,7 @@ export const viewCatalogSections = [
         file: 'frontend/pages/platform/projects/[id]/packages.vue',
         reference: 'compra de cupos y solicitudes con talla y aceptación explícita del cliente',
         audience: 'client', viewType: 'edit',
-        notes: 'Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.',
+        notes: 'Disponibilidad independiente en Feature flags, habilitada inicialmente. Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.',
       },
       {
         label: 'Ideas para el futuro',

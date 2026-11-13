@@ -31,6 +31,7 @@ def test_mcp_catalog_exposes_effective_defaults(credential):
     flags = {item['key']: item for item in result['features']}
     assert flags['platform.documents']['effective'] is True
     assert flags['platform.ai_chatbot']['effective'] is False
+    assert flags['platform.requirement_packages']['effective'] is True
 
 
 def test_mcp_change_requires_confirmation(credential):
@@ -41,15 +42,16 @@ def test_mcp_change_requires_confirmation(credential):
     assert not PlatformFeatureSettings.objects.exists()
 
 
-def test_mcp_confirmation_persists_shared_configuration(credential):
+@pytest.mark.parametrize('key', ['platform.documents', 'platform.requirement_packages'])
+def test_mcp_confirmation_persists_shared_configuration(credential, key):
     preview = call_tool_inprocess('projects', 'update_platform_feature_flags',
-        {'expected_version': 0, 'values': {'platform.documents': False}}, credential=credential)
+        {'expected_version': 0, 'values': {key: False}}, credential=credential)
 
     result = call_tool_inprocess('projects', 'confirm_action',
         {'confirmation_id': preview['confirmation_id']}, credential=credential)
 
     assert result['confirmed'] is True
-    assert PlatformFeatureSettings.objects.get().values == {'platform.documents': False}
+    assert PlatformFeatureSettings.objects.get().values == {key: False}
     assert PlatformFeatureEvent.objects.get().actor_id == credential.actor_id
 
 

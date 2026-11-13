@@ -57,7 +57,7 @@ Contrato y recorrido: [Contratos de programas](PROGRAM_CONTRACT_DOCUMENTS.md).
 
 ## PA-254 — compras y solicitudes por talla (2026-11-12)
 
-Comercial **6.7.0** administra ejemplos genéricos; Proyectos **6.0.0** expone
+Comercial **6.7.0** administra ejemplos genéricos; Proyectos **6.1.0** expone
 compras, saldos, solicitudes y evaluación manual. Cotejar `initialize` y
 `tools/list` en el mismo SHA servido, con credenciales restringidas de cada
 conector. La presencia en este guion no acredita ejecución ni despliegue.
@@ -1054,7 +1054,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 4.0.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 6.0.0 | 230 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, ciclo de vida y control visual de hosting, paquetes por tallas, feature flags, telemetría y capacidad informativa |
+| `projects` | 6.1.0 | 230 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, ciclo de vida y control visual de hosting, paquetes por tallas, feature flags, telemetría y capacidad informativa |
 | `data-integrity` | 1.0.1 | 13 | Integridad transversal: catálogo, revisiones persistentes, hallazgos, correcciones con motivo, decisiones y deshacer |
 | `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
@@ -3139,7 +3139,7 @@ Validar listado/filtros/exportación, búsquedas con owner_id, alertas con desti
 
 Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.
 
-## PA-249 — Monitoreo entre Operaciones 3.2.0 y Proyectos 6.0.0
+## PA-249 — Monitoreo entre Operaciones 3.2.0 y Proyectos 6.1.0
 
 Operaciones conserva las ocho herramientas de seguimiento: catálogo, casos con snapshot, detalle e historial, reportes, estado con versión, notas y vínculo de recursos a proyectos. Las acciones sensibles conservan confirmación y el identificador público `pk`. Proyectos incorpora cinco herramientas de telemetría y capacidad: presión actual, series, consulta y actualización de asignación y su historial. Sus identificadores son `server_id` y `resource_id`. Contrato completo, unidades y activación: [tablero de Monitoreo](monitoring-dashboard.md).
 
@@ -3157,6 +3157,6 @@ modo no cambian. Revisar historial, actor/vía y recibos. Repetir con versión
 anterior y credencial sin permiso: rechazo sin escritura. Sólo la confirmación
 del sitio acredita aplicación; la validación manual permanece pausada.
 
-## PA-263 · Feature flags (Proyectos 6.0.0)
+## PA-263 · Feature flags (Proyectos 6.1.0)
 
 Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento de las seis herramientas, consulta global y por cliente, actualización confirmada, retirada con null, persistencia, 409 con versión superada y denegación de una credencial/actor sin acceso administrativo. Contrastar con el mismo caso en Panel y una cuenta cliente; REST no acredita MCP. IA/audio parten apagados y la excepción del cliente prevalece. Los adaptadores anteriores de IA/Ayuda usan la fuente nueva. Automatizadas sólo en CI; DevQA cotejará herramientas, operaciones, rol, resultado y límites sobre el mismo SHA/entorno al levantarse la pausa.

@@ -1,5 +1,6 @@
 from django.urls import path
 from accounts import views_requirement_packages as views
+from accounts.feature_permissions import bind_feature_permissions
 
 urlpatterns = [
     path('admin/requests/', views.package_admin_queue, name='package-admin-queue'),
@@ -18,3 +19,5 @@ urlpatterns = [
     path('projects/<int:project_id>/requests/<int:package_request_id>/<str:action>/', views.package_request_action, name='package-request-action'),
     path('projects/<int:project_id>/movements/<int:movement_id>/reverse/', views.package_reverse, name='package-reverse'),
 ]
+
+bind_feature_permissions(urlpatterns)
