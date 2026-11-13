@@ -63,11 +63,10 @@ for (const profile of RESPONSIVE_PROFILES) {
       await enterPlatformHelp(page, profile);
       await expect(page.getByRole('combobox', { name: 'Select tour', exact: true }))
         .toHaveText(`${platformHelpTour.content.title_en} · ${platformHelpTour.published_revision}`);
-      const tourToggle = page.getByRole('switch', { name: 'Enable tours', exact: true });
-      await tourToggle.click();
-      await expect(tourToggle).toHaveAttribute('aria-checked', 'false');
-      await tourToggle.click();
-      await expect(tourToggle).toHaveAttribute('aria-checked', 'true');
+      await page.getByRole('combobox', { name: 'Select tour', exact: true }).click();
+      await page.getByRole('option', { name: `${platformHelpTour.content.title_en} · ${platformHelpTour.published_revision}`, exact: true }).click();
+      await expect(page.getByRole('link', { name: 'Manage availability in Feature flags', exact: true }))
+        .toHaveAttribute('href', '/en-us/panel/platform/feature-flags');
       await assertResponsiveScenario(page, testInfo, platformHelpScenario, { profile });
     });
   });
