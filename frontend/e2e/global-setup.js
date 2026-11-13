@@ -10,6 +10,7 @@ import { getResponsiveBatch, getResponsiveScenario } from './responsive/catalog-
 
 const WARMUP_UUID = '11111111-1111-4111-8111-111111111111';
 const RESPONSIVE_WARMUP_ROUTES = Object.freeze({
+  'frontend/pages/index.vue': ['/en-us/'],
   'frontend/pages/consulting/index.vue': ['/es-co/consulting'],
   'frontend/pages/panel/consulting/index.vue': ['/es-co/panel/consulting'],
   'frontend/pages/building-with-us/index.vue': ['/es-co/building-with-us'],

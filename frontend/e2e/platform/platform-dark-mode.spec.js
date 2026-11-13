@@ -17,6 +17,7 @@ async function openSummary(page, user, theme) {
   await page.addInitScript((value) => localStorage.setItem('platform_theme', localStorage.getItem('platform_theme') || value), theme);
   let profile = { ...user };
   await mockApi(page, async ({ apiPath, method, route }) => {
+    if (apiPath === 'platform/features/') return null;
     if (apiPath === 'accounts/me/' && method === 'PATCH') {
       const multipart = route.request().headers()['content-type']?.includes('multipart/form-data');
       profile = { ...profile, ...(multipart ? { custom_cover_image: '/qa-cover.svg', cover_image: '' } : route.request().postDataJSON()) };

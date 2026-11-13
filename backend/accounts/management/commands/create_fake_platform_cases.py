@@ -62,6 +62,11 @@ class Command(BaseCommand):
             })
             roles[name] = user
 
+        from accounts.models_feature_flags import ClientPlatformFeatureSettings
+        ClientPlatformFeatureSettings.objects.update_or_create(user=roles['limited'], defaults={
+            'values': {'platform.documents': False, 'platform.bugs': False},
+        })
+
         for name, owner in (('[QA] Proyecto vacío', project.client),
                             ('[QA] Proyecto de otro cliente', roles['limited'])):
             empty, _ = Project.objects.get_or_create(name=name, client=owner)

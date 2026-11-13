@@ -67,9 +67,9 @@ def test_skipped_state_survives_replay(actors):
     assert PlatformTourProgress.objects.get(user=actors.client, tour=general()).status == 'skipped'
 
 
-@pytest.mark.parametrize(('global_enabled', 'client_enabled'), [(False, True), (True, False), (False, False)])
+@pytest.mark.parametrize(('global_enabled', 'client_enabled'), [(True, False), (False, False)])
 def test_disabled_tour_returns_no_steps(actors, global_enabled, client_enabled):
-    """Breaks when either disabled gate fails to hide the tour."""
+    """Breaks when a disabled client exception fails to hide the tour."""
     help_service.update_flags(actors.admin, {'expected_version': 0, 'tour_enabled': global_enabled})
     help_service.update_flags(actors.admin, {'expected_version': 0, 'tour_enabled': client_enabled}, actors.client.pk)
     assert help_service.client_catalog(actors.client)['tours'] == []
@@ -159,4 +159,5 @@ def test_sensitive_mcp_uses_same_audited_settings_service(actors):
     with patch('content.mcp.panel_bridge.mcp_actor', return_value=actors.admin):
         result = tool['handler']({'expected_version': 0, 'tour_enabled': False})
     assert result['tour_enabled'] is False
-    assert PlatformHelpEvent.objects.filter(action='update_flags', actor=actors.admin).count() == 1
+    from accounts.models_feature_flags import PlatformFeatureEvent
+    assert PlatformFeatureEvent.objects.filter(actor=actors.admin, scope='global').count() == 1

@@ -1,3 +1,4 @@
+jest.mock('~/stores/platform-features', () => ({ usePlatformFeaturesStore: () => ({ routeAllowed: () => true, enabled: () => true }) }))
 /**
  * Tests for usePlatformNav — la fuente única de navegación de la plataforma.
  *

@@ -5,7 +5,7 @@ from content.mcp.proposal_schemas import writable_schema
 
 DESCRIPTIONS = {
     'expected_version': 'Versión vigente obtenida al consultar este registro; impide sobrescribir cambios ajenos.',
-    'tour_enabled': 'Habilita los recorridos; el apagado global prevalece sobre cada cliente.',
+    'tour_enabled': 'Habilita los recorridos; la excepción explícita del cliente prevalece.',
     'video_enabled': 'Habilita los videos disponibles; nunca inicia su reproducción automáticamente.',
     'slug': 'Identificador estable del recorrido. Otra novedad necesita un identificador diferente.',
     'context': 'Lugar de la interfaz cuyos destinos puede señalar el recorrido.',
@@ -58,7 +58,7 @@ PROGRESS_QUERY = {'type': 'object', 'properties': {'page': {'type': 'integer', '
 
 PLATFORM_HELP_TOOLS = [
     _help_op('get_platform_help_settings', 'Consulta interruptores globales de recorridos y videos y su versión.', 'platform-help-settings', envelope_aliases=False),
-    _help_op('update_platform_help_settings', 'Cambia los interruptores globales; el apagado prevalece sobre cualquier cliente.', 'platform-help-settings', 'PATCH', risk='sensitive', confirm=True, payload_schema=writable_schema(HelpFlagsSerializer), envelope_aliases=False),
+    _help_op('update_platform_help_settings', 'Cambia los interruptores globales; las excepciones del cliente prevalecen.', 'platform-help-settings', 'PATCH', risk='sensitive', confirm=True, payload_schema=writable_schema(HelpFlagsSerializer), envelope_aliases=False),
     _help_op('list_platform_help_clients', 'Lista clientes y sus controles de ayuda con búsqueda y paginación.', 'platform-help-clients', query_schema=QUERY, envelope_aliases=False),
     _help_op('get_platform_help_client', 'Consulta los controles de ayuda de un cliente sin modificar sus vistos.', 'platform-help-client', path=('user_id',), envelope_aliases=False),
     _help_op('update_platform_help_client', 'Cambia la disponibilidad de recorridos y videos de un cliente con versión vigente.', 'platform-help-client', 'PATCH', path=('user_id',), risk='sensitive', confirm=True, payload_schema=writable_schema(HelpFlagsSerializer), envelope_aliases=False),

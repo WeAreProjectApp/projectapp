@@ -914,7 +914,15 @@ export const viewCatalogSections = [
         reference: 'recorridos bilingües, novedades, tutorial general y clips de Appi/voz, con recursos sustituibles y controles globales/por cliente',
         audience: 'admin',
         viewType: 'config',
-        notes: 'Interruptores globales y por cliente; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos elegidos desde dropdowns del proyecto y el progreso se conserva por usuario. La búsqueda de clientes filtra al escribir, conserva total y paginación de la consulta vigente y permite reintentar cargas fallidas. Los tres tutoriales en español se previsualizan y pueden sustituirse, retirarse o restaurarse desde el panel o MCP; los cambios concurrentes requieren recargar el recurso.',
+        notes: 'Disponibilidad centralizada en Feature flags; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos y el progreso se conserva por usuario. Los tres tutoriales en español se previsualizan y pueden sustituirse, retirarse o restaurarse desde el panel o MCP; los cambios concurrentes requieren recargar el recurso.',
+      },
+      {
+        label: 'Feature flags de Plataforma',
+        url: '/panel/platform/feature-flags', group: 'Plataforma',
+        file: 'frontend/pages/panel/platform/feature-flags.vue',
+        reference: 'disponibilidad global y excepciones por cliente con herencia y auditoría',
+        notes: 'La excepción explícita prevalece sobre el global. Todas comienzan habilitadas salvo IA y audio; no concede permisos. Gestión equivalente por MCP. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación.',
+        audience: 'admin', viewType: 'config',
       },
       {
         label: 'Configuración de IA de Plataforma',
@@ -924,7 +932,7 @@ export const viewCatalogSections = [
         reference: 'configuración compartida del chatbot y reportes por voz',
         audience: 'admin',
         viewType: 'config',
-        notes: 'Interruptores independientes globales y por cliente, modelos Haiku/Luna por función, claves write-only, plantillas bilingües versionadas con restauración y previsualización, cuotas, consumo estimado y caché. Administración equivalente por MCP.',
+        notes: 'Disponibilidad centralizada en Feature flags; modelos Haiku/Luna por función, claves write-only, plantillas bilingües versionadas con restauración y previsualización, cuotas, consumo estimado y caché. Administración equivalente por MCP.',
       },
       {
         label: 'Monitoreo de proyectos y servidores',
@@ -1266,6 +1274,12 @@ export const viewCatalogSections = [
         viewType: 'list',
       },
       {
+        label: 'Funcionalidad no disponible', url: '/platform/unavailable', group: 'Cuenta',
+        file: 'frontend/pages/platform/unavailable.vue',
+        reference: 'estado de disponibilidad con regreso a Proyectos y recuperación ante fallos de evaluación',
+        audience: 'client', viewType: 'readonly',
+      },
+      {
         label: 'Perfil',
         url: '/platform/profile',
         group: 'Cuenta',
@@ -1405,7 +1419,7 @@ export const viewCatalogSections = [
         file: 'frontend/pages/platform/projects/[id]/packages.vue',
         reference: 'compra de cupos y solicitudes con talla y aceptación explícita del cliente',
         audience: 'client', viewType: 'edit',
-        notes: 'Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.',
+        notes: 'Disponibilidad independiente en Feature flags, habilitada inicialmente. Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.',
       },
       {
         label: 'Ideas para el futuro',

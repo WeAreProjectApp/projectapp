@@ -98,7 +98,7 @@ test.describe('Admin Building on Demand', () => {
     await expect(page.getByTestId('building-on-demand-admin-public-url-es')).toHaveText('https://projectapp.co/es-co/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-open-public-en')).toHaveAttribute('href', 'https://projectapp.co/en-us/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-download-pdf-es')).toBeVisible();
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa y los datos de economía se administran desde el conector MCP Programas (programs), con vista previa y confirmación. El contrato se edita en el Gestor de documentos o por MCP. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-panel-preview')).toContainText(program.hero.title);
   });
 
@@ -261,7 +261,7 @@ test.describe('Admin Building on Demand', () => {
     await expect(page.getByTestId('building-on-demand-admin-contract-version')).toContainText('Versión 21');
     await expect(page.getByTestId('building-on-demand-admin-contract-body')).toContainText('Las horas se renuevan cada mes, no se acumulan');
     await expect(page.getByTestId('building-on-demand-admin-mirror-link')).toHaveAttribute('href', '/es-co/panel/documents/731/edit');
-    await expect(page.getByRole('link', { name: 'Ver PDF del contrato', exact: true })).toHaveAttribute('href', '/api/building-on-demand/admin/contract/pdf/?inline=1');
+    await expect(page.getByRole('link', { name: 'Previsualizar PDF del contrato', exact: true })).toHaveAttribute('href', '/api/building-on-demand/admin/contract/pdf/?inline=1');
     await expect(page.getByTestId('building-on-demand-admin-mirror-alert')).toHaveCount(0);
   });
 
@@ -299,7 +299,7 @@ test.describe('Admin Building on Demand', () => {
     await openContractFromSidebar(page);
 
     await expect(page.getByTestId('building-on-demand-admin-contract-unavailable')).toHaveText('El contrato todavía no está disponible');
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa y los datos de economía se administran desde el conector MCP Programas (programs), con vista previa y confirmación. El contrato se edita en el Gestor de documentos o por MCP. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-admin-contract-history')).toHaveCount(0);
     await expect(page.getByTestId('building-on-demand-admin-contract-error')).toHaveCount(0);
   });

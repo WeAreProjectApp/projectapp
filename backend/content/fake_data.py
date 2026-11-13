@@ -117,6 +117,7 @@ def ensure_fake_data_allowed(command_name: str) -> None:
 # maintenance rule into an executable check for every future model delivery.
 SEEDED_MODELS = {
     'accounts.PackageOrder', 'accounts.PackageRequest', 'accounts.PackageProjectSettings',
+    'accounts.ClientPlatformFeatureSettings',
     'monitoring.Resource', 'monitoring.Source', 'monitoring.Case', 'monitoring.Report',
     # Explicitly marked demo capacity and samples from create_fake_monitoring.
     'monitoring.CapacityAllocation', 'monitoring.TelemetrySample',
@@ -209,6 +210,7 @@ DERIVED_MODELS = {
 }
 
 CATALOG_MODELS = {
+    'accounts.PlatformFeatureSettings',
     'secure_links.SecureLinkFolderLock',
 
     # Published calculator rules are administrative configuration; demo seeds
@@ -233,6 +235,7 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    'accounts.PlatformFeatureEvent',
     # Provider ingestion receipts and real authentication material are not
     # evidence that a fake monitoring source actually delivered an event.
     'monitoring.Credential', 'monitoring.Delivery',

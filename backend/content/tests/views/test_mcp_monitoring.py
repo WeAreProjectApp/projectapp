@@ -118,7 +118,7 @@ def test_operations_discovery_publishes_monitoring_tools(api_client, monitoring_
     tools = {tool['name'] for tool in listed.data['result']['tools']}
     server = discover.data['result']['_meta']['io.modelcontextprotocol/serverInfo']
     assert discover.status_code == 200
-    assert server == {'name': 'projectapp-operations-mcp', 'version': '3.1.1'}
+    assert server == {'name': 'projectapp-operations-mcp', 'version': '3.2.0'}
     assert tools == OPERATIONS_DISCOVERY_TOOL_NAMES
 
 

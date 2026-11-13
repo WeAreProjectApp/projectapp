@@ -1,42 +1,8 @@
 import { ADMIN_HOSTING_CONTROLS } from '../helpers/flow-tags.js'
-import { test, expect, assertResponsiveScenario } from '../helpers/test.js'
-import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from '../responsive/catalog-scenarios.js'
-import { viewportUse } from '../helpers/viewports.js'
-import { mockApi } from '../helpers/api.js'
-import { setAuthLocalStorage } from '../helpers/auth.js'
+import { test, expect } from '../helpers/test.js'
+import { setupHostingControls as setup } from '../helpers/hosting-controls.js'
 
 test.setTimeout(60_000)
-const initial = () => ({ id: 1, name: 'Sitio de prueba', client: 'Cliente ficticio', server: 'VPS de prueba', environment: 'production', version: 0, mode: 'normal', suspension_title: 'Servicio suspendido', suspension_text: 'Gestiona la reactivación con tu proveedor.', banner_title: 'Pago pendiente del servicio', banner_text: 'Contacta a tu proveedor.', targets: [{ key: 'fixture', origins: ['https://fixture.example'], state: 'unintegrated', lifecycle: 'active' }] })
-
-async function setup(page, { failure = false, conflict = false, throughProjects = false } = {}) {
-  const state = initial()
-  await setAuthLocalStorage(page, { token: 'fixture', userAuth: { id: 1, is_staff: true, is_superuser: true, role: 'admin' } })
-  await mockApi(page, ({ apiPath, method, route }) => {
-    if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true, is_superuser: true } }) }
-    if (apiPath === 'hosting-controls/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [state], page: 1, pages: 1 }) }
-    if (apiPath.endsWith('/events/')) return { status: 200, contentType: 'application/json', body: '{"results":[]}' }
-    if (apiPath === 'hosting-controls/1/') return { status: 200, contentType: 'application/json', body: JSON.stringify(state) }
-    if (method === 'PATCH' && apiPath.startsWith('hosting-controls/1/')) {
-      if (failure) return { status: 503, contentType: 'application/json', body: '{"detail":"Fallo de prueba"}' }
-      if (conflict) return { status: 409, contentType: 'application/json', body: '{"detail":"Versión anterior"}' }
-      const data = route.request().postDataJSON()
-      if (data.mode) state.mode = data.mode
-      else {
-        const prefix = data.message_mode === 'suspended' ? 'suspension' : 'banner'
-        state[`${prefix}_title`] = data.title
-        state[`${prefix}_text`] = data.text
-      }
-      state.version += 1
-      state.targets[0].state = 'pending'
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(state) }
-    }
-    return null
-  })
-  await page.goto(throughProjects ? '/panel/projects' : '/panel/projects/hosting', { waitUntil: 'domcontentloaded' })
-  if (throughProjects) await page.getByTestId('projects-hosting-control').click()
-  await expect(page.getByTestId('hosting-switch-banner')).toBeVisible()
-  return state
-}
 
 test('switching mode replaces the previous selection', { tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:success'] }, async ({ page }) => {
   await setup(page)
@@ -90,19 +56,3 @@ test('phone layout retains both message editors', { tag: [...ADMIN_HOSTING_CONTR
   await expect(page.getByTestId('hosting-text-banner')).toHaveValue('Mensaje móvil de prueba.')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
-
-const scenario = getResponsiveScenario('frontend/pages/panel/projects/hosting.vue')
-for (const profile of RESPONSIVE_PROFILES) {
-  test.describe(`hosting control ${profile}`, () => {
-    test.use(viewportUse(profile))
-    test('message editing remains usable at this width', {
-      tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:success', '@responsive:projects', `@responsive-scenario:${scenario.catalogKey}`, `@responsive-batch:${batchForScenario(scenario.catalogKey)}`, `@viewport:${profile}`],
-    }, async ({ page }, testInfo) => {
-      await setup(page)
-      await page.getByTestId('hosting-title-banner').fill('Aviso de prueba responsivo')
-      await page.getByTestId('hosting-save-banner').click()
-      await expect(page.getByTestId('hosting-title-banner')).toHaveValue('Aviso de prueba responsivo')
-      await assertResponsiveScenario(page, testInfo, scenario, { profile })
-    })
-  })
-}

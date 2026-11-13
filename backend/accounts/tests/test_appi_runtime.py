@@ -102,6 +102,8 @@ def test_authenticated_chatbot_detail_disables_intermediary_caching(appi_context
 
 def test_revoked_voice_guide_hides_a_ready_answer_that_has_an_action(appi_context):
     """Fails if a ready dictation guide keeps its actionable link after voice capability is revoked."""
+    from accounts.tests.feature_flag_helpers import set_global_flags, set_client_flags
+    set_global_flags({'platform.ai_voice_reports': True})
     appi_context.config.voice_reporting_enabled = True
     appi_context.config.save(update_fields=['voice_reporting_enabled'])
     UserProfile.objects.filter(user=appi_context.actor).update(voice_reporting_enabled=True)
@@ -117,7 +119,7 @@ def test_revoked_voice_guide_hides_a_ready_answer_that_has_an_action(appi_contex
         answer=answer,
         exact_key='voice-guide',
     )
-    UserProfile.objects.filter(user=appi_context.actor).update(voice_reporting_enabled=False)
+    set_client_flags(appi_context.actor, {'platform.ai_voice_reports': False})
 
     serialized = appi.turn_data(appi_context.actor, turn)
     turn.refresh_from_db()

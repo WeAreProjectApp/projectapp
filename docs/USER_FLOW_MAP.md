@@ -6410,6 +6410,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `layout-locale-switch` | layout | P2 | success | 1 |
 | `layout-navbar-navigation` | layout | P2 | success | 1 |
 | `panel-platform-ai-settings` | admin | P1 | success,error,failure,display | — |
+| `panel-platform-feature-flags` | admin | P1 | success,error,failure,display | — |
 | `platform-access-view` | platform | P2 | — | 0 |
 | `platform-admin-client-detail` | platform | P2 | success,error,failure,display | 1 |
 | `platform-admin-client-list` | platform | P2 | success,error,display | 1 |
@@ -6438,6 +6439,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `platform-delivery-reply-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-responses` | platform | P1 | success,error,failure | 1 |
 | `platform-delivery-review` | platform | P1 | display,success,error,failure | 1 |
+| `platform-feature-availability` | platform | P1 | success,error,failure,display | — |
 | `platform-guided-tour-general` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-project` | platform | P1 | success,error,failure,display | 1 |
 | `platform-guided-tour-voice` | platform | P2 | success,error,failure,display | 1 |
@@ -8220,18 +8222,21 @@ Guía de voz al abrir voluntariamente el formulario real con voz disponible; no 
 - **Rol:** admin
 - **E2E:** `frontend/e2e/admin/admin-platform-help.spec.js`
 
-Configuración global y por cliente de recorridos y videos, con control de versión e historial de vistos por usuario.
+Administración de Ayuda, contenido e historial de vistos, con enlace a Feature flags para la disponibilidad global y por cliente.
 
 | Resultado | Interacción y evidencia |
 |---|---|
 | display | Entrar desde la navegación real y comprobar el contenido publicado o los datos de configuración. |
-| success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
+| success | Abrir la gestión central o guardar contenido de ayuda desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
 
 **PA-251/253/257/261 · delta de interfaz:** La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.
 La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+
+Integración PA-263/PA-251: la disponibilidad por cliente y su búsqueda al escribir se gestionan en Feature flags. Ayuda enlaza al administrador central y conserva recursos, recorridos y progreso.
 
 ### FLOW: `admin-platform-guided-tour-authoring`
 
@@ -8255,11 +8260,11 @@ Borradores bilingües con destinos conocidos, orden de pasos, vista previa, revi
 ### Panel: configuración de IA de Plataforma
 
 Entrada: iniciar sesión como staff, abrir **Plataforma → Configuración de IA**.
-Las dos funciones empiezan apagadas y el global apagado prevalece sobre el cliente.
+IA y audio parten apagados. Su disponibilidad se configura en Feature flags y la excepción del cliente prevalece sobre el global.
 
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
-| success | Cambiar activación y guardar. | Se conserva la configuración confirmada y se muestra confirmación. |
+| success | Abrir la gestión central de disponibilidad. | El enlace lleva a Feature flags; no existen controles de activación duplicados. |
 | success | Guardar una clave, elegir el redactor o un cupo global/cliente. | Sólo se informa presencia/versión de la clave; los dos canales comparten la política. |
 | success | Editar, previsualizar o restaurar una plantilla. | Vista previa sin proveedor; guardar/restaurar crea una versión. |
 | error | Previsualizar una plantilla con marcadores no permitidos. | Error visible, sin revisión nueva ni llamada al modelo. |
@@ -8356,11 +8361,11 @@ Cliente abre sus conversaciones privadas de Appi, cambia entre ellas, carga mens
 - **Rol:** platform-client
 - **E2E:** `frontend/e2e/platform/platform-appi.spec.js`
 
-Cliente ve el lanzador de Appi sólo cuando chatbot está habilitado globalmente y para su cuenta. Si faltan las claves o el proveedor necesario, el lanzador explica que no está disponible y no abre un chat; al recuperar disponibilidad, puede abrir Appi sin mezclar el estado privado de otra sesión.
+Cliente ve el lanzador de Appi sólo cuando el valor efectivo del chatbot está habilitado para su cuenta; la excepción del cliente prevalece sobre el global. Si faltan las claves o el proveedor necesario, el lanzador explica que no está disponible y no abre un chat; al recuperar disponibilidad, puede abrir Appi sin mezclar el estado privado de otra sesión.
 
 | Resultado | Interacción y evidencia |
 |---|---|
-| display | Entrar por la navegación normal como cliente y comprobar que el lanzador se oculta cuando el global o el cliente están apagados, y queda deshabilitado cuando falta preparación del proveedor. |
+| display | Entrar por la navegación normal como cliente y comprobar que el lanzador se oculta cuando su valor efectivo está apagado, y queda deshabilitado cuando falta preparación del proveedor. |
 | success | Con chatbot activo y disponible, abrir Appi desde el lanzador y comprobar que aparece el panel con su propósito y el campo de consulta. |
 | error | Cambiar a una cuenta sin capacidad de chatbot y comprobar que no conserva conversaciones, borrador ni cuota de la cuenta anterior. |
 | failure | Fallar la lectura de capacidades; no se abre un chat con estado incierto y el lanzador no permite una consulta facturable. |
@@ -9608,6 +9613,20 @@ La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acr
 - **Error:** impide listas vacías, duplicados, números fuera de 1–999 o preselecciones fuera de las opciones; muestra errores junto al control.
 - **Failure:** la carga ofrece Reintentar; un guardado rechazado conserva los valores editados y permite otro intento.
 
+# panel-platform-feature-flags
+
+PA-263. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
+
+- success: guardado/persistencia/excepción/herencia o regreso a Proyectos.
+- error: conflicto administrativo o enlace directo deshabilitado.
+- failure: error de servidor o evaluación sin respuesta, con recuperación.
+- display: navegación desde el Panel con valores iniciales o navegación de cliente filtrada.
+
+Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servicios continúa; este registro no acredita aprobación.
+
+
+Integración PA-251: la búsqueda de clientes consulta al escribir, descarta respuestas anteriores incluso durante el debounce, conserva carga/error/reintento y vuelve a la primera página al limpiar.
+
 ### Platform: reportar y seguir bugs de proyecto
 
 El cliente puede reportar un bug general aunque no existan guías publicadas. Si
@@ -9831,6 +9850,17 @@ del cliente permanecen intactas.
 `delivery-reply-prompt.spec.js` cubre envío manual sin adjuntos, revisión del texto
 editado, rechazo de una clasificación fuera del alcance con fuentes incompletas y
 consulta de la conversación pública que originó el prompt.
+
+# platform-feature-availability
+
+PA-263. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
+
+- success: guardado/persistencia/excepción/herencia o regreso a Proyectos.
+- error: conflicto administrativo o enlace directo deshabilitado.
+- failure: error de servidor o evaluación sin respuesta, con recuperación.
+- display: navegación desde el Panel con valores iniciales o navegación de cliente filtrada.
+
+Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servicios continúa; este registro no acredita aprobación.
 
 ### FLOW: `platform-help-videos`
 

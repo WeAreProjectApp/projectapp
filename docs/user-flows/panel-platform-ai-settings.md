@@ -1,11 +1,11 @@
 ### Panel: configuración de IA de Plataforma
 
 Entrada: iniciar sesión como staff, abrir **Plataforma → Configuración de IA**.
-Las dos funciones empiezan apagadas y el global apagado prevalece sobre el cliente.
+IA y audio parten apagados. Su disponibilidad se configura en Feature flags y la excepción del cliente prevalece sobre el global.
 
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
-| success | Cambiar activación y guardar. | Se conserva la configuración confirmada y se muestra confirmación. |
+| success | Abrir la gestión central de disponibilidad. | El enlace lleva a Feature flags; no existen controles de activación duplicados. |
 | success | Guardar una clave, elegir el redactor o un cupo global/cliente. | Sólo se informa presencia/versión de la clave; los dos canales comparten la política. |
 | success | Editar, previsualizar o restaurar una plantilla. | Vista previa sin proveedor; guardar/restaurar crea una versión. |
 | error | Previsualizar una plantilla con marcadores no permitidos. | Error visible, sin revisión nueva ni llamada al modelo. |

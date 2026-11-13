@@ -4,12 +4,13 @@ import { usePlatformAIAdminStore } from '~/stores/platform_ai_admin'
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
 const { t } = useI18n()
+const localePath = useLocalePath()
 const store = usePlatformAIAdminStore()
 const tab = ref('activation'), busy = ref(false), error = ref(''), saved = ref(false), search = ref('')
 const form = reactive({}), keys = reactive({ anthropic: '', openai: '', jev: '' })
 const formVersion = ref(null)
 const selectedTemplateId = ref(''), family = ref('report'), templateContent = ref(''), preview = ref(''), versions = ref([])
-const fields = ['chatbot_enabled', 'voice_reporting_enabled', 'chatbot_model', 'voice_report_model', 'monthly_audio_limit', 'daily_user_audio_limit', 'ai_request_limit', 'ai_window_minutes', 'max_output_tokens', 'report_cache_enabled', 'chatbot_cache_enabled', 'report_cache_hours', 'chatbot_cache_hours']
+const fields = [ 'chatbot_model', 'voice_report_model', 'monthly_audio_limit', 'daily_user_audio_limit', 'ai_request_limit', 'ai_window_minutes', 'max_output_tokens', 'report_cache_enabled', 'chatbot_cache_enabled', 'report_cache_hours', 'chatbot_cache_hours']
 const quotaOverrides = reactive({})
 const tabs = computed(() => ['activation', 'providers', 'templates', 'usage'].map((id) => ({ id, label: t(`platformAI.tabs.${id}`) })))
 const modelOptions = [{ value: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' }, { value: 'gpt-6-luna', label: 'GPT-6 Luna' }]
@@ -54,10 +55,7 @@ function saveClientQuota(client, inherit = false) { return run(async () => {
         <section class="space-y-4 rounded-xl border border-border-muted bg-surface p-4">
           <h2 class="text-lg font-semibold text-text-default">{{ t('platformAI.global') }}</h2>
           <p class="text-sm text-text-muted">{{ t('platformAI.switchHint') }}</p>
-          <div v-for="field in ['chatbot_enabled', 'voice_reporting_enabled']" :key="field" class="flex items-center justify-between gap-3">
-            <span class="text-sm text-text-default">{{ t(`platformAI.settings.${field}`) }}</span>
-            <BaseToggle v-model="form[field]" :aria-label="t(`platformAI.settings.${field}`)" :data-testid="`ai-global-${field}`" />
-          </div>
+          <NuxtLink :to="localePath('/panel/platform/feature-flags')" class="text-text-brand underline">{{ t('platformFeatures.manage') }}</NuxtLink>
           <BaseButton :loading="busy" data-testid="ai-save-settings" @click="saveSettings">{{ t('platformAI.save') }}</BaseButton>
         </section>
         <section class="space-y-4">
@@ -68,10 +66,6 @@ function saveClientQuota(client, inherit = false) { return run(async () => {
           </form>
           <article v-for="client in store.clients.results" :key="client.user_id" class="space-y-3 rounded-xl border border-border-muted bg-surface p-4">
             <h3 class="break-words font-medium text-text-default">{{ client.name }}</h3>
-            <div v-for="field in ['chatbot_enabled', 'voice_reporting_enabled']" :key="field" class="flex items-center justify-between gap-3">
-              <span class="text-sm text-text-default">{{ t(`platformAI.settings.${field}`) }}</span>
-              <BaseToggle :model-value="client[field]" :aria-label="`${client.name}: ${t(`platformAI.settings.${field}`)}`" :disabled="busy" @update:model-value="run(() => store.saveClient(client, field, $event))" />
-            </div>
             <p class="text-sm text-text-muted">{{ t(client.ai_request_limit ? 'platformAI.customQuota' : 'platformAI.inheritedQuota') }}</p>
             <div class="grid gap-3 panel-portrait:grid-cols-2">
               <BaseFormField :label="t('platformAI.settings.ai_request_limit')"><BaseInput v-model="clientQuota(client).limit" type="number" min="1" max="1000" /></BaseFormField>

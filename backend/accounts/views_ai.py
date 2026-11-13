@@ -15,6 +15,7 @@ from accounts.models_ai import PlatformAIEvent, PlatformAITemplate
 from accounts.serializers_ai import (CredentialSerializer, TemplateSerializer, TemplateRestoreSerializer,
     TranscriptionSerializer, ReportDraftSerializer, validated)
 from accounts.services import platform_ai as service
+from accounts.services import platform_features as feature_service
 from accounts.services import platform_ai_templates as templates
 from accounts.services import platform_ai_jobs as jobs
 
@@ -60,11 +61,15 @@ def clients_view(request):
     except ValueError:
         raise ValidationError('Página no válida.') from None
     query = request.query_params.get('search', '')[:200]
-    rows = UserProfile.objects.clients().select_related('user').filter(
+    rows = UserProfile.objects.clients().select_related('user', 'user__platform_feature_settings').filter(
         Q(user__email__icontains=query) | Q(user__first_name__icontains=query) | Q(company_name__icontains=query)).order_by('user_id')
     pager = Paginator(rows, 20)
     result = pager.get_page(page)
-    return private_response({'results': [service.client_data(row) for row in result], 'count': pager.count, 'page': result.number})
+    defaults = feature_service.values_for()
+    def client_projection(row):
+        overrides = getattr(row.user, 'platform_feature_settings', None)
+        return service.client_data(row, {**defaults, **(overrides.values if overrides else {})})
+    return private_response({'results': [client_projection(row) for row in result], 'count': pager.count, 'page': result.number})
 
 
 @private_api_view(['GET', 'PATCH'])

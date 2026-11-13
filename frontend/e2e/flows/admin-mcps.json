@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "El superusuario administra gestores MCP por módulo con nombres «Gestor de …», descripción y «Qué puedes gestionar» derivado de las herramientas realmente publicadas. Revisa permisos, confirmaciones, actividad y credenciales limitadas. Crea, edita, rota, revoca y activa accesos; los secretos aparecen una sola vez. Los conectores pendientes de retiro conservan su evidencia y gestión acotada; los retirados desaparecen del catálogo operativo. El acceso staff no superusuario se rechaza. Un fallo de carga permite reintentar. Nombres, capacidades y credenciales largas permanecen legibles sin desborde en los perfiles soportados.",
+  "description": "El superusuario administra gestores MCP por módulo con nombres «Gestor de …», descripción y «Qué puedes gestionar» derivado de las herramientas realmente publicadas. Revisa permisos, confirmaciones, actividad y credenciales limitadas. Crea, edita, rota, revoca y activa accesos; los secretos aparecen una sola vez. Los conectores pendientes de retiro conservan su evidencia y gestión acotada; los retirados desaparecen del catálogo operativo. El acceso staff no superusuario se rechaza. Un fallo de carga permite reintentar. Nombres, capacidades y credenciales largas permanecen legibles sin desborde en los perfiles soportados. Monitoreo publica el seguimiento de casos en Operaciones y la telemetría y capacidad en Proyectos, sin duplicar acciones canónicas.",
   "expectedSpecs": 16,
   "outcomes": [
     "display",

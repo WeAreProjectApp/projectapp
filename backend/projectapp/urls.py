@@ -58,6 +58,7 @@ urlpatterns = [
     path('api/hosting-runtime/', include('hosting_control.runtime_urls')),
     path('api/secure-links/', include('secure_links.urls')),
     path('api/health/', health_check, name='health-check'),
+    path('api/platform/features/', include('accounts.feature_flags_urls')),
     path('api/platform/ai/', include('accounts.ai_urls')),
     # /admin without the trailing slash would fall through to the SPA
     # catch-all and 404 — APPEND_SLASH never kicks in because the URL

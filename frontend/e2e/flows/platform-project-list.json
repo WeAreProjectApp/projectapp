@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Admin sees all projects with catalog-derived state filters and a create button. Client sees only assigned projects. Below 1024px cards retain complete names; larger screens keep project columns and detail access visible even with 175-character names, with or without spaces.",
+  "description": "Admin sees all projects with catalog-derived state filters and a create button. Client sees only assigned projects. Below 1024px cards retain complete names; larger screens keep project columns and detail access visible even with 175-character names, with or without spaces. Disponibilidad PA-263: conserva la estructura de proyectos y omite indicadores de módulos apagados; el equipo mantiene su acceso autorizado.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

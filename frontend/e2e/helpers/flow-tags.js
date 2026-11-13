@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.105.3
+// Registry version: 2.106.2
 
 // ── admin ──
 export const ADMIN_ACCESS_MANAGEMENT = ['@flow:admin-access-management', '@module:admin', '@priority:P1'];
@@ -330,6 +330,7 @@ export const ADMIN_TASK_DEADLINE_NOTIFICATION = ['@flow:admin-task-deadline-noti
 export const ADMIN_VIEW_MAP = ['@flow:admin-view-map', '@module:admin', '@priority:P4'];
 export const ADMIN_WHATSAPP_SUGGESTION = ['@flow:admin-whatsapp-suggestion', '@module:admin', '@priority:P2'];
 export const PANEL_PLATFORM_AI_SETTINGS = ['@flow:panel-platform-ai-settings', '@module:admin', '@priority:P1'];
+export const PANEL_PLATFORM_FEATURE_FLAGS = ['@flow:panel-platform-feature-flags', '@module:admin', '@priority:P1'];
 export const PROPOSAL_PRE_EXPIRATION_DISCOUNT_SUGGESTION = ['@flow:proposal-pre-expiration-discount-suggestion', '@module:admin', '@priority:P2'];
 
 // ── auth ──
@@ -404,6 +405,7 @@ export const PLATFORM_DELIVERY_NOTICES = ['@flow:platform-delivery-notices', '@m
 export const PLATFORM_DELIVERY_REPLY_PROMPT = ['@flow:platform-delivery-reply-prompt', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_RESPONSES = ['@flow:platform-delivery-responses', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_REVIEW = ['@flow:platform-delivery-review', '@module:platform', '@priority:P1'];
+export const PLATFORM_FEATURE_AVAILABILITY = ['@flow:platform-feature-availability', '@module:platform', '@priority:P1'];
 export const PLATFORM_GUIDED_TOUR_GENERAL = ['@flow:platform-guided-tour-general', '@module:platform', '@priority:P1'];
 export const PLATFORM_GUIDED_TOUR_PROJECT = ['@flow:platform-guided-tour-project', '@module:platform', '@priority:P1'];
 export const PLATFORM_GUIDED_TOUR_VOICE = ['@flow:platform-guided-tour-voice', '@module:platform', '@priority:P2'];
