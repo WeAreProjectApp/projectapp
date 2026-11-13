@@ -56,6 +56,7 @@ jobs:
       - name: Identity isolation and failed evaluation
         run: npm test -- test/stores/platform-features.test.js test/components/PlatformMobileDrawer.test.js --runInBand --coverage=false
   backend-regressions:
+    name: backend-regressions (${{ matrix.group }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -87,7 +87,7 @@ def values_from_profile(profile):
 
 def request_values(request):
     from accounts.authentication import SessionJWTAuthentication
-    if isinstance(request.successful_authenticator, SessionJWTAuthentication):
+    if isinstance(getattr(request, 'successful_authenticator', None), SessionJWTAuthentication):
         return request.user._platform_feature_values
     return values_for(request.user.pk)
 

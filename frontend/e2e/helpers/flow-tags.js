@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.106.0
+// Registry version: 2.106.1
 
 // ── admin ──
 export const ADMIN_ACCESS_MANAGEMENT = ['@flow:admin-access-management', '@module:admin', '@priority:P1'];

@@ -1,4 +1,4 @@
-import catalog from '../../contracts/platform-features.json'
+import catalog from '../../contracts/platform-features.json' with { type: 'json' }
 
 export { catalog as platformFeatureCatalog }
 
@@ -18,4 +18,3 @@ export function featureForRoute(path) {
 export function featureForTarget(target) {
   return catalog.features.find(item => item.targets.includes(target))?.key
 }
-
