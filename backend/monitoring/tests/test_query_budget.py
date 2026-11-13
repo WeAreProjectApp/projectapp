@@ -326,8 +326,8 @@ def test_monitoring_single_date_filter_keeps_its_inclusive_boundary(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('model', [Case, Report])
-def test_monitoring_inverted_dates_return_an_empty_list(staff_client, monitored_source, model):
-    """Falla si un rango invertido deja de responder vacío con el contrato DateField actual."""
+def test_monitoring_inverted_dates_return_validation_error(staff_client, monitored_source, model):
+    """Falla si una consulta acepta un rango cuyo final es anterior al inicio."""
     endpoint, _ = _endpoint(model)
     active_day = date(2024, 2, 15)
 
@@ -344,8 +344,8 @@ def test_monitoring_inverted_dates_return_an_empty_list(staff_client, monitored_
             {'since': (active_day + timedelta(days=1)).isoformat(), 'until': active_day.isoformat()},
         )
 
-    assert response.status_code == 200
-    assert response.json() == {'results': [], 'count': 0, 'page': 1, 'page_size': 25}
+    assert response.status_code == 400
+    assert 'until' in response.json()
 
 
 @pytest.mark.django_db

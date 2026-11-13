@@ -23,6 +23,12 @@ async function openCaseFromPanel(page, options = {}) {
 }
 
 const caseDetail = (page) => page.getByTestId('monitoring-detail');
+const dialogStatus = (page) => page.getByRole('dialog', { name: 'Status' });
+
+async function chooseUnderReview(page) {
+  await caseDetail(page).getByTestId('monitor-detail-state').click();
+  await dialogStatus(page).getByRole('checkbox', { name: 'Under review', exact: true }).check();
+}
 
 test.describe('Monitoring case follow-up and reports', () => {
   test.beforeEach(async ({ page }) => {
@@ -33,7 +39,7 @@ test.describe('Monitoring case follow-up and reports', () => {
     tag: ['@flow:admin-monitoring-case-follow-up', '@outcome:display', '@role:admin'],
   }, async ({ page }) => {
     await openCaseFromPanel(page);
-    await expect(caseDetail(page).getByLabel('Status')).toHaveValue('pending');
+    await expect(caseDetail(page).getByTestId('monitor-detail-state')).toHaveText('Status: Pending');
     await expect(caseDetail(page).getByRole('heading', { name: monitoringCaseTitle, exact: true })).toHaveCount(1);
   });
 
@@ -41,10 +47,10 @@ test.describe('Monitoring case follow-up and reports', () => {
     tag: ['@flow:admin-monitoring-case-follow-up', '@outcome:success', '@role:admin'],
   }, async ({ page }) => {
     const state = await openCase(page);
-    await caseDetail(page).getByLabel('Status').selectOption('reviewing');
+    await chooseUnderReview(page);
     await page.getByRole('button', { name: 'Save status', exact: true }).click();
 
-    await expect(caseDetail(page).getByLabel('Status')).toHaveValue('reviewing');
+    await expect(caseDetail(page).getByTestId('monitor-detail-state')).toHaveText('Status: Under review');
     await expect(page.getByText('Problem detected · Under review', { exact: true })).toHaveCount(1);
     expect(state.requests).toContainEqual({ apiPath: 'monitoring/cases/71/state/', payload: { state: 'reviewing', version: 3 } });
   });
@@ -53,18 +59,18 @@ test.describe('Monitoring case follow-up and reports', () => {
     tag: ['@flow:admin-monitoring-case-follow-up', '@outcome:error', '@role:admin'],
   }, async ({ page }) => {
     await openCase(page, { stateConflict: true });
-    await caseDetail(page).getByLabel('Status').selectOption('reviewing');
+    await chooseUnderReview(page);
     await page.getByRole('button', { name: 'Save status', exact: true }).click();
 
     await expect(page.getByRole('alert')).toHaveText('The case changed. Refresh the detail before saving.');
-    await expect(caseDetail(page).getByLabel('Status')).toHaveValue('reviewing');
+    await expect(caseDetail(page).getByTestId('monitor-detail-state')).toHaveText('Status: Under review');
   });
 
   test('shows a save failure after a server error instead of pretending the state changed', {
     tag: ['@flow:admin-monitoring-case-follow-up', '@outcome:failure', '@role:admin'],
   }, async ({ page }) => {
     await openCase(page, { stateFailure: true });
-    await caseDetail(page).getByLabel('Status').selectOption('reviewing');
+    await chooseUnderReview(page);
     await page.getByRole('button', { name: 'Save status', exact: true }).click();
 
     await expect(page.getByRole('alert')).toHaveText('Could not save the change.');
@@ -148,5 +154,18 @@ test.describe('Monitoring case follow-up and reports', () => {
     await page.getByRole('button', { name: 'Reports', exact: true }).click();
 
     await expect(page.getByRole('alert')).toHaveText('Could not load data. Try refreshing.');
+  });
+
+  test('recovers reports after an expired consultation response', {
+    tag: ['@flow:admin-monitoring-reports', '@outcome:error', '@role:admin'],
+  }, async ({ page }) => {
+    await installMonitoringMock(page, { reportsExpiredOnce: true });
+    await page.goto('/panel/monitoring', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'Reports', exact: true }).click();
+
+    await expect(page.getByRole('alert')).toHaveText('This consultation expired. Use Refresh to continue with the same filters.');
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+
+    await expect(page.getByRole('button', { name: monitoringReportTitle, exact: true })).toHaveCount(1);
   });
 });

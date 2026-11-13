@@ -15,7 +15,7 @@
       <span class="min-w-0 truncate">{{ triggerLabel }}</span>
       <span class="flex shrink-0 items-center gap-1.5">
         <span
-          v-if="modelValue.length"
+          v-if="modelValue.length && !single"
           class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-semibold text-white"
         >{{ modelValue.length }}</span>
         <BaseActionIcon :action="isOpen ? 'collapse' : 'expand'" class="h-3.5 w-3.5" />
@@ -97,6 +97,7 @@ const props = defineProps({
   options: { type: Array, required: true },
   modelValue: { type: Array, default: () => [] },
   searchable: { type: Boolean, default: true },
+  single: { type: Boolean, default: false },
   testId: { type: String, default: '' },
 });
 
@@ -142,6 +143,11 @@ async function openAndFocusOptions() {
 }
 
 function toggle(value) {
+  if (props.single) {
+    emit('update:modelValue', [value]);
+    isOpen.value = false;
+    return;
+  }
   if (props.modelValue.includes(value)) {
     emit('update:modelValue', props.modelValue.filter((item) => item !== value));
   } else {

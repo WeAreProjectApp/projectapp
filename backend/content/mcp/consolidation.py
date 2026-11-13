@@ -26,7 +26,7 @@ CATALOG_VERSIONS = {
     'diagnostics': '2.1.1', 'proposals': '6.3.0', 'content': '3.1.1',
     'building-with-us': '3.1.2', 'building-on-demand': '4.1.2',
     'additional-modules': '4.1.2', 'offerings': '2.1.1', 'programs': '3.1.1',
-    'projects': '5.1.0', 'data-integrity': '1.0.1',
+    'projects': '5.2.0', 'data-integrity': '1.0.1',
     'accounting-billing': '3.1.0',
 
 
