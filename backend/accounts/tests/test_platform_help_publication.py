@@ -35,6 +35,8 @@ def acknowledgement():
 def test_client_catalog_uses_published_revision_after_draft_edit(actors):
     """Breaks when an unpublished editor draft becomes visible to clients."""
     tour = general_tour()
+    from accounts.tests.feature_flag_helpers import set_client_flags
+    set_client_flags(actors.client, {'platform.ai_chatbot': True})
     published = PlatformGuidedTourRevision.objects.get(tour=tour, number=tour.published_revision)
     draft = deepcopy(tour.draft)
     draft['title_es'] = 'Un borrador todavía no publicado'

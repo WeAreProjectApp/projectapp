@@ -15,7 +15,10 @@ class SessionJWTAuthentication(JWTAuthentication):
 
     def get_user(self, validated_token):
         user = super().get_user(validated_token)
-        profile = getattr(user, 'profile', None)
+        from accounts.services.platform_features import profile_queryset, values_from_profile
+        profile = profile_queryset().filter(user_id=user.pk).first()
         if profile is None or validated_token.get('access_version', 0) != profile.access_version:
             raise InvalidToken('El acceso fue revocado. Inicia sesión de nuevo.')
+        user._state.fields_cache['profile'] = profile
+        user._platform_feature_values = values_from_profile(profile)
         return user

@@ -7,9 +7,9 @@
         <col class="w-1/3" />
         <col v-if="isAdmin" />
         <col />
-        <col />
+        <col v-if="showBugs" />
         <col v-if="isAdmin" />
-        <col />
+        <col v-if="showDeliveryValue" />
         <col />
         <col class="w-12" />
       </colgroup>
@@ -18,9 +18,9 @@
           <th class="px-4 py-3">Proyecto</th>
           <th v-if="isAdmin" class="px-4 py-3">Cliente</th>
           <th class="px-4 py-3">Progreso</th>
-          <th class="px-4 py-3">Bugs abiertos</th>
+          <th v-if="showBugs" class="px-4 py-3">Bugs abiertos</th>
           <th v-if="isAdmin" class="px-4 py-3">Solicitudes pendientes</th>
-          <th class="px-4 py-3">Valor total</th>
+          <th v-if="showDeliveryValue" class="px-4 py-3">Valor total</th>
           <th class="px-4 py-3">Última actividad</th>
           <th class="px-2"></th>
         </tr>
@@ -49,7 +49,7 @@
               <span class="shrink-0 text-xs">{{ p.progress || 0 }}%</span>
             </div>
           </td>
-          <td class="px-4 py-3">
+          <td v-if="showBugs" class="px-4 py-3">
             <span :data-testid="`project-bugs-${p.id}`" :class="(p.bugs_open_count || 0) > 0 ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700' : 'text-text-muted'">
               {{ p.bugs_open_count || 0 }}
             </span>
@@ -59,7 +59,7 @@
               {{ p.changes_pending_count || 0 }}
             </span>
           </td>
-          <td class="px-4 py-3 text-sm">
+          <td v-if="showDeliveryValue" class="px-4 py-3 text-sm">
             <span :data-testid="`project-value-${p.id}`" :class="(Number(p.phases_total_amount) > 0) ? 'font-medium text-text-default' : 'text-text-muted'">
               {{ formatCurrency(p.phases_total_amount) }}
             </span>
@@ -68,7 +68,7 @@
           <td class="px-2 py-3 text-right text-text-muted">›</td>
         </tr>
         <tr v-if="!projects.length">
-          <td :colspan="isAdmin ? 8 : 6" class="px-4 py-12 text-center text-text-muted">
+          <td :colspan="4 + (isAdmin ? 2 : 0) + Number(showBugs) + Number(showDeliveryValue)" class="px-4 py-12 text-center text-text-muted">
             No hay proyectos para mostrar.
           </td>
         </tr>
@@ -107,7 +107,7 @@
         </div>
 
         <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <div class="flex items-center justify-between gap-2">
+          <div v-if="showBugs" class="flex items-center justify-between gap-2">
             <dt class="text-xs uppercase tracking-wide text-text-muted">Bugs</dt>
             <dd>
               <span :data-testid="`project-bugs-${p.id}`" :class="(p.bugs_open_count || 0) > 0 ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700' : 'text-text-muted'">{{ p.bugs_open_count || 0 }}</span>
@@ -119,7 +119,7 @@
               <span :class="(p.changes_pending_count || 0) > 0 ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700' : 'text-text-muted'">{{ p.changes_pending_count || 0 }}</span>
             </dd>
           </div>
-          <div class="flex items-center justify-between gap-2">
+          <div v-if="showDeliveryValue" class="flex items-center justify-between gap-2">
             <dt class="text-xs uppercase tracking-wide text-text-muted">Valor</dt>
             <dd :data-testid="`project-value-${p.id}`" :class="(Number(p.phases_total_amount) > 0) ? 'font-medium text-text-default' : 'text-text-muted'">{{ formatCurrency(p.phases_total_amount) }}</dd>
           </div>
@@ -144,6 +144,8 @@ import { useIsMobile } from '~/composables/useIsMobile'
 const props = defineProps({
   projects: { type: Array, required: true },
   role: { type: String, default: 'admin' },
+  showBugs: { type: Boolean, default: true },
+  showDeliveryValue: { type: Boolean, default: true },
 })
 
 defineEmits(['navigate'])

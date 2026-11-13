@@ -20,3 +20,6 @@ urlpatterns = [
     path('admin/events/', views.events_view, name='platform-ai-events'),
     path('admin/cache/invalidate/', views.invalidate_view, name='platform-ai-cache-invalidate'),
 ]
+
+from accounts.feature_permissions import bind_feature_permissions
+bind_feature_permissions(urlpatterns)

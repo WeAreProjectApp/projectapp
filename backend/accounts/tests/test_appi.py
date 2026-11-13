@@ -30,6 +30,8 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def client_context(settings, monkeypatch):
     """Build an enabled client context with deterministic Appi provider boundaries."""
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     settings.PLATFORM_AI_CIPHER_KEY = Fernet.generate_key()
     actor = get_user_model().objects.create_user('appi-client', email='appi@example.test')
     UserProfile.objects.update_or_create(user=actor, defaults={'role': 'client', 'chatbot_enabled': True})
@@ -71,6 +73,8 @@ def test_anonymous_client_cannot_read_conversations():
 
 def test_global_off_blocks_queries(client_context):
     """Fails if the global chatbot switch permits a new conversation."""
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_chatbot': False})
     client_context.config.chatbot_enabled = False
     client_context.config.save()
 

@@ -51,6 +51,8 @@ REPORT_PROPOSAL = {
 
 def configure_voice(client_user, *, daily_limit=20):
     """Enable voice reporting with explicit credentials, limits and templates."""
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_voice_reports': True, 'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     UserProfile.objects.filter(user=client_user).update(voice_reporting_enabled=True)
     PlatformAISettings.objects.update_or_create(
         pk=1,
@@ -426,7 +428,8 @@ def test_post_transcription_shutdown_preserves_consumed_quota(client_user, proje
 
     def transcribe_then_disable(**kwargs):
         seen['audio_header'] = kwargs['audio'].read(4)
-        PlatformAISettings.objects.filter(pk=1).update(voice_reporting_enabled=False)
+        from accounts.tests.feature_flag_helpers import set_global_flags
+        set_global_flags({'platform.ai_voice_reports': False})
         return 'El botón Guardar no responde.'
 
     monkeypatch.setattr('accounts.services.platform_ai_providers.transcribe', transcribe_then_disable)

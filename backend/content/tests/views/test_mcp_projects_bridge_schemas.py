@@ -210,12 +210,15 @@ def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tool
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 117
+    assert len(original_bridge_tools) == 123
     assert (
         set(PROJECTS_BRIDGE_SCHEMAS) | _PLATFORM_HELP_BRIDGE_NAMES
         | _PLATFORM_AI_BRIDGE_NAMES
         | _MONITORING_BRIDGE_NAMES
         | _PACKAGE_PROJECT_BRIDGE_NAMES
+        | {'get_platform_feature_flags', 'update_platform_feature_flags',
+           'list_platform_feature_clients', 'get_platform_client_feature_flags',
+           'update_platform_client_feature_flags', 'list_platform_feature_events'}
         | {'get_project_calculator_version', 'get_project_requirement_calculator',
            'create_project_calculator_draft', 'update_project_calculator_parameters',
            'approve_project_requirement_calculator',

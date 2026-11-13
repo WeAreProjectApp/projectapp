@@ -129,7 +129,7 @@ function defaultCapabilities(view, owner) {
     panelShell: true, table: false, tabs: true, filters: true,
     modal: true, selection: false, touch: true,
   };
-  if (view.url === '/panel/platform/ai') return {
+  if (view.url === '/panel/platform/ai' || view.url === '/panel/platform/feature-flags') return {
     panelShell: true, table: false, tabs: true, filters: true,
     modal: false, selection: false, touch: true,
   };
@@ -173,6 +173,8 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
         ?? (view.url === '/platform/projects/:id/packages' ? 'platform-requirement-packages-purchase' : null)
         ?? (view.url === '/platform/projects/:id/secure-links' ? 'platform-secure-link-manage' : null)
         ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review'
+          : view.url === '/panel/platform/feature-flags' ? 'panel-platform-feature-flags'
+          : view.url === '/platform/unavailable' ? 'platform-feature-availability'
           : view.url === '/panel/platform/ai' ? 'panel-platform-ai-settings' : OWNER_FLOW[owner]),
     outcome: kind === 'redirect' ? (REDIRECT_OUTCOME_BY_URL[view.url] ?? 'success') : 'display',
     profiles: RESPONSIVE_PROFILES,

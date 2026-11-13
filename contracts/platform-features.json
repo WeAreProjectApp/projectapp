@@ -1,0 +1,562 @@
+{
+  "version": 1,
+  "features": [
+    {
+      "key": "platform.delivery",
+      "label_es": "Entregas",
+      "label_en": "Delivery",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/delivery",
+        "/platform/projects/:id/board",
+        "/platform/board"
+      ],
+      "capabilities": [
+        "platform-project-board"
+      ],
+      "targets": [
+        "project-delivery"
+      ],
+      "api_routes": [
+        "platform-approval-file-download",
+        "platform-project-phases",
+        "platform-project-phases-reorder",
+        "platform-project-phase-detail",
+        "delivery-notice-list",
+        "delivery-notice-detail",
+        "delivery-notice-retry-preview",
+        "delivery-notice-retry",
+        "delivery-overview",
+        "delivery-prompt",
+        "delivery-prompt-options",
+        "delivery-prompt-contexts",
+        "delivery-prompt-context",
+        "delivery-prompt-source-download",
+        "delivery-reply-preview",
+        "delivery-import-preview",
+        "delivery-import-apply",
+        "delivery-publish",
+        "delivery-review",
+        "delivery-historical-approvals",
+        "delivery-closure-email-prepare",
+        "delivery-closure-email-history",
+        "delivery-closure-email-detail",
+        "delivery-closure-email-send",
+        "delivery-closure-email-resend-prepare",
+        "delivery-closure-email-attachment",
+        "delivery-messages",
+        "delivery-document-options",
+        "delivery-evidence-options",
+        "delivery-documents",
+        "delivery-document-delete",
+        "delivery-document-pdf",
+        "delivery-review-evidence",
+        "delivery-review-evidence-pdf",
+        "delivery-contracts",
+        "delivery-contracts-detail",
+        "delivery-amendments",
+        "delivery-amendments-detail",
+        "delivery-scopes",
+        "delivery-scopes-detail",
+        "delivery-phases",
+        "delivery-phases-detail",
+        "delivery-stages",
+        "delivery-stages-detail",
+        "delivery-requirements",
+        "delivery-requirements-detail",
+        "delivery-contracts-signature",
+        "delivery-contracts-pdf",
+        "delivery-contracts-source",
+        "delivery-amendments-signature",
+        "delivery-amendments-pdf",
+        "delivery-amendments-source"
+      ]
+    },
+    {
+      "key": "platform.ideas",
+      "label_es": "Ideas",
+      "label_en": "Ideas",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/ideas"
+      ],
+      "capabilities": [
+        "platform-project-ideas"
+      ],
+      "targets": [
+        "project-ideas"
+      ],
+      "api_routes": [
+        "platform-ideas",
+        "platform-idea-detail",
+        "platform-idea-revisions",
+        "platform-idea-archive",
+        "platform-idea-restore",
+        "platform-idea-collections",
+        "platform-idea-collection-detail"
+      ]
+    },
+    {
+      "key": "platform.bugs",
+      "label_es": "Bugs",
+      "label_en": "Bug reports",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/bugs",
+        "/platform/bugs"
+      ],
+      "capabilities": [
+        "platform-bug-follow-up"
+      ],
+      "targets": [
+        "project-bugs"
+      ],
+      "api_routes": [
+        "platform-bug-report-all",
+        "platform-bug-report-list",
+        "platform-bug-report-bulk-evaluate",
+        "platform-bug-report-detail",
+        "platform-bug-report-evaluate",
+        "platform-bug-report-comments",
+        "platform-bug-reopen"
+      ]
+    },
+    {
+      "key": "platform.change_requests",
+      "label_es": "Solicitudes de cambio",
+      "label_en": "Change requests",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/changes",
+        "/platform/changes"
+      ],
+      "capabilities": [
+        "platform-change-requests"
+      ],
+      "targets": [
+        "project-changes"
+      ],
+      "api_routes": [
+        "platform-change-request-all",
+        "platform-change-request-list",
+        "platform-change-request-bulk-evaluate",
+        "platform-change-request-detail",
+        "platform-change-request-evaluate",
+        "platform-change-request-comments",
+        "platform-change-request-convert"
+      ]
+    },
+    {
+      "key": "platform.resources",
+      "label_es": "Recursos",
+      "label_en": "Resources",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/deliverables",
+        "/platform/projects/:id/deliverables/:deliverableId",
+        "/platform/deliverables"
+      ],
+      "capabilities": [
+        "platform-deliverable-library"
+      ],
+      "targets": [
+        "project-resources"
+      ],
+      "api_routes": [
+        "platform-resource-file",
+        "platform-deliverable-all",
+        "platform-deliverable-list",
+        "platform-deliverable-sync-technical",
+        "platform-requirement-list",
+        "platform-deliverable-client-folders",
+        "platform-deliverable-client-folder-detail",
+        "platform-deliverable-client-uploads",
+        "platform-deliverable-detail",
+        "platform-deliverable-upload-version",
+        "platform-deliverable-attachments",
+        "platform-deliverable-commercial-pdf",
+        "platform-deliverable-technical-pdf"
+      ]
+    },
+    {
+      "key": "platform.data_model",
+      "label_es": "Modelo de datos",
+      "label_en": "Data model",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/data-model"
+      ],
+      "capabilities": [
+        "platform-data-model"
+      ],
+      "targets": [],
+      "api_routes": [
+        "platform-project-data-model-entities",
+        "platform-project-data-model-template",
+        "platform-deliverable-data-model-entities"
+      ]
+    },
+    {
+      "key": "platform.documents",
+      "label_es": "Documentos",
+      "label_en": "Documents",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/documents"
+      ],
+      "capabilities": [
+        "platform-document-portal"
+      ],
+      "targets": [
+        "documents"
+      ],
+      "api_routes": [
+        "platform-client-document-list",
+        "platform-client-document-detail",
+        "platform-client-document-pdf",
+        "platform-client-document-sign"
+      ]
+    },
+    {
+      "key": "platform.secure_links",
+      "label_es": "Enlaces seguros",
+      "label_en": "Secure links",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/secure-links"
+      ],
+      "capabilities": [
+        "platform-client-secure-links"
+      ],
+      "targets": [
+        "project-secure-links"
+      ],
+      "api_routes": [
+        "platform-secure-link-list-create",
+        "platform-secure-link-types",
+        "platform-secure-link-detail",
+        "platform-secure-link-events",
+        "platform-secure-link-url",
+        "platform-secure-link-revoke",
+        "platform-secure-link-reactivate"
+      ]
+    },
+    {
+      "key": "platform.hosting",
+      "label_es": "Hosting",
+      "label_en": "Hosting",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/payments",
+        "/platform/projects/:id/payments"
+      ],
+      "capabilities": [
+        "platform-project-payments"
+      ],
+      "targets": [
+        "hosting"
+      ],
+      "api_routes": [
+        "platform-subscription-list",
+        "platform-project-subscription",
+        "platform-card-setup-start",
+        "platform-card-setup-status",
+        "platform-card-setup-confirm",
+        "platform-card-delete",
+        "platform-payment-register-manual",
+        "platform-payment-generate-link",
+        "platform-payment-widget-data",
+        "platform-payment-card-pay",
+        "platform-payment-charge-stored",
+        "platform-payment-verify",
+        "billing-hosting-list",
+        "billing-hosting-read",
+        "billing-hosting-reconcile",
+        "billing-hosting-evidence"
+      ]
+    },
+    {
+      "key": "platform.collection_accounts",
+      "label_es": "Cuentas de cobro",
+      "label_en": "Collection accounts",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/collection-accounts",
+        "/platform/collection-accounts/:id",
+        "/platform/projects/:id/collection-accounts"
+      ],
+      "capabilities": [
+        "platform-collection-accounts"
+      ],
+      "targets": [
+        "collection-accounts"
+      ],
+      "api_routes": [
+        "platform-collection-account-list",
+        "platform-collection-account-detail",
+        "platform-collection-account-issue",
+        "platform-collection-account-mark-paid",
+        "platform-collection-account-mark-cancelled",
+        "platform-collection-account-pdf",
+        "platform-project-collection-accounts",
+        "billing-account-context"
+      ]
+    },
+    {
+      "key": "platform.notifications",
+      "label_es": "Notificaciones",
+      "label_en": "Notifications",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/notifications"
+      ],
+      "capabilities": [
+        "platform-notification-center"
+      ],
+      "targets": [
+        "notifications"
+      ],
+      "api_routes": [
+        "platform-notification-list",
+        "platform-notification-unread-count",
+        "platform-notification-mark-read",
+        "platform-notification-mark-all-read"
+      ]
+    },
+    {
+      "key": "platform.project_access",
+      "label_es": "Accesos operativos",
+      "label_en": "Project access",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/access",
+        "/platform/access"
+      ],
+      "capabilities": [
+        "platform-project-access"
+      ],
+      "targets": [
+        "project-access"
+      ],
+      "api_routes": [
+        "platform-project-access-list",
+        "platform-project-access-detail",
+        "platform-project-access-password-reveal",
+        "platform-project-access-password-delete",
+        "platform-project-access-notes",
+        "platform-project-access-note-detail",
+        "platform-project-access-note-reveal",
+        "platform-project-access-legacy-classify",
+        "platform-client-access-policy",
+        "platform-client-access-preview",
+        "platform-client-access-events",
+        "platform-client-access",
+        "platform-client-credential"
+      ]
+    },
+    {
+      "key": "platform.help_tours",
+      "label_es": "Recorridos de ayuda",
+      "label_en": "Guided tours",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [],
+      "capabilities": [],
+      "targets": [],
+      "api_routes": [],
+      "surfaces": [
+        "frontend/components/platform/PlatformHelpHost.vue",
+        "frontend/components/platform/PlatformHelpVideoModal.vue"
+      ]
+    },
+    {
+      "key": "platform.help_videos",
+      "label_es": "Videos de ayuda",
+      "label_en": "Help videos",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [],
+      "capabilities": [],
+      "targets": [],
+      "api_routes": [],
+      "surfaces": [
+        "frontend/components/platform/PlatformHelpHost.vue",
+        "frontend/components/platform/PlatformHelpVideoModal.vue"
+      ]
+    },
+    {
+      "key": "platform.ai_chatbot",
+      "label_es": "Chatbot",
+      "label_en": "Chatbot",
+      "module": "IA y audio",
+      "default_enabled": false,
+      "routes": [],
+      "capabilities": [],
+      "targets": [
+        "platform-appi-launcher"
+      ],
+      "api_routes": [],
+      "surfaces": [
+        "frontend/components/platform/AppiWidget.vue",
+        "frontend/components/platform/VoiceReportInput.vue"
+      ]
+    },
+    {
+      "key": "platform.ai_voice_reports",
+      "label_es": "Reportes por voz",
+      "label_en": "Voice reports",
+      "module": "IA y audio",
+      "default_enabled": false,
+      "routes": [],
+      "capabilities": [],
+      "targets": [
+        "voice-report"
+      ],
+      "api_routes": [],
+      "surfaces": [
+        "frontend/components/platform/AppiWidget.vue",
+        "frontend/components/platform/VoiceReportInput.vue"
+      ]
+    },
+    {
+      "key": "platform.ai_chatbot_audio",
+      "label_es": "Audio del chatbot",
+      "label_en": "Chatbot audio",
+      "module": "IA y audio",
+      "default_enabled": false,
+      "routes": [],
+      "capabilities": [],
+      "targets": [],
+      "api_routes": [],
+      "surfaces": [
+        "frontend/components/platform/AppiWidget.vue",
+        "frontend/components/platform/VoiceReportInput.vue"
+      ]
+    }
+  ],
+  "api_exemptions": {
+    "access-list": "Infraestructura de acceso, cuenta o administración interna.",
+    "access-detail": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-session-bridge": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-login": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-verify": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-resend-code": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-token-refresh": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-password-reset-request": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-password-reset-verify": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-password-reset-confirm": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-me": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-complete-profile": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-saved-filter-tabs": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-saved-filter-tabs-reset": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-saved-filter-tabs-reorder": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-saved-filter-tab-detail": "Infraestructura de acceso, cuenta o administración interna.",
+    "document-panel-preferences": "Infraestructura de acceso, cuenta o administración interna.",
+    "communication-panel-preferences": "Infraestructura de acceso, cuenta o administración interna.",
+    "reset-communication-panel-preferences": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-admin-list": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-admin-detail": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-admin-resend-invite": "Infraestructura de acceso, cuenta o administración interna.",
+    "panel-admin-login-as": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-impersonation-exchange": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-client-list": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-client-detail": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-client-eligible-proposals": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-client-resend-invite": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-project-list": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-project-detail": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-proposal-list": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-project-payments": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-wompi-webhook": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-email-verify-request": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-email-verify-confirm": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-cover-gallery": "Infraestructura de acceso, cuenta o administración interna.",
+    "billing-options": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-ai-capabilities": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-transcriptions": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-job": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-report-drafts": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-settings": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-clients": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-client": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-credential": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-credential-test": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-templates": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-template": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-template-versions": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-template-preview": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-template-restore": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-usage": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-events": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-ai-cache-invalidate": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "appi-quota": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "appi-conversations": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "appi-conversation": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "appi-messages": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "appi-message": "IA: evaluación por operación en platform_ai.require_ai_feature y Appi; administración exclusiva del Panel.",
+    "platform-help": "Infraestructura de acceso, cuenta o administración interna.",
+    "platform-help-client-progress": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-settings": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-clients": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-client": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-tours": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-tour": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-tour-publish": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-tour-archive": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-tour-preview": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-tour-revisions": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-progress": "Ayuda: catálogo mixto filtrado y evaluación por operación en platform_help.",
+    "platform-help-videos": "Ayuda: evaluación del flag de videos en su servicio.",
+    "platform-features": "Consulta propia o gestión administrativa de disponibilidad.",
+    "platform-feature-settings": "Consulta propia o gestión administrativa de disponibilidad.",
+    "platform-feature-clients": "Consulta propia o gestión administrativa de disponibilidad.",
+    "platform-feature-client": "Consulta propia o gestión administrativa de disponibilidad.",
+    "platform-feature-events": "Consulta propia o gestión administrativa de disponibilidad."
+  },
+  "api_dynamic": {
+    "platform-issue-context-options": "context",
+    "platform-issue-attachment": "attachment",
+    "platform-issue-reply-options": "kind",
+    "platform-issue-reply-prepare": "kind",
+    "platform-issue-reply-context": "kind",
+    "platform-issue-reply-preview": "kind",
+    "platform-issue-reply-source": "kind"
+  },
+  "route_exemptions": {
+    "/platform": "Entrada y selección de destino autorizado.",
+    "/platform/login": "Acceso.",
+    "/platform/admin-login": "Acceso administrativo.",
+    "/platform/verify": "Verificación.",
+    "/platform/complete-profile": "Cuenta.",
+    "/platform/forgot-password": "Recuperación.",
+    "/platform/verify-code": "Recuperación.",
+    "/platform/reset-password": "Recuperación.",
+    "/platform/profile": "Cuenta.",
+    "/platform/projects": "Estructura de proyectos.",
+    "/platform/projects/:id": "Resumen del proyecto.",
+    "/platform/dashboard": "Inicio.",
+    "/platform/clients": "Administración interna.",
+    "/platform/clients/:id": "Administración interna.",
+    "/platform/unavailable": "Estado seguro de indisponibilidad y recuperación."
+  },
+  "capability_exemptions": {
+    "platform-secure-entry": "Infraestructura de identidad, cuenta y administración interna.",
+    "platform-account-recovery": "Infraestructura de identidad, cuenta y administración interna.",
+    "platform-profile-management": "Infraestructura de identidad, cuenta y administración interna.",
+    "platform-project-portfolio": "Infraestructura de identidad, cuenta y administración interna.",
+    "platform-client-administration": "Infraestructura de identidad, cuenta y administración interna.",
+    "platform-feature-unavailable": "Estado seguro sin acceso a funcionalidades restringidas."
+  }
+}

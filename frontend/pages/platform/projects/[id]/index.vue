@@ -7,19 +7,19 @@
           <p class="text-xs uppercase tracking-wider text-text-muted">Progreso</p>
           <p class="mt-2 text-2xl font-semibold text-text-default">{{ project.progress ?? 0 }}%</p>
         </div>
-        <div class="rounded-2xl border border-border-default bg-surface p-4">
+        <div v-if="features.enabled('platform.bugs')" class="rounded-2xl border border-border-default bg-surface p-4">
           <p class="text-xs uppercase tracking-wider text-text-muted">Bugs abiertos</p>
           <p class="mt-2 text-2xl font-semibold" :class="(project.bugs_open_count || 0) > 0 ? 'text-red-600' : 'text-text-default'">
             {{ project.bugs_open_count ?? 0 }}
           </p>
         </div>
-        <div class="rounded-2xl border border-border-default bg-surface p-4">
+        <div v-if="features.enabled('platform.change_requests')" class="rounded-2xl border border-border-default bg-surface p-4">
           <p class="text-xs uppercase tracking-wider text-text-muted">Solicitudes pendientes</p>
           <p class="mt-2 text-2xl font-semibold" :class="(project.changes_pending_count || 0) > 0 ? 'text-amber-600' : 'text-text-default'">
             {{ project.changes_pending_count ?? 0 }}
           </p>
         </div>
-        <div class="rounded-2xl border border-border-default bg-surface p-4">
+        <div v-if="features.enabled('platform.hosting')" class="rounded-2xl border border-border-default bg-surface p-4">
           <p class="text-xs uppercase tracking-wider text-text-muted">Próximo pago de hosting</p>
           <p class="mt-2 text-2xl font-semibold text-text-default">
             {{ project.next_hosting_payment ? formatCurrency(project.next_hosting_payment.amount) : '—' }}
@@ -33,6 +33,7 @@
 
       <!-- Phases -->
       <PhaseList
+        v-if="features.enabled('platform.delivery')"
         :project-id="project.id"
         :phases="phases"
         @add-phase="onAddPhase"
@@ -115,6 +116,8 @@
 </template>
 
 <script setup>
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
+const features = usePlatformFeaturesStore()
 import { computed, onMounted, reactive, ref, useId, watch } from 'vue'
 import { useFocusTrap } from '~/composables/useFocusTrap'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
@@ -146,12 +149,13 @@ const editForm = reactive({ name: '', description: '' })
 const editError = ref('')
 
 async function loadPhases() {
+  if (!features.enabled('platform.delivery')) { phases.value = []; return }
   if (!project.value) return
   phases.value = await projectsStore.loadPhases(project.value.id)
 }
 
 onMounted(loadPhases)
-watch(() => project.value?.id, loadPhases)
+watch(() => [project.value?.id, features.enabled('platform.delivery')], loadPhases)
 
 function onAddPhase() { showAddPhase.value = true }
 async function onPhasesAdded() {

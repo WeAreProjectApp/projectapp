@@ -37,6 +37,10 @@ previos y las bolsas horarias de Células se conservan. Calibración económica
 provisional hasta reunir esfuerzo real. Automatizadas exclusivamente en CI;
 la coordinación manual requiere el buzón de QA, ausente en este host.
 
+## PA-263 — disponibilidad de Plataforma (2026-11-12)
+
+Catálogo compartido con globales y excepciones por cliente; la excepción prevalece. Todas las capacidades ordinarias parten habilitadas; IA y audio parten apagados. Panel, API y MCP comparten servicio, versión y auditoría; se conservan permisos y condiciones técnicas. Implementación en rama de sesión, migraciones por deploy y automatizadas exclusivamente en CI. La pausa de QA manual y servicios sigue vigente; esta nota no acredita validación ni despliegue. Contrato: [Feature flags](../docs/PLATFORM_FEATURE_FLAGS.md).
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.

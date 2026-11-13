@@ -74,7 +74,7 @@
       ]"
     >
       <div class="mx-auto max-w-screen-2xl">
-        <slot />
+        <slot v-if="featureStore.routeAllowed(route.path)" />
       </div>
     </main>
 
@@ -119,6 +119,7 @@
 </template>
 
 <script setup>
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
 import { provide, watch, onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformTheme } from '~/composables/usePlatformTheme'
@@ -133,6 +134,7 @@ import PlatformHelpHost from '~/components/platform/PlatformHelpHost.vue'
 import PlatformHelpVideoModal from '~/components/platform/PlatformHelpVideoModal.vue'
 import { usePlatformHelp } from '~/composables/usePlatformHelp'
 
+const featureStore = usePlatformFeaturesStore()
 const route = useRoute()
 const localePath = useLocalePath()
 const authStore = usePlatformAuthStore()
@@ -178,9 +180,11 @@ onMounted(() => {
   hydrateSidebar()
   hydrateCustomTheme()
   setupResizeListener()
+  window.addEventListener('focus', refreshFeatures)
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('focus', refreshFeatures)
   cleanupResizeListener()
   releaseCustomTheme()
   document.documentElement.classList.remove('dark')
@@ -204,6 +208,33 @@ provide('showThemePicker', showThemePicker)
 
 watch(() => route.fullPath, () => {
   closeMobile()
+})
+
+async function refreshFeatures() {
+  const actorId = authStore.user?.user_id
+  if (!authStore.isClient) return
+  const ready = await featureStore.refresh()
+  const [{ usePlatformAIStore }, { usePlatformChatbotStore }, { usePlatformHelpStore }] = await Promise.all([
+    import('~/stores/platform-ai'), import('~/stores/platform-chatbot'), import('~/stores/platform-help'),
+  ])
+  if (actorId !== authStore.user?.user_id) return
+  if (ready) await Promise.all([usePlatformAIStore().refreshCapabilities(), usePlatformChatbotStore().refreshCapabilities(), usePlatformHelpStore().fetchHelp(route.params.id)])
+  if (actorId !== authStore.user?.user_id) return
+  if (!ready || !featureStore.routeAllowed(route.path)) {
+    await navigateTo(localePath('/platform/unavailable') + (ready ? '' : '?reason=load'))
+  }
+}
+
+watch(() => authStore.user?.user_id, async (id) => {
+  featureStore.reset()
+  const [{ usePlatformAIStore }, { usePlatformChatbotStore }, { usePlatformHelpStore }] = await Promise.all([
+    import('~/stores/platform-ai'), import('~/stores/platform-chatbot'), import('~/stores/platform-help'),
+  ])
+  if (id !== authStore.user?.user_id) return
+  usePlatformAIStore().reset()
+  usePlatformChatbotStore().bindActor(id)
+  usePlatformHelpStore().reset()
+  refreshFeatures()
 })
 
 async function handleLogout() {

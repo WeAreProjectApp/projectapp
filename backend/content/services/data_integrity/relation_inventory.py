@@ -105,6 +105,7 @@ _decide(exempt('Credencial de Google ligada a una identidad personal: bloquea la
 _decide(exempt('Preferencias de Ayuda y recorridos vistos por esta persona; se van con el usuario, '
                'sin reasignarse al corregir relaciones comerciales.'), '''
     accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
+accounts.ClientPlatformFeatureSettings.user accounts.PlatformFeatureEvent.actor accounts.PlatformFeatureEvent.client
 ''')
 _decide(AUTHORSHIP, '''
     accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor

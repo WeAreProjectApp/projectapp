@@ -1930,3 +1930,4 @@ from accounts.models_requirement_packages import (  # noqa: E402, F401
     PackageDecision, PackageExampleRevision, PackageMovement, PackageOperation,
     PackageOrder, PackageProjectSettings, PackageRequest, PackageSizingProposal,
 )
+from accounts.models_feature_flags import ClientPlatformFeatureSettings, PlatformFeatureEvent, PlatformFeatureSettings  # noqa: E402,F401

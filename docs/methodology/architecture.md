@@ -18,6 +18,10 @@ La ampliación en rama de sesión conserva estados y agrupación de eventos; inc
 
 > **PA-254 — 2026-11-12:** órdenes únicas por proyecto, libro de cupos y consentimiento del cliente separados de hosting. Servicios compartidos por Panel, JWT y MCP; ejemplos versionados independientes de parámetros económicos. La aceptación reemplaza consumos de forma atómica. Contrato: `docs/PA254_REQUIREMENT_PACKAGES.md`. Implementación sin acreditar despliegue ni calibración económica.
 
+## PA-263 — disponibilidad de Plataforma (2026-11-12)
+
+Catálogo compartido con globales y excepciones por cliente; la excepción prevalece. Todas las capacidades ordinarias parten habilitadas; IA y audio parten apagados. Panel, API y MCP comparten servicio, versión y auditoría; se conservan permisos y condiciones técnicas. Implementación en rama de sesión, migraciones por deploy y automatizadas exclusivamente en CI. La pausa de QA manual y servicios sigue vigente; esta nota no acredita validación ni despliegue. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
+
 > **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
 > pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
 > lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant

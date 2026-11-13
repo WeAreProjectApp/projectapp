@@ -3156,3 +3156,7 @@ y confirmar. Editar ambos mensajes por separado con
 modo no cambian. Revisar historial, actor/vía y recibos. Repetir con versión
 anterior y credencial sin permiso: rechazo sin escritura. Sólo la confirmación
 del sitio acredita aplicación; la validación manual permanece pausada.
+
+## PA-263 · Feature flags (Proyectos 6.0.0)
+
+Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento de las seis herramientas, consulta global y por cliente, actualización confirmada, retirada con null, persistencia, 409 con versión superada y denegación de una credencial/actor sin acceso administrativo. Contrastar con el mismo caso en Panel y una cuenta cliente; REST no acredita MCP. IA/audio parten apagados y la excepción del cliente prevalece. Los adaptadores anteriores de IA/Ayuda usan la fuente nueva. Automatizadas sólo en CI; DevQA cotejará herramientas, operaciones, rol, resultado y límites sobre el mismo SHA/entorno al levantarse la pausa.

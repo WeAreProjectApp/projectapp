@@ -90,10 +90,10 @@ def test_service_rejects_client_administrator_access(actors):
 
 
 @pytest.mark.parametrize(('global_enabled', 'client_enabled', 'expected'), [
-    (False, True, False), (True, False, False), (True, True, True),
+    (False, True, True), (True, False, False), (True, True, True),
 ])
-def test_video_gate_requires_both_preferences(actors, global_enabled, client_enabled, expected):
-    """Breaks when the video handoff ignores either the global or client help switch."""
+def test_video_gate_respects_explicit_client_precedence(actors, global_enabled, client_enabled, expected):
+    """Breaks when the video handoff ignores the explicit client exception."""
     help_service.update_flags(actors.admin, {'expected_version': 0, 'video_enabled': global_enabled})
     help_service.update_flags(actors.admin, {'expected_version': 0, 'video_enabled': client_enabled}, actors.client.pk)
 

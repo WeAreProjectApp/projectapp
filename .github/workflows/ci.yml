@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Verify Platform feature inventory
+        run: python3 scripts/check_platform_features.py
+
       - name: Verify explainer narration guards
         run: node --test explainers/tests/narration.test.mjs
 

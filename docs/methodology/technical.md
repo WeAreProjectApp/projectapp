@@ -18,6 +18,10 @@ La ampliación en rama de sesión conserva estados y agrupación de eventos; inc
 
 > **PA-254 — 2026-11-12:** API `/api/requirement-packages/`, órdenes con oferta congelada y huella, verificación Wompi de vínculo/moneda/importe, UUID idempotente y candado de proyecto para compras y consumo. No crea suscripciones de hosting. Mercado/impuesto administrables; parámetros, ejemplos y consentimiento conservan ámbitos separados. Migraciones sólo por deploy y pruebas automatizadas sólo en CI.
 
+## PA-263 — disponibilidad de Plataforma (2026-11-12)
+
+Catálogo compartido con globales y excepciones por cliente; la excepción prevalece. Todas las capacidades ordinarias parten habilitadas; IA y audio parten apagados. Panel, API y MCP comparten servicio, versión y auditoría; se conservan permisos y condiciones técnicas. Implementación en rama de sesión, migraciones por deploy y automatizadas exclusivamente en CI. La pausa de QA manual y servicios sigue vigente; esta nota no acredita validación ni despliegue. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
+
 > **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
 
 > **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).

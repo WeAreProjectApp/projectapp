@@ -1741,3 +1741,13 @@ MCP_MODEL_CONTRACTS['projects'] += (
     _contract('accounts.GoogleIdentity', read_only='user created_at', excluded=_excluded('Identidad del proveedor privada; sólo se expone si está vinculado.', 'id subject')),
     _contract('accounts.AccessEvent', read_only='id user actor action method surface ip device created_at'),
 )
+
+
+# PA-263: stable catalogue keys; values are written only through the shared service.
+PLATFORM_FEATURE_CONTRACTS = (
+    _contract('accounts.PlatformFeatureSettings', read_only='id version updated_at', read_write='values'),
+    _contract('accounts.ClientPlatformFeatureSettings', read_only='id user version updated_at', read_write='values'),
+    _contract('accounts.PlatformFeatureEvent', read_only='id actor client scope changes version created_at'),
+)
+
+MCP_MODEL_CONTRACTS['projects'] += PLATFORM_FEATURE_CONTRACTS

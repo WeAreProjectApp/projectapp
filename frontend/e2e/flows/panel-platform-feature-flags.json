@@ -1,0 +1,16 @@
+{
+  "id": "panel-platform-feature-flags",
+  "name": "Feature flags de Plataforma",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Configurar valores globales, excepciones por cliente, herencia, persistencia y conflictos sin conceder permisos. Incluye búsqueda dinámica, procedencia, auditoría y conservación del valor mostrado ante conflictos o errores. La carga inicial fallida conserva la navegación y permite recargar la configuración.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

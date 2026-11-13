@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "El equipo configura activación global y por cliente, modelos, claves write-only, plantillas versionadas, cupo compartido, caché y consumo desde Plataforma > Configuración de IA.",
+  "description": "El equipo administra proveedores, claves write-only, modelos, plantillas ES/EN, cupos compartidos, caché y consumo. La disponibilidad global/por cliente se gestiona en Feature flags; IA y audio parten apagados.",
   "outcomes": [
     "success",
     "error",
