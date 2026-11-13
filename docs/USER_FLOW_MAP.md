@@ -6240,7 +6240,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
 | `admin-managed-calculator-document` | documents | P2 | display | — |
-| `admin-mcps` | admin | P2 | display,success,error,failure | 14 |
+| `admin-mcps` | admin | P2 | display,success,error,failure | 16 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
 | `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |
@@ -7228,6 +7228,7 @@ Management UI for remote MCP connectors that expose panel modules to Claude (cla
   - [Failure] Un 4xx/5xx conserva el formulario o estado anterior y muestra el detalle accionable.
   - [Security] El plaintext no puede recuperarse al recargar; sólo quedan prefijo y hash. Las escrituras —incluidos `created_by` y `linked_by` de hilos documentales, ingresos y extractos— se atribuyen a un principal técnico no interactivo del conector, nunca al superusuario humano del Panel.
   - [Contract] El servidor rechaza envelopes MCP incoherentes, alcances o vencimientos inválidos, confirmaciones vencidas/alteradas y assets temporales con tamaño, hash, MIME o firma incompatibles; un fallo de auditoría no interrumpe la respuesta del transporte.
+- **PA-221:** el nombre visible es «Gestor de …» y el acordeón muestra «Qué puedes gestionar» desde capacidades recibidas del servidor. Los conectores pendientes conservan su migración; los retirados no aparecen ni ejecutan herramientas. La lista larga conserva el ancho disponible; un fallo de carga permite reintentar. El resultado funcional de este refinamiento se acredita sólo con el CI del nuevo corte y la ronda DEV correspondiente.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-mcps.spec.js`
 

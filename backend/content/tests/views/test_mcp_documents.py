@@ -618,7 +618,7 @@ class TestDocumentsConnectorPanel:
     def test_panel_lists_documents_connector_with_tools(self, superuser_client, documents_connector):
         response = superuser_client.get('/api/mcp-connectors/')
         docs = next(c for c in response.data if c['slug'] == 'documents')
-        assert docs['name'] == 'Gestor Documental'
+        assert docs['name'] == 'Gestor de documentos'
         tool_names = [t['name'] for t in docs['tools']]
         assert 'create_document' in tool_names
         assert 'get_document_folder_index' in tool_names

@@ -19,8 +19,9 @@ from content.services.data_integrity.fixes import writers
 from content.services.data_integrity.fixes.base import Fixer, change, retained_blockers
 from content.services.data_integrity.hashing import clean_spaces
 from content.services.data_integrity.scope import (
-    COMM_FOLDER, DOCUMENT, FOLDER, PROFILE, PROJECT, PROPOSAL, THREAD, USER, client_label,
+    COMM_FOLDER, DOCUMENT, FOLDER, PROFILE, PROJECT, PROPOSAL, SECURE_LINK_FOLDER, THREAD, USER, client_label,
 )
+from content.services.data_integrity.snapshots import json_value
 from content.services.data_integrity.types import RENAME, Finding, RecordRef, blocker
 
 DIAGNOSTIC = 'content.webappdiagnostic'
@@ -241,26 +242,42 @@ def _plan_client_name(evidence, clean):
 
 
 def _plan_project(evidence, clean):
-    """A rename re-syncs the managed root folder and root thread (``post_save``), and
-    the root re-sync re-points the root's subfolders of this project that name
-    another client."""
+    """Preview the same root targets that the project's post-save writers use."""
     from accounts.models import Project
     from content.models import CommunicationThread, DocumentFolder
     from content.serializers.panel_projects import UpdatePanelProjectSerializer
+    from content.services.project_document_folder_service import project_root_values
+    from content.services.project_communication_service import project_thread_values, resolve_client_profile
+    from secure_links.folder_services import project_root_values as secure_root_values
+    from secure_links.models import SecureLinkFolder
     project = Project._base_manager.get(pk=evidence['pk'])
     plan = _serializer_plan('project', project, 'name', clean, UpdatePanelProjectSerializer)
     roots = writers.project_root_closure(project.pk)
     folders = list(DocumentFolder._base_manager.filter(pk__in=[pk for label, pk in roots if label == FOLDER]))
-    threads = CommunicationThread._base_manager.filter(pk__in=[pk for label, pk in roots if label == THREAD])
-    for row, field in [*((folder, 'name') for folder in folders), *((thread, 'title') for thread in threads)]:
-        if getattr(row, field) != clean:
-            plan['changes'].append(change(row, field, getattr(row, field), clean, clean))
+    threads = list(CommunicationThread._base_manager.filter(pk__in=[pk for label, pk in roots if label == THREAD]))
+    secure_roots = list(SecureLinkFolder._base_manager.filter(
+        pk__in=[pk for label, pk in roots if label == SECURE_LINK_FOLDER]))
+    target = copy.copy(project)
+    target.name = clean
+    profile = resolve_client_profile(target)
+    targets = [(row, project_root_values(row, target)) for row in folders]
+    targets += [(row, project_thread_values(target, profile)) for row in threads] if profile else []
+    targets += [(row, secure_root_values(target)) for row in secure_roots]
+    for row, values in targets:
+        for field, value in values.items():
+            if getattr(row, field) != value:
+                plan['changes'].append(change(row, field, json_value(getattr(row, field)), json_value(value), clean))
+    if not secure_roots:
+        plan['blockers'].append(blocker(
+            'managed_root_missing', 'Falta la carpeta gestionada de Enlaces seguros. Revisa su estructura antes de '
+            'renombrar el proyecto; esta corrección no crea registros sin una vista previa.'))
     stale = [folder for root in folders for folder in DocumentFolder._base_manager.filter(
         pk__in=root.get_descendant_ids(), project_id=project.pk).exclude(client_user_id=project.client_id)]
     plan['changes'] += [change(folder, 'client_user_id', folder.client_user_id, project.client_id, folder.name)
                         for folder in stale]
     plan['closure'] += [*roots, *((FOLDER, folder.pk) for folder in stale)]
-    plan['blockers'] += retained_blockers([*folders, *threads, *stale])
+    plan['blockers'] += retained_blockers([*folders, *threads, *secure_roots, *stale])
+    plan['guards'] = {'project': project.pk, 'project_roots': [list(key) for key in sorted(roots)]}
     return plan
 
 
@@ -353,6 +370,8 @@ class ExtraSpacesFixer(Fixer):
         from accounts.models import UserProfile
         from content.models.web_app_diagnostic import WebAppDiagnostic
         guards = step.get('guards', {})
+        if 'project_roots' in guards:
+            return [list(key) for key in sorted(writers.project_root_closure(guards['project']))] != guards['project_roots']
         if 'profile' not in guards:
             return False
         profile = UserProfile._base_manager.filter(pk=guards['profile']).first()

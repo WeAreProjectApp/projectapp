@@ -1,5 +1,22 @@
 # Integridad de datos
 
+## PA-221 · catálogo 1.2.1
+
+NM1 comparte los valores de sincronización con los servicios de raíces documentales,
+comunicaciones y Enlaces seguros. Al renombrar un proyecto, la vista previa enumera
+los cuatro cambios de nombre y las reparaciones laterales de relaciones o archivo,
+con antes/después. Una raíz segura ausente bloquea la corrección: no se provisiona
+sin un impacto revisado. Deshacer también verifica la composición de las raíces.
+Los cambios en fechas técnicas de guarda y las nuevas entradas de auditoría son
+trazabilidad de la operación, no ediciones de negocio adicionales.
+
+El dueño actual es el **Gestor de integridad de datos** (`data-integrity`);
+Proyectos conserva sólo su compatibilidad temporal. La skill descubre las herramientas
+del runtime y no presupone qué conectores tiene configurados Codex.
+
+La matriz y las condiciones de retiro están en [el expediente PA-221](audits/PA-221/README.md).
+Esta documentación no acredita aplicación a datos reales ni una nueva aprobación de QA.
+
 Motor que encuentra datos huérfanos, duplicados e inconsistentes en clientes,
 proyectos, documentos, comunicaciones, contabilidad y propuestas, y los corrige con
 vista previa, registro y deshacer. Lo usa la skill `data-integrity`
