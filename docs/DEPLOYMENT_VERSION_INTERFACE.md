@@ -17,8 +17,24 @@ ni valores que se puedan usar como SHA completos en el protocolo.
 
 El registrador de GitHub Deployments se implementa en otra sesión del toolkit.
 Será un reconciliador externo a la transacción: no habrá llamadas a GitHub,
-cola de registro ni claves privadas dentro de ProjectApp. La clave de la App
-no puede ser legible por el usuario del runtime; su custodia se resuelve aparte.
+cola de registro ni claves privadas dentro de ProjectApp.
+
+### Custodia decidida por Carlos: 197 = A
+
+Ruta propuesta en PROD:
+`/home/ryzepeck/.config/projectapp-vps-deployments/credentials/app-private-key.pem`.
+Carlos instala la clave como `ryzepeck`, fuera de los repositorios, con archivo
+`0600` y carpeta de credenciales `0700`. El registrador recibe sólo la ruta de
+ese archivo y lo lee desde su propio contexto; nunca recibe la clave por
+argumentos, texto de configuración versionado ni logs.
+
+La carpeta debe quedar oculta para los servicios de **todas las apps**, incluidos
+web, Huey y sus procesos auxiliares. El modo 0600 no basta: el runtime comparte
+el usuario `ryzepeck`. La sesión del toolkit implementa el aislamiento de los
+servicios según 197=A, manteniendo el acceso del registrador. Antes de activar
+el registro, debe acreditar la lectura permitida al registrador y denegada en
+el contexto de cada servicio de app, sin imprimir el contenido de la clave.
+Este PR sólo documenta la decisión: no instala la clave ni modifica el VPS.
 
 ## Contrato de lectura, versión 1
 

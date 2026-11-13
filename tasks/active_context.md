@@ -7,6 +7,11 @@ expone identidades de backend/frontend, añade cobertura y política de eventos
 en CI y entrega el contrato al reconciliador de otra sesión. Los controles de
 plantillas y Chromium se inventarían y proponen para el toolkit, sin dar por
 hecha su incorporación. No se toca PROD, claves ni registros GitHub reales.
+Custodia 197=A decidida por Carlos: clave 0600 fuera de los repositorios en
+`/home/ryzepeck/.config/projectapp-vps-deployments/credentials/app-private-key.pem`,
+instalada por Carlos y con la carpeta oculta a todos los servicios de apps;
+el toolkit implementa y acredita ese aislamiento. No basta compartir el UID
+y poner 0600. Esta rama sólo documenta la ruta y el contrato.
 Validación automatizada sólo en CI; entrega mediante PR abierto y verde, sin merge.
 [Contrato y traspaso](../docs/DEPLOYMENT_VERSION_INTERFACE.md).
 
