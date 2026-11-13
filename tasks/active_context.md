@@ -1,3 +1,12 @@
+# PA-265 — Historial documental (2026-11-13)
+
+Implementación en rama de sesión: historial compacto, consulta visible y diff de
+bloques renderizados; origen/destino explícitos, lectura completa y retorno con
+contexto. Reutiliza las API y MCP existentes sin mutar instantáneas. Propuestas y
+los demás módulos conservan su visor. Pruebas nuevas exclusivamente en CI; QA
+manual y servicios siguen pausados. Contrato y traspaso:
+[PA-265](../docs/PA-265-DOCUMENT-HISTORY.md). Entrega verificada en el PR.
+
 ## PA-250 / PA-259 / PA-260-D1 / PA-252 — 2026-11-12
 
 Implementación en worktree propio desde main 295b65ef: contraste de Saltar recorrido,

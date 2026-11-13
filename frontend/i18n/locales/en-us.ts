@@ -52,6 +52,7 @@ export default defineI18nLocale(async () => {
     platformHelp,
     documentPdf,
     documentFolders,
+    documentHistory,
     procurement,
 
     hostingBilling,
@@ -111,6 +112,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/platformHelp/en.js'),
     import('~/locales/documentPdf/en.js'),
     import('~/locales/documentFolders/en.js'),
+    import('~/locales/documentHistory/en.js'),
     import('~/locales/procurement/en.js'),
 
     import('~/locales/hostingBilling/en.js'),
@@ -172,6 +174,7 @@ export default defineI18nLocale(async () => {
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
     documentFolders: documentFolders.default,
+    documentHistory: documentHistory.default,
     procurement: procurement.default,
 
     hostingBilling: hostingBilling.default,
