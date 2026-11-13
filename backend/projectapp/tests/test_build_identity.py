@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,9 @@ def write_manifest(path, commit=COMMIT):
 
 @pytest.fixture
 def artifacts(tmp_path, settings, monkeypatch):
+    # Load real routes before relocating artifacts: unrelated views must not
+    # retain a temporary BASE_DIR through Django's lazy URL imports.
+    import_module(settings.ROOT_URLCONF)
     settings.BASE_DIR = tmp_path
     settings.STATIC_ROOT = tmp_path / 'staticfiles'
     # Each test represents a fresh worker startup, not a request-time refresh.
