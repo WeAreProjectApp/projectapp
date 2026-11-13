@@ -230,7 +230,7 @@ describe('multiple groups from functional requirements', () => {
 
 // ── Mounted tests: nested linked-requirements modal ──────────────────────────
 
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import FunctionalRequirementsModal from '../../components/BusinessProposal/FunctionalRequirementsModal.vue';
 import LinkedRequirementsModal from '../../components/BusinessProposal/LinkedRequirementsModal.vue';
 import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';

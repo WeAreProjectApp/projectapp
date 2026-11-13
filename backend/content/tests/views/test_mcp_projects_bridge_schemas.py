@@ -67,12 +67,9 @@ _DELEGATED_QUERY_READS = {
     'list_monitoring_capacity_history': {'page', 'changes_before'},
 }
 _MONITORING_BRIDGE_NAMES = {
-    'get_monitoring_catalog', 'get_monitoring_status', 'list_monitoring_cases',
-    'get_monitoring_case', 'set_monitoring_case_state',
-    'add_monitoring_case_note', 'list_monitoring_reports',
-    'get_monitoring_report', 'get_monitoring_server_series',
+    'get_monitoring_status', 'get_monitoring_server_series',
     'get_monitoring_capacity', 'update_monitoring_capacity',
-    'list_monitoring_capacity_history', 'link_monitoring_project',
+    'list_monitoring_capacity_history',
 }
 _PLATFORM_HELP_BRIDGE_NAMES = {
     'get_platform_help_settings', 'update_platform_help_settings',
@@ -210,7 +207,7 @@ def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tool
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 123
+    assert len(original_bridge_tools) == 115
     assert (
         set(PROJECTS_BRIDGE_SCHEMAS) | _PLATFORM_HELP_BRIDGE_NAMES
         | _PLATFORM_AI_BRIDGE_NAMES
@@ -242,7 +239,7 @@ def test_projects_bridge_payload_matches_writable_serializers(bridge_tools):
 
 @pytest.mark.parametrize(('tool_name', 'field', 'channel'), [
     ('list_projects', 'scope', 'query'),
-    ('list_monitoring_cases', 'severity', 'query'),
+    ('get_monitoring_status', 'kind', 'query'),
     ('list_monitoring_capacity_history', 'changes_before', 'query'),
     ('create_project_idea', 'request_id', 'payload'),
     ('set_project_client_access_policy', 'permissions', 'payload'),

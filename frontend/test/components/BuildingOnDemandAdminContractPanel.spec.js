@@ -132,7 +132,7 @@ describe('BuildingOnDemandAdminContractPanel', () => {
     const viewer = wrapper.get('[data-testid="building-on-demand-admin-contract-view-pdf"]');
 
     expect(viewer.attributes()).toMatchObject({ href: '/api/building-on-demand/admin/contract/pdf/?inline=1', target: '_blank', rel: 'noopener noreferrer' });
-    expect(viewer.text()).toBe('Ver PDF del contrato');
+    expect(viewer.text()).toBe('Previsualizar PDF del contrato');
   });
 
   it('renders the published markdown as a read-only document', async () => {

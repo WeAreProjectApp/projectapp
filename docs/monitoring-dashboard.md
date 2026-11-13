@@ -55,3 +55,8 @@ DevQA debe verificar tools/list y ejecutar las operaciones permitidas/denegadas 
 CI cubre filtros, paginación, agregados, permisos, métricas, capacidad y MCP. DEV LISTO y QA manual son evidencias independientes sobre un SHA servido: roles, IDs ficticios, fechas, temas, cinco anchos (incluida tableta vertical), foco con mouse, recuperación y tiempos observables. No se agregan casos dedicados de teclado. Sin asignación de dupla o acceso a DEV se registra el pendiente; no se declara aprobación.
 
 El generador `create_fake_monitoring` admite count/seed/fecha ancla del generador canónico y sólo desarrollo aislado. Incluye varias páginas, notas/entregas extensas, observaciones vacías y con cero/false, fuentes con estados distintos, capacidad y series ficticias con huecos. Nunca se ejecuta desde esta sesión contra la base del servicio.
+
+
+## Reparto MCP en la integración de 2026-11-12
+
+El Gestor de operaciones es dueño del catálogo y del seguimiento de casos y reportes: notas, estado con versión y vínculo de recursos a proyectos. Las escrituras sensibles requieren confirmación. El Gestor de proyectos ofrece presión actual, series y capacidad informativa versionada con su historial. Las herramientas no se duplican entre gestores.

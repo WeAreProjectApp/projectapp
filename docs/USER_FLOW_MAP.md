@@ -8235,6 +8235,9 @@ Administración de Ayuda, contenido e historial de vistos, con enlace a Feature 
 **PA-251/253/257/261 · delta de interfaz:** La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.
 La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
+
+Integración PA-263/PA-251: la disponibilidad por cliente y su búsqueda al escribir se gestionan en Feature flags. Ayuda enlaza al administrador central y conserva recursos, recorridos y progreso.
+
 ### FLOW: `admin-platform-guided-tour-authoring`
 
 - **Módulo:** admin
@@ -9620,6 +9623,9 @@ PA-263. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
 - display: navegación desde el Panel con valores iniciales o navegación de cliente filtrada.
 
 Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servicios continúa; este registro no acredita aprobación.
+
+
+Integración PA-251: la búsqueda de clientes consulta al escribir, descarta respuestas anteriores incluso durante el debounce, conserva carga/error/reintento y vuelve a la primera página al limpiar.
 
 ### Platform: reportar y seguir bugs de proyecto
 

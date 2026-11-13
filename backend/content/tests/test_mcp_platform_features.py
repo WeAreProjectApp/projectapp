@@ -59,7 +59,7 @@ def test_mcp_rejects_nonadministrative_actor(credential, client_user):
 
     result = call_tool_inprocess('projects', 'get_platform_feature_flags', {}, credential=credential)
 
-    assert result['error']['code'] == 'ACCESS_REJECTED'
+    assert result['error']['code'] == 'FORBIDDEN'
 
 
 def test_mcp_client_override_can_return_to_inheritance(credential, client_user):

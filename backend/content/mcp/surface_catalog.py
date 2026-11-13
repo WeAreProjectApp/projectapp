@@ -18,6 +18,7 @@ EXEMPTIONS = {
     '/platform/verify-code': 'identity-bootstrap',
     '/platform/complete-profile': 'identity-bound-profile',
     '/platform/profile': 'identity-bound-profile',
+    '/platform/unavailable': 'reference-only',
     '/platform/notifications': 'identity-bound-private-inbox',
 }
 EXEMPTION_REASONS = {
@@ -61,6 +62,10 @@ FEATURE_TOOL_PATTERNS = {
     'panel-platform-help': ('platform_help', 'guided_tour', 'tour_progress'),
     'panel-platform-ai': ('platform_ai',),
     'panel-monitoring': ('monitoring',),
+    'panel-project-hosting-control': ('hosting_control',),
+    'panel-requirement-packages': ('package',),
+    'panel-platform-features': ('platform_feature',),
+    'platform-requirement-packages': ('package',),
     'panel-financial-flow': ('income', 'expense', 'accounting_dashboard', 'accounting_stats'),
     'panel-service-revenue': ('hosting', 'collection_account', 'income', 'recurring', 'ads'),
     'panel-cash-credit': ('pocket', 'card', 'statement', 'transaction', 'recurring', 'partner', 'split'),
@@ -92,6 +97,7 @@ def feature_tools(feature_id, names):
 OWNERS = (
     ('/panel/procurement', 'procurement'), ('/panel/data-integrity', 'data-integrity'),
     ('/panel/accounting', 'accounting'), ('/panel/monitoring', 'operations'),
+    ('/panel/requirement-packages', 'projects'),
     ('/panel/requirement-calculator', 'commercial'), ('/panel/consulting', 'commercial'),
     ('/panel/clients', 'commercial'), ('/panel/proposals', 'commercial'), ('/panel/defaults', 'commercial'),
     ('/panel/diagnostics', 'commercial'), ('/panel/partnership-program', 'programs'),

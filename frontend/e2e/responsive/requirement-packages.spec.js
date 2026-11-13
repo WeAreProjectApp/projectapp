@@ -40,9 +40,11 @@ async function setupPlatformPackages(page) {
 
 async function openPlatformPackages(page) {
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' });
-  await page.getByTestId(`project-row-${REQUIREMENT_PACKAGE_PROJECT.id}`).click();
+  await page.getByTestId(new RegExp(`^project-(?:row|card)-${REQUIREMENT_PACKAGE_PROJECT.id}$`)).click();
   await expect(page.getByRole('heading', { name: REQUIREMENT_PACKAGE_PROJECT.name, exact: true })).toHaveText(REQUIREMENT_PACKAGE_PROJECT.name);
-  await page.getByRole('link', { name: 'Paquetes de requerimientos', exact: true }).click();
+  const navigation = page.getByRole('button', { name: 'Abrir navegación', exact: true });
+  if (await navigation.isVisible()) await navigation.click();
+  await page.getByRole('link', { name: 'Paquetes de requerimientos', exact: true }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/platform\/projects\/1\/packages$/);
 }
 

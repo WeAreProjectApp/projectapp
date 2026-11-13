@@ -67,8 +67,8 @@ def test_lookup_distinguishes_the_cell_contract(cell_mirror):
 
     assert (mirror.pk, variant) == (cell_mirror.pk, 'building_on_demand')
     assert message == (
-        'Este contrato es de sólo lectura y permanece en Contratos. '
-        'Su contenido se actualiza mediante el MCP de Building on Demand.'
+        'Este contrato permanece en Contratos; su identidad y ubicación están protegidas. '
+        'Edita el contenido desde el Gestor de documentos o mediante el MCP de Programas.'
     )
     assert contract_mirror_service.building_with_us_mirror(cell_mirror.document) is None
     assert contract_mirror_service.mirror_read_only_message(cell_mirror.document) == message

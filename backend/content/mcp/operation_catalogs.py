@@ -170,7 +170,11 @@ def _project_create_tool():
 
 
 PROJECT_TOOLS = [
-    *MONITORING_TOOLS,
+    *(tool for tool in MONITORING_TOOLS if tool['name'] in {
+        'get_monitoring_status', 'get_monitoring_server_series',
+        'get_monitoring_capacity', 'update_monitoring_capacity',
+        'list_monitoring_capacity_history',
+    }),
     *PLATFORM_HELP_TOOLS,
     _op('list_projects', 'Lista proyectos y sus indicadores por estado; client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_projects']),
     _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['get_project']),
