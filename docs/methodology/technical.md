@@ -1,3 +1,13 @@
+## PA-267 — Identidad de build y procedimiento del fleet
+
+`build:django` fija un SHA completo antes de generar y escribe un manifiesto
+junto al frontend validado. En el stage sin Git usa el objetivo exportado por
+Integrity. `collectstatic` lleva la misma identidad al artefacto de estáticos;
+Django la captura al arrancar para `/api/version/`. `/version.json` lee el
+frontend publicado; ambas respuestas evitan caché y Git en tiempo de ejecución.
+El guion antiguo está retirado. Registro GitHub y custodia de claves pertenecen
+al toolkit. Contrato: [PA-267](../DEPLOYMENT_VERSION_INTERFACE.md).
+
 > **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
 
 > **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).
@@ -877,7 +887,7 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 ### Static payload and collection policy
 
 - Production sets `experimental.payloadExtraction: false`. The generated site is mounted below Django's `/static/frontend/` CDN prefix; keeping payloads inline prevents Nitro from treating CDN payload URLs as prerenderable HTML routes.
-- `scripts/deploy.sh`, the ops toolkit's regeneration and the in-app `inline` rebuild (local development) call `collectstatic` with `clear=True`/`--clear`. `staticfiles/` is generated output and must not retain hashed chunks or file/directory shapes from older Nuxt builds.
+- The transactional deploy, the ops toolkit's regeneration and the in-app `inline` rebuild (local development) call `collectstatic` with `clear=True`/`--clear`. `staticfiles/` is generated output and must not retain hashed chunks or file/directory shapes from older Nuxt builds.
 - A production-equivalent build must contain zero `_payload.json` artifacts and zero JavaScript chunks above 500,000 bytes before publication.
 
 ### MCP connector concurrency

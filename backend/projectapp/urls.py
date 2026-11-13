@@ -10,6 +10,7 @@ from django.conf.urls.static import static
 
 from .views import serve_nuxt
 from .pwa import serve_pwa_file
+from .build_identity import backend_version, frontend_version
 from content.views.blog import serve_sitemap_xml
 from content.views.qr_cards import qr_card_redirect
 from content.views.linktree import linktree_short_redirect
@@ -55,6 +56,8 @@ urlpatterns = [
     path('api/monitoring/', include('monitoring.urls')),
     path('api/secure-links/', include('secure_links.urls')),
     path('api/health/', health_check, name='health-check'),
+    path('api/version/', backend_version, name='backend-version'),
+    path('version.json', frontend_version, name='frontend-version'),
     path('api/platform/ai/', include('accounts.ai_urls')),
     # /admin without the trailing slash would fall through to the SPA
     # catch-all and 404 — APPEND_SLASH never kicks in because the URL

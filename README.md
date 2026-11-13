@@ -220,13 +220,16 @@ DRAFT → SENT → VIEWED → ACCEPTED
 
 See [docs/deployment-guide.md](docs/deployment-guide.md) for initial setup and full documentation.
 
-Quick deploy (on server):
-```bash
-cd /home/ryzepeck/webapps/projectapp
-./scripts/deploy.sh
-```
+Producción usa `/deploy-and-check` del toolkit `vps-ops-toolkit`: una
+transacción de Integrity con preparación aparte, publicación de artefactos y
+recuperación. `scripts/deploy.sh` está retirado y rechaza cualquier ejecución.
+El éxito depende del cierre de Integrity, después del control de salud.
 
-Options: `--sync-configs` (sync systemd/nginx), `--skip-frontend`, `--dry-run`, `--yes`.
+La identidad del backend se consulta en `/api/version/`; la del frontend, en
+`/version.json`. El SHA se fija durante el build. El registrador de GitHub
+Deployments pertenece al toolkit y se implementa por separado.
+
+Contrato y traspaso de controles: [Interfaz de versión de despliegue](docs/DEPLOYMENT_VERSION_INTERFACE.md).
 
 ---
 

@@ -1,3 +1,15 @@
+## PA-267 — Identidad de versión y retiro del guion antiguo — en validación por CI
+
+Alcance confirmado por Carlos a partir del reporte de sa4 del 13-11-2026:
+ProjectApp se despliega con la transacción del toolkit; el éxito llega al cerrar
+Integrity. Esta rama retira el guion alternativo, fija el SHA durante el build,
+expone identidades de backend/frontend, añade cobertura y política de eventos
+en CI y entrega el contrato al reconciliador de otra sesión. Los controles de
+plantillas y Chromium se inventarían y proponen para el toolkit, sin dar por
+hecha su incorporación. No se toca PROD, claves ni registros GitHub reales.
+Validación automatizada sólo en CI; entrega mediante PR abierto y verde, sin merge.
+[Contrato y traspaso](../docs/DEPLOYMENT_VERSION_INTERFACE.md).
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.
