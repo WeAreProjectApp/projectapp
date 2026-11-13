@@ -614,3 +614,47 @@ for (const alias of ['compact', 'portrait']) {
     });
   });
 }
+
+
+test('completed pending review returns mouse focus to the same proposal (PA-260)', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  // Review is removed after confirmation; BODY is not a coherent return destination.
+  const state = buildFixture({ status: 'accepted' });
+  const scenario = newClientScenario();
+  await mockApproval(page, state);
+  await openList(page);
+  await page.getByTestId('approval-review-71').click();
+  const modal = page.getByTestId('proposal-approval-modal');
+  await modal.getByTestId('approval-toggle-client').click();
+  await modal.getByTestId('approval-new-client-name').fill(scenario.name);
+  await modal.getByTestId('approval-new-client-email').fill(scenario.email);
+  await modal.getByTestId('approval-project-name').fill(scenario.projectName);
+
+  await page.getByTestId('approval-confirm').click();
+
+  await expect(modal).toHaveCount(0);
+  await expect(page.getByTestId('approval-review-71')).toHaveCount(0);
+  await expect(page.getByTestId('proposal-open-71')).toBeFocused();
+  expect(await page.getByTestId('proposal-open-71').evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0].payload.new_client.name).toBe(scenario.name);
+  expect(state.submissions[0].payload.new_project.name).toBe(scenario.projectName);
+  expect(state.otherMutations).toEqual([]);
+});
+
+test('cancelled review returns mouse focus to Review (PA-260)', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  const state = buildFixture({ status: 'accepted' });
+  await mockApproval(page, state);
+  await openList(page);
+  const opener = page.getByTestId('approval-review-71');
+  await opener.click();
+
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+
+  await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
+  await expect(opener).toBeFocused();
+  expect(state.submissions).toEqual([]);
+});

@@ -111,8 +111,9 @@
           <section v-if="cuenta" data-testid="income-detail-collection">
             <h4 class="text-sm font-semibold text-text-default mb-1">Cuenta de cobro</h4>
             <p class="text-sm text-text-muted">
-              {{ cuenta.public_number }} · {{ money(cuenta.total) }}
-              · emitida {{ formatDate(cuenta.issue_date) }}
+              {{ cuenta.public_number || t('panelUsability.incomeCollection.unnumbered') }} · {{ money(cuenta.total) }}
+              · {{ collectionStatusLabel }}
+              <span v-if="cuenta.issue_date"> · {{ collectionDateLabel }}: {{ collectionDate }}</span>
             </p>
           </section>
 
@@ -244,6 +245,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'duplicate']);
 
+const { t, locale } = useI18n();
 const store = useAccountingStore();
 const detail = ref(null);
 const loading = ref(false);
@@ -251,6 +253,16 @@ const error = ref(false);
 
 const income = computed(() => detail.value?.income ?? null);
 const cuenta = computed(() => detail.value?.collection_account ?? null);
+const issuedAccount = computed(() => ['issued', 'paid'].includes(cuenta.value?.commercial_status));
+const collectionStatusLabel = computed(() => {
+  const status = cuenta.value?.commercial_status;
+  const key = ['draft', 'issued', 'paid'].includes(status) ? status : 'unavailable';
+  return t(`panelUsability.incomeCollection.${key}`);
+});
+const collectionDateLabel = computed(() => t(`panelUsability.incomeCollection.${issuedAccount.value ? 'issueDate' : 'documentDate'}`));
+const collectionDate = computed(() => formatDate(cuenta.value?.issue_date, {
+  locale: locale.value.startsWith('en') ? 'en' : 'es',
+}));
 const receivableApplies = computed(() => (
   income.value?.kind === 'expected' && income.value?.ledger === 'company'
 ));

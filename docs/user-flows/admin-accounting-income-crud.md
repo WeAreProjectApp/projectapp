@@ -58,6 +58,7 @@ Ya no existe la transición Liquidación con ajustes ni un formulario que
 reinicie los datos. Al completarse, la fila conserva Cuenta pendiente de emitir
 y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 
+Actualización 2026-11-12: Detalle e historial distingue la cuenta en borrador, emitida o pagada por commercial_status, presenta la fecha del documento para borrador y fecha de emisión para emitida/pagada, sin emitir ni numerar durante la consulta (PA-259). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 **PA-251/253/257/261 · delta de interfaz:** Los importes fraccionarios conservan centavos en filas clásicas/agrupadas, menús y detalle de Participaciones, sin alterar reparto ni payload de liquidación.
 La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.

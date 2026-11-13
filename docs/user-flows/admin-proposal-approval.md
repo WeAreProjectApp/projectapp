@@ -26,3 +26,5 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresi�
 - **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
 
 PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
+
+Actualización 2026-11-12: Tras confirmar con mouse, el foco vuelve al disparador si sigue disponible o a un destino visible del mismo registro cuando Revisar desaparece; cancelar conserva el disparador (PA-260/D1). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.

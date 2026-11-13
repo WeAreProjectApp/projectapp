@@ -22,6 +22,7 @@
       :visible="Boolean(approvalProposal)"
       :proposal="approvalProposal || {}"
       :accept-proposal="approvalAccept"
+      :return-focus="approvalReturnFocus"
       @close="approvalProposal = null"
       @completed="onApprovalCompleted"
     />
@@ -83,8 +84,8 @@
     <div v-if="isCurrentProposal" data-testid="proposal-record-header"
          class="sticky top-0 z-30 -mx-4 px-4 py-3 mb-6 bg-surface/80 backdrop-blur-md border-b border-border-muted transition-all sm:-mx-6 sm:px-6 panel-desktop:-mx-8 panel-desktop:px-8">
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-        <BaseButton v-if="proposal.project_review_required" variant="secondary" size="sm" :data-testid="`approval-review-${proposal.id}`" @click="openApproval(proposal, false)">{{ approvalText.pending }}</BaseButton>
-        <h1 class="text-lg sm:text-xl font-light text-text-default truncate">{{ proposal.title }}</h1>
+        <BaseButton v-if="proposal.project_review_required" variant="secondary" size="sm" :data-testid="`approval-review-${proposal.id}`" class="focus:ring-2 focus:ring-focus-ring focus:ring-offset-2" @click="openApproval(proposal, false)">{{ approvalText.pending }}</BaseButton>
+        <h1 ref="approvalHeading" tabindex="-1" class="focus:outline focus:outline-2 focus:outline-focus-ring focus:outline-offset-4 text-lg sm:text-xl font-light text-text-default truncate">{{ proposal.title }}</h1>
         <span v-if="proposal.total_investment > 0" class="text-sm sm:text-base font-light text-text-subtle whitespace-nowrap">
           ({{ formatInvestment(proposal.total_investment, proposal.currency) }})
         </span>
@@ -683,7 +684,10 @@ async function handleStatusChange(newStatus) {
 
 // Header status select (admin mode): shared confirm + PATCH + notify flow.
 // The store updates currentProposal on success, so no local assignment needed.
-const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
+const approvalHeading = ref(null);
+const { approvalText, approvalProposal, approvalAccept, approvalReturnFocus, openApproval, approvalCompleted } = useProposalApproval({
+  returnFocus: () => approvalHeading.value,
+});
 
 function onApprovalCompleted(result) {
   approvalCompleted(result);
