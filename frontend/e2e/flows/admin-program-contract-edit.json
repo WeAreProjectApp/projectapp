@@ -1,0 +1,15 @@
+{
+  "id": "admin-program-contract-edit",
+  "name": "Admin Program Contract Editing",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Desde Contrato en Building with Us o Células, abrir el documento vinculado en el Gestor, editar fuente/presentación con motivo y guardar; regresar al módulo para consultar la misma revisión. Motivo ausente impide guardar; un conflicto o fallo conserva la fuente local. Los metadatos y los demás espejos permanecen protegidos.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure"
+  ]
+}

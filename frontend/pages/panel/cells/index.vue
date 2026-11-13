@@ -13,6 +13,7 @@ import ExplainerVisibilityToggle from '~/components/ExplainerVisibilityToggle.vu
 import VideoResourceManager from '~/components/resources/VideoResourceManager.vue';
 import { useExplainerVideo } from '~/composables/useExplainerVideos';
 import { useExplainerVideosStore } from '~/stores/explainer_videos';
+import { useProgramContractRefresh } from '~/composables/useProgramContractRefresh';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
@@ -24,6 +25,7 @@ const videoSettings = useExplainerVideosStore();
 const explainer = useExplainerVideo('building-on-demand', computed(() => store.previewLanguage), computed(() => videoSettings.settings?.resources?.[`building-on-demand:${store.previewLanguage}`]));
 const tabFromQuery = (value) => ['economics', 'contract'].includes(value) ? value : 'program';
 const activeSection = ref(tabFromQuery(route.query.tab));
+const refreshContract = useProgramContractRefresh(store, activeSection);
 const loadedTabs = { program: false, economics: false, contract: false };
 let isMounted = false;
 
@@ -39,14 +41,10 @@ const previewLanguages = computed(() => ['es', 'en'].map((language) => ({
 })));
 
 async function loadTab(kind) {
+  if (kind === 'contract') return refreshContract();
   if (loadedTabs[kind]) return;
   loadedTabs[kind] = true;
   if (kind === 'economics') return store.fetchEconomics();
-  if (kind === 'contract') {
-    await store.fetchContract();
-    if (!store.contractUnavailable) await store.fetchVersions('contract');
-    return;
-  }
   await Promise.all([store.fetchPreview(store.previewLanguage), store.fetchVersions('program')]);
 }
 

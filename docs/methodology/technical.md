@@ -2,6 +2,14 @@
 
 El exportador `frontend/scripts/export-mcp-surfaces.mjs` deriva superficies y funciones del Mapa de vistas. `mcp_surface_matrix --check` detecta falta de asignación y drift del manifiesto; no demuestra cobertura funcional. CI conserva JSON/CSV con revisión y resultados pendientes. QA completa evidencias por herramienta, permiso, confirmación, vista y función antes del retiro. La migración aditiva 0308 se aplica sólo por deploy. Pruebas automatizadas en CI y validación DEV/Chrome por separado conforme al acuerdo ProjectApp.
 
+> **Contratos de programas — 2026-11-12:** Building with Us y Células comparten
+> la edición del Gestor y sus servicios versionados con MCP. El guardado verifica
+> la revisión, actualiza PDF e historial de forma atómica y conserva el documento
+> vinculado. Los módulos consultan, previsualizan, descargan y enlazan al editor.
+> Esta actualización sustituye la restricción histórica de edición exclusiva
+> mediante MCP para estos dos contratos; los demás espejos conservan sus bloqueos.
+> [Contrato técnico y validación](../PROGRAM_CONTRACT_DOCUMENTS.md).
+
 > **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
 
 > **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../DATA_INTEGRITY.md).

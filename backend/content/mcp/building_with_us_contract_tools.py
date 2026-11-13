@@ -70,7 +70,7 @@ def _prepare_initialization(arguments):
 
 def _initialization_impact(arguments):
     prepared = _run(service.prepare_initialization, arguments.get('folder_id'))
-    return {'summary': 'Inicializa o resincroniza el espejo interno de sólo lectura en Contratos, con PDF y notas privadas.', **prepared}
+    return {'summary': 'Inicializa o resincroniza el documento contractual en Contratos, con PDF y notas privadas.', **prepared}
 
 
 def _initialize(arguments):
@@ -121,7 +121,7 @@ def _render(arguments):
 _RENDER['handler'] = _render
 BUILDING_WITH_US_CONTRACT_TOOLS = [
     {'name': 'get_building_with_us_contract', 'risk': 'read', 'annotations': dict(_READ_ANNOTATIONS),
-     'description': 'Lee el contrato privado vigente: markdown, versión, autor, motivo, etag y estado del espejo de sólo lectura del Gestor.',
+     'description': 'Lee el contrato privado vigente: markdown, versión, autor, motivo, etag y estado del documento sincronizado y editable desde el Gestor.',
      'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {}}, 'handler': _read,
      'output_schema': {'type': 'object', 'properties': {
          'markdown': {'description': 'Fuente markdown_html_v1: Markdown con listas/tablas y HTML limitado para color, resaltado y alineación.', 'type': 'string'}, 'version': {'type': 'integer'}, 'version_id': {'type': 'integer'},

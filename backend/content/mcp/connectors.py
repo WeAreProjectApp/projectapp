@@ -136,12 +136,12 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='content',
     ),
     'documents': ConnectorSpec(
-        'documents', '7.1.0',
+        'documents', '7.2.0',
         (DOCUMENT_TOOLS, DOCUMENT_THREAD_TOOLS, DOCUMENT_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
         notes=(
-            'Los espejos de contrato (is_contract_mirror=true) son de solo lectura '
-            'y no se mueven: revisa editable, movable y move_blockers antes de '
+            'Los contratos de programa permiten editar contenido y presentación con if_match y change_note. '
+            'Los otros espejos contractuales son de solo lectura; ninguno se mueve. Revisa editable, movable y move_blockers antes de '
             'editar o mover.',
         ),
     ),
