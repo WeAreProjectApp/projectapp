@@ -55,6 +55,49 @@ parcial y el editor conserva el borrador. Otros espejos siguen en sólo lectura.
 Las lecturas no crean documentos ausentes. No acredita firma ni revisión jurídica.
 Contrato y recorrido: [Contratos de programas](PROGRAM_CONTRACT_DOCUMENTS.md).
 
+## PA-254 — compras y solicitudes por talla (2026-11-12)
+
+Comercial **6.7.0** administra ejemplos genéricos; Proyectos **5.2.0** expone
+compras, saldos, solicitudes y evaluación manual. Cotejar `initialize` y
+`tools/list` en el mismo SHA servido, con credenciales restringidas de cada
+conector. La presencia en este guion no acredita ejecución ni despliegue.
+
+1. Consultar `list_package_request_queue`, `get_package_generic_examples`, `get_project_package_examples`
+   y `get_project_requirement_packages`. La respuesta pública muestra definición
+   y ejemplos sin bandas de horas ni costo interno. Una talla particular
+   prevalece; las omitidas conservan el genérico.
+2. Publicar ejemplos con motivo, UUID y revisión vigente mediante
+   `publish_package_generic_examples` o `publish_project_package_examples`,
+   confirmando la acción sensible. Consultar su historial; repetir la operación
+   no duplica revisiones y una revisión vieja devuelve conflicto. No cambian
+   parámetros económicos ni documentos de calculadora aprobados.
+3. Crear una compra con la huella consultada usando `create_package_purchase`.
+   No acredita saldo. En datos ficticios, `confirm_external_package_payment`
+   exige confirmación, fecha y referencia. Verificar un único crédito por talla
+   aunque se reintente. `prepare_package_checkout` y `verify_package_payment`
+   conservan orden, importe y moneda; sus pruebas sustituyen la pasarela en su
+   frontera, sin cobros reales ni suscripciones de hosting.
+4. Registrar una solicitud con `create_package_request`; consultar
+   `get_package_request` y `get_package_evaluation_context`. El equipo puede
+   comenzar evaluación o publicar una propuesta manual por
+   `publish_package_size_proposal`, con confirmación y versión vigente. Publicar
+   y responder una objeción no consumen cupos.
+5. El titular responde desde su sesión personal de Plataforma. **No existe
+   herramienta MCP de consentimiento.** Cotejar talla, agenda y compra origen
+   antes de aceptar; la aceptación y el débito son atómicos. Otra propuesta
+   requiere nueva aceptación. Un cliente ajeno, una sesión suplantada o una
+   versión obsoleta no producen movimientos.
+6. Consultar movimientos; `reverse_package_consumption` exige motivo y
+   confirmación, conserva el vencimiento original y no devuelve dinero.
+   `update_project_package_settings` sólo afecta ofertas futuras. Las compras
+   y decisiones anteriores permanecen congeladas y no se transfieren de cliente.
+
+Cobertura de CI: `accounts/tests/test_requirement_packages.py`,
+`content/tests/views/test_mcp_requirement_packages.py` y contratos MCP vigentes.
+Contrato y corpus provisional: [PA254_REQUIREMENT_PACKAGES.md](PA254_REQUIREMENT_PACKAGES.md).
+La calibración económica necesita esfuerzo real; ni este guion ni las compras
+ficticias lo sustituyen.
+
 ## Integridad de datos — validación 2026-11-05
 
 Verificar `mcp_inventory --check`, paridad de esquemas, 13 herramientas en Integridad (10 de negocio + 3 de control), permisos administrativos, confirmación de aplicar/deshacer/revisar y ausencia de integridad en nuevas credenciales de Proyectos. Los accesos legacy/pre_split deben seguir operando con aviso; migrar conserva actor, permisos y vencimiento. Tras deploy: activar destino, configurar consumidores sin exponer sus credenciales, comprobar una revisión real de lectura y el barrido de Bogotá. Nada de esto se acredita por tests locales. Contrato completo en `DATA_INTEGRITY.md`.

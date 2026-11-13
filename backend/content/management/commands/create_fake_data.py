@@ -190,6 +190,9 @@ class Command(BaseCommand):
             if not options['skip_platform']:
                 case_args = ('--skip-accounting',) if options['skip_accounting'] else ()
                 self._run_seeded('platform QA cases', 'create_fake_platform_cases', *case_args)
+                from content.management.commands._package_seed_helpers import seed_fake_packages
+                seed_fake_packages(context=context)
+                self._completed.append('requirement packages QA cases')
 
         command = (
             f'python manage.py create_fake_data --replace --count {count} '

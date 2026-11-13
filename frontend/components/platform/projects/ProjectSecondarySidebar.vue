@@ -64,6 +64,7 @@ const items = computed(() => {
     { label: t('platformDelivery.navigation'), href: localePath(`${base}/delivery`), tourTarget: 'project-delivery' },
     { label: t('projectIdeas.navigation'), href: localePath(`${base}/ideas`), tourTarget: 'project-ideas' },
     { label: 'Solicitudes',       href: localePath(`${base}/changes`), tourTarget: 'project-changes' },
+    { label: t('requirementPackages.title'), href: localePath(`${base}/packages`) },
     { label: 'Bugs',              href: localePath(`${base}/bugs`), tourTarget: 'project-bugs' },
     { label: 'Recursos',          href: localePath(`${base}/deliverables`), tourTarget: 'project-resources' },
     { label: 'Hosting',           href: localePath(`${base}/payments`) },

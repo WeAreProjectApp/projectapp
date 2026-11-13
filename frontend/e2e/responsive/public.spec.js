@@ -98,7 +98,10 @@ async function setupPublic(page) {
 }
 
 async function switchToSpanish(page) {
-  await page.getByRole('button', { name: 'Switch to Spanish' }).click();
+  const switcher = page.getByRole('button', { name: 'Switch to Spanish', exact: true }).filter({ visible: true });
+  await expect(switcher).toHaveCount(1);
+  await expect(switcher).toBeEnabled();
+  await switcher.click();
   await expect(page).toHaveURL(/\/es-co\//);
 }
 

@@ -16,6 +16,8 @@ La ampliación en rama de sesión conserva estados y agrupación de eventos; inc
 
 > **PA-264 — preparado en rama de sesión:** control visual de hosting por producción, independiente del ciclo comercial y los flags por cliente. Panel/MCP comparten modo, mensajes independientes, versión y auditoría; receptores externos confirman documento y huella. Integraciones, límites y validación pendiente en `docs/HOSTING_CONTROL.md`. QA manual y servicios continúan pausados.
 
+> **PA-254 — 2026-11-12:** órdenes únicas por proyecto, libro de cupos y consentimiento del cliente separados de hosting. Servicios compartidos por Panel, JWT y MCP; ejemplos versionados independientes de parámetros económicos. La aceptación reemplaza consumos de forma atómica. Contrato: `docs/PA254_REQUIREMENT_PACKAGES.md`. Implementación sin acreditar despliegue ni calibración económica.
+
 > **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
 > pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
 > lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant
