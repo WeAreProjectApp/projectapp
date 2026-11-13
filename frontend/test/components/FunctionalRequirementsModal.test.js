@@ -230,7 +230,7 @@ describe('multiple groups from functional requirements', () => {
 
 // ── Mounted tests: nested linked-requirements modal ──────────────────────────
 
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import FunctionalRequirementsModal from '../../components/BusinessProposal/FunctionalRequirementsModal.vue';
 import LinkedRequirementsModal from '../../components/BusinessProposal/LinkedRequirementsModal.vue';
 import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';
@@ -254,8 +254,8 @@ const ITEM_REQUIREMENTS_MAP = {
       priority: 'high',
       epicKey: 'views',
       flowKey: 'req-home',
-      configuration: 'NO debe mostrarse',
-      usageFlow: 'NO debe mostrarse',
+      configuration: 'Los CTAs administrables se cargan desde la portada.',
+      usageFlow: 'Abrir la portada → elegir un CTA → navegar al destino.',
     },
     {
       title: 'Estados vacío y de error del Home',
@@ -309,29 +309,34 @@ describe('nested linked-requirements link', () => {
       .toContain('View requirements (2)');
   });
 
-  it('opens the nested modal with title, priority and description but not configuration/usageFlow', async () => {
+  it('passes linked requirement data to the nested modal', async () => {
     const wrapper = mountModal();
     await wrapper.find('[data-testid="view-requirements-link"]').trigger('click');
 
     const nested = wrapper.findComponent(LinkedRequirementsModal);
     expect(nested.props('visible')).toBe(true);
     expect(nested.props('requirements')).toHaveLength(2);
+    expect(nested.props('requirements')[0]).toEqual(expect.objectContaining({
+      title: 'Home dinámico con CTAs',
+      description: 'Página de inicio con secciones administrables.',
+      priority: 'high',
+      configuration: 'Los CTAs administrables se cargan desde la portada.',
+      usageFlow: 'Abrir la portada → elegir un CTA → navegar al destino.',
+    }));
 
     const text = nested.text();
     expect(text).toContain('Home dinámico con CTAs');
     expect(text).toContain('Alta'); // priority high → Alta (es)
     expect(text).toContain('Página de inicio con secciones administrables.');
     expect(text).toContain('Estados vacío y de error del Home');
-    expect(text).not.toContain('NO debe mostrarse');
   });
 
   it('closing the nested modal keeps the parent modal open', async () => {
     const wrapper = mountModal();
     await wrapper.find('[data-testid="view-requirements-link"]').trigger('click');
 
-    const nested = wrapper.findComponent(LinkedRequirementsModal);
-    nested.vm.$emit('close');
-    await wrapper.vm.$nextTick();
+    await wrapper.get('button[aria-label="Cerrar requerimientos vinculados"]').trigger('click');
+    await flushPromises();
 
     expect(wrapper.findComponent(LinkedRequirementsModal).props('visible')).toBe(false);
     expect(wrapper.emitted('close')).toBeUndefined();

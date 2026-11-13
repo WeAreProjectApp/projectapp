@@ -2,8 +2,15 @@
   "id": "admin-monitoring-case-note",
   "name": "Admin Monitoring Case Note",
   "module": "monitoring",
-  "roles": ["admin"],
+  "roles": [
+    "admin"
+  ],
   "priority": "P2",
-  "description": "Staff records a note in the case history and keeps the typed text when validation or delivery fails.",
-  "outcomes": ["success", "error", "failure", "display"]
+  "description": "Staff records a note in case history and preserves its draft during pagination or a rejected save.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
 }

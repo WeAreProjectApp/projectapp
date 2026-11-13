@@ -46,7 +46,7 @@ def record_estimate(data, *, actor):
     if not created and (estimate.author_id != getattr(actor, 'pk', None) or estimate.definition_digest != expected_digest
                         or any(getattr(estimate, key) != value for key, value in values.items())):
         raise ValidationError('Ese identificador ya corresponde a otra estimación.')
-    return {'id': estimate.pk, 'size': estimate.size, 'package_eligible': estimate.size != 'PROJECT',
+    return {'id': estimate.pk, 'size': estimate.size, 'package_eligible': estimate.size in ('XS', 'S', 'M'),
             'revision_id': estimate.revision_id,
             'project_version_id': estimate.project_version_id}
 

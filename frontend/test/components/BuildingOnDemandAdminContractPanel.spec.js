@@ -26,11 +26,12 @@ const makeContract = (overrides = {}) => ({
   ...overrides,
 });
 const mounted = [];
-function mountContract(overrides = {}) {
+function mountContract(overrides = {}, { markdownStub = null } = {}) {
   const wrapper = mount(ContractPanel, {
     props: { contract: makeContract(), ...overrides },
     global: {
       stubs: {
+        ...(markdownStub ? { DocumentMarkdownBody: markdownStub } : {}),
         PanelDownloadLink: {
           props: ['url', 'label', 'filename'],
           template: '<a :href="url" :download="filename">{{ label }}</a>',
@@ -55,6 +56,7 @@ describe('BuildingOnDemandAdminContractPanel', () => {
     const mirror = wrapper.get('[data-testid="building-on-demand-admin-contract-mirror"]');
 
     expect(mirror.get('[data-testid="building-on-demand-admin-mirror-link"]').attributes('href')).toBe('/es-co/panel/documents/15/edit');
+    expect(mirror.get('[data-testid="building-on-demand-admin-mirror-link"]').text()).toBe('Editar en el Gestor de documentos');
     expect(mirror.text()).toContain('ProjectApp › Contratos › Building on Demand');
     expect(mirror.text()).toContain('Contrato de célula Scrum');
     expect(mirror.text()).toContain('Versión de la copia: 4');
@@ -130,7 +132,7 @@ describe('BuildingOnDemandAdminContractPanel', () => {
     const viewer = wrapper.get('[data-testid="building-on-demand-admin-contract-view-pdf"]');
 
     expect(viewer.attributes()).toMatchObject({ href: '/api/building-on-demand/admin/contract/pdf/?inline=1', target: '_blank', rel: 'noopener noreferrer' });
-    expect(viewer.text()).toBe('Ver PDF del contrato');
+    expect(viewer.text()).toBe('Previsualizar PDF del contrato');
   });
 
   it('renders the published markdown as a read-only document', async () => {
@@ -143,6 +145,15 @@ describe('BuildingOnDemandAdminContractPanel', () => {
     expect(body.get('td').text()).toBe('Bolsa');
     expect(body.findAll('td').map((cell) => cell.text())).toEqual(['Bolsa', 'Mensual']);
     expect(body.find('textarea').exists()).toBe(false);
+  });
+
+  it('uses the shared editorial format for a saved contract', () => {
+    const wrapper = mountContract({}, {
+      markdownStub: { props: ['format'], template: '<article data-testid="building-on-demand-markdown-renderer" :data-format="format" />' },
+    });
+
+    // Fails if content saved by the document editor is rendered as plain Markdown in this module.
+    expect(wrapper.get('[data-testid="building-on-demand-markdown-renderer"]').attributes('data-format')).toBe('markdown_html_v1');
   });
 
   it('keeps the contract reading region accessible without markdown content', async () => {

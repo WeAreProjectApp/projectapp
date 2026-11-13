@@ -27,6 +27,8 @@ pytestmark = pytest.mark.django_db
 
 def configure_voice(client_user):
     """Enable the complete voice-reporting dependency set for one client."""
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_voice_reports': True, 'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     UserProfile.objects.filter(user=client_user).update(voice_reporting_enabled=True)
     PlatformAISettings.objects.update_or_create(
         pk=1,

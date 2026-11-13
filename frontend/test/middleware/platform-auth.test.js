@@ -1,3 +1,4 @@
+jest.mock('~/stores/platform-features', () => ({ usePlatformFeaturesStore: () => ({ refresh: async () => true, routeAllowed: () => true, enabled: () => true }) }))
 /**
  * Tests for the platform-auth route middleware — role-aware landing.
  *

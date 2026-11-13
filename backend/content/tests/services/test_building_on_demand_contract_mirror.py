@@ -23,6 +23,7 @@ from content.services import (
     contract_template_service,
     document_ownership_planner,
 )
+from content.services.document_write_service import document_etag
 from content.tests.building_on_demand_fixtures import contract_update
 from content.tests.mcp_parity import assert_no_writes, call_tool_inprocess
 
@@ -66,8 +67,8 @@ def test_lookup_distinguishes_the_cell_contract(cell_mirror):
 
     assert (mirror.pk, variant) == (cell_mirror.pk, 'building_on_demand')
     assert message == (
-        'Este contrato es de sólo lectura y permanece en Contratos. '
-        'Su contenido se actualiza mediante el MCP de Building on Demand.'
+        'Este contrato permanece en Contratos; su identidad y ubicación están protegidas. '
+        'Edita el contenido desde el Gestor de documentos o mediante el MCP de Programas.'
     )
     assert contract_mirror_service.building_with_us_mirror(cell_mirror.document) is None
     assert contract_mirror_service.mirror_read_only_message(cell_mirror.document) == message
@@ -137,7 +138,6 @@ def test_gestor_download_rejects_an_unavailable_cell_artifact(admin_client, cell
 
 
 @pytest.mark.parametrize('method,route,payload', [
-    ('patch', 'update-document', {'content_markdown': '# Cambio desde el Gestor'}),
     ('delete', 'delete-document', {}),
     ('patch', 'archive-document', {}),
     ('post', 'duplicate-document', {}),
@@ -158,6 +158,27 @@ def test_gestor_writes_preserve_the_synchronized_contract(admin_client, cell_mir
     assert DocumentNote.objects.filter(document=cell_mirror.document).count() == note_count
 
 
+def test_gestor_edit_creates_a_synchronized_cell_revision(admin_client, cell_mirror):
+    """Fails if Gestor content editing does not persist the cell revision and its PDF."""
+    before_pdf = bytes(cell_mirror.pdf_content)
+    response = admin_client.patch(reverse('update-document', args=[cell_mirror.document_id]), {
+        'content_markdown': '# Contrato de célula actualizado\n\nLa estimación aprobada queda registrada.',
+        'if_match': document_etag(cell_mirror.document),
+        'change_note': 'Aclara el registro de estimaciones.',
+        'include_content': True,
+    }, format='json')
+    cell_mirror.refresh_from_db()
+    cell_mirror.document.refresh_from_db()
+
+    assert response.status_code == 200
+    assert response.data['markdown'] == '# Contrato de célula actualizado\n\nLa estimación aprobada queda registrada.'
+    assert response.data['contract_version'] == 2
+    assert service.read_contract()['markdown'] == response.data['markdown']
+    assert cell_mirror.revision.version == 2
+    assert bytes(cell_mirror.pdf_content).startswith(b'%PDF-')
+    assert bytes(cell_mirror.pdf_content) != before_pdf
+
+
 def test_documents_connector_reads_the_live_cell_revision(cell_mirror, documents_credential, superuser):
     """Fails if the documents connector supplies stale text after a cell-contract update."""
     arguments = contract_update(service.read_contract())
@@ -170,15 +191,13 @@ def test_documents_connector_reads_the_live_cell_revision(cell_mirror, documents
     assert result['markdown'] == arguments['markdown']
     assert result['contract_variant'] == 'building_on_demand'
     assert result['contract_version'] == current['version']
-    assert result['editable'] is False
+    assert result['editable'] is True
+    assert result['content_editable'] is True
     assert result['movable'] is False
-    assert result['edit_blockers'] == ['contract_mirror']
+    assert result['edit_blockers'] == []
 
 
-@pytest.mark.parametrize('tool,arguments', [
-    ('update_document', {'markdown': '# Cambio conversacional'}),
-    ('append_document', {'markdown': 'Texto añadido al contrato'}),
-])
+@pytest.mark.parametrize('tool,arguments', [('append_document', {'markdown': 'Texto añadido al contrato'})])
 def test_documents_connector_refuses_cell_contract_mutations(cell_mirror, documents_credential, tool, arguments):
     """Fails if the general documents connector becomes an alternate cell-contract writer."""
     before = service.resource_etags()
@@ -192,6 +211,29 @@ def test_documents_connector_refuses_cell_contract_mutations(cell_mirror, docume
     assert result['error']['details']['edit_blockers'] == ['contract_mirror']
     assert service.resource_etags() == before
     assert BuildingOnDemandContractMirror.objects.get(pk=cell_mirror.pk).document_id == cell_mirror.document_id
+
+
+def test_documents_connector_updates_the_cell_contract(cell_mirror, documents_credential):
+    """Fails if Documents MCP acknowledges a cell edit without storing its revision and PDF."""
+    before_pdf = bytes(cell_mirror.pdf_content)
+    result = call_tool_inprocess('documents', 'update_document', {
+        'document_id': cell_mirror.document_id,
+        'markdown': '# Contrato de célula por MCP\n\nEl cambio queda auditado.',
+        'if_match': document_etag(cell_mirror.document),
+        'change_note': 'Aclara la auditoría del contrato.',
+        'template_style': 'friendly',
+        'include_content': True,
+    }, credential=documents_credential)
+    cell_mirror.refresh_from_db()
+    cell_mirror.document.refresh_from_db()
+
+    assert result['markdown'] == '# Contrato de célula por MCP\n\nEl cambio queda auditado.'
+    assert result['contract_version'] == 2
+    assert service.read_contract()['markdown'] == result['markdown']
+    assert cell_mirror.revision.version == 2
+    assert bytes(cell_mirror.pdf_content).startswith(b'%PDF-')
+    assert bytes(cell_mirror.pdf_content) != before_pdf
+    assert cell_mirror.document.template_style == 'friendly'
 
 
 def test_confirmed_documents_deletion_preserves_the_cell_contract(cell_mirror, documents_credential):

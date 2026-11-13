@@ -59,6 +59,8 @@
     <ProjectsTable
       v-else
       :projects="filteredProjects"
+      :show-bugs="features.enabled('platform.bugs')"
+      :show-delivery-value="features.enabled('platform.delivery')"
       :role="authStore.isAdmin ? 'admin' : 'client'"
       @navigate="goToProject"
     />
@@ -244,6 +246,8 @@
 </template>
 
 <script setup>
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
+const features = usePlatformFeaturesStore()
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
 import { usePlatformAuthStore } from '~/stores/platform-auth'

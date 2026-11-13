@@ -170,6 +170,8 @@ const localePath = useLocalePath()
 function getNotifRoute(notif) {
   if (!notif.project) return null
   const base = `/platform/projects/${notif.project}`
+  if (notif.related_object_type === 'package_request') return localePath(`${base}/packages?request=${notif.related_object_id}`)
+  if (notif.related_object_type === 'package_order') return localePath(`${base}/packages`)
   if (notif.related_object_type === 'delivery_stage') return localePath(`${base}/delivery?stage=${notif.related_object_id}`)
   const typeRoutes = {
     bug_reported: '/bugs', bug_status_changed: '/bugs',

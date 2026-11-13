@@ -3,13 +3,44 @@ import { get_request, create_request, patch_request } from '~/stores/services/re
 const request_http = (method, url, data, config) => method === 'GET' ? get_request(url, config) : method === 'POST' ? create_request(url, data) : patch_request(url, data)
 const base = 'platform/help/'
 export const usePlatformHelpAdminStore = defineStore('platform-help-admin', {
-  state: () => ({ settings: null, tours: [], targets: {}, clients: { results: [], page: 1, count: 0 }, progress: { results: [], page: 1, count: 0 } }),
+  state: () => ({
+    settings: null, tours: [], targets: {},
+    clients: { results: [], page: 1, count: 0 },
+    clientsLoading: false, clientsError: false, clientsSearch: '', clientsGeneration: 0,
+    progress: { results: [], page: 1, count: 0 },
+  }),
   actions: {
     async load() {
       const [settings, catalog] = await Promise.all([request_http('GET', `${base}settings/`), request_http('GET', `${base}admin/tours/`)])
       this.settings = settings.data; this.tours = catalog.data.results; this.targets = catalog.data.targets
     },
-    async loadClients(page = 1, search = '') { this.clients = (await request_http('GET', `${base}clients/`, null, { params: { page, search } })).data },
+    invalidateClients(search = '') {
+      // Invalidate immediately, including the debounce window before the next GET.
+      this.clientsGeneration += 1;
+      this.clientsSearch = search;
+      this.clients = { results: [], page: 1, count: 0 };
+      this.clientsLoading = true;
+      this.clientsError = false;
+    },
+    cancelClients() {
+      this.clientsGeneration += 1;
+      this.clientsLoading = false;
+    },
+    async loadClients(page = 1, search = '') {
+      const generation = ++this.clientsGeneration;
+      this.clientsSearch = search;
+      this.clientsLoading = true;
+      this.clientsError = false;
+      this.clients = { results: [], page, count: 0 };
+      try {
+        const response = await request_http('GET', `${base}clients/`, null, { params: { page, search } });
+        if (generation === this.clientsGeneration) this.clients = response.data;
+      } catch {
+        if (generation === this.clientsGeneration) this.clientsError = true;
+      } finally {
+        if (generation === this.clientsGeneration) this.clientsLoading = false;
+      }
+    },
     async loadProgress(page = 1) { this.progress = (await request_http('GET', `${base}admin/progress/`, null, { params: { page } })).data },
     async saveFlags(flags, userId) { return (await request_http('PATCH', `${base}${userId ? `clients/${userId}/` : 'settings/'}`, { expected_version: flags.version, tour_enabled: flags.tour_enabled, video_enabled: flags.video_enabled })).data },
     async saveTour(tour) {

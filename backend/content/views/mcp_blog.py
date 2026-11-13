@@ -528,13 +528,13 @@ def mcp_endpoint(request, slug, token=None):
         _record_event(connector_for_log, 'auth_error', ok=False, detail=detail)
         raise Http404
 
-    tools = tools_for_credential(slug, credential)
     legacy_catalog = spec.compatibility or credential.catalog != 'canonical'
     if connector.retired_at or (credential.catalog != 'canonical' and catalog_retired_at(connector, credential)):
         return Response(_jsonrpc_error(None, 'CONNECTOR_RETIRED',
                         ('Este acceso está retirado. Usa commercial, offerings o programs según la función.'
                          if slug == 'commercial' else
                          f'Este acceso está retirado. Usa {spec.canonical_area} con una credencial nueva.')), status=410)
+    tools = tools_for_credential(slug, credential)
     if not connector.is_active:
         raise Http404
 
@@ -680,7 +680,7 @@ mcp_endpoint.cls.get_exception_handler = lambda self: transport_exception_handle
 # ---------------------------------------------------------------------------
 
 def _connector_payload(connector):
-    from content.mcp.presentation import connector_description, section_note
+    from content.mcp.presentation import connector_capabilities, connector_description, connector_name, section_note
 
     spec = CONNECTORS.get(connector.slug)
     tools = TOOLS_BY_SLUG.get(connector.slug, [])
@@ -762,6 +762,7 @@ def _connector_payload(connector):
         'module_id': spec.module_id if spec else None,
         'lifecycle': 'retired' if connector.retired_at else 'deprecated' if spec and spec.compatibility else 'canonical',
         'replacement': spec.canonical_area if spec else None,
+        'replacement_name': connector_name(spec.canonical_area) if spec else None,
         'migration_started_at': connector.migration_started_at,
         'consumers_verified_at': connector.consumers_verified_at,
         'aliases_retired_at': connector.aliases_retired_at,
@@ -769,8 +770,9 @@ def _connector_payload(connector):
         'pre_split_retired_at': connector.pre_split_retired_at,
         'last_legacy_use_at': getattr(connector, '_panel_last_legacy_use', None),
         'version': spec.version if spec is not None else None,
-        'name': connector.name,
+        'name': connector_name(connector.slug, connector.name),
         'description': connector_description(connector.slug, connector.description),
+        'capabilities': connector_capabilities(connector.slug, tools),
         'section_note': section_note(connector.slug),
         'is_active': connector.is_active and connector.retired_at is None,
         'has_token': bool(connector.token_hash),
@@ -818,7 +820,7 @@ def list_mcp_connectors(request):
                 to_attr='_panel_credentials',
             ),
         )
-        .all()
+        .filter(retired_at__isnull=True)
         .order_by('slug')
     )
     return Response([_connector_payload(c) for c in connectors if c.slug in CONNECTORS], status=status.HTTP_200_OK)

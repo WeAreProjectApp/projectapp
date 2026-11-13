@@ -1,3 +1,5 @@
+import featureCatalog from '../../../contracts/platform-features.json' with { type: 'json' };
+
 export function getApiPath(requestUrl) {
   const url = new URL(requestUrl);
   return url.pathname.replace(/^\/api\//, "");
@@ -38,6 +40,16 @@ export async function mockApi(page, handler) {
     const apiPath = getApiPath(route.request().url());
     const method = route.request().method();
     let result = await handler({ route, apiPath, method });
+
+    // New availability boundary: ordinary fixture accounts inherit the catalogue.
+    // Scenario-specific handlers take precedence, including deliberate failures.
+    if (!result && apiPath === 'platform/features/' && method === 'GET') {
+      const user = await page.evaluate(() => JSON.parse(localStorage.getItem('platform_user') || 'null'));
+      result = { status: 200, contentType: 'application/json', body: JSON.stringify({
+        user_id: user?.user_id, catalog_version: featureCatalog.version,
+        features: Object.fromEntries(featureCatalog.features.map(item => [item.key, item.default_enabled])),
+      }) };
+    }
 
     // Document-manager specs predating server pagination expose their fixture
     // through the legacy array endpoint. Reuse that data while each spec is

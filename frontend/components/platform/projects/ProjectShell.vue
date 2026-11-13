@@ -4,7 +4,7 @@
       <ProjectBreadcrumb :project-name="project?.name" />
       <div class="mt-2 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
-          <h1 class="text-xl font-semibold text-text-default truncate">{{ project?.name || 'Proyecto' }}</h1>
+          <h1 class="text-xl font-semibold text-text-default truncate">{{ project?.name || t('projectAccess.accessError.project') }}</h1>
           <span v-if="project" :class="statusChipClass(project.current_state)">{{ project.status_label }}</span>
         </div>
         <!-- PA-50 return path: the same record's commercial face. Admin-only —
@@ -34,13 +34,13 @@
         <slot />
       </main>
     </div>
-    <p v-else-if="store.isLoading" role="status" class="px-6 py-12 text-center text-text-muted">Cargando proyecto…</p>
+    <p v-else-if="store.isLoading" role="status" class="px-6 py-12 text-center text-text-muted">{{ t('projectAccess.accessError.loading') }}</p>
     <section v-else-if="store.error" role="alert" class="space-y-4 rounded-3xl border border-border-default bg-surface p-6" data-testid="project-access-error">
       <h2 class="text-lg font-semibold text-text-default">{{ errorTitle }}</h2>
       <p class="text-sm text-text-muted">{{ errorMessage }}</p>
       <div class="flex flex-wrap gap-3">
-        <BaseButton as="NuxtLink" :to="localePath('/platform/projects')" variant="secondary">Volver a proyectos</BaseButton>
-        <BaseButton v-if="store.errorStatus !== 403 && store.errorStatus !== 404" variant="primary" @click="store.fetchProject(projectId)">Volver a intentar</BaseButton>
+        <BaseButton as="NuxtLink" :to="localePath('/platform/projects')" variant="secondary">{{ t('projectAccess.accessError.back') }}</BaseButton>
+        <BaseButton v-if="store.errorStatus !== 403 && store.errorStatus !== 404" variant="primary" @click="store.fetchProject(projectId)">{{ t('projectAccess.accessError.retry') }}</BaseButton>
       </div>
     </section>
   </div>
@@ -69,11 +69,9 @@ function openPanelRecord() {
 
 const projectId = computed(() => Number(route.params.id))
 const project = computed(() => Number(store.currentProject?.id) === projectId.value ? store.currentProject : null)
-const errorTitle = computed(() => store.errorStatus === 403 ? 'No tienes acceso a este proyecto' : store.errorStatus === 404 ? 'Proyecto no disponible' : 'No pudimos abrir el proyecto')
-const errorMessage = computed(() => store.errorStatus === 403
-  ? 'Tu cuenta no tiene permiso para abrir este espacio. Consulta con el equipo que administra tu acceso.'
-  : store.errorStatus === 404 ? 'El proyecto no está disponible. Vuelve al listado para consultar tus proyectos.'
-    : 'No pudimos cargar este espacio. Comprueba tu sesión y vuelve a intentarlo.')
+const errorKind = computed(() => store.errorStatus === 403 ? 'denied' : store.errorStatus === 404 ? 'unavailable' : 'failed')
+const errorTitle = computed(() => t(`projectAccess.accessError.${errorKind.value}Title`))
+const errorMessage = computed(() => t(`projectAccess.accessError.${errorKind.value}Message`))
 
 onBeforeMount(() => { if (projectId.value) store.fetchProject(projectId.value) })
 watch(projectId, (id) => { if (id) store.fetchProject(id) }, { flush: 'sync' })

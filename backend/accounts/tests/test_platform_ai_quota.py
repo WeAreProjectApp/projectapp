@@ -36,6 +36,8 @@ def configure_chatbot_audio(client_user, *, limit=20):
     """Enable chatbot dictation with explicit provider credentials."""
     configure_quota(client_user, limit=limit)
     UserProfile.objects.filter(user=client_user).update(chatbot_enabled=True)
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     PlatformAISettings.objects.filter(pk=1).update(chatbot_enabled=True)
     PlatformAICredential.objects.bulk_create([
         PlatformAICredential(provider='anthropic', encrypted_value='configured'),
@@ -135,6 +137,8 @@ def test_chat_voice_redemption_uses_the_existing_consumed_reservation(client_use
     """Fails if sending a ready dictated chatbot question spends the quota twice."""
     configure_quota(client_user)
     UserProfile.objects.filter(user=client_user).update(chatbot_enabled=True)
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     PlatformAISettings.objects.filter(pk=1).update(chatbot_enabled=True)
     PlatformAICredential.objects.bulk_create([
         PlatformAICredential(provider='anthropic', encrypted_value='configured'),

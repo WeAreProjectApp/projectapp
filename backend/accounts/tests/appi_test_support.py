@@ -29,6 +29,8 @@ def install_chat_templates():
 @pytest.fixture
 def appi_context(settings, monkeypatch):
     """Return an enabled client, owned project, API client, and real templates."""
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     settings.PLATFORM_AI_CIPHER_KEY = Fernet.generate_key()
     actor = get_user_model().objects.create_user('appi-owner', email='owner@appi.test')
     UserProfile.objects.update_or_create(

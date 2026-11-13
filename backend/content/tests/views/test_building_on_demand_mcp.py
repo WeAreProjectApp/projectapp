@@ -64,7 +64,7 @@ def test_connector_discovery_pins_the_schema_version(api_client, building_on_dem
 
     catalog = rpc_call(api_client, token, 'describe_capabilities', {})['structuredContent']
 
-    assert catalog['version'] == '4.1.1'
+    assert catalog['version'] == '4.1.2'
 
 
 def test_catalog_writes_advertise_durable_confirmation(api_client, building_on_demand_mcp):

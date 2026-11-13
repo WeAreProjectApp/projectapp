@@ -61,6 +61,14 @@ def gap(reason):
     return Decision(GAP, reason=reason)
 
 
+_decide(exempt('Compras, consentimiento e historial por tallas protegidos. La titularidad no se traslada ni repara automáticamente.'), '''
+accounts.PackageOrder.project accounts.PackageOrder.client
+accounts.PackageRequest.project accounts.PackageRequest.client
+accounts.PackageExampleRevision.project accounts.PackageProjectSettings.project
+accounts.PackageOperation.project
+''')
+
+
 # ── The client: UserProfile and User ─────────────────────────────────────────
 
 _decide(covered('CL4', 'CL6', 'PR1', 'PR2'), 'content.BusinessProposal.client')
@@ -97,6 +105,7 @@ _decide(exempt('Credencial de Google ligada a una identidad personal: bloquea la
 _decide(exempt('Preferencias de Ayuda y recorridos vistos por esta persona; se van con el usuario, '
                'sin reasignarse al corregir relaciones comerciales.'), '''
     accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
+accounts.ClientPlatformFeatureSettings.user accounts.PlatformFeatureEvent.actor accounts.PlatformFeatureEvent.client
 ''')
 _decide(AUTHORSHIP, '''
     accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor

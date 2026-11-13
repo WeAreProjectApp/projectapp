@@ -1,0 +1,16 @@
+{
+  "id": "platform-requirement-packages-request",
+  "name": "Solicitar evaluación de un requerimiento",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Describir un resultado nuevo, enviarlo sin entrega previa obligatoria y consultar su estado.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

@@ -4,7 +4,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import UserProfile
-from accounts.models_platform_help import PlatformHelpSettings, ClientPlatformHelpSettings
+from accounts.tests.feature_flag_helpers import set_global_flags, set_client_flags
 
 pytestmark = pytest.mark.django_db
 
@@ -18,12 +18,12 @@ def tutorial_client(django_user_model, *, onboarded=True):
 
 
 @pytest.mark.parametrize(('global_on', 'client_on', 'visible'), [
-    (True, True, True), (False, True, False), (True, False, False), (False, False, False),
+    (True, True, True), (False, True, True), (True, False, False), (False, False, False),
 ])
 def test_shared_help_switches_govern_tutorials(django_user_model, global_on, client_on, visible):
     user, client = tutorial_client(django_user_model)
-    PlatformHelpSettings.objects.update_or_create(pk=1, defaults={'video_enabled': global_on})
-    ClientPlatformHelpSettings.objects.update_or_create(user=user, defaults={'video_enabled': client_on})
+    set_global_flags({'platform.help_videos': global_on})
+    set_client_flags(user, {'platform.help_videos': client_on})
     response = client.get('/api/platform/help/videos/')
     assert response.status_code == 200
     assert response.data['enabled'] is visible

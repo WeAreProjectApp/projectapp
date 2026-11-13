@@ -47,6 +47,7 @@ export default defineI18nLocale(async () => {
     buildingOnDemandAdmin,
     videoResources,
     platformAI,
+    platformFeatures,
     integrity,
     platformHelp,
     documentPdf,
@@ -57,6 +58,7 @@ export default defineI18nLocale(async () => {
     hostingBilling,
 
     requirementCalculator,
+    requirementPackages,
   ] = await Promise.all([
     import('../../locales/panelUsability/es.js').then(m => m.default),
     import('~/locales/global/es.js'),
@@ -105,6 +107,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/buildingOnDemandAdmin/es.js'),
     import('~/locales/videoResources/es.js'),
     import('~/locales/platformAI/es.js'),
+    import('~/locales/platformFeatures/es.js'),
     import('~/locales/integrity/es.js'),
     import('~/locales/platformHelp/es.js'),
     import('~/locales/documentPdf/es.js'),
@@ -115,6 +118,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/hostingBilling/es.js'),
 
     import('~/locales/requirementCalculator/es.js'),
+    import('~/locales/requirementPackages/es.js'),
   ])
 
   return {
@@ -165,6 +169,7 @@ export default defineI18nLocale(async () => {
     buildingOnDemandAdmin: buildingOnDemandAdmin.default,
     videoResources: videoResources.default,
     platformAI: platformAI.default,
+    platformFeatures: platformFeatures.default,
     integrity: integrity.default,
     platformHelp: platformHelp.default,
     documentPdf: documentPdf.default,
@@ -175,5 +180,6 @@ export default defineI18nLocale(async () => {
     hostingBilling: hostingBilling.default,
 
     requirementCalculator: requirementCalculator.default,
+    requirementPackages: requirementPackages.default,
   }
 })

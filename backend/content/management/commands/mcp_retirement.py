@@ -22,6 +22,7 @@ class Command(BaseCommand):
         action.add_argument('--retire', action='store_true')
         parser.add_argument('--replacement-credential', type=int, action='append', default=[])
         parser.add_argument('--apply', action='store_true')
+        parser.add_argument('--coverage-report', help='Matriz JSON con comprobaciones funcionales, permisos y confirmaciones del corte actual.')
         parser.add_argument('--catalog', choices=['legacy', 'pre_split'], default='legacy')
 
     @transaction.atomic
@@ -55,12 +56,35 @@ class Command(BaseCommand):
             field = 'pre_split_consumers_verified_at' if catalog == 'pre_split' else 'consumers_verified_at'
             setattr(connector, field, timezone.now())
             connector.save(update_fields=[field, 'updated_at'])
+        evidence = None
+        if options['coverage_report']:
+            if (not isinstance(connector.retirement_evidence, dict)
+                    or not isinstance(connector.retirement_evidence.get(catalog, []), list)):
+                raise CommandError('La evidencia histórica tiene un formato inválido; consérvala y revísala antes del retiro.')
+            from content.mcp.coverage import CoverageError, load_verified_report
+            try:
+                evidence = load_verified_report(options['coverage_report'])
+            except CoverageError as exc:
+                raise CommandError(str(exc)) from None
+            # Evaluate against the candidate proof even during a dry run. Only
+            # a successful retirement persists it; previous proofs remain intact.
+            connector.retirement_evidence = {
+                **connector.retirement_evidence,
+                catalog: [*connector.retirement_evidence.get(catalog, []),
+                          {**evidence, 'verified_at': timezone.now().isoformat()}],
+            }
         report = retirement_status(connector, catalog=catalog)
         if options['retire'] and options['apply']:
             if not report['eligible']:
                 raise CommandError('Retiro bloqueado: ' + ', '.join(report['blockers']))
             field = 'pre_split_retired_at' if catalog == 'pre_split' else 'retired_at' if spec.compatibility else 'aliases_retired_at'
             setattr(connector, field, timezone.now())
-            connector.save(update_fields=[field, 'updated_at'])
+            fields = [field, 'updated_at']
+            if evidence:
+                fields.append('retirement_evidence')
+            if spec.compatibility:
+                connector.is_active = False
+                fields.append('is_active')
+            connector.save(update_fields=fields)
             report['retired'] = True
         self.stdout.write(json.dumps(report, ensure_ascii=False, indent=2))

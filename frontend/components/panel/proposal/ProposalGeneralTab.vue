@@ -379,31 +379,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm font-medium text-text-default mb-1">Tipo de proyecto</label>
-        <BaseSelect v-model="form.project_type">
-          <option value="">— Sin definir —</option>
-          <option value="website">Sitio Web</option>
-          <option value="ecommerce">E-commerce</option>
-          <option value="webapp">Aplicación Web</option>
-          <option value="landing">Landing Page</option>
-          <option value="redesign">Rediseño</option>
-          <option value="mobile_app">App Móvil</option>
-          <option value="branding">Branding / Identidad Visual</option>
-          <option value="cms">Sistema CMS</option>
-          <option value="portal">Portal / Intranet</option>
-          <option value="api_integration">Integración de APIs</option>
-          <option value="marketplace">Marketplace</option>
-          <option value="erp">Sistema ERP / Administrativo</option>
-          <option value="booking">Sistema de Reservas</option>
-          <option value="dashboard">Dashboard / Reportes</option>
-          <option value="crm">Sistema CRM</option>
-          <option value="saas">SaaS / Plataforma</option>
-          <option value="chatbot">Chatbot / Asistente Virtual</option>
-          <option value="ai_tool">Herramienta con IA</option>
-          <option value="automation">Automatización / RPA</option>
-          <option value="data_analytics">Analítica de Datos / BI</option>
-          <option value="plugin_extension">Plugin / Extensión</option>
-          <option value="other">Otro</option>
-        </BaseSelect>
+        <BaseChoiceSelect v-model="form.project_type" :options="projectTypeOptions" aria-label="Tipo de proyecto" />
         <BaseInput
           v-if="form.project_type === 'other'"
           v-model="form.project_type_custom"
@@ -414,36 +390,7 @@
       </div>
       <div>
         <label class="block text-sm font-medium text-text-default mb-1">Tipo de mercado</label>
-        <BaseSelect v-model="form.market_type">
-          <option value="">— Sin definir —</option>
-          <option value="b2b">B2B</option>
-          <option value="b2c">B2C</option>
-          <option value="saas">SaaS</option>
-          <option value="retail">Retail</option>
-          <option value="services">Servicios profesionales</option>
-          <option value="health">Salud</option>
-          <option value="education">Educación</option>
-          <option value="real_estate">Inmobiliaria</option>
-          <option value="fintech">Fintech / Finanzas</option>
-          <option value="restaurant">Restaurantes / F&amp;B</option>
-          <option value="tourism">Turismo / Hospitalidad</option>
-          <option value="logistics">Logística / Transporte</option>
-          <option value="sports">Deportes / Fitness</option>
-          <option value="legal">Servicios Legales / Jurídico</option>
-          <option value="construction">Construcción / Arquitectura</option>
-          <option value="media">Medios / Entretenimiento</option>
-          <option value="ngo">ONG / Sector Público</option>
-          <option value="agriculture">Agro / Tecnología Agrícola</option>
-          <option value="tech">Tecnología / Software</option>
-          <option value="consulting">Consultoría / Asesoría</option>
-          <option value="automotive">Automotriz</option>
-          <option value="fashion">Moda / Textil</option>
-          <option value="beauty">Belleza / Cuidado Personal</option>
-          <option value="manufacturing">Manufactura / Industrial</option>
-          <option value="energy">Energía / Utilities</option>
-          <option value="gaming">Videojuegos / Gaming</option>
-          <option value="other">Otro</option>
-        </BaseSelect>
+        <BaseChoiceSelect v-model="form.market_type" :options="marketTypeOptions" aria-label="Tipo de mercado" />
         <BaseInput
           v-if="form.market_type === 'other'"
           v-model="form.market_type_custom"
@@ -455,8 +402,9 @@
     </div>
     <div>
       <label class="block text-sm font-medium text-text-default mb-1">Idioma</label>
-      <BaseSelect
+      <BaseChoiceSelect
         v-model="form.language"
+        aria-label="Idioma"
         :options="[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }]"
       />
       <p class="text-xs text-text-subtle mt-1">Solo afecta los títulos por defecto al crear. Cambiar aquí no regenera las secciones existentes.</p>
@@ -574,6 +522,7 @@
 </template>
 
 <script setup>
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue';
 import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
 import { computed, ref, watch } from 'vue';
 import {
@@ -588,6 +537,63 @@ import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useTooltipTexts } from '~/composables/useTooltipTexts';
 import { toSlug } from '~/utils/slugify';
 import { getExpiryDays, expiryFromDays } from '~/utils/proposalExpiry';
+
+const projectTypeOptions = [
+  ["", "— Sin definir —"],
+  ["website", "Sitio Web"],
+  ["ecommerce", "E-commerce"],
+  ["webapp", "Aplicación Web"],
+  ["landing", "Landing Page"],
+  ["redesign", "Rediseño"],
+  ["mobile_app", "App Móvil"],
+  ["branding", "Branding / Identidad Visual"],
+  ["cms", "Sistema CMS"],
+  ["portal", "Portal / Intranet"],
+  ["api_integration", "Integración de APIs"],
+  ["marketplace", "Marketplace"],
+  ["erp", "Sistema ERP / Administrativo"],
+  ["booking", "Sistema de Reservas"],
+  ["dashboard", "Dashboard / Reportes"],
+  ["crm", "Sistema CRM"],
+  ["saas", "SaaS / Plataforma"],
+  ["chatbot", "Chatbot / Asistente Virtual"],
+  ["ai_tool", "Herramienta con IA"],
+  ["automation", "Automatización / RPA"],
+  ["data_analytics", "Analítica de Datos / BI"],
+  ["plugin_extension", "Plugin / Extensión"],
+  ["other", "Otro"],
+].map(([value, label]) => ({ value, label }));
+
+const marketTypeOptions = [
+  ["", "— Sin definir —"],
+  ["b2b", "B2B"],
+  ["b2c", "B2C"],
+  ["saas", "SaaS"],
+  ["retail", "Retail"],
+  ["services", "Servicios profesionales"],
+  ["health", "Salud"],
+  ["education", "Educación"],
+  ["real_estate", "Inmobiliaria"],
+  ["fintech", "Fintech / Finanzas"],
+  ["restaurant", "Restaurantes / F&B"],
+  ["tourism", "Turismo / Hospitalidad"],
+  ["logistics", "Logística / Transporte"],
+  ["sports", "Deportes / Fitness"],
+  ["legal", "Servicios Legales / Jurídico"],
+  ["construction", "Construcción / Arquitectura"],
+  ["media", "Medios / Entretenimiento"],
+  ["ngo", "ONG / Sector Público"],
+  ["agriculture", "Agro / Tecnología Agrícola"],
+  ["tech", "Tecnología / Software"],
+  ["consulting", "Consultoría / Asesoría"],
+  ["automotive", "Automotriz"],
+  ["fashion", "Moda / Textil"],
+  ["beauty", "Belleza / Cuidado Personal"],
+  ["manufacturing", "Manufactura / Industrial"],
+  ["energy", "Energía / Utilities"],
+  ["gaming", "Videojuegos / Gaming"],
+  ["other", "Otro"],
+].map(([value, label]) => ({ value, label }));
 
 const props = defineProps({
   proposal: { type: Object, required: true },

@@ -23,6 +23,7 @@ const makeContract = (overrides = {}) => ({
   ...overrides,
 });
 const DownloadStub = { props: ['url', 'label'], template: '<a :href="url">{{ label }}</a>' };
+const MarkdownBodyStub = { props: ['markdown', 'format'], template: '<article data-testid="building-with-us-markdown-renderer" :data-format="format">{{ markdown }}</article>' };
 const mounted = [];
 function mountContract(overrides = {}) {
   const wrapper = mount(ContractPanel, {
@@ -30,7 +31,7 @@ function mountContract(overrides = {}) {
     global: {
       components: { BaseAlert, BaseBadge },
       stubs: {
-        DocumentMarkdownBody: { props: ['markdown'], template: '<article>{{ markdown }}</article>' },
+        DocumentMarkdownBody: MarkdownBodyStub,
         PanelDownloadLink: DownloadStub,
         NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
       },
@@ -46,6 +47,7 @@ describe('BuildingWithUsAdminContractPanel', () => {
     const wrapper = mountContract();
 
     expect(wrapper.get('[data-testid="building-with-us-mirror-link"]').attributes('href')).toBe('/es-co/panel/documents/15/edit');
+    expect(wrapper.get('[data-testid="building-with-us-mirror-link"]').text()).toBe('Editar en el Gestor de documentos');
   });
 
   it('omits the mirror link when the document id is missing', () => {
@@ -90,10 +92,22 @@ describe('BuildingWithUsAdminContractPanel', () => {
     expect(wrapper.get('[data-testid="building-with-us-contract-download-pdf"]').attributes('href')).toBe('/api/building-with-us/admin/contract/pdf/');
   });
 
-  it('passes the read-only contract to the markdown renderer', () => {
+  it('opens the contract PDF in a separate preview tab', () => {
     const wrapper = mountContract();
 
+    // Fails if the module loses its preview action while retaining only a download.
+    expect(wrapper.get('[data-testid="building-with-us-contract-view-pdf"]').attributes()).toMatchObject({
+      href: '/api/building-with-us/admin/contract/pdf/?inline=1', target: '_blank', rel: 'noopener noreferrer',
+    });
+  });
+
+  it('renders the read-only contract with the shared editorial format', () => {
+    const wrapper = mountContract();
+
+    // Fails if contract formatting falls back to plain Markdown after an editor saves rich text.
+    expect(wrapper.get('[data-testid="building-with-us-markdown-renderer"]').attributes('data-format')).toBe('markdown_html_v1');
     expect(wrapper.get('[data-testid="building-with-us-contract-body"]').text()).toBe('# Contrato de alianza');
+    expect(wrapper.find('textarea').exists()).toBe(false);
   });
 
   it('retries a failed contract request', async () => {

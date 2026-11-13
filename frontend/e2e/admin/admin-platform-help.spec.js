@@ -40,22 +40,15 @@ function helpFixture({ settings = { tour_enabled: true, video_enabled: true, ver
   return { settings: { ...settings }, tours: tours.map((tour) => structuredClone(tour)), clients, progress }
 }
 
-async function setupAdmin(page, { fixture = helpFixture(), settingsStatus = 200, tourStatus = 200 } = {}) {
+async function setupAdmin(page, { fixture = helpFixture(), settingsReadStatus = 200, tourStatus = 200 } = {}) {
   const writes = []
   await setAuthLocalStorage(page, { token: 'platform-help-admin', userAuth: { id: 51, role: 'admin', is_staff: true, is_superuser: true } })
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/' && method === 'GET') return json({ user: { username: 'help-admin', is_staff: true, is_superuser: true } })
-    if (apiPath === 'platform/help/settings/' && method === 'GET') return json(fixture.settings)
+    if (apiPath === 'platform/help/settings/' && method === 'GET') return json(fixture.settings, settingsReadStatus)
     if (apiPath === 'platform/help/admin/tours/' && method === 'GET') return json({ results: fixture.tours, targets })
     if (apiPath === 'platform/help/clients/' && method === 'GET') return json({ results: fixture.clients, page: 1, count: fixture.clients.length })
     if (apiPath === 'platform/help/admin/progress/' && method === 'GET') return json({ results: fixture.progress, page: 1, count: fixture.progress.length })
-    if (apiPath === 'platform/help/settings/' && method === 'PATCH') {
-      const body = JSON.parse(route.request().postData() || '{}')
-      writes.push({ type: 'settings', body })
-      if (settingsStatus >= 400) return json({ detail: 'La configuración fue modificada por otra persona.' }, settingsStatus)
-      fixture.settings = { ...fixture.settings, ...body, version: fixture.settings.version + 1 }
-      return json(fixture.settings)
-    }
     if (apiPath === `platform/help/admin/tours/${authoredTour.id}/` && method === 'PATCH') {
       const body = JSON.parse(route.request().postData() || '{}')
       writes.push({ type: 'tour', body })
@@ -92,39 +85,35 @@ test.describe('Platform help administration', () => {
     await setupAdmin(page, { fixture: helpFixture({ progress: [{ user_id: 9002, user: 'client@e2e-test.com', tour: 'platform-basics', status: 'completed' }] }) })
 
     await openPlatformHelp(page)
-    await expect(page.getByLabel('Seleccionar recorrido')).toHaveValue(String(authoredTour.id))
+    await expect(page.getByLabel('Seleccionar recorrido')).toContainText(authoredTour.content.title_es)
     await expect(page.getByTestId('platform-help-admin')).toContainText('client@e2e-test.com')
   })
 
-  test('saving global availability sends the current version', {
+  test('availability management links to its central administrator', {
     tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    // Bug caught: turning off tours does not persist the global setting with its version.
-    const writes = await setupAdmin(page)
-
+    await setupAdmin(page)
     await openPlatformHelp(page)
-    const toggle = page.getByRole('switch', { name: 'Recorridos habilitados', exact: true })
-    await expect(toggle).toHaveAttribute('aria-checked', 'true')
-    await toggle.click()
-    await page.getByRole('heading', { name: 'Disponibilidad global', exact: true })
-      .locator('xpath=..').getByRole('button', { name: 'Guardar', exact: true }).click()
 
-    await expect(page.getByRole('status')).toHaveText('Cambios guardados.')
-    await expect.poll(() => writes.find((item) => item.type === 'settings')?.body).toMatchObject({ expected_version: 3, tour_enabled: false, video_enabled: true })
+    await expect(page.getByRole('link', { name: 'Gestionar disponibilidad en Feature flags', exact: true })).toHaveAttribute('href', '/es-co/panel/platform/feature-flags')
   })
 
-  test('a stale global availability write reports the save failure', {
+  test('permission failure keeps configuration unavailable', {
+    tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    await setupAdmin(page, { settingsReadStatus: 403 })
+    await openPlatformHelp(page)
+
+    await expect(page.getByRole('alert')).toContainText('No se pudo guardar')
+  })
+
+  test('configuration load failure shows recovery guidance', {
     tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:failure'],
   }, async ({ page }) => {
-    // Bug caught: a version conflict is acknowledged as saved even though the setting was rejected.
-    await setupAdmin(page, { settingsStatus: 409 })
-
+    await setupAdmin(page, { settingsReadStatus: 503 })
     await openPlatformHelp(page)
-    await page.getByRole('switch', { name: 'Recorridos habilitados', exact: true }).click()
-    await page.getByRole('heading', { name: 'Disponibilidad global', exact: true })
-      .locator('xpath=..').getByRole('button', { name: 'Guardar', exact: true }).click()
 
-    await expect(page.getByRole('alert')).toHaveText('No se pudo guardar. Actualiza los datos e inténtalo de nuevo.')
+    await expect(page.getByRole('alert')).toContainText('Actualiza los datos')
   })
 
   test('previewing a tour shows the saved draft in the active locale', {

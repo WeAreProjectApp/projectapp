@@ -51,6 +51,11 @@ async function gotoProposals(page) {
   await page.waitForResponse((resp) => resp.url().includes('/proposals') && resp.status() === 200);
 }
 
+async function chooseStatus(page, control, label) {
+  await control.click();
+  await page.getByRole('option', { name: label, exact: true }).click();
+}
+
 test.describe('Admin Proposal Inline Status Change', () => {
   test.describe.configure({ timeout: 60_000 });
 
@@ -59,7 +64,7 @@ test.describe('Admin Proposal Inline Status Change', () => {
   });
 
   test('forced finished status PATCHes after confirmation', {
-    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const updates = [];
     await setupMock(page, { onStatusUpdate: (id, body) => updates.push({ id, body }) });
@@ -70,7 +75,7 @@ test.describe('Admin Proposal Inline Status Change', () => {
     const row = page.getByRole('row').filter({ hasText: 'Proposal A' });
     const statusSelect = row.getByRole('combobox');
     await expect(statusSelect).toBeVisible();
-    await statusSelect.selectOption('finished');
+    await chooseStatus(page, statusSelect, 'Finalizada');
 
     const confirmButton = page.getByTestId('confirm-modal-confirm');
     await expect(confirmButton).toBeVisible();
@@ -82,7 +87,7 @@ test.describe('Admin Proposal Inline Status Change', () => {
   });
 
   test('natural transition PATCHes without confirmation', {
-    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const updates = [];
     await setupMock(page, { onStatusUpdate: (id, body) => updates.push({ id, body }) });
@@ -91,14 +96,14 @@ test.describe('Admin Proposal Inline Status Change', () => {
     // 'rejected' is a natural transition from 'viewed' → no confirm dialog.
     const row = page.getByRole('row').filter({ hasText: 'Proposal A' });
     const responsePromise = page.waitForResponse((resp) => resp.url().includes('update-status') && resp.status() === 200);
-    await row.getByRole('combobox').selectOption('rejected');
+    await chooseStatus(page, row.getByRole('combobox'), 'Rechazada');
     await responsePromise;
 
     expect(updates).toEqual([{ id: 1, body: { status: 'rejected' } }]);
   });
 
   test('renders every status with Spanish labels grouped by natural vs forced', {
-    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     await setupMock(page);
     await gotoProposals(page);
@@ -107,16 +112,20 @@ test.describe('Admin Proposal Inline Status Change', () => {
     const statusSelect = row.getByRole('combobox');
     await expect(statusSelect).toBeVisible();
 
-    const labels = await statusSelect.locator('option').allTextContents();
+    await statusSelect.click();
+    const listbox = page.getByRole('listbox', { name: 'Cambiar estado de la propuesta' });
+    const labels = await listbox.getByRole('option').allTextContents();
     for (const label of ['Vista', 'En negociación', 'Rechazada', 'Borrador', 'Enviada', 'Aceptada', 'Finalizada', 'Expirada']) {
       expect(labels).toContain(label);
     }
-    const naturalLabels = await statusSelect.locator('optgroup[label="Flujo normal"] option').allTextContents();
-    expect(naturalLabels).toEqual(['En negociación', 'Rechazada']);
+    await expect(listbox).toContainText('Flujo normal');
+    await expect(listbox).toContainText('Forzar estado');
+    await expect(listbox.getByRole('option', { name: 'En negociación', exact: true })).toHaveCount(1);
+    await expect(listbox.getByRole('option', { name: 'Rechazada', exact: true })).toHaveCount(1);
   });
 
   test('accepted proposal exposes finished as a natural inline option', {
-    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     await setupMock(page);
     await gotoProposals(page);
@@ -124,8 +133,10 @@ test.describe('Admin Proposal Inline Status Change', () => {
     const row = page.getByRole('row').filter({ hasText: 'Proposal C' });
     const statusSelect = row.getByRole('combobox');
     await expect(statusSelect).toBeVisible();
-    const naturalLabels = await statusSelect.locator('optgroup[label="Flujo normal"] option').allTextContents();
-    expect(naturalLabels).toEqual(['Finalizada']);
+    await statusSelect.click();
+    const listbox = page.getByRole('listbox', { name: 'Cambiar estado de la propuesta' });
+    await expect(listbox).toContainText('Flujo normal');
+    await expect(listbox.getByRole('option', { name: 'Finalizada', exact: true })).toHaveCount(1);
   });
 
   test('draft to sent surfaces the email_delivery failure toast', {
@@ -137,7 +148,7 @@ test.describe('Admin Proposal Inline Status Change', () => {
     await gotoProposals(page);
 
     const row = page.getByRole('row').filter({ hasText: 'Proposal D' });
-    await row.getByRole('combobox').selectOption('sent');
+    await chooseStatus(page, row.getByRole('combobox'), 'Enviada');
     // draft → sent is natural but always confirms ("Enviar propuesta").
     await expect(page.getByText('Enviar propuesta')).toBeVisible();
     await Promise.all([
@@ -149,7 +160,7 @@ test.describe('Admin Proposal Inline Status Change', () => {
   });
 
   test('actions modal exposes the Cambiar estado row with the same select', {
-    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const updates = [];
     await setupMock(page, { onStatusUpdate: (id, body) => updates.push({ id, body }) });
@@ -161,13 +172,13 @@ test.describe('Admin Proposal Inline Status Change', () => {
 
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('update-status')),
-      modalRow.getByRole('combobox').first().selectOption('rejected'),
+      chooseStatus(page, modalRow.getByRole('combobox').first(), 'Rechazada'),
     ]);
     expect(updates).toEqual([{ id: 1, body: { status: 'rejected' } }]);
   });
 
   test('edit page header select PATCHes the status inline', {
-    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const updates = [];
     await mockApi(page, async ({ apiPath, route }) => {
@@ -190,7 +201,7 @@ test.describe('Admin Proposal Inline Status Change', () => {
     await expect(headerSelect).toBeVisible({ timeout: 15000 });
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('update-status')),
-      headerSelect.selectOption('rejected'),
+      chooseStatus(page, headerSelect, 'Rechazada'),
     ]);
     expect(updates).toEqual([{ status: 'rejected' }]);
   });

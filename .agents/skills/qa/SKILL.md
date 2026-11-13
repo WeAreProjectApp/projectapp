@@ -748,3 +748,8 @@ En modo fleet, anteponer una columna `Host`/`Proyecto` y, si hay >15 filas, un
 ## Referencias externas
 
 - https://github.com/cloudflare/security-audit-skill · commit c1c8a8c1471069fb0e188eeaff69b8e8db6564a8 · revisado 2026-10-10 · Adaptado de cloudflare/security-audit-skill (MIT) · el frente QA de improvement-pass y la validación de sus candidatos
+
+
+## ProjectApp · PA-263 · mapeo prospectivo de funcionalidades
+
+Sólo en ProjectApp, cuando exista `contracts/platform-features.json`: para capacidades nuevas o modificadas de Plataforma, aplicar `docs/PLATFORM_FEATURE_FLAGS.md`. Declarar clave estable o exclusión justificada; comprobar módulo/vista real, navegación, acceso directo, API y descargas, además de global/herencia/excepción/retirada/aislamiento. Los flags no conceden permisos; IA y audio comienzan apagados. El control estático de CI no sustituye la comprobación funcional. QA entrega brechas a Backlog para deduplicar y registrar TO DO dentro de la ficha consolidada cuando corresponda; sync-knowledge coordina publicación canónica. Esta regla no reanuda rondas ni servicios pausados.

@@ -36,7 +36,7 @@ describe('BuildingOnDemandAdminMcpHint', () => {
     const hint = wrapper.get('[data-testid="building-on-demand-admin-mcp-hint"]');
 
     expect(hint.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe(label);
-    expect(hint.text()).toContain('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación.');
+    expect(hint.text()).toContain('El programa y los datos de economía se administran desde el conector MCP Programas (programs), con vista previa y confirmación. El contrato se edita en el Gestor de documentos o por MCP.');
     expect(hint.text()).toContain('El video se puede gestionar aquí o desde el mismo conector.');
     expect(hint.find('button').exists()).toBe(false);
   });
@@ -47,7 +47,7 @@ describe('BuildingOnDemandAdminMcpHint', () => {
 
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-slug"]').text()).toBe('programs');
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe('Estado del conector no disponible');
-    expect(wrapper.text()).toContain('únicamente desde el conector MCP Programas (programs)');
+    expect(wrapper.text()).toContain('desde el conector MCP Programas (programs)');
     expect(wrapper.text()).toContain('El video se puede gestionar aquí o desde el mismo conector.');
   });
 
@@ -56,7 +56,7 @@ describe('BuildingOnDemandAdminMcpHint', () => {
     const wrapper = mountHint({ slug: 'programs', is_active: false });
 
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe('Connector inactive');
-    expect(wrapper.text()).toContain('The program, economics inputs and contract are managed exclusively through the Programas (programs) MCP connector, with preview and confirmation.');
+    expect(wrapper.text()).toContain('The program and economics inputs are managed through the Programas (programs) MCP connector, with preview and confirmation. Edit the contract in the Document manager or through MCP.');
     expect(wrapper.text()).toContain('Manage the video here or through the same connector.');
   });
 });

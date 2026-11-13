@@ -33,6 +33,8 @@ def staff_admin(admin_user):
 
 
 def configure_voice(client_user):
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_voice_reports': True, 'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     profile = UserProfile.objects.get(user=client_user)
     profile.voice_reporting_enabled = True
     profile.chatbot_enabled = True
@@ -60,10 +62,11 @@ def chat_template():
     return template
 
 
-def test_global_disable_overrides_an_enabled_client_with_configured_providers(client_user):
-    """Fails if a client can use voice reports while the global switch is off."""
+def test_global_disable_applies_to_inheriting_client_with_configured_providers(client_user):
+    """Fails if a client can use voice reports while an inherited global flag is off."""
     configure_voice(client_user)
-    PlatformAISettings.objects.filter(pk=1).update(voice_reporting_enabled=False)
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_voice_reports': False})
 
     capabilities = platform_ai.ai_capabilities(client_user)
 
@@ -74,7 +77,8 @@ def test_feature_gate_reloads_client_flag_before_a_worker_uses_voice(client_user
     """Fails if a queued worker trusts a stale enabled client profile."""
     configure_voice(client_user)
     _ = client_user.profile
-    UserProfile.objects.filter(user=client_user).update(voice_reporting_enabled=False)
+    from accounts.tests.feature_flag_helpers import set_client_flags
+    set_client_flags(client_user, {'platform.ai_voice_reports': False})
 
     with pytest.raises(PermissionDenied, match='apagada'):
         platform_ai.require_ai_feature(client_user, 'voice_reporting')
