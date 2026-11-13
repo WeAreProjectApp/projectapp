@@ -1,3 +1,13 @@
+## PA-265 — Lectura del historial documental (2026-11-13)
+
+`EntityHistoryTabs` despacha documentos a `DocumentHistoryPanel`; el resto
+conserva `EntityHistoryPanel`. `useDocumentHistory` posee la paginación, selección
+y generaciones de solicitudes de una instancia. Las revisiones completas y el
+endpoint compare existente alimentan una proyección saneada de bloques con
+alineación acotada y grupos de metadatos. Ninguna consulta persiste esa
+proyección ni usa relaciones actuales para reconstruir el contenido histórico.
+Contrato: [PA-265](../PA-265-DOCUMENT-HISTORY.md).
+
 > **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
 > pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
 > lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant

@@ -138,7 +138,11 @@ async function installFixtures(page, { fail = null, onCall = () => {} } = {}) {
       onCall({ kind: 'version', type, id });
       if (fail === 'version' && failures.version++ === 0) return json({ detail: 'Version unavailable' }, 503);
       const details = {
-        document: version(id, 2, [{ field: 'content_markdown', label: 'Contenido', old: 'Contenido anterior', new: 'Contenido vigente' }]),
+        document: version(id, id === 101 ? 1 : 2, [], {
+          ...histories.document.find((row) => row.id === id),
+          snapshot: { title: 'Contrato de Servicios', content_markdown: id === 101 ? 'Contenido anterior' : 'Contenido vigente' },
+          previous_id: id === 102 ? 101 : null,
+        }),
         proposal: version(id, id === 201 ? 2 : 3, [{ field: 'total_investment', label: 'Inversión', old: '5000000', new: '6500000' }]),
         project: version(id, 2, [{ field: 'repository_url', label: 'Repositorio', old: 'https://git.example.test/old', new: 'https://git.example.test/acme/atlas' }], { protected_fields: ['access.production.password'] }),
         client: version(id, 2, [{ field: 'email', label: 'Correo electrónico', old: 'ana@old.example', new: 'ana@acme.example' }], { snapshot: { email: 'ana@acme.example' } }),
@@ -237,7 +241,7 @@ test.describe('document history', () => {
     await installFixtures(page); await openDocumentHistory(page);
     await expect(page.getByTestId('history-latest')).toContainText('Admin E2E');
     await expect(page.getByTestId('history-entry-102')).toContainText('Contenido');
-    await expect(page.getByTestId('history-order')).toHaveValue('recent');
+    await expect(page.getByTestId('history-order')).toHaveText(/Más reciente primero/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
   });
 
