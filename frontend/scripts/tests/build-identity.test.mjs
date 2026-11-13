@@ -51,7 +51,10 @@ test('rejects conflicting explicit identity', (t) => {
   assert.throws(() => resolveBuildCommit(root, { ...fleet, PROJECTAPP_BUILD_COMMIT: otherCommit }), /differs from the Integrity target/);
 });
 
-for (const [label, invalid] of [['abbreviated', 'abc123'], ['uppercase', 'A'.repeat(40)], ['nonhex', 'z'.repeat(40)]]) {
+for (const [label, invalid] of [
+  ['abbreviated', 'abc123'], ['uppercase', 'A'.repeat(40)],
+  ['nonhex', 'z'.repeat(40)], ['newline-terminated', `${commit}\n`],
+]) {
   test(`rejects a ${label} commit`, (t) => {
     const root = directory(t);
     assert.throws(() => resolveBuildCommit(root, { PROJECTAPP_BUILD_COMMIT: invalid }), /full lowercase/);

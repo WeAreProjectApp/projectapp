@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 const commitPattern = /^[0-9a-f]{40}$/;
 
 function validateCommit(commit) {
-  if (typeof commit !== 'string' || !commitPattern.test(commit)) {
+  if (typeof commit !== 'string' || commit.length !== 40 || !commitPattern.test(commit)) {
     throw new Error('Build identity requires a full lowercase 40-character commit SHA.');
   }
   return commit;
