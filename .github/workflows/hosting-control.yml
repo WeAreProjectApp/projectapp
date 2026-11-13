@@ -7,11 +7,35 @@ concurrency:
   cancel-in-progress: true
 jobs:
   hosting-contracts:
+    name: hosting-contracts (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        file: [hosting_control/tests/test_controls.py, hosting_control/tests/test_guard.py, hosting_control/tests/test_receiver.py, content/tests/views/test_mcp_hosting_control.py]
+        include:
+          - name: modes-and-messages
+            file: hosting_control/tests/test_controls.py
+          - name: document-adapter
+            file: hosting_control/tests/test_guard.py
+          - name: receiver
+            file: hosting_control/tests/test_receiver.py
+          - name: mcp-operations
+            file: content/tests/views/test_mcp_hosting_control.py
+          - name: audit-identity
+            file: >-
+              content/tests/services/test_client_merge_access_security.py
+              content/tests/models/test_client_merge_relation_policy.py
+              content/tests/services/test_data_integrity_relation_inventory.py
+          - name: mcp-schemas
+            file: >-
+              content/tests/views/test_mcp_projects_bridge_schemas.py::test_projects_bridge_family_has_complete_closed_schemas
+              content/tests/views/test_mcp_projects_bridge_schemas.py::test_projects_bridge_contract_covers_panel_reads
+              content/tests/views/test_mcp_projects_bridge_schemas.py::test_projects_bridge_payload_matches_writable_serializers
+              content/tests/services/test_mcp_schema_policy.py::test_connector_input_schemas_follow_policy[projects]
+              content/tests/services/test_mcp_schema_policy.py::test_generic_backlog_matches_current_tools
+              content/tests/views/test_mcp_schema_explicitness.py::test_published_tools_outside_the_backlog_satisfy_the_policy
+              content/tests/views/test_mcp_schema_explicitness.py::test_open_schema_backlog_matches_the_current_failures
+              content/tests/services/test_mcp_connector_registry.py::test_backlog_literals_preserve_current_exceptions
     defaults:
       run:
         working-directory: backend
