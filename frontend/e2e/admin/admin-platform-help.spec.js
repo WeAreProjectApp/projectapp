@@ -175,10 +175,11 @@ test.describe('Platform help administration', () => {
 
     await openPlatformHelp(page)
     const results = page.getByTestId('help-client-results')
+    const clientsSection = results.locator('xpath=..')
     const search = page.getByLabel('Buscar cliente', { exact: true })
     await search.fill('Diego')
     await expect(results).toContainText('Diego Página uno')
-    await page.getByRole('button', { name: 'Página siguiente', exact: true }).click()
+    await clientsSection.getByRole('button', { name: 'Página siguiente', exact: true }).click()
     await expect(results).toContainText('Diego Página dos')
     await search.fill('')
 
@@ -231,7 +232,7 @@ test.describe('Platform help administration', () => {
     await page.getByRole('heading', { name: 'Disponibilidad global', exact: true })
       .locator('xpath=..').getByRole('button', { name: 'Guardar', exact: true }).click()
 
-    await expect(page.getByRole('status')).toHaveText('Cambios guardados.')
+    await expect(page.getByTestId('platform-help-admin').getByRole('status').filter({ hasText: /^Cambios guardados\.$/ })).toHaveText('Cambios guardados.')
     await expect.poll(() => writes.find((item) => item.type === 'settings')?.body).toMatchObject({ expected_version: 3, tour_enabled: false, video_enabled: true })
   })
 

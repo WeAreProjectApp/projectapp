@@ -32,7 +32,7 @@ test.describe('Platform initials palette', () => {
       await setPlatformAuth(page, { user });
       await setupSidebarMocks(page, user);
       await page.addInitScript(theme => localStorage.setItem('platform_theme', theme), mode);
-      await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
+      await page.goto('/platform', { waitUntil: 'domcontentloaded' });
       const sidebar = page.getByRole('complementary');
       await sidebar.getByRole('link', { name: 'Configuración', exact: true }).click();
       await expect(page).toHaveURL(/\/platform\/profile$/);

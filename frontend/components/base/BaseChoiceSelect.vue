@@ -108,7 +108,7 @@ watch(() => props.modelValue, () => close(false));
     </button>
     <input
       v-if="required" class="sr-only" tabindex="-1" aria-hidden="true" :value="emptyValue ? '' : 'selected'"
-      :disabled="disabled" required @invalid.prevent="trigger?.focus()"
+      :disabled="disabled" :title="disabled ? disabledReason : undefined" required @invalid.prevent="trigger?.focus()"
     >
     <BaseFloatingListbox
       :id="`${controlId}-options`" :open="open && !disabled" :anchor="trigger" :owner="owner"

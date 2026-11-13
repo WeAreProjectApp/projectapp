@@ -211,9 +211,7 @@ test.describe('Admin Proposal Create', () => {
     const customInput = page.getByPlaceholder('Especificar tipo de proyecto...');
     await expect(customInput).not.toBeVisible();
 
-    const projectType = page.getByRole('combobox', { name: 'Tipo de proyecto', exact: true });
-    await projectType.click();
-    await page.getByRole('option', { name: 'Otro', exact: true }).click();
+    await page.getByRole('combobox').filter({ hasText: 'Sitio Web' }).selectOption('other');
     await expect(customInput).toBeVisible();
   });
 });
