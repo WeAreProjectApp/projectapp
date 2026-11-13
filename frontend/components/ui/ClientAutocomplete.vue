@@ -46,10 +46,10 @@
         class="absolute inset-y-0 right-0 flex items-center pr-3 text-text-subtle hover:text-text-default transition-colors"
         :aria-label="isCatalog
           ? 'Limpiar búsqueda'
-          : (clearLabel || ($t ? $t('clients.autocomplete.clear') : 'Limpiar'))"
+          : (clearLabel || ($t ? $t('global.clearClientSelection') : 'Limpiar'))"
         :title="isCatalog
           ? 'Limpiar búsqueda'
-          : (clearLabel || ($t ? $t('clients.autocomplete.clear') : 'Limpiar'))"
+          : (clearLabel || ($t ? $t('global.clearClientSelection') : 'Limpiar'))"
         @click="isCatalog ? clearCatalogFilter() : clearSelection()"
       >
         <BaseActionIcon action="clear" />

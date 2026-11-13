@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Abrir Contrato, consultar Markdown y el espejo sincronizado en ProjectApp/Contratos; leer la advertencia desactualizada o sin inicializar, descargar PDF y reintentar un fallo del contrato.",
+  "description": "Abrir Contrato, consultar la versión y el documento sincronizado; previsualizar y descargar PDF, abrir el documento exacto en el Gestor, editar con motivo y volver para consultar la nueva versión. Conservar el borrador ante conflicto o fallo de guardado; consultar estados desactualizado o sin inicializar y reintentar fallos de lectura.",
   "outcomes": [
     "display",
     "success",

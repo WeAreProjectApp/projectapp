@@ -1,4 +1,5 @@
 export default {
+  clientsLoadError: 'Clients could not be loaded.', retry: 'Retry', clientCount: '{count} clients', contextLocked: 'The context is preserved when editing an existing tour.',
   help: 'Help', next: 'Next', previous: 'Previous', done: 'Finish', skip: 'Skip tour',
   progress: '{current} of {total}', video: 'Watch video', dismiss: 'Close',
   videoInvitation: 'You can also watch a video to get to know the platform.',

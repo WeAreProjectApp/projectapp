@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n, useLocalePath } from '#imports';
 import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownBody.vue';
+import BaseActionIcon from '~/components/base/BaseActionIcon.vue';
 import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
 import { formatDateTime } from '~/utils/formatDate';
 import { normalizeMirrorStatus } from '~/stores/building_with_us';
@@ -71,15 +72,19 @@ const lastSyncedLabel = computed(() => formatDateTime(documentMirror.value?.last
         >{{ t('buildingWithUsAdmin.contract.mirrorLink') }}</BaseButton>
       </div>
       <BaseAlert v-if="warningKey" class="mt-4" variant="warning" data-testid="building-with-us-mirror-alert">{{ t(`buildingWithUsAdmin.contract.${warningKey}`) }}</BaseAlert>
-      <PanelDownloadLink
-        v-if="contract"
-        class="mt-5"
-        url="/api/building-with-us/admin/contract/pdf/"
-        filename="building-with-us-contract.pdf"
-        :label="t('buildingWithUsAdmin.contract.downloadPdf')"
-        size="md"
-        data-testid="building-with-us-contract-download-pdf"
-      />
+      <div v-if="contract" class="mt-5 flex flex-wrap gap-2">
+        <BaseButton as="a" to="/api/building-with-us/admin/contract/pdf/?inline=1" target="_blank" rel="noopener noreferrer" variant="secondary" data-testid="building-with-us-contract-view-pdf">
+          <BaseActionIcon action="view" />
+          <span>{{ t('buildingWithUsAdmin.contract.viewPdf') }}</span>
+        </BaseButton>
+        <PanelDownloadLink
+          url="/api/building-with-us/admin/contract/pdf/"
+          filename="building-with-us-contract.pdf"
+          :label="t('buildingWithUsAdmin.contract.downloadPdf')"
+          size="md"
+          data-testid="building-with-us-contract-download-pdf"
+        />
+      </div>
       <template v-if="contract">
         <h3 id="building-with-us-contract-body-title" class="mt-6 text-base font-medium text-text-default">{{ t('buildingWithUsAdmin.contract.bodyTitle') }}</h3>
         <p id="building-with-us-contract-scroll-hint" class="mt-2 text-sm text-text-subtle">{{ t('buildingWithUsAdmin.contract.scrollHint') }}</p>
@@ -91,7 +96,7 @@ const lastSyncedLabel = computed(() => formatDateTime(documentMirror.value?.last
           aria-describedby="building-with-us-contract-scroll-hint"
           data-testid="building-with-us-contract-body"
         >
-          <DocumentMarkdownBody :markdown="contract.markdown || ''" standard-markdown />
+          <DocumentMarkdownBody :markdown="contract.markdown || ''" format="markdown_html_v1" />
         </div>
       </template>
     </template>

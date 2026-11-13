@@ -38,10 +38,42 @@ _SERVICE_SERIALIZERS = {
     'set_project_client_access_policy': 'accounts.serializers_project_client_access.ClientAccessPolicySerializer',
     'update_platform_ai_settings': 'accounts.serializers_ai.SettingsSerializer',
     'update_platform_ai_client': 'accounts.serializers_ai.ClientFlagsSerializer',
+    'set_hosting_control_mode': 'hosting_control.serializers.ModeInput',
+    'update_hosting_control_message': 'hosting_control.serializers.MessageInput',
 }
 _VIEW_PAYLOAD_FIELDS = {'create_project_state': {'confirm_similar'}}
 _CREATE_DEFAULT_FIELDS = {'create_project_state': {'group'}}
-_DELEGATED_QUERY_READS = {'preview_retained_container_cleanup': set(CONTAINER_KINDS)}
+_VIEW_SERIALIZERS = {
+    'set_monitoring_case_state': 'monitoring.serializers.StateSerializer',
+    'add_monitoring_case_note': 'monitoring.serializers.NoteSerializer',
+    'update_monitoring_capacity': 'monitoring.serializers.CapacitySerializer',
+    'link_monitoring_project': 'monitoring.serializers.ResourceLinkSerializer',
+}
+_DELEGATED_QUERY_READS = {
+    'preview_retained_container_cleanup': set(CONTAINER_KINDS),
+    'get_monitoring_status': {'resource', 'source', 'kind'},
+    'list_monitoring_cases': {
+        'page', 'resource', 'source', 'kind', 'state', 'severity', 'condition',
+        'followup', 'search', 'since', 'until', 'snapshot',
+    },
+    'list_monitoring_reports': {
+        'page', 'resource', 'source', 'kind', 'search', 'since', 'until', 'snapshot',
+    },
+    'get_monitoring_server_series': {'period'},
+    'get_monitoring_case': {
+        'page', 'activities_page', 'deliveries_page', 'history_snapshot',
+        'activities_before', 'deliveries_before',
+    },
+    'list_monitoring_capacity_history': {'page', 'changes_before'},
+}
+_MONITORING_BRIDGE_NAMES = {
+    'get_monitoring_catalog', 'get_monitoring_status', 'list_monitoring_cases',
+    'get_monitoring_case', 'set_monitoring_case_state',
+    'add_monitoring_case_note', 'list_monitoring_reports',
+    'get_monitoring_report', 'get_monitoring_server_series',
+    'get_monitoring_capacity', 'update_monitoring_capacity',
+    'list_monitoring_capacity_history', 'link_monitoring_project',
+}
 _PLATFORM_HELP_BRIDGE_NAMES = {
     'get_platform_help_settings', 'update_platform_help_settings',
     'list_platform_help_clients', 'get_platform_help_client',
@@ -82,6 +114,8 @@ def _payload_serializers(tool, row):
     paths = [item['class'] for item in row['serializers'] if item['channel'] == 'data']
     if tool['name'] in _SERVICE_SERIALIZERS:
         paths.append(_SERVICE_SERIALIZERS[tool['name']])
+    if tool['name'] in _VIEW_SERIALIZERS:
+        paths.append(_VIEW_SERIALIZERS[tool['name']])
     return [_serializer_class(path)() for path in paths]
 
 
@@ -170,19 +204,23 @@ def panel_case(db):
 
 
 def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tools, bridge_tools):
+    """Fails if the Projects catalog omits a bridge family or publishes an incomplete schema."""
     failures = {name: schema_problems(tool) for name, tool in bridge_tools.items()}
     assert all(bridge_tools[name]['_panel_operation'][key] == schema
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 99
+    assert len(original_bridge_tools) == 117
     assert (
         set(PROJECTS_BRIDGE_SCHEMAS) | _PLATFORM_HELP_BRIDGE_NAMES
         | _PLATFORM_AI_BRIDGE_NAMES
+        | _MONITORING_BRIDGE_NAMES
         | _PACKAGE_PROJECT_BRIDGE_NAMES
         | {'get_project_calculator_version', 'get_project_requirement_calculator',
            'create_project_calculator_draft', 'update_project_calculator_parameters',
-           'approve_project_requirement_calculator'}
+           'approve_project_requirement_calculator',
+           'list_hosting_controls', 'get_hosting_control', 'set_hosting_control_mode',
+           'update_hosting_control_message', 'list_hosting_control_events'}
     ) == set(original_bridge_tools)
     assert failures == {name: [] for name in original_bridge_tools}, failures
 
@@ -201,6 +239,8 @@ def test_projects_bridge_payload_matches_writable_serializers(bridge_tools):
 
 @pytest.mark.parametrize(('tool_name', 'field', 'channel'), [
     ('list_projects', 'scope', 'query'),
+    ('list_monitoring_cases', 'severity', 'query'),
+    ('list_monitoring_capacity_history', 'changes_before', 'query'),
     ('create_project_idea', 'request_id', 'payload'),
     ('set_project_client_access_policy', 'permissions', 'payload'),
 ])
@@ -251,6 +291,7 @@ def test_flat_project_update_keeps_the_owner(bridge_tools, panel_case):
 
 
 def test_flat_client_change_executes_the_reviewed_detach_plan(bridge_tools, panel_case, make_income):
+    """Fails if a confirmed detach plan changes ownership outside its reviewed impact."""
     income = make_income(client=panel_case.client.profile, project=panel_case.project)
     target = {'project_id': panel_case.project.pk, 'client_profile_id': panel_case.other.profile.pk}
     preview = assert_no_writes(bridge_tools['preview_project_client_change']['handler'], target)

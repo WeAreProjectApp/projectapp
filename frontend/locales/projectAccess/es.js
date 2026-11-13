@@ -1,4 +1,16 @@
 export default {
+  accessError: {
+    project: 'Proyecto',
+    loading: 'Cargando proyecto…',
+    deniedTitle: 'No tienes acceso a este proyecto',
+    deniedMessage: 'Tu cuenta no tiene permiso para abrir este espacio. Consulta con el equipo que administra tu acceso.',
+    unavailableTitle: 'Proyecto no disponible',
+    unavailableMessage: 'El proyecto no está disponible. Vuelve al listado para consultar tus proyectos.',
+    failedTitle: 'No pudimos abrir el proyecto',
+    failedMessage: 'No pudimos cargar este espacio. Comprueba tu sesión y vuelve a intentarlo.',
+    back: 'Volver a proyectos',
+    retry: 'Volver a intentar',
+  },
   commercialRecord: {
     label: 'Ficha comercial',
     title: 'Abrir la ficha comercial en el panel (pestaña nueva)',
@@ -77,6 +89,7 @@ export default {
   }
 },
   "projectActions": {
+    "hosting": 'Control de hosting',
     "label": "Acciones de {name}",
     "detail": "Ver detalle",
     "space": "Abrir espacio en la plataforma",

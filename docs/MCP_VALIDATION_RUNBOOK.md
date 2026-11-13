@@ -1,3 +1,60 @@
+## PA-221 — impacto, catálogo y cobertura (2026-11-12)
+
+El ticket conserva **TO DO por indicación de Carlos**. Este guion no acredita
+una nueva aprobación de QA ni autoriza cambios de estado o acceso. Expediente,
+inventario estático y matriz: [PA-221](audits/PA-221/README.md).
+
+1. Con el catálogo de reglas **1.2.1** del Gestor de integridad (MCP **1.0.1**),
+   preparar un proyecto ficticio con NM1 activo y sus
+   raíces documental, de conversación y de Enlaces seguros. Comparar todos los
+   valores antes/después de la vista previa con el registro de aplicación;
+   incluir asociaciones, archivado y descendientes afectados. La vista previa
+   no escribe. Confirmar exige hash vigente y motivo. Una raíz gestionada ausente
+   bloquea la corrección para evitar creaciones fuera del impacto anunciado.
+2. Deshacer restaura exactamente el estado previo. Cambios posteriores de datos
+   o composición de raíces bloquean la operación sin sobrescribirlos. Repetir
+   barridos general y por entidad, acceso desde la skill, fusión y reasignación
+   con datos ficticios; conservar duplicados archivados y registros emitidos.
+3. Cotejar los doce nombres «Gestor de …», descripciones y «Qué puedes gestionar»
+   con `tools/list`, permisos y confirmaciones reales. Los pendientes de retiro
+   siguen visibles; los retirados se excluyen del catálogo operativo, no ofrecen
+   herramientas y rechazan el acceso con 410.
+4. En Operations **3.1.1**, comprobar las ocho acciones de Monitoring para
+   catálogo, casos, notas, estados, reportes y vínculo de recursos. Usan las
+   mismas vistas y validaciones administrativas del Panel. Estado y vínculo
+   exigen confirmación sensible; el estado exige además versión vigente.
+   Contrastar autoría, ausencia de escritura previa y rechazo de permisos o
+   versiones de caso obsoletas.
+   La ingestión de fuentes conserva su autenticación específica.
+5. Generar `mcp_surface_matrix --check` en el SHA servido y completar el reporte
+   funcional por herramienta, función de vista, rol y evidencia. El inventario
+   de 111 vistas y 831 herramientas es estático; `mapped_unverified` no equivale
+   a una prueba. Verificar el reporte con `--verify` y revisar su veracidad.
+6. Cotejar consumidores y reemplazos según
+   [el procedimiento de retiro](MCP_MODULE_UNIFICATION.md). `mcp_retirement`
+   exige `--coverage-report` vigente además de sus guardas de uso, transición,
+   consumidores y confirmaciones. Un dry run no guarda evidencia ni retira.
+   El retiro exitoso conserva la trazabilidad por catálogo; un catálogo de
+   compatibilidad no desactiva al gestor canónico.
+
+Pruebas automatizadas exclusivamente en CI: regresiones NM1,
+`test_mcp_monitoring.py`, `test_mcp_surface_matrix.py`, `test_mcp_retirement.py`,
+descubrimiento/catálogo y recorridos MCP del Panel. La ejecución DEV/Chrome,
+la skill y la matriz funcional completa se acreditan por separado. La migración
+aditiva 0308 corresponde al deploy; no se aplica desde el worktree.
+
+## PA-255/PA-256 — contratos de programas en el Gestor (2026-11-12)
+
+Documentos 8.3.0 permite editar los contratos de Building with Us y Células mediante
+`update_document` con `if_match` y `change_note`. El mismo servicio se usa desde
+el editor del Gestor y los MCP contractuales existentes. Validar en CI y en el
+DEV aislado acordado: lectura de fuente/versión, edición de contenido y presentación,
+PDF sincronizado, motivo obligatorio, rechazo de campos protegidos, permisos y
+conflicto tras una escritura desde otra vía. Un fallo de PDF no deja una revisión
+parcial y el editor conserva el borrador. Otros espejos siguen en sólo lectura.
+Las lecturas no crean documentos ausentes. No acredita firma ni revisión jurídica.
+Contrato y recorrido: [Contratos de programas](PROGRAM_CONTRACT_DOCUMENTS.md).
+
 ## PA-254 — compras y solicitudes por talla (2026-11-12)
 
 Comercial **6.7.0** administra ejemplos genéricos; Proyectos **5.2.0** expone
@@ -997,7 +1054,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 4.0.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 5.0.0 | 187 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial y ciclo de vida de hosting |
+| `projects` | 5.2.0 | 211 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, ciclo de vida de hosting y Monitoreo con casos, telemetría y capacidad informativa |
 | `data-integrity` | 1.0.1 | 13 | Integridad transversal: catálogo, revisiones persistentes, hallazgos, correcciones con motivo, decisiones y deshacer |
 | `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
@@ -3081,3 +3138,21 @@ Validar listado/filtros/exportación, búsquedas con owner_id, alertas con desti
 ## Accesos autorizados — projects 4.5.0
 
 Cuatro herramientas de acceso reutilizan servicios del Panel. list_accesses/get_access consultan sólo metadatos; create_client_access crea sin habilitar; change_access es sensible y requiere confirmación. Probar permisos de clientes/equipo, cierre de sesiones, último superusuario y ausencia de desafíos/secretos. Las credenciales anteriores mantienen su catálogo previo. Ver AUTHORIZED_ACCESS.md.
+
+## PA-249 — Monitoreo en MCP Proyectos 5.2.0
+
+El catálogo canónico incorpora 13 operaciones de consulta y gestión de Monitoreo. Contrato completo, unidades y activación: [tablero de Monitoreo](monitoring-dashboard.md). Consultar catálogo, casos con snapshot, detalle/historia, reportes, presión, series y asignación informativa; gestionar estado con versión, notas, vínculo de proyecto y capacidad con versión. Los identificadores son case_id/report_id/server_id/resource_id, según la herramienta.
+
+Al paginar `list_monitoring_capacity_history`, reenviar `history_bounds.changes` como `changes_before` (incluido 0). Un cambio concurrente no debe desplazar filas ni alterar el total de ese corte. Omitir el límite abre una consulta nueva e incluye los cambios recientes.
+
+En DEV aislado y sobre el SHA servido: comprobar tools/list y describe_capabilities para una credencial permitida y otra explícitamente restringida; ejecutar consulta, nota, transición, lectura de serie y edición de capacidad; cotejar el mismo registro desde Panel. Repetir con ID de otro tipo o inexistente, actor sin staff, versión antigua y herramienta no permitida. Una denegación no modifica datos. No consultar ni imprimir tokens, credenciales de ingestión o configuración operativa. La existencia de las rutas REST y el test del adaptador no sustituyen esta comprobación del conector real.
+
+## PA-264 · Hosting visual por producción
+
+Consultar `list_hosting_controls`/`get_hosting_control` con rol administrativo;
+verificar destino y versión. Cambiar cada modo con `set_hosting_control_mode`
+y confirmar. Editar ambos mensajes por separado con
+`update_hosting_control_message`; comprobar por Panel que el otro texto y el
+modo no cambian. Revisar historial, actor/vía y recibos. Repetir con versión
+anterior y credencial sin permiso: rechazo sin escritura. Sólo la confirmación
+del sitio acredita aplicación; la validación manual permanece pausada.

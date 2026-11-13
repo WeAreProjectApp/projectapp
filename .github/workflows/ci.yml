@@ -156,6 +156,17 @@ jobs:
         run: |
           python manage.py mcp_inventory --check
           python manage.py mcp_schema_report
+          python manage.py mcp_surface_matrix --check --output mcp-surface-matrix.json
+          python manage.py mcp_surface_matrix --format csv --output mcp-surface-matrix.csv
+
+      - name: Preserve MCP surface and operation inventory
+        if: matrix.shard == '1/6'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-surface-matrix
+          path: |
+            backend/mcp-surface-matrix.json
+            backend/mcp-surface-matrix.csv
 
       - name: Prepare isolated nginx for private media HTTP tests
         run: |

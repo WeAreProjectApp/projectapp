@@ -1,0 +1,374 @@
+{
+  "es": {
+    "functionalRequirements": {
+      "title": "Requerimientos",
+      "groups": [
+        {
+          "id": "views",
+          "title": "Vistas",
+          "items": [
+            {
+              "id": "pa257-register",
+              "icon": "✅",
+              "name": "Registro",
+              "description": "Crear una cuenta propia."
+            },
+            {
+              "id": "pa257-login",
+              "icon": "✅",
+              "name": "Inicio de sesión",
+              "description": "Entrar a la cuenta."
+            },
+            {
+              "id": "pa257-legal",
+              "icon": "✅",
+              "name": "Aviso legal",
+              "description": "Consultar el texto legal."
+            }
+          ]
+        },
+        {
+          "id": "components",
+          "title": "Componentes",
+          "items": [
+            {
+              "id": "pa257-search",
+              "icon": "✅",
+              "name": "Buscador de productos",
+              "description": "Encontrar productos por su nombre."
+            }
+          ]
+        },
+        {
+          "id": "features",
+          "title": "Funcionalidades",
+          "items": [
+            {
+              "id": "pa257-edit",
+              "icon": "✅",
+              "name": "Editar productos",
+              "description": "Actualizar productos propios con permiso."
+            }
+          ]
+        }
+      ],
+      "additionalModules": [
+        {
+          "id": "pwa_module",
+          "title": "PWA",
+          "is_visible": true,
+          "is_invite": false,
+          "is_calculator_module": true,
+          "default_selected": true,
+          "items": [
+            {
+              "id": "pa257-pwa-install",
+              "icon": "✅",
+              "name": "Instalación en dispositivo",
+              "description": "Instalar la aplicación."
+            },
+            {
+              "id": "pa257-pwa-splash",
+              "icon": "✅",
+              "name": "Pantalla de carga personalizada",
+              "description": "Identificar la aplicación al abrir."
+            }
+          ]
+        }
+      ]
+    },
+    "technicalDocument": {
+      "epics": [
+        {
+          "epicKey": "views",
+          "requirements": [
+            {
+              "flowKey": "register-fields",
+              "title": "Validar datos de registro",
+              "description": "Validar datos de registro",
+              "configuration": "Validar correo único y contraseña en servidor.",
+              "usageFlow": "Completar campos → enviar → recibir cuenta.",
+              "linked_item_ids": [
+                "pa257-register"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "register-errors",
+              "title": "Conservar datos ante errores",
+              "description": "Conservar datos ante errores",
+              "configuration": "Mantener el borrador y señalar el campo rechazado.",
+              "usageFlow": "Enviar un correo inválido → corregir el campo.",
+              "linked_item_ids": [
+                "pa257-register"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "login-session",
+              "title": "Autenticar la cuenta",
+              "description": "Autenticar la cuenta",
+              "configuration": "Crear sesión sólo tras validar credenciales.",
+              "usageFlow": "Enviar credenciales → entrar o recibir rechazo.",
+              "linked_item_ids": [
+                "pa257-login"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "legal-read",
+              "title": "Leer el aviso vigente",
+              "description": "Leer el aviso vigente",
+              "configuration": "Presentar el texto aprobado como contenido estático.",
+              "usageFlow": "Abrir aviso → leer el texto completo.",
+              "linked_item_ids": [
+                "pa257-legal"
+              ],
+              "priority": "medium"
+            }
+          ]
+        },
+        {
+          "epicKey": "components",
+          "requirements": [
+            {
+              "flowKey": "search-query",
+              "title": "Filtrar por nombre",
+              "description": "Filtrar por nombre",
+              "configuration": "Consultar la fuente autorizada al escribir.",
+              "usageFlow": "Escribir → ver coincidencias.",
+              "linked_item_ids": [
+                "pa257-search"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "search-empty",
+              "title": "Explicar ausencia de coincidencias",
+              "description": "Explicar ausencia de coincidencias",
+              "configuration": "Mostrar vacío sin borrar el texto consultado.",
+              "usageFlow": "Buscar texto inexistente → corregirlo.",
+              "linked_item_ids": [
+                "pa257-search"
+              ],
+              "priority": "medium"
+            }
+          ]
+        },
+        {
+          "epicKey": "features",
+          "requirements": [
+            {
+              "flowKey": "edit-permissions",
+              "title": "Rechazar cambios ajenos",
+              "description": "Rechazar cambios ajenos",
+              "configuration": "Verificar pertenencia y permiso en el servidor.",
+              "usageFlow": "Solicitar otro registro → acceso denegado.",
+              "linked_item_ids": [
+                "pa257-edit"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "edit-validation",
+              "title": "Validar precio antes de guardar",
+              "description": "Validar precio antes de guardar",
+              "configuration": "Rechazar valores negativos sin escrituras parciales.",
+              "usageFlow": "Editar precio → guardar o corregir error.",
+              "linked_item_ids": [
+                "pa257-edit"
+              ],
+              "priority": "medium"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "en": {
+    "functionalRequirements": {
+      "title": "Requirements",
+      "groups": [
+        {
+          "id": "views",
+          "title": "Views",
+          "items": [
+            {
+              "id": "pa257-register",
+              "icon": "✅",
+              "name": "Registration",
+              "description": "Create an account."
+            },
+            {
+              "id": "pa257-login",
+              "icon": "✅",
+              "name": "Sign in",
+              "description": "Access the account."
+            },
+            {
+              "id": "pa257-legal",
+              "icon": "✅",
+              "name": "Legal notice",
+              "description": "Read the legal copy."
+            }
+          ]
+        },
+        {
+          "id": "components",
+          "title": "Components",
+          "items": [
+            {
+              "id": "pa257-search",
+              "icon": "✅",
+              "name": "Product search",
+              "description": "Find products by name."
+            }
+          ]
+        },
+        {
+          "id": "features",
+          "title": "Features",
+          "items": [
+            {
+              "id": "pa257-edit",
+              "icon": "✅",
+              "name": "Edit products",
+              "description": "Update owned products with permission."
+            }
+          ]
+        }
+      ],
+      "additionalModules": [
+        {
+          "id": "pwa_module",
+          "title": "PWA",
+          "is_visible": true,
+          "is_invite": false,
+          "is_calculator_module": true,
+          "default_selected": true,
+          "items": [
+            {
+              "id": "pa257-pwa-install",
+              "icon": "✅",
+              "name": "Device Installation",
+              "description": "Install the application."
+            },
+            {
+              "id": "pa257-pwa-splash",
+              "icon": "✅",
+              "name": "Custom Splash Screen",
+              "description": "Identify the application on launch."
+            }
+          ]
+        }
+      ]
+    },
+    "technicalDocument": {
+      "epics": [
+        {
+          "epicKey": "views",
+          "requirements": [
+            {
+              "flowKey": "register-fields",
+              "title": "Validate registration data",
+              "description": "Validate registration data",
+              "configuration": "Validate unique email and password on the server.",
+              "usageFlow": "Fill fields → submit → receive account.",
+              "linked_item_ids": [
+                "pa257-register"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "register-errors",
+              "title": "Keep data after errors",
+              "description": "Keep data after errors",
+              "configuration": "Keep the draft and identify the rejected field.",
+              "usageFlow": "Submit an invalid email → correct the field.",
+              "linked_item_ids": [
+                "pa257-register"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "login-session",
+              "title": "Authenticate the account",
+              "description": "Authenticate the account",
+              "configuration": "Create a session only after credentials are validated.",
+              "usageFlow": "Submit credentials → enter or receive rejection.",
+              "linked_item_ids": [
+                "pa257-login"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "legal-read",
+              "title": "Read the current notice",
+              "description": "Read the current notice",
+              "configuration": "Show approved copy as static content.",
+              "usageFlow": "Open the notice → read all copy.",
+              "linked_item_ids": [
+                "pa257-legal"
+              ],
+              "priority": "medium"
+            }
+          ]
+        },
+        {
+          "epicKey": "components",
+          "requirements": [
+            {
+              "flowKey": "search-query",
+              "title": "Filter by name",
+              "description": "Filter by name",
+              "configuration": "Query the authorized source while typing.",
+              "usageFlow": "Type → see matches.",
+              "linked_item_ids": [
+                "pa257-search"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "search-empty",
+              "title": "Explain missing matches",
+              "description": "Explain missing matches",
+              "configuration": "Show empty results without clearing the query.",
+              "usageFlow": "Search for missing text → correct it.",
+              "linked_item_ids": [
+                "pa257-search"
+              ],
+              "priority": "medium"
+            }
+          ]
+        },
+        {
+          "epicKey": "features",
+          "requirements": [
+            {
+              "flowKey": "edit-permissions",
+              "title": "Reject changes to other records",
+              "description": "Reject changes to other records",
+              "configuration": "Verify ownership and permission on the server.",
+              "usageFlow": "Request another record → deny access.",
+              "linked_item_ids": [
+                "pa257-edit"
+              ],
+              "priority": "medium"
+            },
+            {
+              "flowKey": "edit-validation",
+              "title": "Validate price before saving",
+              "description": "Validate price before saving",
+              "configuration": "Reject negative values without partial writes.",
+              "usageFlow": "Edit price → save or correct error.",
+              "linked_item_ids": [
+                "pa257-edit"
+              ],
+              "priority": "medium"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

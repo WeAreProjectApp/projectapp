@@ -196,8 +196,9 @@ test.describe('Admin Proposal Create', () => {
   });
 
   test('selecting "Otro" project type shows custom text input', {
-    tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
+    // Bug caught: the custom project detail could become unreachable after the project type control changed.
     await mockApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       return null;
@@ -210,8 +211,7 @@ test.describe('Admin Proposal Create', () => {
     const customInput = page.getByPlaceholder('Especificar tipo de proyecto...');
     await expect(customInput).not.toBeVisible();
 
-    // quality: allow-fragile-selector (project type select has no testid, identified by default option text)
-    await page.locator('select').filter({ hasText: 'Sin definir' }).first().selectOption('other');
+    await page.getByRole('combobox').filter({ hasText: 'Sitio Web' }).selectOption('other');
     await expect(customInput).toBeVisible();
   });
 });

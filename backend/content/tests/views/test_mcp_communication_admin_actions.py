@@ -457,7 +457,7 @@ def test_correct_message_date_appends_correction(
     message.refresh_from_db()
     assert message.occurred_at == corrected_at
     assert correction['reason'] == 'Hora confirmada con el cliente'
-    assert correction['corrected_by_name'] == 'MCP Gestor de Comunicaciones'
+    assert correction['corrected_by_name'] == 'MCP Gestor de comunicaciones'
 
 
 def test_correct_message_date_rejects_draft(

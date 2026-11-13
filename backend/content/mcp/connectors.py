@@ -36,6 +36,7 @@ from content.mcp.operation_catalogs import (
     PROJECT_TOOLS,
 )
 from content.mcp.access_tools import ACCESS_TOOLS
+from content.mcp.hosting_control_tools import HOSTING_CONTROL_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.platform_secure_link_tools import PLATFORM_SECURE_LINK_TOOLS
 from content.mcp.proposal_formalization_tools import PROPOSAL_FORMALIZATION_TOOLS
@@ -137,12 +138,12 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='content',
     ),
     'documents': ConnectorSpec(
-        'documents', '7.1.0',
+        'documents', '7.2.0',
         (DOCUMENT_TOOLS, DOCUMENT_THREAD_TOOLS, DOCUMENT_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
         notes=(
-            'Los espejos de contrato (is_contract_mirror=true) son de solo lectura '
-            'y no se mueven: revisa editable, movable y move_blockers antes de '
+            'Los contratos de programa permiten editar contenido y presentación con if_match y change_note. '
+            'Los otros espejos contractuales son de solo lectura; ninguno se mueve. Revisa editable, movable y move_blockers antes de '
             'editar o mover.',
         ),
     ),
@@ -179,7 +180,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         'linkedin-personal', '1.1.0', (LINKEDIN_TOOLS,),
         compatibility=True, canonical_area='content',
     ),
-    'operations': ConnectorSpec('operations', '2.1.0', (OPERATIONS_TOOLS,)),
+    'operations': ConnectorSpec('operations', '2.2.0', (OPERATIONS_TOOLS,)),
     'building-with-us': ConnectorSpec(
         'building-with-us', '2.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
     ),
@@ -216,7 +217,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['programs'],),
     ),
     'projects': ConnectorSpec(
-        'projects', '3.3.0', (PROJECT_TOOLS, ACCESS_TOOLS, PROJECT_CALCULATOR_TOOLS, PACKAGE_PROJECT_TOOLS), uploads=True,
+        'projects', '3.4.0', (PROJECT_TOOLS, ACCESS_TOOLS, PROJECT_CALCULATOR_TOOLS, HOSTING_CONTROL_TOOLS, PACKAGE_PROJECT_TOOLS), uploads=True,
     ),
     'content': ConnectorSpec(
         'content', '2.1.1',
@@ -270,6 +271,8 @@ CONNECTORS, TOOLS_BY_SLUG, LEGACY_TOOLS_BY_SLUG = build_catalogs(
 
 
 def tools_for_credential(slug, credential):
+    if credential is not None and credential.connector.retired_at:
+        return []
     if credential is not None and getattr(credential, 'catalog', '') == 'pre_split':
         return PRE_SPLIT_TOOLS_BY_SLUG[slug]
     if credential is not None and getattr(credential, 'catalog', '') == 'legacy':

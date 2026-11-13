@@ -32,7 +32,7 @@ const projectAppRemainder = computed(() => Math.max(0, Math.round((
 const sectionId = (name) => `${formId}-${name}`;
 const money = (value) => {
   const amount = Number(value ?? 0);
-  return formatMoney(amount, 'COP', { decimals: Number.isInteger(amount) ? 0 : 2 });
+  return formatMoney(amount, 'COP', { decimals: 'auto' });
 };
 const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value: 'partners', label: 'Socios' }];
 </script>

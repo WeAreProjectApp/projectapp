@@ -1,7 +1,7 @@
 # Estándar de Rendimiento (fleet)
 
-<!-- standard_version: 1.0.0 -->
-**Versión:** 1.0.0 · **Vigente desde:** 2026-09-14 · **Canónico:** `vps-ops-toolkit/workflows/testing/PERFORMANCE_STANDARDS.md`
+<!-- standard_version: 1.1.0 -->
+**Versión:** 1.1.0 · **Vigente desde:** 2026-09-14 (1.1.0: excepción `Q(1)==Q(N)` de §5, 2026-10-11) · **Canónico:** `vps-ops-toolkit/workflows/testing/PERFORMANCE_STANDARDS.md`
 
 > Esta copia (`<proyecto>/docs/PERFORMANCE_STANDARDS.md`) la escribe
 > `scripts/maintenance/sync-test-quality-core.sh` y **se sobrescribe en cada sync**.
@@ -137,6 +137,11 @@ reporte · `inferred` = sólo `file:line`.
 ## 5. Evidencia aceptada
 
 - **Mínimo por hallazgo:** ≥1 `file:line` leído en ESTA corrida + ≥1 `cmd:` reproducible.
+- **Excepción `Q(1)==Q(N)`:** sin `cmd:`, un mecanismo que rompe por construcción la
+  constancia del conteo de queries (una consulta por fila, visible en la fuente) puede
+  confirmarse sólo con `file:line`: queda `inferred` e impacto MEDIO como máximo. Todo otro
+  hallazgo sin `cmd:` no se confirma: queda pendiente de evidencia (`needs_validation` en
+  el registro de una ronda de mejora), con el comando exacto como plan.
 - `cmd:` válidos: `pytest … -k budget` con `CaptureQueriesContext`; `manage.py sqlmigrate`;
   `EXPLAIN` sobre la query dominante **en staging/dev**; una línea de
   `backend/logs/silk-reports/*.log` o del slow log de MySQL; `du -sh` / stats del build

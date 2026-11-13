@@ -71,7 +71,7 @@
       data-testid="partner-split-remainder"
       class="text-xs text-text-muted"
     >
-      Bolsillo ProjectApp: {{ formatMoney(remainder, 'COP') }}
+      Bolsillo ProjectApp: {{ formatMoney(remainder, 'COP', { decimals: 'auto' }) }}
     </p>
   </div>
 </template>

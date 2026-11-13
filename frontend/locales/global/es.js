@@ -1,4 +1,6 @@
 export default {
+    choiceSelect: { placeholder: 'Seleccionar', search: 'Buscar opciones', empty: 'No hay opciones que coincidan.' },
+    clearClientSelection: 'Limpiar selección de cliente',
     theme: {
       enableLight: "Activar modo claro",
       enableDark: "Activar modo oscuro",

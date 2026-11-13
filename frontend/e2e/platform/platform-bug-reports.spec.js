@@ -48,6 +48,11 @@ const mockProjectRequirements = [
 
 const meResponse = (user) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(user) });
 
+async function chooseIssueSource(page, title) {
+  await page.getByTestId('issue-source').click();
+  await page.getByRole('option', { name: new RegExp(`^${title} ·`) }).click();
+}
+
 function setupMocks(page, { user }) {
   return mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
@@ -93,7 +98,7 @@ test.describe('Platform Bug Reports — Client', () => {
   });
 
   test('client can create a new bug report', {
-    tag: [...PLATFORM_BUG_REPORTS, '@role:platform-client'],
+    tag: [...PLATFORM_BUG_REPORTS, '@role:platform-client', '@outcome:success'],
   }, async ({ page }) => {
     await setupMocks(page, { user: mockPlatformClient });
     await page.goto('/platform/projects/1/bugs', { waitUntil: 'domcontentloaded' });
@@ -101,7 +106,7 @@ test.describe('Platform Bug Reports — Client', () => {
 
     await page.getByRole('button', { name: /reportar bug/i }).click();
     await page.getByPlaceholder('¿Qué está fallando?').fill('New bug report');
-    await page.getByTestId('issue-source').selectOption('501');
+    await chooseIssueSource(page, 'Checkout flow');
     await page.getByRole('button', { name: /reportar bug/i }).last().click();
 
     // On a successful submit the create form closes.

@@ -123,6 +123,10 @@
   --color-on-accent-rgb: 0 41 33;
   --color-on-danger-rgb: 255 255 255;
 
+  /* Identity initials keep the brand pair even when a personal theme changes primary. */
+  --color-profile-avatar-rgb: 0 41 33;
+  --color-on-profile-avatar-rgb: 255 255 255;
+
   /* Status (paired soft + strong) */
   --color-success-soft: #D1FAE5;
   --color-success-strong: #065F46;

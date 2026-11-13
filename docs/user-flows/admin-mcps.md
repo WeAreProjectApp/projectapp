@@ -17,6 +17,7 @@
   - [Failure] Un 4xx/5xx conserva el formulario o estado anterior y muestra el detalle accionable.
   - [Security] El plaintext no puede recuperarse al recargar; sólo quedan prefijo y hash. Las escrituras —incluidos `created_by` y `linked_by` de hilos documentales, ingresos y extractos— se atribuyen a un principal técnico no interactivo del conector, nunca al superusuario humano del Panel.
   - [Contract] El servidor rechaza envelopes MCP incoherentes, alcances o vencimientos inválidos, confirmaciones vencidas/alteradas y assets temporales con tamaño, hash, MIME o firma incompatibles; un fallo de auditoría no interrumpe la respuesta del transporte.
+- **PA-221:** el nombre visible es «Gestor de …» y el acordeón muestra «Qué puedes gestionar» desde capacidades recibidas del servidor. Los conectores pendientes conservan su migración; los retirados no aparecen ni ejecutan herramientas. La lista larga conserva el ancho disponible; un fallo de carga permite reintentar. El resultado funcional de este refinamiento se acredita sólo con el CI del nuevo corte y la ronda DEV correspondiente.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-mcps.spec.js`
 

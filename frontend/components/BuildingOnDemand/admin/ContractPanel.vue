@@ -102,7 +102,7 @@ const lastSyncedLabel = computed(() => formatDateTime(documentMirror.value?.last
         aria-describedby="building-on-demand-admin-contract-scroll-hint"
         data-testid="building-on-demand-admin-contract-body"
       >
-        <DocumentMarkdownBody :markdown="contract.markdown || ''" standard-markdown />
+        <DocumentMarkdownBody :markdown="contract.markdown || ''" format="markdown_html_v1" />
       </div>
     </template>
     <p v-else class="mt-5 text-sm text-text-subtle" data-testid="building-on-demand-admin-contract-unavailable">{{ t('buildingOnDemandAdmin.contract.empty') }}</p>

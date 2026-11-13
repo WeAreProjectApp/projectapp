@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 CONTRACT_TITLE = 'Contrato de alquiler de célula — Building on Demand'
 MIRROR_POINTER = (
     f'# {CONTRACT_TITLE}\n\nEste documento muestra en vivo el contrato vigente de Building on Demand. '
-    'Se edita desde el MCP «Building on Demand».'
+    'Se edita en el Gestor de documentos o mediante el MCP de Programas.'
 )
 INITIALIZATION_NOTE = 'Inicialización del espejo contractual de sólo lectura.'
 PENDING_DECISIONS_V1 = """Inventario de preguntas abiertas de las fichas y respuestas de la versión inicial.
@@ -237,7 +237,7 @@ def list_versions(*, offset=0, limit=20, include_content=False):
     return {'total': queryset.count(), 'versions': versions}
 
 
-def prepare_update(arguments, *, restore=False, require_match=False):
+def prepare_update(arguments, *, restore=False, require_match=False, locked_state=None):
     allowed = {'version_id' if restore else 'markdown', 'if_match', 'change_note'}
     if not restore:
         allowed.add('patches')
@@ -246,7 +246,7 @@ def prepare_update(arguments, *, restore=False, require_match=False):
     sources = [key for key in ('markdown', 'patches', 'version_id') if key in arguments]
     if len(sources) != 1 or (restore and sources != ['version_id']):
         raise BuildingOnDemandError('Indica exactamente markdown o patches; para restaurar usa version_id.')
-    contract = _load()
+    contract = locked_state[0] if locked_state is not None else _load()
     current = contract.current_revision
     etag = contract_etag(current)
     if require_match and not arguments.get('if_match'):
@@ -272,12 +272,12 @@ def prepare_update(arguments, *, restore=False, require_match=False):
         except ContractTemplateError as exc:
             raise BuildingOnDemandError(str(exc), code=exc.code, details=exc.details) from exc
     validate_markdown(markdown)
-    mirror = _mirror(contract)
+    mirror = locked_state[1] if locked_state is not None else _mirror(contract)
     return {
         'changed': markdown != current.markdown, 'markdown': markdown,
         'diff': markdown_diff(current.markdown, markdown, 'building-on-demand'), 'placeholders': [],
         'document_to_sync': {'document_id': mirror.document_id if mirror else None, 'status': 'ready' if mirror else 'missing'},
-        'resource_etags': resource_etags(),
+        'resource_etags': resource_etags() if locked_state is None else {},
     }
 
 
@@ -375,17 +375,32 @@ def _lock_folder_pin():
 
 
 @transaction.atomic
-def apply_update(arguments, *, actor, credential=None, restore=False, expected_etags=None):
+def apply_update(arguments, *, actor, credential=None, restore=False, expected_etags=None,
+                 document_if_match=None, document_options=None):
     contract = _load(lock=True)
     mirror = _lock_mirror(contract)
+    if document_if_match is not None and (
+        mirror is None or mirror.document.is_archived
+        or (mirror.document_id, document_etag(mirror.document)) != document_if_match
+    ):
+        raise BuildingOnDemandError('El contrato cambió; conserva tu texto y vuelve a cargarlo antes de guardar.', code='STALE_VERSION')
+    if document_if_match is not None:
+        arguments = {**arguments, 'markdown': arguments.get('markdown', contract.current_revision.markdown),
+                     'if_match': contract_etag(contract.current_revision)}
     _lock_folder_pin()
     if expected_etags is not None and expected_etags != resource_etags():
         raise BuildingOnDemandError('El contrato, su espejo o la carpeta fijada cambió desde la vista previa.', code='STALE_VERSION')
-    prepared = prepare_update(arguments, restore=restore, require_match=True)
+    prepared = prepare_update(arguments, restore=restore, require_match=True, locked_state=(contract, mirror))
     folder = _resolve_folder(lock=True)
-    if not prepared['changed']:
+    options = document_options or {}
+    presentation_changed = bool(mirror and any(getattr(mirror.document, key) != value for key, value in options.items()))
+    if not prepared['changed'] and not presentation_changed:
         _sync_locked(contract, mirror, folder, actor=actor, note=INITIALIZATION_NOTE)
         return {'applied': True, 'changed': False}
+    if presentation_changed:
+        for key, value in options.items():
+            setattr(mirror.document, key, value)
+        mirror.document.save(update_fields=[*options, 'updated_at'])
     revision = BuildingOnDemandContractRevision.objects.create(
         version=contract.current_revision.version + 1, markdown=prepared['markdown'], author=actor, credential=credential,
         author_label=actor.get_username() if actor else 'Consola', change_note=arguments['change_note'].strip(),

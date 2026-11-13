@@ -146,15 +146,27 @@
           class="border-t border-border-muted px-4 sm:px-5 py-4 space-y-4"
         >
           <p class="min-w-0 max-w-full text-sm text-text-muted [overflow-wrap:anywhere]">{{ connector.description }}</p>
+          <div v-if="connector.capabilities?.length" :data-testid="`mcp-capabilities-${connector.slug}`" class="space-y-2">
+            <h3 class="text-sm font-semibold text-text-default">Qué puedes gestionar</h3>
+            <ul class="space-y-2 text-sm text-text-muted">
+              <li v-for="capability in connector.capabilities" :key="capability.label" class="min-w-0 [overflow-wrap:anywhere]">
+                <span class="font-medium text-text-default">{{ capability.label }}:</span>
+                {{ capability.actions.join(' · ') }}.
+                <span v-if="capability.requires_confirmation" class="text-text-subtle">Las acciones sensibles requieren confirmación.</span>
+              </li>
+            </ul>
+            <p class="text-xs text-text-subtle">Cada credencial limita las acciones disponibles y conserva los permisos de su actor. Los secretos requieren un permiso explícito; los documentos emitidos conservan su evidencia.</p>
+          </div>
           <p v-if="connector.section_note" class="text-sm text-text-subtle" :data-testid="`mcp-scope-${connector.slug}`">{{ connector.section_note }}</p>
           <div v-if="connector.is_legacy || connector.aliases_retired_at || connector.pre_split_started_at" class="rounded-lg border border-border-muted p-3 text-sm text-text-muted" :data-testid="`mcp-migration-${connector.slug}`">
-            <p v-if="connector.lifecycle === 'retired'">Conector retirado. Configura una credencial nueva de {{ connector.replacement }}.</p>
-            <p v-else-if="connector.is_legacy">Migra a {{ connector.replacement }}. Este acceso se conserva al menos 30 días y hasta verificar los consumidores y 14 días sin llamadas antiguas.</p>
+            <p v-if="connector.lifecycle === 'retired'">Conector retirado. Configura una credencial nueva de {{ connector.replacement_name || connector.replacement }}.</p>
+            <p v-else-if="connector.is_legacy">Migra a {{ connector.replacement_name || connector.replacement }}. Este acceso se conserva al menos 30 días y hasta verificar los consumidores y 14 días sin llamadas antiguas.</p>
             <p v-else-if="connector.pre_split_retired_at">{{ connector.slug === 'projects' ? 'El catálogo anterior de Proyectos está retirado. Usa Proyectos e Integridad de datos.' : 'El catálogo comercial anterior está retirado. Usa las credenciales nuevas de Comercial, Nuestra oferta y Programas.' }}</p>
             <p v-else-if="connector.pre_split_started_at">{{ connector.slug === 'projects' ? 'Los accesos anteriores de Proyectos conservan su alcance. Migra integridad de datos al conector propio.' : 'Las credenciales comerciales anteriores conservan su alcance durante la transición. Migra sus funciones a Comercial, Nuestra oferta y Programas según corresponda.' }}</p>
             <p v-else>Los accesos al catálogo anterior ya están retirados.</p>
             <p v-if="connector.last_legacy_use_at">Último uso antiguo: {{ formatDate(connector.last_legacy_use_at) }}.</p>
             <p v-if="connector.is_legacy">Inventario de consumidores: {{ connector.consumers_verified_at ? 'verificado' : 'pendiente de verificar' }}.</p>
+            <p v-if="connector.is_legacy">Antes del retiro se deben comprobar las funciones y los permisos de los gestores de reemplazo, con evidencia del mismo corte.</p>
           </div>
 
           <!-- Connection status derived from the latest MCP request -->
@@ -535,8 +547,8 @@ const store = useMcpsStore();
 const sectionOrder = new Map(getPanelNavSections((path) => path).map((section, index) => [section.id, index]));
 const canonicalOrder = (connector) => sectionOrder.get(connector.module_id || connector.slug) ?? sectionOrder.size;
 const connectorGroups = computed(() => [
-  { id: 'canonical', title: 'Conectores por módulo', connectors: store.connectors.filter((item) => !item.is_legacy).sort((a, b) => canonicalOrder(a) - canonicalOrder(b)) },
-  { id: 'retiring', title: 'Conectores en retirada', connectors: store.connectors.filter((item) => item.is_legacy) },
+  { id: 'canonical', title: 'Conectores por módulo', connectors: store.connectors.filter((item) => !item.is_legacy && item.lifecycle !== 'retired').sort((a, b) => canonicalOrder(a) - canonicalOrder(b)) },
+  { id: 'retiring', title: 'Conectores en retirada', connectors: store.connectors.filter((item) => item.is_legacy && item.lifecycle !== 'retired') },
 ].filter((group) => group.connectors.length));
 const { t } = useI18n();
 const notify = usePanelNotify();
