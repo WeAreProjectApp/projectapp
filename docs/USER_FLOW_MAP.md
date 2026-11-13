@@ -6264,6 +6264,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-procurement-opportunity-list` | procurement | P1 | display,success,failure | — |
 | `admin-procurement-saved-searches` | procurement | P2 | display,success,error,failure | — |
 | `admin-procurement-settings-sync` | procurement | P2 | display,success,error,failure | — |
+| `admin-program-contract-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-detail` | admin | P1 | display,failure | — |
 | `admin-project-access-field-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-notes` | admin | P2 | display,success,error,failure | — |
@@ -7954,9 +7955,11 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Role:** admin
 - **Priority:** P1
 - **Route:** `/:locale/panel/building-with-us`
-- **Interaction:** Abrir Contrato, consultar Markdown y el espejo sincronizado en ProjectApp/Contratos; leer la advertencia desactualizada o sin inicializar, descargar PDF y reintentar un fallo del contrato.
+- **Interaction:** Abrir Contrato, consultar la versión y el documento sincronizado; previsualizar y descargar PDF, abrir el documento exacto en el Gestor, editar con motivo y volver para consultar la nueva versión. Conservar el borrador ante conflicto o fallo de guardado; consultar estados desactualizado o sin inicializar y reintentar fallos de lectura.
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidence:** frontend/components/BuildingWithUs/admin/ContractPanel.vue; frontend/pages/panel/building-with-us/index.vue; GET /api/building-with-us/admin/contract/; GET /api/building-with-us/admin/contract/pdf/; `frontend/e2e/admin/admin-building-with-us.spec.js`.
+
+La edición compartida y sus errores se registran en `admin-program-contract-edit`.
 
 
 ## Section 35 — Building on Demand (Oct 10, 2026)
@@ -8123,11 +8126,13 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Role:** admin
 - **Priority:** P1
 - **Route:** `/:locale/panel/cells?tab=contract`
-- **Interaction:** Abrir Contrato desde Células para consultar la revisión, el contenido y su copia en ProjectApp › Contratos; leer los estados Sincronizado, Desactualizado, Sin inicializar o todavía no disponible, descargar PDF y reintentar un fallo de carga.
+- **Interaction:** Abrir Contrato, consultar la versión y el documento sincronizado; previsualizar y descargar PDF, abrir el documento exacto en el Gestor, editar con motivo y volver para consultar la nueva versión. Conservar el borrador ante conflicto o fallo de guardado; consultar estados no disponible, desactualizado o sin inicializar y reintentar fallos de lectura.
 - **Outcomes:** `display`, `success`, `failure`
 - **Result:** La copia muestra el estado y los metadatos de sincronización y permite abrir el documento del Gestor Documental cuando existe. El contrato y su copia se administran desde MCP; el panel no edita ni sincroniza. `contract: null` con respuesta 404 muestra que el contrato todavía no está disponible, mientras un fallo del servidor presenta Reintentar.
 - **Evidence:** `frontend/pages/panel/cells/index.vue:124`; `frontend/components/BuildingOnDemand/admin/ContractPanel.vue:42`; `frontend/stores/building_on_demand.js:48`; GET `/api/building-on-demand/admin/contract/`; GET `/api/building-on-demand/admin/contract/pdf/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
 - **Scope:** Los estados del espejo son resultados de consulta, no errores de entrada. Su historial y el fallo de descarga de PDF requieren evidencia adicional a la lectura del contrato.
+
+La edición compartida y sus errores se registran en `admin-program-contract-edit`.
 
 
 ## Platform Help and Guided Tours
@@ -9011,6 +9016,18 @@ Los siete filtros muestran sus etiquetas, se distribuyen según el ancho real y 
 - **Outcomes:** `display`, `success`, `error`, `failure`
 - **Evidence:** frontend/pages/panel/platform/help.vue; frontend/components/platform/PlatformVideoResourcesManager.vue; frontend/components/resources/VideoResourceManager.vue.
 - **Scope:** Se llega desde la navegación del panel y se comprueba el contenido de las tres piezas. La sustitución, la validación local de MP4 y el rechazo del servidor se ejercitan en la interfaz; los permisos, la concurrencia y el ciclo completo de carga, retirada y restauración por MCP se prueban en backend. Los interruptores compartidos pertenecen al flujo de administración de Ayuda.
+
+### FLOW: `admin-program-contract-edit`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/documents/:id/edit`
+- **Interaction:** Abrir el documento vinculado desde Contrato en Building with Us o Células, editar la fuente y guardar con motivo. Volver al módulo y consultar la misma versión guardada.
+- **Outcomes:** `success`, `error`, `failure`
+- **Evidence:** frontend/pages/panel/documents/[id]/edit.vue; frontend/composables/useProgramContractRefresh.js; PATCH /api/documents/:id/update/; frontend/e2e/admin/admin-module-contract-document-editor.spec.js.
+
+El guardado exige la versión leída. Motivo ausente impide guardar. Ante conflicto o fallo del servicio se conserva la fuente local; los metadatos contractuales permanecen protegidos. Los contratos de propuestas siguen en sólo lectura. Los casos parametrizados cubren ambos módulos sin atribuir aprobación o firma al documento.
 
 # Marca y recursos del proyecto
 

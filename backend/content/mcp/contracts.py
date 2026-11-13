@@ -134,7 +134,7 @@ MCP_MODEL_CONTRACTS = {
             'content.BuildingOnDemandContractMirror',
             read_only='id document revision synced_at',
             excluded=_excluded(
-                'Estado transaccional interno del contrato de célula y su PDF; sólo se edita mediante el MCP Building on Demand.',
+                'Estado transaccional interno del contrato de célula y su PDF; el Gestor y los MCP delegan en el escritor contractual.',
                 'contract pdf_content',
             ),
         ),
@@ -142,7 +142,7 @@ MCP_MODEL_CONTRACTS = {
             'content.BuildingWithUsContractMirror',
             read_only='id document revision synced_at',
             excluded=_excluded(
-                'Estado transaccional interno del contrato de alianza y su PDF; sólo se edita mediante el MCP Building with Us.',
+                'Estado transaccional interno del contrato de alianza y su PDF; el Gestor y los MCP delegan en el escritor contractual.',
                 'contract pdf_content',
             ),
         ),

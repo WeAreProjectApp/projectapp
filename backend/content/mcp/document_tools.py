@@ -56,6 +56,7 @@ from content.services.contract_mirror_service import (
     mirror_read_only_message,
     is_contract_mirror,
     mirror_markdown,
+    module_contract_mirror,
 )
 from content.services.contract_template_service import mirror_metadata
 from content.services.document_content import build_content_json
@@ -114,6 +115,7 @@ def _markdown_qs():
             'folder', 'project', 'client_user__profile', 'contract_template',
             'contract_mirror__template', 'contract_mirror__revision',
             *(f'{relation}__revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
+            *(f'{relation}__contract__current_revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
         )
         .prefetch_related('tags')
     )
@@ -347,7 +349,7 @@ def _doc_summary(doc):
         'created_at': doc.created_at.isoformat() if doc.created_at else None,
         'etag': _document_etag(doc),
         **document_capabilities(doc),
-        'edit_blockers': [CONTRACT_MIRROR_BLOCKER] if is_contract_mirror(doc) else [],
+        'edit_blockers': [CONTRACT_MIRROR_BLOCKER] if is_contract_mirror(doc) and not module_contract_mirror(doc) else [],
         'is_contract_mirror': is_contract_mirror(doc),
         'calculator': (doc.metadata or {}).get('requirement_calculator'),
     }
@@ -372,7 +374,7 @@ def _doc_detail(doc):
         'proposal_source': _shared_summary(doc),
         **mirror_metadata(doc),
         'markdown': markdown,
-        'text_formats': doc.text_formats,
+        'text_formats': {**(doc.text_formats or {}), '/content_markdown': 'markdown_html_v1'} if module_contract_mirror(doc) else doc.text_formats,
         'client_email_subject': doc.client_email_subject,
         'client_email_body': doc.client_email_body,
         'client_whatsapp_message': doc.client_whatsapp_message,
@@ -640,6 +642,22 @@ def update_document(arguments):
     moving = 'folder_id' in arguments
     doc = (Document.objects.select_related('document_type', 'project').filter(pk=arguments.get('document_id')).first()
            if moving else None) or _get_markdown_doc_or_error(arguments.get('document_id'))
+    if module_contract_mirror(doc):
+        from content.mcp.context import current_mcp_context
+        from content.services.module_contract_document_service import ModuleContractDocumentError, update_contract_document
+        payload = {key: value for key, value in arguments.items() if key not in ('document_id', 'include_content')}
+        if 'markdown' in payload:
+            if 'content_markdown' in payload:
+                raise ToolError('Envía markdown o content_markdown, nunca ambos.')
+            payload['content_markdown'] = payload.pop('markdown')
+        context = current_mcp_context()
+        try:
+            doc = update_contract_document(doc, payload, actor=mcp_actor(), credential=context.credential if context else None)
+        except ModuleContractDocumentError as exc:
+            raise ToolError(str(exc), code=exc.code, details=exc.details) from exc
+        return document_write_payload(doc, include_content=arguments.get('include_content', False)) | mirror_metadata(doc)
+    if {'change_note', 'template_style'}.intersection(arguments):
+        raise ToolError('change_note y template_style sólo se admiten aquí para contratos de programa.')
     if doc.is_generated_snapshot and not moving:
         raise ToolError(
             'Un documento generado no admite cambios manuales.',
@@ -1208,8 +1226,9 @@ DOCUMENT_TOOLS = [
             'client_email_subject, client_email_body, client_whatsapp_message, '
             'client_custom_notes. Al '
             'cambiar el markdown se reprocesa el contenido para el PDF. El '
-            'contrato vigente (is_contract_mirror) es un espejo de solo lectura '
-            'que no se puede editar ni mover. Consulta movable para saber si '
+            'contrato de programa (building_with_us/building_on_demand) admite edición con '
+            'if_match y change_note obligatorios y sincroniza revisión/PDF con el módulo; '
+            'sólo permite contenido y presentación. Los demás espejos contractuales son de solo lectura. Consulta movable para saber si '
             'un documento puede moverse y move_blockers para conocer los '
             'motivos que lo impiden. Al cambiar folder_id, client_policy '
             'usa abort_on_conflict por defecto y portal_policy usa abort; '
@@ -1228,6 +1247,14 @@ DOCUMENT_TOOLS = [
                 'if_match': {
                     'type': 'string',
                     'description': 'ETag devuelto por read_document.',
+                },
+                'change_note': {
+                    'type': 'string', 'minLength': 1, 'maxLength': 4000,
+                    'description': 'Motivo obligatorio al editar un contrato de Building with Us o Células; se guarda con la revisión.',
+                },
+                'template_style': {
+                    'type': 'string', 'enum': ['professional', 'friendly'],
+                    'description': 'Presentación del PDF; sólo para contratos de programa en esta operación.',
                 },
                 'folder_id': {
                     'type': ['integer', 'null'],

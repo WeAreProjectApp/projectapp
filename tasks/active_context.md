@@ -1,3 +1,14 @@
+## Contratos de programas editables desde el Gestor — 2026-11-12
+
+PA-255/PA-256: el Gestor permite editar contenido y presentación de los contratos
+Building with Us y Células con motivo y versión obligatorios. El escritor de cada
+programa conserva revisión, historial y PDF en una transacción; los módulos
+consultan, descargan y enlazan al documento exacto. Se mantienen los MCP y la
+protección de ubicación, identidad y privacidad. No cambia el contenido jurídico
+ni acredita aprobación contractual. Sin migraciones ni cambios productivos.
+Contrato técnico y validación: [Contratos de programas](../docs/PROGRAM_CONTRACT_DOCUMENTS.md).
+Implementación en rama de sesión; la validación automatizada se ejecuta en CI.
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.

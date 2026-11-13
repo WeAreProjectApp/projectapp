@@ -1,3 +1,14 @@
+## Contratos de programas editables desde el Gestor — 2026-11-12
+
+PA-255/PA-256: el Gestor permite editar contenido y presentación de los contratos
+Building with Us y Células con motivo y versión obligatorios. El escritor de cada
+programa conserva revisión, historial y PDF en una transacción; los módulos
+consultan, descargan y enlazan al documento exacto. Se mantienen los MCP y la
+protección de ubicación, identidad y privacidad. No cambia el contenido jurídico
+ni acredita aprobación contractual. Sin migraciones ni cambios productivos.
+Contrato técnico y validación: [Contratos de programas](../docs/PROGRAM_CONTRACT_DOCUMENTS.md).
+Implementación en rama de sesión; la validación automatizada se ejecuta en CI.
+
 > **Contratación estatal interna — 2026-11-05:** desarrollo independiente en rama de sesión: panel/API/MCP, filtros OR palabras/UNSPSC más criterios AND, alertas inmediata/diaria/semanal con destinatarios editables y seguimiento con análisis externo. Pruebas locales por capas aprobadas; entrega y CI en el PR #552. Operación en `docs/PROCUREMENT.md`; sin lectura de buzones ni IA interna.
 
 > **Integridad de datos — 2026-11-05:** módulo MCP propio y panel administrativo compartiendo motor de 51 reglas (23 corregibles). Revisiones persistentes diarias y a demanda, alcances contables individuales, aceptación auditada y radar. Todos los administradores pueden operar integridad financiera sin ampliar permisos en otros módulos. Migraciones content.0305–0306; despliegue, consumidores y primera revisión real se verifican por separado. Contrato: [Integridad de datos](../docs/DATA_INTEGRITY.md).

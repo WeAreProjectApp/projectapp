@@ -1,3 +1,11 @@
+> **Contratos de programas — 2026-11-12:** Building with Us y Células comparten
+> la edición del Gestor y sus servicios versionados con MCP. El guardado verifica
+> la revisión, actualiza PDF e historial de forma atómica y conserva el documento
+> vinculado. Los módulos consultan, previsualizan, descargan y enlazan al editor.
+> Esta actualización sustituye la restricción histórica de edición exclusiva
+> mediante MCP para estos dos contratos; los demás espejos conservan sus bloqueos.
+> [Contrato técnico y validación](../PROGRAM_CONTRACT_DOCUMENTS.md).
+
 > **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
 > pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
 > lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant
