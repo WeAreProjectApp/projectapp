@@ -793,7 +793,7 @@ export const viewCatalogSections = [
         group: 'Comunicaciones',
         file: 'frontend/pages/panel/secure-links/index.vue',
         reference: 'enlaces de un solo uso para compartir información sensible',
-        notes: 'Formulario inicial de Mensaje confidencial, dropdown con nombre condicional para Personalizado, campos opcionales y configuración visibles desde el inicio, sin Asunto; URL automática sin exigir cliente ni proyecto. Estados Listo para compartir, Enviado (marca manual), Abierto, Vencido y Revocado, con conteos e historial. Los tres puntos al inicio de cada fila abren un modal con detalle, editar contenido, copiar, marcar enviado, revocar o reactivar y eliminar con confirmación; el detalle renombra el título en línea y tiene una sola opción de editar; reactivar limpia la marca de envío y conserva el historial. Actualizar datos recarga la tabla. Recibidos reúne lo que envían los clientes; ?link=<id> abre el detalle. Carpetas propias y subcarpetas separadas de raíces automáticas de proyecto; navegación por proyecto o cliente, búsqueda y estados dentro del subárbol, movimiento sin reasignación y archivo reversible sin revocar enlaces.',
+        notes: 'Formulario inicial de Mensaje confidencial, dropdown con nombre condicional para Personalizado, campos opcionales y configuración visibles desde el inicio, sin Asunto; URL automática sin exigir cliente ni proyecto. Estados Listo para compartir, Enviado (marca manual), Abierto, Vencido y Revocado, con conteos e historial. Los tres puntos al inicio de cada fila abren un modal con detalle, editar contenido, copiar, marcar enviado, revocar o reactivar y eliminar con confirmación; el detalle renombra el título en línea, permite copiar su valor completo vigente sin revelar contenido y tiene una sola opción de editar; reactivar limpia la marca de envío y conserva el historial. Actualizar datos recarga la tabla. Recibidos reúne lo que envían los clientes; ?link=<id> abre el detalle. Carpetas propias y subcarpetas separadas de raíces automáticas de proyecto; navegación por proyecto o cliente, búsqueda y estados dentro del subárbol, movimiento sin reasignación y archivo reversible sin revocar enlaces.',
         audience: 'admin',
         viewType: 'list',
       },
@@ -901,7 +901,7 @@ export const viewCatalogSections = [
         reference: 'recorridos bilingües, novedades, tutorial general y clips de Appi/voz, con recursos sustituibles y controles globales/por cliente',
         audience: 'admin',
         viewType: 'config',
-        notes: 'Interruptores globales y por cliente; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos y el progreso se conserva por usuario. Los tres tutoriales en español se previsualizan y pueden sustituirse, retirarse o restaurarse desde el panel o MCP; los cambios concurrentes requieren recargar el recurso.',
+        notes: 'Interruptores globales y por cliente; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos elegidos desde dropdowns del proyecto y el progreso se conserva por usuario. La búsqueda de clientes filtra al escribir, conserva total y paginación de la consulta vigente y permite reintentar cargas fallidas. Los tres tutoriales en español se previsualizan y pueden sustituirse, retirarse o restaurarse desde el panel o MCP; los cambios concurrentes requieren recargar el recurso.',
       },
       {
         label: 'Configuración de IA de Plataforma',

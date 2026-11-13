@@ -42,6 +42,14 @@
                   </span>
                 </div>
                 <BaseRichTextContent v-if="req.description" class="text-sm text-text-default/70 font-light" :source="req.description" :format="req.text_formats?.['/description'] || 'plain'" />
+                <div v-if="req.configuration" class="mt-3 space-y-1" data-testid="linked-requirement-configuration">
+                  <h5 class="text-sm font-semibold text-text-default">{{ language === 'en' ? 'Technical detail' : 'Detalle técnico' }}</h5>
+                  <BaseRichTextContent class="text-sm text-text-default/70" :source="req.configuration" :format="req.text_formats?.['/configuration'] || 'plain'" />
+                </div>
+                <div v-if="req.usageFlow" class="mt-3 space-y-1" data-testid="linked-requirement-usage-flow">
+                  <h5 class="text-sm font-semibold text-text-default">{{ language === 'en' ? 'Usage flow' : 'Flujo de uso' }}</h5>
+                  <BaseRichTextContent class="text-sm text-text-default/70" :source="req.usageFlow" :format="req.text_formats?.['/usageFlow'] || 'plain'" />
+                </div>
               </li>
             </ul>
           </div>

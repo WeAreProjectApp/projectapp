@@ -74,6 +74,7 @@ export default {
     language: 'Idioma de la página que verá el destinatario',
     cancel: 'Cancelar', save: 'Guardar cambios', create: 'Generar enlace',
     renameTitle: 'Editar título', saveTitle: 'Guardar',
+    copyTitle: 'Copiar título', titleCopied: 'Título copiado', titleCopyFailed: 'No se pudo copiar el título. Intenta de nuevo.',
   },
   fields: {
     show: 'Mostrar',

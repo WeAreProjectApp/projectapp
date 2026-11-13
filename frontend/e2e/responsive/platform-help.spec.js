@@ -61,7 +61,8 @@ for (const profile of RESPONSIVE_PROFILES) {
       // Bug caught: a responsive sidebar or drawer hides the route into platform-help administration.
       await setupPlatformHelp(page);
       await enterPlatformHelp(page, profile);
-      await expect(page.getByLabel('Select tour', { exact: true })).toHaveValue(String(platformHelpTour.id));
+      await expect(page.getByRole('combobox', { name: 'Select tour', exact: true }))
+        .toHaveText(`${platformHelpTour.content.title_en} · ${platformHelpTour.published_revision}`);
       const tourToggle = page.getByRole('switch', { name: 'Enable tours', exact: true });
       await tourToggle.click();
       await expect(tourToggle).toHaveAttribute('aria-checked', 'false');

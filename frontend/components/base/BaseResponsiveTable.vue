@@ -203,7 +203,7 @@
                 :responsive-profile="null"
               >
                 <template v-if="col.format === 'money'">
-                  {{ formatMoney(row[col.key], 'COP') }}
+                  {{ formatMoney(row[col.key], 'COP', { decimals: col.moneyDecimals ?? 0 }) }}
                 </template>
                 <template v-else-if="col.format === 'percent'">
                   {{ formatPercent(row[col.key]) }}
@@ -373,7 +373,7 @@ const props = defineProps({
   /**
    * Column config: { key, label, format ('money'|'percent'|'date'|'text'|'badge'),
    * align ('left'|'right'|'center'), badgeTones ({ value: tone }),
-   * textPolicy ('wrap'|'truncate'|'atomic'),
+   * textPolicy ('wrap'|'truncate'|'atomic'), moneyDecimals (0|2|'auto', default 0),
    * sortable (Boolean), size (see utils/tableLayout SIZE_NAMES),
    * group (String — adjacent columns sharing one draw closer together),
    * hideBelow ('md'|'lg' — legacy collapse rule), responsive: {
@@ -766,7 +766,7 @@ function badgeClass(col, value) {
 }
 
 function formatGroupedValue(col, value) {
-  if (col.format === 'money') return formatMoney(value, 'COP');
+  if (col.format === 'money') return formatMoney(value, 'COP', { decimals: col.moneyDecimals ?? 0 });
   if (col.format === 'percent') return formatPercent(value);
   if (col.format === 'date') return formatDate(value);
   return value ?? '—';

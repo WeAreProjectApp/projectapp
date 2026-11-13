@@ -274,6 +274,7 @@
     <template v-else>
       <IncomeGroupedTable
         column-layout="content"
+        money-decimals="auto"
         v-if="isGrouped"
         v-model:selected="selectedIds"
         selectable
@@ -701,7 +702,8 @@ import { describeBulkSettleResult } from '~/utils/settleAllocation';
 import { settlementBlockedReason } from '~/utils/incomeSettlement';
 import { describeProjectAssignmentResult } from '~/utils/projectAssignment';
 import { formatDate } from '~/utils/formatDate';
-import { formatMoney } from '~/utils/formatMoney';
+import { formatMoney as formatMoneyValue } from '~/utils/formatMoney';
+const formatMoney = (value) => formatMoneyValue(value, '', { decimals: 'auto' });
 import { historySendsLink } from '~/utils/historyDeepLink';
 import {
   paymentConfirmationWarning,
@@ -809,7 +811,7 @@ const operationalIndicatorDetails = computed(() => [
 ]);
 
 function money(value) {
-  return formatMoney(Number(value ?? 0), 'COP');
+  return formatMoneyValue(Number(value ?? 0), 'COP', { decimals: 'auto' });
 }
 
 // -------------------------------------------------------------------
@@ -1431,7 +1433,7 @@ const columns = [
     responsive: { compact: 'group', portrait: 'group', landscape: 'group' },
   },
   {
-    key: 'total_amount', label: 'Total', format: 'money', sortable: true,
+    key: 'total_amount', label: 'Total', format: 'money', moneyDecimals: 'auto', sortable: true,
     textPolicy: 'wrap',
     responsive: { compact: 'group', portrait: 'keep', landscape: 'keep' },
   },

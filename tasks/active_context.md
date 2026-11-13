@@ -3286,3 +3286,18 @@ de PA-219 y conserva su autoría. Los casos de video usan el contrato real
 El modal invalida el catálogo anterior al cambiar de cliente. Pruebas sólo en CI;
 DevQA administra el turno manual de clientes 19/20 y la revisión editorial.
 Evidencia y pendientes: `docs/audits/2026-11-06-pa220-help-video.md`.
+## PA-251 / PA-253 / PA-257 / PA-258 / PA-261 — entrega de interfaz
+
+Trabajo en un worktree propio desde `origin/main`: precisión visual de ingresos,
+dropdowns y búsqueda de Ayuda, granularidad de requerimientos sin cuotas,
+navegación/avatar y copia del título de un enlace seguro. PA-257 conserva el modal
+de detalle y usa corpus ficticio ES/EN. Pruebas y builds sólo en CI. No se concede
+turno DEV/QA, no se despliega y no se repiten pagos ni aprobaciones históricos.
+
+Cambios implementados en commits separados por ticket. El contrato de listas ya
+admitía N requerimientos: se conservaron esquema/IDs y se retiraron las cuotas
+del prompt. Nuevo dropdown compartido, búsqueda de Ayuda con invalidación desde
+la escritura y copia del título sin peticiones de contenido. Mapas actualizados
+sin añadir rutas. Corpus y traspaso:
+`docs/audits/PA-251-253-257-258-261/README.md`. La entrega requiere CI verde;
+la validación visual y MCP del entorno aislado sigue pendiente de turno.

@@ -6,9 +6,10 @@
     "guest"
   ],
   "priority": "P2",
-  "description": "Client sees the four core cards (views, components, specific features and contextual cross-cutting features) and clicks a requirement group card to open its detail modal with items, icons and descriptions. Items with linked technical requirements show a 'Ver requerimientos (N)' link that opens a nested modal listing each requirement title, priority and description (detailed and executive modes; hidden on legacy proposals without item ids).",
+  "description": "Client sees the four core cards (views, components, specific features and contextual cross-cutting features) and clicks a requirement group card to open its detail modal with items, icons and descriptions. Items with linked technical requirements show a 'Ver requerimientos (N)' link that opens a nested modal listing each requirement title, priority and description (detailed and executive modes; hidden on legacy proposals without item ids). El modal conserva uno o varios requerimientos por elemento y muestra configuration y usageFlow con su formato cuando existen, manteniendo propuestas antiguas sin esos campos.",
   "expectedSpecs": 1,
   "outcomes": [
+    "success",
     "display"
   ]
 }
