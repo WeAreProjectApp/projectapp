@@ -1,3 +1,13 @@
+## PA-267 — Identidad de componentes y frontera operativa
+
+La transacción en dos fases del toolkit publica conjuntamente los artefactos.
+La aplicación entrega `/api/version/` con identidad congelada al iniciar Django
+y `/version.json` con la identidad del frontend servido; no decide el éxito de
+la operación ni registra Deployments. Un proceso antiguo conserva su identidad
+ante un intercambio posterior. El reconciliador externo coteja ambos SHA con
+Integrity tras el cierre y sin operaciones abiertas. Contrato y límites:
+[interfaz de versión](../DEPLOYMENT_VERSION_INTERFACE.md).
+
 ## PA-265 — Lectura del historial documental (2026-11-13)
 
 `EntityHistoryTabs` despacha documentos a `DocumentHistoryPanel`; el resto
