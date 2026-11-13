@@ -1,62 +1,66 @@
-"""Operations owns monitoring follow-up; source ingestion is not delegated."""
+"""Monitoring management shares the Panel's authorization and write services."""
 from content.mcp.operation_builder import _op
-from content.mcp.proposal_schemas import writable_schema
-from monitoring.serializers import FilterSerializer, NoteSerializer, ResourceLinkSerializer, StateSerializer
+from content.mcp.schema_policy import closed_object
 
-DESCRIPTIONS = {
-    'page': 'Página positiva; se devuelven 25 registros por página.',
-    'resource': 'ID positivo del recurso observado.', 'source': 'ID positivo de la fuente observada.',
-    'kind': 'Tipo de recurso: proyecto o servidor.', 'state': 'Estado admitido del caso.',
-    'severity': 'Gravedad admitida del caso.', 'search': 'Texto del título, hasta 200 caracteres.',
-    'since': 'Fecha inicial inclusiva en formato YYYY-MM-DD.',
-    'until': 'Fecha final inclusiva en formato YYYY-MM-DD.',
-    'version': 'Versión leída del caso; impide sobrescribir un cambio posterior.',
-    'note': 'Nota opcional del cambio de estado, hasta 4000 caracteres.',
-    'text': 'Nota interna no vacía, hasta 4000 caracteres; queda atribuida al actor técnico.',
-    'project': 'ID del proyecto asociado al recurso; null retira la asociación.',
+
+def field(kind, description, **kwargs):
+    return {'type': kind, 'description': description, **kwargs}
+
+
+PAGE = field('integer', 'Página de 25 registros.', minimum=1)
+FILTERS = {
+    'page': PAGE,
+    'resource': field('integer', 'ID del recurso técnico: proyecto o servidor.', minimum=1),
+    'source': field('integer', 'ID de la fuente dentro del recurso.', minimum=1),
+    'kind': field('string', 'Tipo del recurso técnico.', enum=['project', 'server']),
+    'state': field('string', 'Estado humano del seguimiento.', enum=['pending', 'reviewing', 'resolved']),
+    'severity': field('string', 'Gravedad de la observación.', enum=['info', 'warning', 'critical']),
+    'condition': field('string', 'Condición técnica, independiente del seguimiento humano.', enum=['active', 'recovered']),
+    'followup': field('boolean', 'true limita a seguimientos pending o reviewing, incluso recuperados.'),
+    'search': field('string', 'Texto del título, sin buscar dentro de evidencia técnica.', maxLength=200),
+    'since': field('string', 'Fecha inicial incluida en la zona horaria del proyecto.', format='date'),
+    'until': field('string', 'Fecha final incluida, igual o posterior a since.', format='date'),
+    'snapshot': field('string', 'new crea una consulta estable de 15 minutos; el token recibido permite paginarla.', maxLength=64),
+}
+CAPACITY = {
+    'version': field('integer', 'Versión leída; 0 para la primera asignación. Un conflicto exige volver a consultar.', minimum=0),
+    **{f'{dimension}_mode': field('string', f'Modalidad de {dimension}: sin configurar, compartida o asignada.', enum=['unknown', 'shared', 'assigned']) for dimension in ['cpu', 'ram', 'storage']},
+    'cpu_vcpu': field(['number', 'string', 'null'], 'CPU en vCPU; positiva en modo assigned, null en los demás.'),
+    'ram_bytes': field(['integer', 'null'], 'RAM en bytes; positiva en modo assigned, null en los demás.'),
+    'storage_bytes': field(['integer', 'null'], 'Almacenamiento en bytes; positivo en modo assigned, null en los demás.'),
 }
 
 
-def _schema(serializer):
-    schema = writable_schema(serializer)
-    for name, field in schema['properties'].items():
-        field['description'] = DESCRIPTIONS[name]
-    return schema
-
-
-def _tool(name, description, route, method='GET', *, detail=False, serializer=None, confirm=False,
-          query_fields=None):
-    kwargs = {'payload_schema': _schema(serializer)} if serializer and method != 'GET' else {
-        'query_schema': _schema(serializer) if serializer else
-        {'type': 'object', 'properties': {}, 'additionalProperties': False},
-    }
-    if query_fields is not None:
-        query = kwargs['query_schema']
-        query['properties'] = {field: query['properties'][field] for field in query_fields}
-    tool = _op(name, description, route, method, ('pk',) if detail else (),
-               'sensitive' if confirm else 'read' if method == 'GET' else 'write', confirm,
-               envelope_aliases=False, **kwargs)
-    if detail:
-        tool['input_schema']['properties']['pk'] = {
-            'type': 'integer', 'minimum': 1, 'description': 'ID positivo del caso, reporte o recurso indicado por la herramienta.',
-        }
-    if confirm:
-        def impact(arguments):
-            resource = 'monitoring_case_id' if 'case' in name else 'monitoring_resource_id'
-            return {'summary': description, 'resources': {resource: arguments['pk']},
-                    'changes': {key: arguments[key] for key in ('state', 'version', 'project') if key in arguments}}
-        tool['impact_builder'] = impact
+def operation(name, description, route, *, path=False, query=None, payload=None, method='GET'):
+    parameter = 'case_id' if route.startswith('monitoring-case-') else 'report_id' if route == 'monitoring-report-detail' else 'server_id' if route == 'monitoring-series' else 'resource_id'
+    tool = _op(name, description, route, method, (parameter,) if path else (),
+               'read' if method == 'GET' else 'write', envelope_aliases=False,
+               query_schema=closed_object(query or {}) if method == 'GET' else None, payload_schema=payload)
+    if path:
+        tool['input_schema']['properties'][parameter] = field('integer', 'ID positivo del caso, reporte o recurso técnico indicado por la operación.', minimum=1)
     return tool
 
 
 MONITORING_TOOLS = [
-    _tool('get_monitoring_catalog', 'Consulta recursos y fuentes observadas, su salud y asociación a proyectos; no revela credenciales de ingestión.', 'monitoring-catalog'),
-    _tool('list_monitoring_cases', 'Lista casos operativos con filtros y paginación; la evidencia extensa se consulta en el detalle.', 'monitoring-cases', serializer=FilterSerializer),
-    _tool('get_monitoring_case', 'Consulta un caso operativo con su evidencia, historial y entregas paginadas; conserva el alcance administrativo.', 'monitoring-case', detail=True, serializer=FilterSerializer, query_fields=('page',)),
-    _tool('update_monitoring_case_state', 'Cambia el estado de un caso con su versión vigente y nota; exige confirmación y registra el actor técnico.', 'monitoring-case-state', 'POST', detail=True, serializer=StateSerializer, confirm=True),
-    _tool('create_monitoring_case_note', 'Añade una nota interna al caso operativo y la atribuye al actor de la credencial; no modifica evidencia recibida.', 'monitoring-case-note', 'POST', detail=True, serializer=NoteSerializer),
-    _tool('list_monitoring_reports', 'Lista reportes operativos con filtros y paginación; el texto completo se consulta en el detalle.', 'monitoring-reports', serializer=FilterSerializer,
-          query_fields=('page', 'resource', 'source', 'kind', 'search', 'since', 'until')),
-    _tool('get_monitoring_report', 'Consulta el texto y contexto de un reporte operativo recibido, sin modificar su evidencia ni origen.', 'monitoring-report', detail=True),
-    _tool('link_monitoring_resource_project', 'Asocia o desvincula el proyecto de un recurso observado con confirmación; conserva las observaciones y su evidencia histórica.', 'monitoring-resource-link', 'PATCH', detail=True, serializer=ResourceLinkSerializer, confirm=True),
+    operation('get_monitoring_catalog', 'Consulta proyectos, servidores y fuentes, salud y última observación.', 'monitoring-catalog'),
+    operation('get_monitoring_status', 'Consulta revisión y presión medida actual de servidores; distingue ausencia de datos.', 'monitoring-status', query={key: value for key, value in FILTERS.items() if key in {'resource', 'source', 'kind'}}),
+    operation('list_monitoring_cases', 'Consulta casos de 25 en 25; snapshot=new incluye indicadores y atención del conjunto filtrado completo.', 'monitoring-cases', query=FILTERS),
+    operation('get_monitoring_case', 'Consulta evidencia original, estado y páginas independientes de notas y entregas.', 'monitoring-case-detail', path=True, query={'page': PAGE, 'activities_page': PAGE, 'deliveries_page': PAGE,
+        'history_snapshot': field('boolean', 'Congela el límite superior del historial para paginar sin incorporar entradas nuevas.'),
+        'activities_before': field('integer', 'Límite de notas recibido en history_bounds.activities.', minimum=0),
+        'deliveries_before': field('integer', 'Límite de entregas recibido en history_bounds.deliveries.', minimum=0)}),
+    operation('set_monitoring_case_state', 'Cambia el seguimiento sin confundirlo con recuperación técnica; exige versión vigente.', 'monitoring-case-state', path=True, method='POST', payload=closed_object({
+        'state': FILTERS['state'], 'version': field('integer', 'Versión actual del caso.', minimum=1),
+        'note': field('string', 'Nota opcional del cambio.', maxLength=4000),
+    }, ['state', 'version'])),
+    operation('add_monitoring_case_note', 'Añade una nota con autor y fecha conservando el historial.', 'monitoring-case-note', path=True, method='POST', payload=closed_object({'text': field('string', 'Nota no vacía.', minLength=1, maxLength=4000)}, ['text'])),
+    operation('list_monitoring_reports', 'Consulta reportes informativos paginados; retención de 90 días.', 'monitoring-reports', query={key: value for key, value in FILTERS.items() if key not in {'state', 'severity', 'condition', 'followup'}}),
+    operation('get_monitoring_report', 'Consulta el texto original saneado de un reporte informativo.', 'monitoring-report-detail', path=True),
+    operation('get_monitoring_server_series', 'Consulta muestras reales, huecos y capacidad de RAM, disco, CPU y carga.', 'monitoring-series', path=True, query={'period': field('string', 'Periodo histórico; 24h por defecto.', enum=['24h', '7d', '30d', '90d'])}),
+    operation('get_monitoring_capacity', 'Consulta asignación informativa, servidor y disponibilidad de consumo por proyecto.', 'monitoring-capacity', path=True),
+    operation('update_monitoring_capacity', 'Registra capacidad informativa sin aplicar límites al servidor; conserva auditoría y versión.', 'monitoring-capacity', path=True, method='PUT', payload=closed_object(CAPACITY, ['version', 'cpu_mode', 'ram_mode', 'storage_mode'])),
+    operation('list_monitoring_capacity_history', 'Consulta cambios de capacidad con autor y valores anteriores y posteriores; conserva el límite recibido entre páginas.', 'monitoring-capacity-history', path=True, query={
+        'page': PAGE, 'changes_before': field('integer', 'Límite superior recibido en history_bounds.changes; omitir para iniciar una consulta nueva.', minimum=0),
+    }),
+    operation('link_monitoring_project', 'Vincula un recurso técnico de proyecto con un proyecto comercial; null desvincula.', 'monitoring-resource-link', path=True, method='PATCH', payload=closed_object({'project': field(['integer', 'null'], 'ID de accounts.Project, o null para desvincular.')}, ['project'])),
 ]

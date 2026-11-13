@@ -6243,9 +6243,11 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `admin-mcps` | admin | P2 | display,success,error,failure | 16 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
-| `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |
-| `admin-monitoring-case-note` | monitoring | P2 | success,error,failure,display | — |
-| `admin-monitoring-reports` | monitoring | P2 | display,success,failure | — |
+| `admin-monitoring-case-list` | monitoring | P1 | display,success,error,failure | — |
+| `admin-monitoring-case-note` | monitoring | P2 | display,success,error,failure | — |
+| `admin-monitoring-project-capacity` | monitoring | P1 | display,success,error,failure | — |
+| `admin-monitoring-reports` | monitoring | P2 | display,success,error,failure | — |
+| `admin-monitoring-server-trends` | monitoring | P1 | display,success,failure | — |
 | `admin-outbound-email-history-attachments` | admin | P1 | display | — |
 | `admin-outbound-email-history-body` | admin | P1 | display | 1 |
 | `admin-outbound-email-history-filter` | admin | P1 | display | 1 |
@@ -8920,43 +8922,68 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 ### FLOW: `admin-monitoring-case-follow-up`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
-- **Ruta:** `/panel/monitoring`, modal desde el título de un caso.
-- **Display:** evidencia, condición técnica y estado manual separados; historial paginado y enlace al reporte de origen cuando existe.
-- **Success:** cambiar Pendiente / En revisión / Resuelto persiste el estado y la autoría.
-- **Error:** una versión desactualizada devuelve conflicto y solicita actualizar.
-- **Failure:** un fallo de guardado se anuncia sin perder la selección.
-- **API:** detalle del caso y `POST /api/monitoring/cases/:id/state/`.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`.
+- **Ruta:** `/panel/monitoring`, detalle desde evento o atención prioritaria.
+- **Display:** condición técnica y estado humano separados, observaciones etiquetadas que conservan cero/false, JSON original desplegable y notas/entregas con páginas independientes.
+- **Success:** guardar estado con versión vigente y consultar el reporte relacionado conservando el regreso al caso.
+- **Error:** un conflicto de versión exige actualizar, sin sobrescribir el seguimiento vigente.
+- **Failure:** un fallo de carga o guardado mantiene abierto el detalle y permite reintentar.
+- **API:** GET cases/:id y POST cases/:id/state de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-monitoring-case-list`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
 - **Ruta:** `/panel/monitoring` desde Monitoreo en la navegación.
-- **Display:** casos de proyectos, identidad del recurso y salud de las fuentes.
-- **Success:** cambiar a Servidores o aplicar filtros muestra la lista correspondiente, con paginación de 25.
-- **Failure:** una carga fallida muestra un aviso y permite actualizar, sin simular una lista saludable.
-- **API:** `GET /api/monitoring/catalog/`, `GET /api/monitoring/cases/`.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-list.spec.js`.
+- **Display:** indicadores del conjunto filtrado completo, atención prioritaria, salud de fuentes y tarjetas compactas con identidad y fechas.
+- **Success:** elegir proyecto/servidor, fuente, estado, gravedad, condición, seguimiento, texto o fechas; abrir filtros desde indicadores y detalle de salud de una fuente; Limpiar filtros; navegar una consulta estable de 25 registros y conservar selección en URL.
+- **Error:** fechas invertidas o consulta vencida muestran explicación y permiten recuperar la consulta sin perder filtros.
+- **Failure:** fallos de lista, catálogo o chequeo de estado quedan visibles; no se simula una lista saludable.
+- **API:** catalog, cases y status de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-list.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-monitoring-case-note`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
 - **Ruta:** `/panel/monitoring`, modal de caso.
-- **Display:** historial con texto, autor y fecha de la nota.
-- **Success:** escribir y agregar una nota la incorpora al historial compartido.
-- **Error / failure:** un rechazo o fallo de API muestra el error y conserva el texto escrito.
-- **API:** `POST /api/monitoring/cases/:id/notes/` y detalle del caso.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`.
+- **Display:** notas con autor y fecha dentro del historial paginado.
+- **Success:** agregar una nota la incorpora al historial compartido; cambiar páginas no borra el borrador.
+- **Error:** nota vacía no se envía; validación rechazada conserva el texto y muestra el error.
+- **Failure:** un fallo del servidor conserva la nota para reintentar.
+- **API:** POST cases/:id/notes y GET cases/:id de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`; ejecución y SHA se acreditan en CI.
+
+### FLOW: `admin-monitoring-project-capacity`
+
+- **Módulo / rol:** monitoreo / administrador del panel.
+- **Ruta:** `/panel/monitoring`, Proyectos al elegir un proyecto.
+- **Display:** servidor relacionado, asignación/compartido/sin configurar y unidades; consumo por proyecto no disponible e historial de cambios.
+- **Success:** registrar cantidades informativas y consultar el historial con autor y antes/después, conservando filas y total entre páginas aunque otro operador añada cambios. Guardar no cambia cuotas reales.
+- **Error:** cantidades inválidas o versión en conflicto se explican, conservando la edición.
+- **Failure:** carga o guardado fallido permite reintentar sin inventar consumo.
+- **API:** GET/PUT resources/:id/capacity y GET resources/:id/capacity/history de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-project-capacity.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-monitoring-reports`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
 - **Ruta:** `/panel/monitoring`, pestaña Reportes.
-- **Display:** reportes informativos y aviso de retención de 90 días.
-- **Success:** abrir un reporte presenta texto plano, sin controles de seguimiento de casos.
-- **Failure:** una carga fallida se comunica y permite volver a intentar.
-- **API:** `GET /api/monitoring/reports/` y `GET /api/monitoring/reports/:id/`.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-list.spec.js`.
+- **Display:** total filtrado, última observación, reportes paginados y retención; detalle original como texto sin controles de casos.
+- **Success:** filtrar por recurso/fuente/texto/fechas, limpiar y navegar páginas de una consulta estable; abrir un reporte.
+- **Error:** fechas invertidas o snapshot vencido tienen recuperación explícita.
+- **Failure:** fallo de carga visible sin simular éxito.
+- **API:** GET reports y reports/:id de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`; ejecución y SHA se acreditan en CI.
+
+### FLOW: `admin-monitoring-server-trends`
+
+- **Módulo / rol:** monitoreo / administrador del panel.
+- **Ruta:** `/panel/monitoring`, pestaña Servidores.
+- **Display:** capacidad y última muestra por servidor; gráficas de RAM, disco, CPU y carga con unidades, leyenda y huecos reales. Ausencia explícita de histórico.
+- **Success:** elegir servidor y periodos 24 h/7 d/30 d/90 d solicita las muestras correspondientes.
+- **Error:** no aplica al selector cerrado de periodos; su validación del servidor pertenece a backend.
+- **Failure:** una serie fallida muestra aviso y reintento.
+- **API:** GET status y servers/:id/series de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-server-trends.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-outbound-email-history-attachments`
 

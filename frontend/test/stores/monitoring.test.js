@@ -68,6 +68,23 @@ describe('useMonitoringStore', () => {
     expect(store.count).toBe(0)
   })
 
+  it('keeps page sources with their snapshot without replacing the global catalog', async () => {
+    // Falla si una página mezcla sus fuentes de cobertura con el catálogo global de otro corte.
+    store.sources = [{ id: 3, name: 'Fuente del catálogo', health: 'current' }]
+    get_request.mockResolvedValue({
+      data: {
+        results: [{ id: 14, title: 'Alerta de disco' }], count: 26, page_size: 25, page: 2, snapshot: 'snapshot-42',
+        sources: [{ id: 8, name: 'Fuente del corte', health: 'no_data' }],
+      },
+    })
+
+    await store.list({ page: 2, snapshot: 'snapshot-42' })
+
+    expect(store.currentPage).toBe(2)
+    expect(store.snapshotSources).toEqual([{ id: 8, name: 'Fuente del corte', health: 'no_data' }])
+    expect(store.sources).toEqual([{ id: 3, name: 'Fuente del catálogo', health: 'current' }])
+  })
+
   it('keeps the detail closed when its request resolves after close', async () => {
     // Falla si una respuesta tardía vuelve a abrir un modal que el operador cerró.
     const detailRequest = deferred()
@@ -88,9 +105,10 @@ describe('useMonitoringStore', () => {
     create_request.mockResolvedValue({ data: { state: 'reviewing' } })
     get_request.mockResolvedValue({ data: { id: 7, version: 4, state: 'reviewing', title: 'Base lenta' } })
 
-    await store.transition('reviewing')
+    await store.transition('reviewing', { history_snapshot: true })
 
     expect(create_request).toHaveBeenCalledWith('monitoring/cases/7/state/', { state: 'reviewing', version: 3 })
+    expect(get_request).toHaveBeenCalledWith('monitoring/cases/7/', { params: { page: 1, history_snapshot: true } })
   })
 
   it('replaces the case detail after a state transition', async () => {
@@ -112,9 +130,10 @@ describe('useMonitoringStore', () => {
       data: { id: 9, version: 2, activities: [{ id: 31, text: 'Revisé los índices.' }] },
     })
 
-    await store.note('Revisé los índices.')
+    await store.note('Revisé los índices.', { history_snapshot: true })
 
     expect(create_request).toHaveBeenCalledWith('monitoring/cases/9/notes/', { text: 'Revisé los índices.' })
+    expect(get_request).toHaveBeenCalledWith('monitoring/cases/9/', { params: { page: 1, history_snapshot: true } })
   })
 
   it('replaces case activities after a note', async () => {

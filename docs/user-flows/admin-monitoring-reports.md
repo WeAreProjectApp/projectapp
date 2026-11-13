@@ -2,8 +2,9 @@
 
 - **Módulo / rol:** monitoreo / administrador del panel.
 - **Ruta:** `/panel/monitoring`, pestaña Reportes.
-- **Display:** reportes informativos y aviso de retención de 90 días.
-- **Success:** abrir un reporte presenta texto plano, sin controles de seguimiento de casos.
-- **Failure:** una carga fallida se comunica y permite volver a intentar.
-- **API:** `GET /api/monitoring/reports/` y `GET /api/monitoring/reports/:id/`.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-list.spec.js`.
+- **Display:** total filtrado, última observación, reportes paginados y retención; detalle original como texto sin controles de casos.
+- **Success:** filtrar por recurso/fuente/texto/fechas, limpiar y navegar páginas de una consulta estable; abrir un reporte.
+- **Error:** fechas invertidas o snapshot vencido tienen recuperación explícita.
+- **Failure:** fallo de carga visible sin simular éxito.
+- **API:** GET reports y reports/:id de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`; ejecución y SHA se acreditan en CI.

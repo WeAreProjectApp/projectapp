@@ -1,0 +1,15 @@
+{
+  "id": "admin-monitoring-server-trends",
+  "name": "Admin Monitoring Server Trends",
+  "module": "monitoring",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Staff selects a server and period to inspect measured RAM, disk, CPU and load with capacity, last update and explicit gaps.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

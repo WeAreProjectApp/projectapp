@@ -117,6 +117,8 @@ def ensure_fake_data_allowed(command_name: str) -> None:
 # maintenance rule into an executable check for every future model delivery.
 SEEDED_MODELS = {
     'monitoring.Resource', 'monitoring.Source', 'monitoring.Case', 'monitoring.Report',
+    # Explicitly marked demo capacity and samples from create_fake_monitoring.
+    'monitoring.CapacityAllocation', 'monitoring.TelemetrySample',
     'secure_links.SecureLink', 'secure_links.SecureLinkFolder',
     'accounts.BugReport', 'accounts.ChangeRequest', 'accounts.DataModelEntity',
     'accounts.CommunicationPanelPreference',
@@ -153,6 +155,7 @@ SEEDED_MODELS = {
 
 DERIVED_MODELS = {
     'monitoring.CaseActivity', 'secure_links.SecureLinkEvent',
+    'monitoring.CapacityChange',
     'content.ConsultingProgramRevision',
     'content.BuildingOnDemandProgramRevision',
     'content.BuildingOnDemandContractRevision', 'content.BuildingOnDemandContractMirror',

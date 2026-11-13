@@ -72,6 +72,7 @@ class Case(models.Model):
     fingerprint = models.CharField(max_length=200)
     fingerprint_hash = models.CharField(max_length=64)
     title = models.CharField(max_length=240)
+    summary = models.CharField(max_length=500, blank=True)
     severity = models.CharField(max_length=10, choices=SEVERITIES)
     state = models.CharField(max_length=10, choices=STATES, default='pending')
     condition = models.CharField(max_length=12, default='active')
@@ -137,4 +138,48 @@ class CaseActivity(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['case', '-created_at'])]
+        ordering = ['-created_at', '-pk']
+
+
+class TelemetrySample(models.Model):
+    """Measured host values, independent of incident identity and counters."""
+    delivery = models.OneToOneField(Delivery, on_delete=models.CASCADE, related_name='sample')
+    resource = models.ForeignKey(Resource, on_delete=models.PROTECT, related_name='samples')
+    observed_at = models.DateTimeField()
+    cpu_percent = models.FloatField(null=True)
+    cpu_count = models.PositiveIntegerField()
+    load_1m = models.FloatField()
+    ram_total_bytes = models.PositiveBigIntegerField()
+    ram_used_bytes = models.PositiveBigIntegerField()
+    disk_total_bytes = models.PositiveBigIntegerField()
+    disk_used_bytes = models.PositiveBigIntegerField()
+
+    class Meta:
+        ordering = ['observed_at', 'pk']
+        indexes = [models.Index(fields=['resource', 'observed_at'], name='monitor_sample_resource_time')]
+
+
+class CapacityAllocation(models.Model):
+    """Declared allocation; saving it never modifies the host configuration."""
+    MODES = [('unknown', 'Sin configurar'), ('shared', 'Compartida'), ('assigned', 'Asignada')]
+    resource = models.OneToOneField(Resource, on_delete=models.PROTECT, related_name='allocation')
+    cpu_mode = models.CharField(max_length=10, choices=MODES, default='unknown')
+    cpu_vcpu = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
+    ram_mode = models.CharField(max_length=10, choices=MODES, default='unknown')
+    ram_bytes = models.PositiveBigIntegerField(null=True, blank=True)
+    storage_mode = models.CharField(max_length=10, choices=MODES, default='unknown')
+    storage_bytes = models.PositiveBigIntegerField(null=True, blank=True)
+    version = models.PositiveIntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class CapacityChange(models.Model):
+    allocation = models.ForeignKey(CapacityAllocation, on_delete=models.PROTECT, related_name='changes')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    actor_name = models.CharField(max_length=150)
+    before = models.JSONField(default=dict)
+    after = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
         ordering = ['-created_at', '-pk']
