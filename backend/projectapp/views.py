@@ -4,12 +4,21 @@ import os
 
 from django.conf import settings
 from django.http import (
-    FileResponse, Http404, HttpResponseRedirect, HttpResponsePermanentRedirect,
+    FileResponse, Http404, HttpResponse, HttpResponseRedirect, HttpResponsePermanentRedirect,
 )
 
 logger = logging.getLogger(__name__)
 
 FRONTEND_DIR = os.path.join(settings.BASE_DIR, 'static', 'frontend')
+
+
+def _frontend_response(path, content_type):
+    # The enrolled document adapter must decorate HTML before it is sent.
+    # Keep streaming binary assets and installations without hosting control.
+    if content_type == 'text/html' and getattr(settings, 'HOSTING_CONTROL_ENABLED', False):
+        with open(path, 'rb') as stream:
+            return HttpResponse(stream.read(), content_type=content_type)
+    return FileResponse(open(path, 'rb'), content_type=content_type)
 DEFAULT_LOCALE = 'en-us'
 
 # Known SPA route prefixes that should always resolve to the SPA fallback
@@ -137,26 +146,26 @@ def serve_nuxt(request, path=''):
     # 1. Exact file match (e.g. _payload.json, .png, .mp4, .splinecode)
     if os.path.isfile(resolved):
         content_type, _ = mimetypes.guess_type(resolved)
-        return FileResponse(open(resolved, 'rb'), content_type=content_type)
+        return _frontend_response(resolved, content_type)
 
     # 2. Directory with index.html (e.g. /en-us/about-us/ → index.html)
     index_file = os.path.join(resolved, 'index.html')
     if os.path.isfile(index_file):
-        response = FileResponse(open(index_file, 'rb'), content_type='text/html')
+        response = _frontend_response(index_file, 'text/html')
         response['Cache-Control'] = 'no-cache'
         return response
 
     # 3. SPA fallback for client-side routes not pre-rendered
     fallback = os.path.join(FRONTEND_DIR, '200.html')
     if os.path.isfile(fallback):
-        response = FileResponse(open(fallback, 'rb'), content_type='text/html')
+        response = _frontend_response(fallback, 'text/html')
         response['Cache-Control'] = 'no-cache'
         return response
 
     # 4. Root index.html as last resort
     root_index = os.path.join(FRONTEND_DIR, 'index.html')
     if os.path.isfile(root_index):
-        response = FileResponse(open(root_index, 'rb'), content_type='text/html')
+        response = _frontend_response(root_index, 'text/html')
         response['Cache-Control'] = 'no-cache'
         return response
 

@@ -865,6 +865,12 @@ export const viewCatalogSections = [
         notes: 'Búsqueda por nombre, correo o empresa; filtros combinables, vistas guardadas, conteos y dropdowns. Crear cliente sin proyecto ni acceso; habilitar, bloquear o desvincular Google con confirmación. El equipo administra clientes y sólo los superusuarios administran equipo. Actividad paginada por cuenta sin códigos ni tokens.',
       },
       {
+        label: 'Control de hosting', url: '/panel/projects/hosting', group: 'Plataforma',
+        file: 'frontend/pages/panel/projects/hosting.vue', reference: 'control visual de producciones por proyecto',
+        audience: 'admin', viewType: 'config',
+        notes: 'Selecciona producción y dominio; switches excluyentes de pantalla y banner, títulos y textos independientes por modo, vista previa e historial. Distingue configuración guardada de aplicación confirmada por cada destino; estados sin integrar, pendiente, desconectado y error. Panel y MCP comparten permisos y versiones. No detiene servicios ni modifica datos.',
+      },
+      {
         label: 'Proyectos (Plataforma)',
         url: '/panel/projects',
         group: 'Plataforma',

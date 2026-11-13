@@ -1716,6 +1716,14 @@ MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)
 
 # Authentication secrets are never part of the administrative MCP surface.
 MCP_MODEL_CONTRACTS['projects'] += (
+    _contract('hosting_control.Control', read_only='id resource version updated_at',
+              read_write='mode suspension_title suspension_text banner_title banner_text'),
+    _contract('hosting_control.Target', read_only='id control key origins lifecycle adapter acknowledged_version acknowledged_digest acknowledged_payload acknowledged_at last_seen_at last_error'),
+    _contract('hosting_control.Event', read_only='id control actor actor_name source before after version created_at'),
+    _contract('hosting_control.RuntimeCredential', excluded=_excluded('Credencial de transporte administrada exclusivamente mediante archivo protegido; nunca por MCP.', 'id label token_hash targets revoked_at')),
+)
+
+MCP_MODEL_CONTRACTS['projects'] += (
     _contract('accounts.LoginChallenge', excluded=_excluded('Estado efímero de autenticación; nunca se expone por MCP.', 'id user surface browser_digest identity_digest code_digest access_version expires_at attempts closed device created_at')),
     _contract('accounts.AccessRateBucket', excluded=_excluded('Contadores internos contra abuso; nunca se exponen por MCP.', 'key requests updated_at')),
     _contract('accounts.GoogleIdentity', read_only='user created_at', excluded=_excluded('Identidad del proveedor privada; sólo se expone si está vinculado.', 'id subject')),
