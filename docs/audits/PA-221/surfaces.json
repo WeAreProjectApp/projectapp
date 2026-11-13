@@ -1,0 +1,1939 @@
+{
+  "schema": 1,
+  "sources": {
+    "frontend/config/viewCatalog.js": "7fa69910ee3f8873178a92a19b755b39ec94bd985f181afcade56098f18cd6d8",
+    "frontend/config/viewCapabilityCatalog.js": "3cd7642bd90c89e84eeb3ca063e01ef33b3bc834b982fcbeb268e44497256b50"
+  },
+  "surfaces": [
+    {
+      "id": "/panel/procurement",
+      "surface": "Panel",
+      "module": "Contratación estatal",
+      "view": "Oportunidades SECOP",
+      "file": "frontend/pages/panel/procurement/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Procesos y Mis clasificados, búsquedas guardadas con favorito, alertas con destinatarios y frecuencias, entregas con reintento y configuración de horarios Bogotá. Modales de búsqueda, alerta, confirmación y contenido enviado. Exportación Excel, filtros únicos y sincronización manual. MCP propio; el correo y análisis externo no se ejecutan dentro del módulo.",
+      "features": [
+        {
+          "id": "panel-procurement-workspace",
+          "label": "Buscar y seguir oportunidades públicas",
+          "summary": "Consulta y exporta procesos, guarda búsquedas, administra destinatarios y frecuencias, revisa entregas y registra análisis y descartes con historial. Un único MCP ofrece las mismas acciones; el asistente externo lee el correo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/procurement/:id",
+      "surface": "Panel",
+      "module": "Contratación estatal",
+      "view": "Detalle de oportunidad SECOP",
+      "file": "frontend/pages/panel/procurement/[id].vue",
+      "audience": "admin",
+      "view_type": "detail",
+      "description": "Datos oficiales, fecha de cierre, días restantes y vínculo SECOP. Clasificación personal con notas, descarte con motivo y restauración. Notas del equipo e historial inmutable de decisiones; sin IA interna.",
+      "features": [
+        {
+          "id": "panel-procurement-workspace",
+          "label": "Buscar y seguir oportunidades públicas",
+          "summary": "Consulta y exporta procesos, guarda búsquedas, administra destinatarios y frecuencias, revisa entregas y registra análisis y descartes con historial. Un único MCP ofrece las mismas acciones; el asistente externo lee el correo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/login",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Login del panel",
+      "file": "frontend/pages/panel/login.vue",
+      "audience": "admin",
+      "view_type": "auth",
+      "features": [
+        {
+          "id": "panel-secure-login",
+          "label": "Entrar al panel",
+          "summary": "Ofrece contraseña, código por correo y Google con CAPTCHA para cuentas habilitadas."
+        }
+      ]
+    },
+    {
+      "id": "/panel",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Dashboard del panel",
+      "file": "frontend/pages/panel/index.vue",
+      "audience": "admin",
+      "view_type": "dashboard",
+      "description": "Radar desplegable de correos fallidos, recurrentes, tareas, cuentas de cobro y propuestas: listas de cinco, detalle en modal y acceso al registro exacto resaltado. Incluye cuentas con documento vinculado pendiente como alerta financiera exclusiva de superusuarios. El contador suma elementos. App instalable con ayuda por navegador y reintento sin conexión; los datos requieren internet.",
+      "features": [
+        {
+          "id": "panel-command-center",
+          "label": "Leer el estado del negocio",
+          "summary": "Resume pipeline, operación y señales financieras. El radar despliega siete tipos de alerta con listas paginadas, detalle en modal y acceso al registro exacto; cuenta elementos, retira correos resueltos por reintento y alerta a superusuarios sobre cuentas con documento vinculado pendiente. Los administradores también consultan hallazgos de integridad y su última revisión. El panel se puede instalar como ProjectApp desde la navegación, con ayuda por navegador y reintento sin conexión."
+        }
+      ]
+    },
+    {
+      "id": "/panel/views",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Mapa de vistas",
+      "file": "frontend/pages/panel/views.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Incluye pestaña de Configuración (modo y filtros por defecto).",
+      "features": [
+        {
+          "id": "panel-product-reference",
+          "label": "Consultar mapa y sistema de diseño",
+          "summary": "Expone la taxonomía de vistas y los componentes visuales compartidos; la guía permite comprobarlos con el tema claro/oscuro del Panel."
+        }
+      ]
+    },
+    {
+      "id": "/panel/additional-modules",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Catálogo de módulos adicionales",
+      "file": "frontend/pages/panel/additional-modules/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "General permite descargar los PDFs originales comercial y técnico de propuestas vencidas mediante acceso administrativo. Documentos conserva sus anexos formales. Recursos permite cargar, sustituir, quitar y restaurar el video general por idioma. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. El resumen respeta el límite de texto visible.",
+      "features": [
+        {
+          "id": "panel-additional-modules",
+          "label": "Administrar módulos adicionales",
+          "summary": "Mantiene el catálogo bilingüe, sus tres vistas, PDF para clientes, enlaces seleccionados, seguimiento de lectura y recursos de video cargables por idioma. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+        }
+      ]
+    },
+    {
+      "id": "/panel/partnership-program",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Programa de Alianza",
+      "file": "frontend/pages/panel/partnership-program/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Configuración incluye Recursos para cargar, sustituir, quitar y restaurar el video general por idioma.",
+      "features": [
+        {
+          "id": "panel-financing",
+          "label": "Gestionar el Programa de Alianza y sus otrosíes",
+          "summary": "Reúne las condiciones bilingües, la exclusividad conceptual sólo a cinco años, la vista pública, las políticas versionadas y la preparación, firma y seguimiento de otrosíes de financiación. Configuración administra el archivo de video explicativo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/requirement-calculator",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Calculadora de requerimientos",
+      "file": "frontend/pages/panel/requirement-calculator/index.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Comercial administra la definición, señales, valores y revisiones por panel/MCP. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.",
+      "features": [
+        {
+          "id": "panel-requirement-calculator",
+          "label": "Administrar calculadora y versiones por proyecto",
+          "summary": "Configura señales, pesos, porcentajes y valores internos, conserva revisiones y sincroniza el documento general. Prepara variantes particulares por proyecto en borrador, ajusta sólo parámetros y registra su aprobación para congelar documento y PDF. Revisa cierres con evidencia completa paginada y propuestas de calibración. La clasificación se realiza desde un chat externo por MCP."
+        }
+      ]
+    },
+    {
+      "id": "/panel/consulting",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Consultoría y asesoría",
+      "file": "frontend/pages/panel/consulting/index.vue",
+      "audience": "admin",
+      "view_type": "readonly",
+      "description": "Junto a Diagnósticos en Comercial. Copia URLs ES/EN, abre la vista cliente, descarga PDF y consulta versión e historial paginado. El contenido público se mantiene mediante MCP Comercial con vista previa y confirmación y admite anotaciones de formato por texto.",
+      "features": [
+        {
+          "id": "panel-consulting",
+          "label": "Consultar y compartir Consultoría y asesoría",
+          "summary": "Consulta la presentación ES/EN, copia enlaces públicos, descarga PDF y revisa versiones e historial paginado. La edición se confirma mediante MCP Comercial. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. El MCP acepta formato por texto."
+        }
+      ]
+    },
+    {
+      "id": "/panel/building-with-us",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Building with Us",
+      "file": "frontend/pages/panel/building-with-us/index.vue",
+      "audience": "admin",
+      "view_type": "readonly",
+      "description": "Dos pestañas: Programa y Contrato, de solo lectura. Copia URLs, descarga PDFs, previsualiza ES/EN, consulta historial paginado y estado del espejo en el Gestor Documental. El contrato enlaza a su documento exacto en el Gestor para editar contenido y presentación; guardar sincroniza versión, historial y PDF. Programa se edita mediante el conector MCP Programas (programs); building-with-us se conserva en retirada. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. La edición vía MCP admite anotaciones de formato.",
+      "features": [
+        {
+          "id": "panel-building-with-us",
+          "label": "Consultar Building with Us",
+          "summary": "Distribuye el programa bilingüe, descarga PDFs y consulta Programa y Contrato de solo lectura, versiones e historial paginado. El contrato muestra su documento en ProjectApp/Contratos y enlaza al Gestor para editarlo con revisión, historial y PDF sincronizados; también admite edición mediante el conector MCP Programas (building-with-us se conserva temporalmente como compatibilidad). Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. El MCP acepta formato por texto y Markdown contractual."
+        }
+      ]
+    },
+    {
+      "id": "/panel/cells",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Células",
+      "file": "frontend/pages/panel/cells/index.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Programa, Economía y Contrato conservan consulta de contenido; Programa también permite previsualizar, mostrar u ocultar, cargar, sustituir, quitar y restaurar el video por idioma; ?tab=economics y ?tab=contract abren las dos últimas. Copia URLs, descarga PDFs, previsualiza ES/EN y consulta historial paginado. Economía reúne los números internos. Contrato muestra el Markdown y su espejo en ProjectApp/Contratos, con estados sincronizado, desactualizado, sin inicializar o contrato no disponible. El contrato enlaza a su documento exacto en el Gestor para editar contenido y presentación, con versión, historial y PDF sincronizados. Textos y cifras del programa se editan mediante el conector MCP Programas (programs); building-on-demand se conserva en retirada. El video se administra aquí o desde el mismo conector, sin crear versiones del programa. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. La edición vía MCP admite anotaciones de formato.",
+      "features": [
+        {
+          "id": "panel-building-on-demand",
+          "label": "Consultar Células de Building on Demand",
+          "summary": "Distribuye el programa bilingüe, descarga PDFs y consulta Programa, Economía y Contrato, con vista previa ES/EN e historial paginado. Economía reúne los números internos. El contrato muestra su documento en ProjectApp/Contratos y enlaza al Gestor para editarlo con revisión, historial y PDF sincronizados, o explica si aún no está disponible. Programa también reproduce el video explicativo y permite gestionar su archivo por idioma, visibilidad y restauración. Las ediciones del contenido comercial se confirman mediante el conector MCP Programas (programs); building-on-demand se conserva temporalmente como compatibilidad. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. El MCP acepta formato por texto y Markdown contractual."
+        }
+      ]
+    },
+    {
+      "id": "/panel/partnership-program/new",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear otrosí de financiación",
+      "file": "frontend/pages/panel/partnership-program/new.vue",
+      "audience": "admin",
+      "view_type": "create",
+      "features": [
+        {
+          "id": "panel-financing",
+          "label": "Gestionar el Programa de Alianza y sus otrosíes",
+          "summary": "Reúne las condiciones bilingües, la exclusividad conceptual sólo a cinco años, la vista pública, las políticas versionadas y la preparación, firma y seguimiento de otrosíes de financiación. Configuración administra el archivo de video explicativo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/partnership-program/:id",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Detalle del otrosí de financiación",
+      "file": "frontend/pages/panel/partnership-program/[id].vue",
+      "audience": "admin",
+      "view_type": "detail",
+      "features": [
+        {
+          "id": "panel-financing",
+          "label": "Gestionar el Programa de Alianza y sus otrosíes",
+          "summary": "Reúne las condiciones bilingües, la exclusividad conceptual sólo a cinco años, la vista pública, las políticas versionadas y la preparación, firma y seguimiento de otrosíes de financiación. Configuración administra el archivo de video explicativo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/financing",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Programa de Alianza (enlace anterior)",
+      "file": "frontend/pages/panel/financing/index.vue",
+      "audience": "admin",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "panel-financing",
+          "label": "Gestionar el Programa de Alianza y sus otrosíes",
+          "summary": "Reúne las condiciones bilingües, la exclusividad conceptual sólo a cinco años, la vista pública, las políticas versionadas y la preparación, firma y seguimiento de otrosíes de financiación. Configuración administra el archivo de video explicativo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/financing/new",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear otrosí (enlace anterior)",
+      "file": "frontend/pages/panel/financing/new.vue",
+      "audience": "admin",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "panel-financing",
+          "label": "Gestionar el Programa de Alianza y sus otrosíes",
+          "summary": "Reúne las condiciones bilingües, la exclusividad conceptual sólo a cinco años, la vista pública, las políticas versionadas y la preparación, firma y seguimiento de otrosíes de financiación. Configuración administra el archivo de video explicativo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/financing/:id",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Detalle del otrosí (enlace anterior)",
+      "file": "frontend/pages/panel/financing/[id].vue",
+      "audience": "admin",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "panel-financing",
+          "label": "Gestionar el Programa de Alianza y sus otrosíes",
+          "summary": "Reúne las condiciones bilingües, la exclusividad conceptual sólo a cinco años, la vista pública, las políticas versionadas y la preparación, firma y seguimiento de otrosíes de financiación. Configuración administra el archivo de video explicativo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/proposals",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Listado de propuestas",
+      "file": "frontend/pages/panel/proposals/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Al cerrar la revisión de aprobación, el foco vuelve a un destino visible del mismo registro aunque desaparezca Revisar. Aprobar permite confirmar el cierre o revisar después sin crear entidades. Los anexos se seleccionan explícitamente y las revisiones recuperan la selección confirmada. Contratos y Anexos comparten sus recursos con el gestor. Los cambios preparan borradores; los paquetes aprobados se conservan hasta reconfirmar. Aprobar abre una revisión compartida de cliente, proyecto y documentos; permite seleccionar existentes o crear al confirmar, aprobar y revisar después sin aprovisionar y retomar propuestas históricas pendientes. Los contratos del paquete pueden ser los de la propuesta o varios archivos personalizados, conservando siempre los detalles comercial y técnico. Configuraciones administra las opciones numéricas y las tres preselecciones del contrato de servicio: duración en meses y una lista compartida para ambos preavisos. Los contratos existentes conservan sus valores. Incluye carga, sustitución, eliminación, restauración y previsualización del video de bienvenida por idioma, con su control general de visibilidad.",
+      "features": [
+        {
+          "id": "panel-proposals",
+          "label": "Gestionar propuestas",
+          "summary": "Aprueba confirmando cliente, proyecto y contrato o permite aprobar y revisar después sin crear entidades. El equipo confirma existentes o nuevos y retoma revisiones históricas pendientes y elige contratos de la propuesta o varios personalizados conservando detalles comercial y técnico, originales y firmas. El paquete comparte identidad con el gestor, con descargas privadas, borradores, historial y nuevas versiones confirmadas. Los adjuntos habilitados se pueden sustituir desde el gestor conservando la revisión aprobada. Elige estado, tipo, mercado e idioma desde dropdowns y ofrece Limpiar selección de cliente con un nombre traducido. Consulta los intereses del cliente con fecha en General y decide manualmente el alcance y la inversión, sin recargos automáticos. Crea, edita y sigue propuestas en seis áreas con subpestañas: General, Propuesta, Comunicación, Documentos, Proyecto y Seguimiento, disponibles según el estado; conserva enlaces previos y cambios pendientes al navegar; permite descargar desde General los PDFs originales comercial y técnico aun vencidos; carga o sustituye videos genéricos y personalizados desde Configuraciones y Propuesta > Recursos; previsualiza el video de bienvenida y controla su visibilidad global desde Configuraciones e individual desde General; cambia la modalidad de contrato en cualquier estado, con nota y revisión confirmada fuera de negociación, conservación literal de personalizados y consulta o restauración de instantáneas permanentes; formaliza con contrato único o con contratos de producto y de servicio, anexos con el contenido original: diez capítulos comerciales y tres técnicos (stack, modelo de datos y módulos), con orden y numeración propios y correo por secciones. En modalidad separada, Servicio aprobado permite confirmar sólo producto o producto y servicio, con los anexos activos elegidos explícitamente y conservación del paquete anterior hasta reconfirmar. Las condiciones completas de hosting se incorporan al contrato de servicio y el anexo comercial queda centrado en el producto; avisa si el servicio requiere regeneración antes de formalizar. Crea y edita contratos en formularios compactos con campos adaptados a móvil. Configura las opciones y preselecciones de duración y preavisos del servicio. En el contrato, elige desde desplegables visuales accesibles con opciones numéricas convertidas a letras y texto personalizado editable que se conserva al reabrir; los errores de guardado mantienen el borrador para corregir o reintentar. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales, contratos, PDF formales y CSV sin abrir ventanas; informa errores para reintentar. Incluye historial por registro con fecha, autor y consulta de versiones. Proyecto > Datos reúne cliente, contactos y proyecto en cualquier estado, con revisión confirmada de reasignaciones al mismo cliente, también desde un proyecto eliminado. Correos concentra los ajustes de email; ambos guardan sin sobrescribir borradores de General. Actividad carga veinte entradas por vez y permite reintentar; Historial muestra rango, total y controles de página. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye detalle técnico, correos y salida formal. Ajusta el vencimiento por días calendario en la zona del navegador conservando la hora y sin cambios al cargar. Proyecto > Datos refleja inmediatamente el cliente confirmado, sin perder borradores de otras áreas."
+        }
+      ]
+    },
+    {
+      "id": "/panel/proposals/create",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear propuesta",
+      "file": "frontend/pages/panel/proposals/create.vue",
+      "audience": "admin",
+      "view_type": "create",
+      "description": "Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar.",
+      "features": [
+        {
+          "id": "panel-proposals",
+          "label": "Gestionar propuestas",
+          "summary": "Aprueba confirmando cliente, proyecto y contrato o permite aprobar y revisar después sin crear entidades. El equipo confirma existentes o nuevos y retoma revisiones históricas pendientes y elige contratos de la propuesta o varios personalizados conservando detalles comercial y técnico, originales y firmas. El paquete comparte identidad con el gestor, con descargas privadas, borradores, historial y nuevas versiones confirmadas. Los adjuntos habilitados se pueden sustituir desde el gestor conservando la revisión aprobada. Elige estado, tipo, mercado e idioma desde dropdowns y ofrece Limpiar selección de cliente con un nombre traducido. Consulta los intereses del cliente con fecha en General y decide manualmente el alcance y la inversión, sin recargos automáticos. Crea, edita y sigue propuestas en seis áreas con subpestañas: General, Propuesta, Comunicación, Documentos, Proyecto y Seguimiento, disponibles según el estado; conserva enlaces previos y cambios pendientes al navegar; permite descargar desde General los PDFs originales comercial y técnico aun vencidos; carga o sustituye videos genéricos y personalizados desde Configuraciones y Propuesta > Recursos; previsualiza el video de bienvenida y controla su visibilidad global desde Configuraciones e individual desde General; cambia la modalidad de contrato en cualquier estado, con nota y revisión confirmada fuera de negociación, conservación literal de personalizados y consulta o restauración de instantáneas permanentes; formaliza con contrato único o con contratos de producto y de servicio, anexos con el contenido original: diez capítulos comerciales y tres técnicos (stack, modelo de datos y módulos), con orden y numeración propios y correo por secciones. En modalidad separada, Servicio aprobado permite confirmar sólo producto o producto y servicio, con los anexos activos elegidos explícitamente y conservación del paquete anterior hasta reconfirmar. Las condiciones completas de hosting se incorporan al contrato de servicio y el anexo comercial queda centrado en el producto; avisa si el servicio requiere regeneración antes de formalizar. Crea y edita contratos en formularios compactos con campos adaptados a móvil. Configura las opciones y preselecciones de duración y preavisos del servicio. En el contrato, elige desde desplegables visuales accesibles con opciones numéricas convertidas a letras y texto personalizado editable que se conserva al reabrir; los errores de guardado mantienen el borrador para corregir o reintentar. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales, contratos, PDF formales y CSV sin abrir ventanas; informa errores para reintentar. Incluye historial por registro con fecha, autor y consulta de versiones. Proyecto > Datos reúne cliente, contactos y proyecto en cualquier estado, con revisión confirmada de reasignaciones al mismo cliente, también desde un proyecto eliminado. Correos concentra los ajustes de email; ambos guardan sin sobrescribir borradores de General. Actividad carga veinte entradas por vez y permite reintentar; Historial muestra rango, total y controles de página. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye detalle técnico, correos y salida formal. Ajusta el vencimiento por días calendario en la zona del navegador conservando la hora y sin cambios al cargar. Proyecto > Datos refleja inmediatamente el cliente confirmado, sin perder borradores de otras áreas."
+        }
+      ]
+    },
+    {
+      "id": "/panel/proposals/:id/edit",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Editar / detalle de propuesta",
+      "file": "frontend/pages/panel/proposals/[id]/edit.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "Aprobar y vincular usan el mismo modal de revisión interna, con resumen comercial de lectura, selección o creación de cliente/proyecto, contratos originales o personalizados múltiples y confirmación obligatoria. Reabrir conserva el vínculo y ofrece el mismo recurso que el gestor, paquete vigente, borrador pendiente e historial descargable. Editor organizado en General, Propuesta, Comunicación, Documentos, Proyecto y Seguimiento, con subpestañas visibles y disponibilidad según el estado. Conserva enlaces anteriores y ediciones pendientes entre grupos. Proyecto > Datos muestra cliente, contactos y proyecto en todos los estados, con guardado independiente; una propuesta vinculada conserva su cliente y permite revisar una reasignación al mismo cliente con motivo, impacto y confirmación, también desde un proyecto eliminado y con decisión de hosting cuando la fase ya debería cobrarse. Comunicación > Correos reúne la firma, funcionalidades y fases del email, con guardado independiente. General calcula el vencimiento por días calendario locales, conserva la hora y abre sin cambios artificiales. General muestra módulos de interés y fecha; el equipo incorpora alcance e inversión manualmente. Se retiraron los recargos porcentuales por módulos. Propuesta > Recursos permite cargar, sustituir y quitar el video personalizado que aparece dentro de Vista Ejecutiva y Propuesta Completa. General permite mostrar u ocultar el video de bienvenida para esta propuesta e informa por qué puede no estar disponible. Usa el id interno de la propuesta. Documentos permite cambiar contrato único o producto y servicio en todos los estados. En contratos separados, Servicio aprobado decide si la próxima confirmación incluye sólo producto o también servicio; conserva siempre los anexos activos y la evidencia anterior hasta reconfirmar. Fuera de negociación exige nota, vista previa y confirmación o cancelación. Conserva literalmente personalizados, documentos enviados y firmas; exige los tres plazos del servicio sin completar valores globales. Seguimiento > Historial permite consultar, descargar y restaurar instantáneas permanentes con una nueva confirmación. En la modalidad separada, el anexo comercial conserva producto y pagos; hosting, cobertura, cortesía, precios y renovación se incorporan al contrato de servicio, también personalizado. Un aviso permite regenerarlo si cambian sus condiciones y bloquea su formalización mientras esté obsoleto. Crear y editar contratos usan formularios compactos que se apilan en móvil. Los datos del servicio ofrecen desplegables visuales navegables con teclado, opciones configurables y Personalizar con texto libre editable; al reabrir se conserva la redacción guardada. Si el guardado falla, el modal conserva el borrador y permite corregir o reintentar. Permite copiar en Markdown los contratos y los anexos con el contenido original (el comercial conserva diez capítulos y el técnico sólo stack, modelo de datos y módulos, con orden y numeración propios), visualizar y descargar adjuntos sin salir del editor, descargar contratos y PDF formales sin abrir ventanas y reintentar descargas fallidas, copiar PDF con texto/DOCX/XLSX y preparar un correo con los contratos de la modalidad, adjuntos seleccionables y revisión previa de los archivos exactos. Seguimiento carga Actividad de veinte en veinte con Cargar más y reintento, sin perder notas nuevas; el Historial muestra rango, total y navegación por páginas arriba y abajo, y conserva comparación y descarga de versiones. Seguimiento reúne Actividad, Historial por registro con fecha, autor, valores anteriores y consulta de versiones, y Analítica; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye secciones, detalle técnico y composición del correo. Al confirmar la aprobación y al recargar refleja el cliente real del proyecto vinculado, sin perder borradores de otras áreas.",
+      "features": [
+        {
+          "id": "panel-proposals",
+          "label": "Gestionar propuestas",
+          "summary": "Aprueba confirmando cliente, proyecto y contrato o permite aprobar y revisar después sin crear entidades. El equipo confirma existentes o nuevos y retoma revisiones históricas pendientes y elige contratos de la propuesta o varios personalizados conservando detalles comercial y técnico, originales y firmas. El paquete comparte identidad con el gestor, con descargas privadas, borradores, historial y nuevas versiones confirmadas. Los adjuntos habilitados se pueden sustituir desde el gestor conservando la revisión aprobada. Elige estado, tipo, mercado e idioma desde dropdowns y ofrece Limpiar selección de cliente con un nombre traducido. Consulta los intereses del cliente con fecha en General y decide manualmente el alcance y la inversión, sin recargos automáticos. Crea, edita y sigue propuestas en seis áreas con subpestañas: General, Propuesta, Comunicación, Documentos, Proyecto y Seguimiento, disponibles según el estado; conserva enlaces previos y cambios pendientes al navegar; permite descargar desde General los PDFs originales comercial y técnico aun vencidos; carga o sustituye videos genéricos y personalizados desde Configuraciones y Propuesta > Recursos; previsualiza el video de bienvenida y controla su visibilidad global desde Configuraciones e individual desde General; cambia la modalidad de contrato en cualquier estado, con nota y revisión confirmada fuera de negociación, conservación literal de personalizados y consulta o restauración de instantáneas permanentes; formaliza con contrato único o con contratos de producto y de servicio, anexos con el contenido original: diez capítulos comerciales y tres técnicos (stack, modelo de datos y módulos), con orden y numeración propios y correo por secciones. En modalidad separada, Servicio aprobado permite confirmar sólo producto o producto y servicio, con los anexos activos elegidos explícitamente y conservación del paquete anterior hasta reconfirmar. Las condiciones completas de hosting se incorporan al contrato de servicio y el anexo comercial queda centrado en el producto; avisa si el servicio requiere regeneración antes de formalizar. Crea y edita contratos en formularios compactos con campos adaptados a móvil. Configura las opciones y preselecciones de duración y preavisos del servicio. En el contrato, elige desde desplegables visuales accesibles con opciones numéricas convertidas a letras y texto personalizado editable que se conserva al reabrir; los errores de guardado mantienen el borrador para corregir o reintentar. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales, contratos, PDF formales y CSV sin abrir ventanas; informa errores para reintentar. Incluye historial por registro con fecha, autor y consulta de versiones. Proyecto > Datos reúne cliente, contactos y proyecto en cualquier estado, con revisión confirmada de reasignaciones al mismo cliente, también desde un proyecto eliminado. Correos concentra los ajustes de email; ambos guardan sin sobrescribir borradores de General. Actividad carga veinte entradas por vez y permite reintentar; Historial muestra rango, total y controles de página. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye detalle técnico, correos y salida formal. Ajusta el vencimiento por días calendario en la zona del navegador conservando la hora y sin cambios al cargar. Proyecto > Datos refleja inmediatamente el cliente confirmado, sin perder borradores de otras áreas."
+        }
+      ]
+    },
+    {
+      "id": "/panel/defaults",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Valores por defecto (propuestas y diagnósticos)",
+      "file": "frontend/pages/panel/defaults.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a secciones y plantillas de correo.",
+      "features": [
+        {
+          "id": "panel-commercial-settings",
+          "label": "Configurar mensajes y valores base",
+          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+        }
+      ]
+    },
+    {
+      "id": "/panel/styleguide",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Design System Styleguide",
+      "file": "frontend/pages/panel/styleguide.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "El selector de la guía y el control general aplican el mismo tema claro/oscuro; la elección se conserva al recargar.",
+      "features": [
+        {
+          "id": "panel-product-reference",
+          "label": "Consultar mapa y sistema de diseño",
+          "summary": "Expone la taxonomía de vistas y los componentes visuales compartidos; la guía permite comprobarlos con el tema claro/oscuro del Panel."
+        }
+      ]
+    },
+    {
+      "id": "/panel/proposals/email-templates",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Plantillas de email de propuestas",
+      "file": "frontend/pages/panel/proposals/email-templates.vue",
+      "audience": "admin",
+      "view_type": "redirect",
+      "description": "Redirige a /panel/defaults?mode=proposal&tab=emails. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar.",
+      "features": [
+        {
+          "id": "panel-commercial-settings",
+          "label": "Configurar mensajes y valores base",
+          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+        }
+      ]
+    },
+    {
+      "id": "/panel/proposals/email-deliverability",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Entregabilidad de email",
+      "file": "frontend/pages/panel/proposals/email-deliverability.vue",
+      "audience": "admin",
+      "view_type": "redirect",
+      "description": "Redirige a /panel/emails?tab=status; las estadísticas y los fallos recientes se consultan en Comunicaciones > Emails.",
+      "features": [
+        {
+          "id": "panel-email-center",
+          "label": "Preparar y revisar emails",
+          "summary": "Centraliza composición con varios destinatarios y copias, configuración e historial de correo. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. La vista previa y el envío comparten la fuente."
+        }
+      ]
+    },
+    {
+      "id": "/panel/proposals/defaults",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Defaults de propuestas",
+      "file": "frontend/pages/panel/proposals/defaults.vue",
+      "audience": "admin",
+      "view_type": "redirect",
+      "description": "Redirige a /panel/defaults?mode=proposal.",
+      "features": [
+        {
+          "id": "panel-commercial-settings",
+          "label": "Configurar mensajes y valores base",
+          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+        }
+      ]
+    },
+    {
+      "id": "/panel/clients",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Clientes",
+      "file": "frontend/pages/panel/clients/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "La búsqueda por nombre completo publica lista y contadores coherentes; sin coincidencias muestra vacío y ante fallo permite reintentar. Ficha compartida con facturación: nombre, empresa, correo, contacto, dirección y tipo de identificación NIT o C.C. Los datos se completan en nuevas cuentas de cobro y se pueden actualizar desde su preparación. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y permite confirmar cliente, proyecto y contratos o aprobar y revisar después sin crear entidades. Los anexos se seleccionan explícitamente. Datos sin proyecto permite consultar y descargar información conservada de proyectos eliminados; para trasladarla a un proyecto vigente del mismo cliente se usa Asignar registros sin proyecto en ese proyecto.",
+      "features": [
+        {
+          "id": "panel-clients-offers",
+          "label": "Administrar clientes",
+          "summary": "Centraliza las identidades comerciales de los clientes. La búsqueda por nombre completo mantiene lista y contadores coherentes, muestra vacío sin coincidencias y permite reintentar fallos. La ficha conserva dirección y distingue NIT de C.C.; las cuentas de cobro reutilizan sus datos y permiten editar la ficha durante la preparación. Incluye historial por registro con fecha, autor y consulta de versiones; aprobar desde la ficha de un cliente abre la misma revisión de cliente, proyecto y documentos. Incluye consulta y descarga de datos conservados sin proyecto; su traslado se hace desde Asignar registros sin proyecto del proyecto de destino."
+        }
+      ]
+    },
+    {
+      "id": "/panel/blog",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Blog del panel",
+      "file": "frontend/pages/panel/blog/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "panel-editorial-content",
+          "label": "Publicar blog y LinkedIn",
+          "summary": "Gestiona artículos, calendario editorial y distribución en LinkedIn. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a extractos y cuerpo del blog."
+        }
+      ]
+    },
+    {
+      "id": "/panel/blog/create",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear post de blog",
+      "file": "frontend/pages/panel/blog/create.vue",
+      "audience": "admin",
+      "view_type": "create",
+      "description": "Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a extractos y cuerpo; el JSON estructurado conserva su editor de código.",
+      "features": [
+        {
+          "id": "panel-editorial-content",
+          "label": "Publicar blog y LinkedIn",
+          "summary": "Gestiona artículos, calendario editorial y distribución en LinkedIn. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a extractos y cuerpo del blog."
+        }
+      ]
+    },
+    {
+      "id": "/panel/blog/:id/edit",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Editar post de blog",
+      "file": "frontend/pages/panel/blog/[id]/edit.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a extractos y cuerpo; el JSON estructurado conserva su editor de código.",
+      "features": [
+        {
+          "id": "panel-editorial-content",
+          "label": "Publicar blog y LinkedIn",
+          "summary": "Gestiona artículos, calendario editorial y distribución en LinkedIn. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a extractos y cuerpo del blog."
+        }
+      ]
+    },
+    {
+      "id": "/panel/blog/calendar",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Calendario de blog",
+      "file": "frontend/pages/panel/blog/calendar.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "features": [
+        {
+          "id": "panel-editorial-content",
+          "label": "Publicar blog y LinkedIn",
+          "summary": "Gestiona artículos, calendario editorial y distribución en LinkedIn. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a extractos y cuerpo del blog."
+        }
+      ]
+    },
+    {
+      "id": "/panel/linkedin",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "LinkedIn del panel",
+      "file": "frontend/pages/panel/linkedin/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "panel-editorial-content",
+          "label": "Publicar blog y LinkedIn",
+          "summary": "Gestiona artículos, calendario editorial y distribución en LinkedIn. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a extractos y cuerpo del blog."
+        }
+      ]
+    },
+    {
+      "id": "/panel/portfolio",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Portafolio del panel",
+      "file": "frontend/pages/panel/portfolio/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "panel-portfolio-content",
+          "label": "Mostrar resultados",
+          "summary": "Administra los casos de portafolio y su contenido bilingüe. El JSON conserva anotaciones de formato por texto y las presenta en la vista pública."
+        }
+      ]
+    },
+    {
+      "id": "/panel/portfolio/create",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear item de portafolio",
+      "file": "frontend/pages/panel/portfolio/create.vue",
+      "audience": "admin",
+      "view_type": "create",
+      "description": "El JSON estructurado permite declarar el formato por texto mediante text_formats; conserva el editor de código.",
+      "features": [
+        {
+          "id": "panel-portfolio-content",
+          "label": "Mostrar resultados",
+          "summary": "Administra los casos de portafolio y su contenido bilingüe. El JSON conserva anotaciones de formato por texto y las presenta en la vista pública."
+        }
+      ]
+    },
+    {
+      "id": "/panel/portfolio/:id/edit",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Editar item de portafolio",
+      "file": "frontend/pages/panel/portfolio/[id]/edit.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "El JSON estructurado permite declarar el formato por texto mediante text_formats; conserva el editor de código.",
+      "features": [
+        {
+          "id": "panel-portfolio-content",
+          "label": "Mostrar resultados",
+          "summary": "Administra los casos de portafolio y su contenido bilingüe. El JSON conserva anotaciones de formato por texto y las presenta en la vista pública."
+        }
+      ]
+    },
+    {
+      "id": "/panel/qr-cards",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Tarjetas QR del panel",
+      "file": "frontend/pages/panel/qr-cards/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "panel-shareable-resources",
+          "label": "Crear recursos compartibles",
+          "summary": "Configura tarjetas QR y Linktrees con colores, logo, Google Fonts o plantillas HTML propias. Valida diseños, cambia imágenes, publica versiones y comparte plantillas entre proyectos del cliente."
+        }
+      ]
+    },
+    {
+      "id": "/panel/linktrees",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Linktrees del panel",
+      "file": "frontend/pages/panel/linktrees/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "panel-shareable-resources",
+          "label": "Crear recursos compartibles",
+          "summary": "Configura tarjetas QR y Linktrees con colores, logo, Google Fonts o plantillas HTML propias. Valida diseños, cambia imágenes, publica versiones y comparte plantillas entre proyectos del cliente."
+        }
+      ]
+    },
+    {
+      "id": "/panel/linktrees/:id/edit",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Editar linktree",
+      "file": "frontend/pages/panel/linktrees/[id]/edit.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "features": [
+        {
+          "id": "panel-shareable-resources",
+          "label": "Crear recursos compartibles",
+          "summary": "Configura tarjetas QR y Linktrees con colores, logo, Google Fonts o plantillas HTML propias. Valida diseños, cambia imágenes, publica versiones y comparte plantillas entre proyectos del cliente."
+        }
+      ]
+    },
+    {
+      "id": "/panel/hour-packages",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Paquetes de requerimientos",
+      "file": "frontend/pages/panel/hour-packages/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Las vistas de tarjetas y comparativa presentan el formato declarado de las notas, compartido con la propuesta y su PDF.",
+      "features": [
+        {
+          "id": "panel-hour-packages",
+          "label": "Administrar paquetes de requerimientos",
+          "summary": "Gestiona cupos XS/S/M, vigencia, descuentos y valores internos; convierte precios por mercado y configura el cupo mensual de Alianza. Las notas admiten formato visual y Fuente Markdown."
+        }
+      ]
+    },
+    {
+      "id": "/panel/hour-packages/create",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear paquete de requerimientos",
+      "file": "frontend/pages/panel/hour-packages/create.vue",
+      "audience": "admin",
+      "view_type": "create",
+      "description": "Las notas editoriales admiten edición Visual y Fuente Markdown.",
+      "features": [
+        {
+          "id": "panel-hour-packages",
+          "label": "Administrar paquetes de requerimientos",
+          "summary": "Gestiona cupos XS/S/M, vigencia, descuentos y valores internos; convierte precios por mercado y configura el cupo mensual de Alianza. Las notas admiten formato visual y Fuente Markdown."
+        }
+      ]
+    },
+    {
+      "id": "/panel/hour-packages/:id/edit",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Editar paquete de requerimientos",
+      "file": "frontend/pages/panel/hour-packages/[id]/edit.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "Las notas editoriales admiten edición Visual y Fuente Markdown.",
+      "features": [
+        {
+          "id": "panel-hour-packages",
+          "label": "Administrar paquetes de requerimientos",
+          "summary": "Gestiona cupos XS/S/M, vigencia, descuentos y valores internos; convierte precios por mercado y configura el cupo mensual de Alianza. Las notas admiten formato visual y Fuente Markdown."
+        }
+      ]
+    },
+    {
+      "id": "/panel/documents",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Gestor Documental",
+      "file": "frontend/pages/panel/documents/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Contratos y Anexos de cada proyecto comparten identidad con las propuestas y conservan sus revisiones aprobadas. ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Mantiene las tres plantillas contractuales en Contratos con contenido y ubicación de solo lectura y rechaza carpetas duplicadas en el mismo nivel. Las notas, borradores de correo y WhatsApp admiten formato y copia al canal correspondiente. Nueva carpeta abre el formulario directo con destino visible y propone la carpeta abierta o la raíz del proyecto. Gestionar carpetas permite buscar destinos por fragmento y reconocer su rama en los resultados y el árbol.",
+      "features": [
+        {
+          "id": "panel-documents",
+          "label": "Crear y seguir documentos",
+          "summary": "Contratos y Anexos comparten identidad con la propuesta, con paquete vigente, borradores e historial. Los adjuntos habilitados se sustituyen en borrador y los documentos estructurados abren el mismo editor de origen. Los conflictos conservan los archivos. Crea documentos desde Markdown o PDF de hasta 25 MiB, conserva su identificación, permite ver y descargar el original y reemplazarlo con historial mientras no sustente evidencia firmada o publicada. Busca texto extraído del PDF vigente, sin OCR. Administra sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. Las tres plantillas de contrato (unificado, producto y servicio) permanecen en Contratos como espejos de solo lectura, con versión y fecha de sincronización; se consultan y descargan en PDF o Markdown. Las carpetas rechazan nombres repetidos en el mismo nivel, incluidos los archivados. Se crean desde el encabezado con destino visible y contexto de la carpeta abierta o la raíz del proyecto; el gestor ofrece búsqueda de destinos con ruta y jerarquía explícita. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye notas, borradores y PDF. El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Los contratos de Building with Us y Células se editan desde el Gestor con motivo y versión obligatorios; sincronizan el módulo y el PDF y conservan el borrador ante conflictos."
+        }
+      ]
+    },
+    {
+      "id": "/panel/documents/create",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear documento",
+      "file": "frontend/pages/panel/documents/create.vue",
+      "audience": "admin",
+      "view_type": "create",
+      "description": "El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Crea documentos desde Markdown o PDF de hasta 25 MiB. El PDF conserva título, notas, cliente, proyecto y carpeta, se ve como archivo original y no se edita como texto. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar.",
+      "features": [
+        {
+          "id": "panel-documents",
+          "label": "Crear y seguir documentos",
+          "summary": "Contratos y Anexos comparten identidad con la propuesta, con paquete vigente, borradores e historial. Los adjuntos habilitados se sustituyen en borrador y los documentos estructurados abren el mismo editor de origen. Los conflictos conservan los archivos. Crea documentos desde Markdown o PDF de hasta 25 MiB, conserva su identificación, permite ver y descargar el original y reemplazarlo con historial mientras no sustente evidencia firmada o publicada. Busca texto extraído del PDF vigente, sin OCR. Administra sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. Las tres plantillas de contrato (unificado, producto y servicio) permanecen en Contratos como espejos de solo lectura, con versión y fecha de sincronización; se consultan y descargan en PDF o Markdown. Las carpetas rechazan nombres repetidos en el mismo nivel, incluidos los archivados. Se crean desde el encabezado con destino visible y contexto de la carpeta abierta o la raíz del proyecto; el gestor ofrece búsqueda de destinos con ruta y jerarquía explícita. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye notas, borradores y PDF. El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Los contratos de Building with Us y Células se editan desde el Gestor con motivo y versión obligatorios; sincronizan el módulo y el PDF y conservan el borrador ante conflictos."
+        }
+      ]
+    },
+    {
+      "id": "/panel/documents/:id/edit",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Editar documento",
+      "file": "frontend/pages/panel/documents/[id]/edit.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Los PDF subidos conservan identificación editable, descarga original y reemplazo versionado con historial. El reemplazo se bloquea cuando sustenta evidencia firmada o publicada. La búsqueda del gestor incluye únicamente texto extraído del PDF vigente, sin OCR. Los documentos de cierre abren la fuente estructurada compartida o permiten sustituir adjuntos habilitados en borrador. El paquete vigente y su historial se conservan hasta confirmar otra versión; los conflictos conservan el archivo elegido. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; los tres espejos de propuestas se abren en solo lectura con versión, sincronización, PDF y Markdown en vivo; los contratos de Building with Us y Células se editan aquí con motivo obligatorio y control de versión, sincronizando historial y PDF con sus módulos, sin cambiar identidad, ubicación ni visibilidad; acceso interno. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Notas y borradores comparten el editor; WhatsApp ofrece sus formatos nativos.",
+      "features": [
+        {
+          "id": "panel-documents",
+          "label": "Crear y seguir documentos",
+          "summary": "Contratos y Anexos comparten identidad con la propuesta, con paquete vigente, borradores e historial. Los adjuntos habilitados se sustituyen en borrador y los documentos estructurados abren el mismo editor de origen. Los conflictos conservan los archivos. Crea documentos desde Markdown o PDF de hasta 25 MiB, conserva su identificación, permite ver y descargar el original y reemplazarlo con historial mientras no sustente evidencia firmada o publicada. Busca texto extraído del PDF vigente, sin OCR. Administra sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. Las tres plantillas de contrato (unificado, producto y servicio) permanecen en Contratos como espejos de solo lectura, con versión y fecha de sincronización; se consultan y descargan en PDF o Markdown. Las carpetas rechazan nombres repetidos en el mismo nivel, incluidos los archivados. Se crean desde el encabezado con destino visible y contexto de la carpeta abierta o la raíz del proyecto; el gestor ofrece búsqueda de destinos con ruta y jerarquía explícita. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye notas, borradores y PDF. El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Los contratos de Building with Us y Células se editan desde el Gestor con motivo y versión obligatorios; sincronizan el módulo y el PDF y conservan el borrador ante conflictos."
+        }
+      ]
+    },
+    {
+      "id": "/panel/documents/statuses",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Estados de documentos",
+      "file": "frontend/pages/panel/documents/statuses.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "features": [
+        {
+          "id": "panel-documents",
+          "label": "Crear y seguir documentos",
+          "summary": "Contratos y Anexos comparten identidad con la propuesta, con paquete vigente, borradores e historial. Los adjuntos habilitados se sustituyen en borrador y los documentos estructurados abren el mismo editor de origen. Los conflictos conservan los archivos. Crea documentos desde Markdown o PDF de hasta 25 MiB, conserva su identificación, permite ver y descargar el original y reemplazarlo con historial mientras no sustente evidencia firmada o publicada. Busca texto extraído del PDF vigente, sin OCR. Administra sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. Las tres plantillas de contrato (unificado, producto y servicio) permanecen en Contratos como espejos de solo lectura, con versión y fecha de sincronización; se consultan y descargan en PDF o Markdown. Las carpetas rechazan nombres repetidos en el mismo nivel, incluidos los archivados. Se crean desde el encabezado con destino visible y contexto de la carpeta abierta o la raíz del proyecto; el gestor ofrece búsqueda de destinos con ruta y jerarquía explícita. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye notas, borradores y PDF. El cuerpo documental ofrece una barra agrupada de texto, párrafo y alineación; enlaces y tablas tienen controles contextuales. Permite insertar avisos, índice, código y separadores. La vista previa construye el índice y conserva la lectura literal del texto plano. Los contratos de Building with Us y Células se editan desde el Gestor con motivo y versión obligatorios; sincronizan el módulo y el PDF y conservan el borrador ante conflictos."
+        }
+      ]
+    },
+    {
+      "id": "/panel/admins",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Admins del panel",
+      "file": "frontend/pages/panel/admins/index.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "features": [
+        {
+          "id": "panel-admin-access",
+          "label": "Administrar operadores",
+          "summary": "Permite gestionar las cuentas que acceden al panel interno."
+        }
+      ]
+    },
+    {
+      "id": "/panel/communications",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Comunicaciones con clientes",
+      "file": "frontend/pages/panel/communications/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Carpetas jerárquicas independientes por cliente/proyecto; hilos completos movibles, IDs visibles y búsqueda por ID. Modal con saltos al inicio/final, redacción y detalles plegables, copia directa y marcado de enviado en Más. Redacta y consulta mensajes con formato; el perfil de WhatsApp limita las opciones a las que admite ese canal.",
+      "features": [
+        {
+          "id": "panel-client-threads",
+          "label": "Registrar conversaciones",
+          "summary": "Organiza hilos completos en carpetas y subcarpetas por cliente o proyecto, con IDs visibles y búsqueda exacta. Permite recorrer el histórico, plegar la redacción y copiar mensajes directamente. Los mensajes se editan en Visual o Fuente y se copian con el formato de su canal; WhatsApp ofrece formatos nativos."
+        }
+      ]
+    },
+    {
+      "id": "/panel/secure-links",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Enlaces seguros",
+      "file": "frontend/pages/panel/secure-links/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Formulario inicial de Mensaje confidencial, dropdown con nombre condicional para Personalizado, campos opcionales y configuración visibles desde el inicio, sin Asunto; URL automática sin exigir cliente ni proyecto. Estados Listo para compartir, Enviado (marca manual), Abierto, Vencido y Revocado, con conteos e historial. Los tres puntos al inicio de cada fila abren un modal con detalle, editar contenido, copiar, marcar enviado, revocar o reactivar y eliminar con confirmación; el detalle renombra el título en línea, permite copiar su valor completo vigente sin revelar contenido y tiene una sola opción de editar; reactivar limpia la marca de envío y conserva el historial. Actualizar datos recarga la tabla. Recibidos reúne lo que envían los clientes; ?link=<id> abre el detalle. Carpetas propias y subcarpetas separadas de raíces automáticas de proyecto; navegación por proyecto o cliente, búsqueda y estados dentro del subárbol, movimiento sin reasignación y archivo reversible sin revocar enlaces.",
+      "features": [
+        {
+          "id": "panel-secure-links",
+          "label": "Compartir información sensible",
+          "summary": "Genera la URL con un formulario de campos esenciales, dropdown de tipos y opciones visibles desde el inicio, sin Asunto. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; renombra el título en línea y copia su valor completo con una acción independiente de Copiar enlace, edita el contenido desde el detalle o desde los tres puntos de la fila y conserva eliminación confirmada, reactivación e historial. Organiza por carpetas automáticas de proyecto, carpetas propias y subcarpetas; navega por cliente, filtra estados dentro de la carpeta y mueve o archiva sin cambiar permisos ni revocar enlaces."
+        }
+      ]
+    },
+    {
+      "id": "/panel/emails",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Emails",
+      "file": "frontend/pages/panel/emails/index.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Reúne Redactar, Historial, Estado de los emails y Configuración. El historial filtra destinatario, familia, estado, adjuntos y fechas; permite reintentar un destinatario fallido con su evidencia exacta o desde el origen contable disponible, y explica los bloqueos. Estado reúne estadísticas, tendencia y fallos recientes. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. La vista previa y el envío usan el mismo contenido.",
+      "features": [
+        {
+          "id": "panel-email-center",
+          "label": "Preparar y revisar emails",
+          "summary": "Centraliza composición con varios destinatarios y copias, configuración e historial de correo. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. La vista previa y el envío comparten la fuente."
+        }
+      ]
+    },
+    {
+      "id": "/panel/diagnostics",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Diagnosticos de aplicaciones",
+      "file": "frontend/pages/panel/diagnostics/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "panel-diagnostics",
+          "label": "Entregar diagnósticos",
+          "summary": "Administra diagnósticos iniciales y finales con seguimiento de lectura. Descarga acuerdos, borradores, adjuntos y CSV sin abandonar el panel; conserva la vista previa interna y permite reintentar errores. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye correos y PDF."
+        }
+      ]
+    },
+    {
+      "id": "/panel/diagnostics/create",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Crear diagnostico",
+      "file": "frontend/pages/panel/diagnostics/create.vue",
+      "audience": "admin",
+      "view_type": "create",
+      "features": [
+        {
+          "id": "panel-diagnostics",
+          "label": "Entregar diagnósticos",
+          "summary": "Administra diagnósticos iniciales y finales con seguimiento de lectura. Descarga acuerdos, borradores, adjuntos y CSV sin abandonar el panel; conserva la vista previa interna y permite reintentar errores. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye correos y PDF."
+        }
+      ]
+    },
+    {
+      "id": "/panel/diagnostics/:id/edit",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Editar / detalle de diagnostico",
+      "file": "frontend/pages/panel/diagnostics/[id]/edit.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "Documentos descarga el acuerdo final, el borrador y los adjuntos sin abrir ventanas. Los PDF e imágenes se previsualizan dentro del panel. Las descargas y las exportaciones CSV muestran el estado de carga y permiten reintentar errores. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye secciones y composición del correo.",
+      "features": [
+        {
+          "id": "panel-diagnostics",
+          "label": "Entregar diagnósticos",
+          "summary": "Administra diagnósticos iniciales y finales con seguimiento de lectura. Descarga acuerdos, borradores, adjuntos y CSV sin abandonar el panel; conserva la vista previa interna y permite reintentar errores. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye correos y PDF."
+        }
+      ]
+    },
+    {
+      "id": "/panel/diagnostics/defaults",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Defaults de diagnostico",
+      "file": "frontend/pages/panel/diagnostics/defaults.vue",
+      "audience": "admin",
+      "view_type": "redirect",
+      "description": "Redirige a /panel/defaults?mode=diagnostic.",
+      "features": [
+        {
+          "id": "panel-commercial-settings",
+          "label": "Configurar mensajes y valores base",
+          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+        }
+      ]
+    },
+    {
+      "id": "/panel/tasks",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Tasks",
+      "file": "frontend/pages/panel/tasks/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "panel-team-tasks",
+          "label": "Organizar el trabajo del equipo",
+          "summary": "Permite priorizar y mover tareas internas en un tablero Kanban."
+        }
+      ]
+    },
+    {
+      "id": "/panel/access",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Accesos",
+      "file": "frontend/pages/panel/access/index.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Búsqueda por nombre, correo o empresa; filtros combinables, vistas guardadas, conteos y dropdowns. Crear cliente sin proyecto ni acceso; habilitar, bloquear o desvincular Google con confirmación. El equipo administra clientes y sólo los superusuarios administran equipo. Actividad paginada por cuenta sin códigos ni tokens.",
+      "features": [
+        {
+          "id": "panel-account-access",
+          "label": "Administrar accesos autorizados",
+          "summary": "Centraliza clientes y equipo habilitados, búsqueda, filtros guardados, actividad y vínculo Google. Crear cliente no concede acceso; habilitar y bloquear exige los permisos del operador."
+        }
+      ]
+    },
+    {
+      "id": "/panel/projects/hosting",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Control de hosting",
+      "file": "frontend/pages/panel/projects/hosting.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Selecciona producción y dominio; switches excluyentes de pantalla y banner, títulos y textos independientes por modo, vista previa e historial. Distingue configuración guardada de aplicación confirmada por cada destino; estados sin integrar, pendiente, desconectado y error. Panel y MCP comparten permisos y versiones. No detiene servicios ni modifica datos.",
+      "features": [
+        {
+          "id": "panel-project-hosting-control",
+          "label": "Controlar el aviso de hosting",
+          "summary": "Selecciona producción; configura pantalla o banner excluyentes y mensajes propios, con versiones, historial y confirmación real por destino. Permite retirar el aviso sin pérdida de datos. MCP comparte la gestión."
+        }
+      ]
+    },
+    {
+      "id": "/panel/requirement-packages",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Solicitudes por tallas",
+      "file": "frontend/pages/panel/requirement-packages/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Busca solicitudes y proyectos, propone talla y agenda, revisa objeciones y confirma pagos externos. Ejemplos genéricos o por proyecto con historial y MCP. La aceptación y consumo corresponden al cliente.",
+      "features": [
+        {
+          "id": "panel-requirement-packages",
+          "label": "Evaluar solicitudes por tallas",
+          "summary": "Administra ejemplos genéricos y del proyecto, compras, saldos y reversiones. Evalúa manualmente, propone talla y agenda y responde objeciones, conservando el consentimiento del cliente."
+        }
+      ]
+    },
+    {
+      "id": "/panel/projects",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Proyectos (Plataforma)",
+      "file": "frontend/pages/panel/projects/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Listado y detalle abren el espacio del mismo proyecto por ID en una pestaña nueva, también desde Hosting, Ingresos y Cuentas de cobro. Cada proyecto vigente tiene espacio; las referencias sin proyecto no ofrecen enlace. Cambiar cliente muestra el impacto antes de confirmar. Si la historia financiera, las entregas o los tickets bloquean el cambio, muestra los motivos y orienta a crear un proyecto nuevo para el cliente destino; oculta la elección de Mover o Desvincular y deshabilita la confirmación. Desde el encabezado de Eliminar, un superusuario elige las categorías a eliminar, apagadas por defecto, y confirma DELETE. Lo conservado queda sin proyecto bajo el cliente; las dependencias se eligen manualmente y el historial de facturación se conserva siempre y no puede seleccionarse; borrar una fuente protegida bloquea. Asignar registros sin proyecto ofrece además, sin marcar, los ingresos, documentos e hilos conservados del cliente con su proyecto de origen y posibles duplicados; trasladarlos queda auditado y se puede deshacer.",
+      "features": [
+        {
+          "id": "panel-project-portfolio",
+          "label": "Administrar proyectos",
+          "summary": "Abre el espacio del proyecto por ID en otra pestaña desde las acciones y el detalle; el listado identifica su disponibilidad. Relaciona cada proyecto con su cliente, accesos y Linktrees; organiza documentos y assets privados de branding y diseño. Cambiar cliente muestra el impacto y los motivos de bloqueo por historia financiera, entregas o tickets; cuando el cambio está bloqueado, oculta Mover y Desvincular, deshabilita la confirmación y orienta a crear un proyecto nuevo para el cliente destino. Reúne las acciones en tres puntos y permite eliminar proyectos vacíos con confirmación. Desde el encabezado de Eliminar, un superusuario elige categorías con interruptores apagados por defecto y confirma DELETE; las dependencias requieren elección manual. Lo conservado queda bajo el cliente sin proyecto; el historial de facturación se conserva siempre; borrar una fuente de evidencia protegida sigue bloqueado. Asignar registros sin proyecto traslada, con auditoría y opción de deshacer, los ingresos, documentos e hilos conservados que el equipo elija. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/projects/:id/ideas",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Ideas del proyecto",
+      "file": "frontend/pages/panel/projects/[id]/ideas.vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "Recopilar conserva copias seleccionadas y no modifica contratos ni alcance.",
+      "features": [
+        {
+          "id": "panel-project-ideas",
+          "label": "Recopilar ideas para el futuro",
+          "summary": "Conserva autoría, versiones y archivo reversible; congela copias de una selección explícita por proyecto y cliente."
+        }
+      ]
+    },
+    {
+      "id": "/panel/projects/statuses",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Estados de proyectos",
+      "file": "frontend/pages/panel/projects/statuses.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "features": [
+        {
+          "id": "panel-project-lifecycle",
+          "label": "Gobernar el ciclo del proyecto",
+          "summary": "Configura y aplica estados con consecuencias operativas trazables."
+        }
+      ]
+    },
+    {
+      "id": "/panel/platform/help",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Ayuda de la plataforma",
+      "file": "frontend/pages/panel/platform/help.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Disponibilidad centralizada en Feature flags; borradores, orden de pasos, vista previa, publicación e historial. Los destinos son controles conocidos y el progreso se conserva por usuario. Los tres tutoriales en español se previsualizan y pueden sustituirse, retirarse o restaurarse desde el panel o MCP; los cambios concurrentes requieren recargar el recurso.",
+      "features": [
+        {
+          "id": "panel-platform-help",
+          "label": "Administrar la ayuda de clientes",
+          "summary": "Configura recorridos ES/EN con disponibilidad centralizada en Feature flags; administra los tutoriales general, Appi y voz, publica novedades con destinos conocidos y consulta los vistos."
+        }
+      ]
+    },
+    {
+      "id": "/panel/platform/feature-flags",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Feature flags de Plataforma",
+      "file": "frontend/pages/panel/platform/feature-flags.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "La excepción explícita prevalece sobre el global. Todas comienzan habilitadas salvo IA y audio; no concede permisos. Gestión equivalente por MCP. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación.",
+      "features": [
+        {
+          "id": "panel-platform-features",
+          "label": "Controlar funcionalidades de clientes",
+          "summary": "Configura globales y excepciones por cliente, muestra herencia y resultado efectivo y conserva auditoría. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación. IA y audio parten apagados; los flags no conceden permisos."
+        }
+      ]
+    },
+    {
+      "id": "/panel/platform/ai",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Configuración de IA de Plataforma",
+      "file": "frontend/pages/panel/platform/ai.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Disponibilidad centralizada en Feature flags; modelos Haiku/Luna por función, claves write-only, plantillas bilingües versionadas con restauración y previsualización, cuotas, consumo estimado y caché. Administración equivalente por MCP.",
+      "features": [
+        {
+          "id": "panel-platform-ai",
+          "label": "Configurar la IA de Plataforma",
+          "summary": "Enlaza a Feature flags para disponibilidad; administra modelos y claves protegidas, plantillas bilingües versionadas, consumo y caché."
+        }
+      ]
+    },
+    {
+      "id": "/panel/monitoring",
+      "surface": "Panel",
+      "module": "Panel administrativo",
+      "view": "Monitoreo de proyectos y servidores",
+      "file": "frontend/pages/panel/monitoring/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Indicadores del conjunto filtrado con acceso a condición y seguimiento, atención prioritaria, detalle de salud de fuentes, gráficas con huecos de datos, capacidad informativa y consultas paginadas estables. El detalle conserva evidencia original y páginas independientes de notas y entregas. El Gestor de operaciones conserva el seguimiento, las notas y el vínculo de recursos a proyectos con los mismos permisos, versiones y confirmaciones. La ingestión mantiene su credencial de fuente. La recuperación técnica no cierra el seguimiento.",
+      "features": [
+        {
+          "id": "panel-monitoring",
+          "label": "Priorizar la atención y entender la capacidad",
+          "summary": "Prioriza problemas activos y fuentes sin información; muestra tendencias medidas de servidores, asignación informativa por proyecto y reportes paginados. El Gestor de operaciones consulta casos y reportes, agrega notas, cambia estados con versión y vincula recursos a proyectos; las acciones sensibles requieren confirmación."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Resumen",
+      "file": "frontend/pages/panel/accounting/index.vue",
+      "audience": "admin",
+      "view_type": "dashboard",
+      "features": [
+        {
+          "id": "panel-financial-flow",
+          "label": "Leer ingresos y gastos",
+          "summary": "El detalle de un ingreso distingue la cuenta en borrador, emitida o pagada y rotula su fecha sin modificarla. Resume resultados, estima la cartera pendiente por cobrar y permite gestionar entradas y salidas de dinero con captura base/total incluido y desglose de IVA, propuesto al 19 % en nuevos registros. Editar conserva la tasa guardada. El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Liquidar permite abonar uno o varios ingresos sin cuenta emitida. La selección muestra valor total y saldo pendiente; el reparto propone cubrir los más antiguos y permite ajustes, con un único movimiento. La acción individual y colectiva comparte un solo modal con participaciones globales, deducciones proporcionales, saldo pendiente o reprogramado e IVA configurable por ingreso: interruptor visible junto al encabezado, porcentaje y captura base o total incluido con desglose; guarda en el original y conserva bloqueos por pagos, deducciones o cuentas emitidas. Participaciones muestra los importes de cada socio y el remanente positivo de ProjectApp incluso contraída, con los centavos recibidos. Diferencia se abre automáticamente cuando se recibe menos. Al completar el pago sin cuenta muestra Cuenta pendiente de emitir y envía un aviso único al equipo con historial y reintento. La confirmación opcional por ingreso se revisa dentro del mismo modal antes de enviar al cliente. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/incomes",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Ingresos",
+      "file": "frontend/pages/panel/accounting/incomes.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Detalle e historial distingue el estado comercial de la cuenta y rotula su fecha sin emitir ni numerar. El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Liquidar permite registrar un abono individual o colectivo sin cuenta emitida. La selección muestra el valor total y el saldo pendiente por separado; el reparto llena los más antiguos, permite ajustes manuales y conserva un único movimiento del bolsillo. Uno o varios ingresos se liquidan en el mismo modal con Participaciones globales, Diferencia que se abre al recibir menos y IVA configurable por ingreso desde el encabezado: interruptor Sin IVA, porcentaje, captura antes de IVA o total incluido y desglose de base, impuesto y total; guarda en el original y respeta bloqueos por pagos, deducciones o cuentas emitidas. Las deducciones son proporcionales y el saldo puede conservarse pendiente o reprogramarse. Cuando el ingreso queda pagado sin cuenta emitida, muestra Cuenta pendiente de emitir y permite crear la cuenta o completar su borrador; el equipo recibe un aviso interno único, consultable y reintentable desde Historial. La cuenta posterior conserva el importe completo y se emite pagada. La confirmación opcional del pago al cliente conserva el correo de su cuenta emitida; su revisión ocurre dentro del mismo modal. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Participaciones muestra los importes de cada socio y el remanente positivo de ProjectApp incluso contraída, con centavos cuando corresponda.",
+      "features": [
+        {
+          "id": "panel-financial-flow",
+          "label": "Leer ingresos y gastos",
+          "summary": "El detalle de un ingreso distingue la cuenta en borrador, emitida o pagada y rotula su fecha sin modificarla. Resume resultados, estima la cartera pendiente por cobrar y permite gestionar entradas y salidas de dinero con captura base/total incluido y desglose de IVA, propuesto al 19 % en nuevos registros. Editar conserva la tasa guardada. El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Liquidar permite abonar uno o varios ingresos sin cuenta emitida. La selección muestra valor total y saldo pendiente; el reparto propone cubrir los más antiguos y permite ajustes, con un único movimiento. La acción individual y colectiva comparte un solo modal con participaciones globales, deducciones proporcionales, saldo pendiente o reprogramado e IVA configurable por ingreso: interruptor visible junto al encabezado, porcentaje y captura base o total incluido con desglose; guarda en el original y conserva bloqueos por pagos, deducciones o cuentas emitidas. Participaciones muestra los importes de cada socio y el remanente positivo de ProjectApp incluso contraída, con los centavos recibidos. Diferencia se abre automáticamente cuando se recibe menos. Al completar el pago sin cuenta muestra Cuenta pendiente de emitir y envía un aviso único al equipo con historial y reintento. La confirmación opcional por ingreso se revisa dentro del mismo modal antes de enviar al cliente. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/expenses",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Gastos",
+      "file": "frontend/pages/panel/accounting/expenses.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Nuevos gastos proponen IVA del 19 %; editar conserva la tasa registrada. Desglose opcional de IVA sin clasificación automática de IVA descontable. Detalle accesible por enlace desde el bolsillo, independiente de los filtros del listado. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.",
+      "features": [
+        {
+          "id": "panel-financial-flow",
+          "label": "Leer ingresos y gastos",
+          "summary": "El detalle de un ingreso distingue la cuenta en borrador, emitida o pagada y rotula su fecha sin modificarla. Resume resultados, estima la cartera pendiente por cobrar y permite gestionar entradas y salidas de dinero con captura base/total incluido y desglose de IVA, propuesto al 19 % en nuevos registros. Editar conserva la tasa guardada. El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Liquidar permite abonar uno o varios ingresos sin cuenta emitida. La selección muestra valor total y saldo pendiente; el reparto propone cubrir los más antiguos y permite ajustes, con un único movimiento. La acción individual y colectiva comparte un solo modal con participaciones globales, deducciones proporcionales, saldo pendiente o reprogramado e IVA configurable por ingreso: interruptor visible junto al encabezado, porcentaje y captura base o total incluido con desglose; guarda en el original y conserva bloqueos por pagos, deducciones o cuentas emitidas. Participaciones muestra los importes de cada socio y el remanente positivo de ProjectApp incluso contraída, con los centavos recibidos. Diferencia se abre automáticamente cuando se recibe menos. Al completar el pago sin cuenta muestra Cuenta pendiente de emitir y envía un aviso único al equipo con historial y reintento. La confirmación opcional por ingreso se revisa dentro del mismo modal antes de enviar al cliente. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/hostings",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Hostings",
+      "file": "frontend/pages/panel/accounting/hostings.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa.",
+      "features": [
+        {
+          "id": "panel-service-revenue",
+          "label": "Seguir servicios y cobros",
+          "summary": "Relaciona hosting, recurrentes, publicidad y cuentas de cobro. La preparación de cuentas reutiliza nombre, identificación, correo, contacto y dirección del cliente y permite guardar cambios en su ficha. Los cobros de proyecto muestran las selecciones de contrato u hosting también desde Ingresos y explican el dato faltante. El hosting se reconoce por dominio y periodicidad y se confirma desde el cobro; su alta conserva cliente y proyecto. Las referencias contradictorias llevan a conciliación con regreso y formulario recuperable. Permiten buscar y registrar un contrato existente desde el cobro sin copiarlo, con coincidencias resaltadas sin distinguir mayúsculas, tildes ni guiones bajos, contratos y otrosíes primero y todas las versiones identificadas por fecha y ubicación. Permiten diferir explícitamente el tipo y el vínculo con un interruptor, autor y fecha, aviso amarillo en listado y detalle, filtro con conteo y radar financiero. El pendiente interno no bloquea emisión, envío ni liquidación por ese vínculo. Al completar contrato con otrosí opcional u hosting exclusivo se retira el aviso y se conservan snapshots y PDF; los históricos esperan asociación administrativa. Muestra base, IVA y total coherentes en el PDF y el correo, pide un último aviso con los datos clave antes de emitir y enviar, e incluye historial por registro con fecha, autor y consulta de versiones. La cuenta de un ingreso ya pagado conserva el importe completo y el IVA, se emite pagada y no registra otro movimiento. Marcar pagada una cuenta vinculada a un esperado abre el modal compartido de liquidación, con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión del correo dentro del mismo diálogo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/pocket",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Bolsillo",
+      "file": "frontend/pages/panel/accounting/pocket.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Cada movimiento muestra a quién pertenece: Empresa, Gustavo, Carlos o Sin vincular, tanto en tabla como en tarjetas. El detalle de consulta tiene dirección compartible, importe y fecha legibles, saldo real posterior independiente de filtros, vínculo directo a Ingresos o Gastos y reparto de abonos con pendientes actuales y saldo a favor. Notas completas e historial en un modal compacto. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Acceso interno.",
+      "features": [
+        {
+          "id": "panel-cash-credit",
+          "label": "Controlar caja y crédito",
+          "summary": "Reúne bolsillo, tarjetas y extractos mensuales. Cada movimiento del bolsillo muestra su pertenencia y abre un detalle compacto con saldo real posterior, vínculos a Ingresos o Gastos, reparto de abonos, pendientes actuales, saldo a favor y notas. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/recurring",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Recurrentes",
+      "file": "frontend/pages/panel/accounting/recurring.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.",
+      "features": [
+        {
+          "id": "panel-service-revenue",
+          "label": "Seguir servicios y cobros",
+          "summary": "Relaciona hosting, recurrentes, publicidad y cuentas de cobro. La preparación de cuentas reutiliza nombre, identificación, correo, contacto y dirección del cliente y permite guardar cambios en su ficha. Los cobros de proyecto muestran las selecciones de contrato u hosting también desde Ingresos y explican el dato faltante. El hosting se reconoce por dominio y periodicidad y se confirma desde el cobro; su alta conserva cliente y proyecto. Las referencias contradictorias llevan a conciliación con regreso y formulario recuperable. Permiten buscar y registrar un contrato existente desde el cobro sin copiarlo, con coincidencias resaltadas sin distinguir mayúsculas, tildes ni guiones bajos, contratos y otrosíes primero y todas las versiones identificadas por fecha y ubicación. Permiten diferir explícitamente el tipo y el vínculo con un interruptor, autor y fecha, aviso amarillo en listado y detalle, filtro con conteo y radar financiero. El pendiente interno no bloquea emisión, envío ni liquidación por ese vínculo. Al completar contrato con otrosí opcional u hosting exclusivo se retira el aviso y se conservan snapshots y PDF; los históricos esperan asociación administrativa. Muestra base, IVA y total coherentes en el PDF y el correo, pide un último aviso con los datos clave antes de emitir y enviar, e incluye historial por registro con fecha, autor y consulta de versiones. La cuenta de un ingreso ya pagado conserva el importe completo y el IVA, se emite pagada y no registra otro movimiento. Marcar pagada una cuenta vinculada a un esperado abre el modal compartido de liquidación, con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión del correo dentro del mismo diálogo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/ads",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Ads",
+      "file": "frontend/pages/panel/accounting/ads.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.",
+      "features": [
+        {
+          "id": "panel-service-revenue",
+          "label": "Seguir servicios y cobros",
+          "summary": "Relaciona hosting, recurrentes, publicidad y cuentas de cobro. La preparación de cuentas reutiliza nombre, identificación, correo, contacto y dirección del cliente y permite guardar cambios en su ficha. Los cobros de proyecto muestran las selecciones de contrato u hosting también desde Ingresos y explican el dato faltante. El hosting se reconoce por dominio y periodicidad y se confirma desde el cobro; su alta conserva cliente y proyecto. Las referencias contradictorias llevan a conciliación con regreso y formulario recuperable. Permiten buscar y registrar un contrato existente desde el cobro sin copiarlo, con coincidencias resaltadas sin distinguir mayúsculas, tildes ni guiones bajos, contratos y otrosíes primero y todas las versiones identificadas por fecha y ubicación. Permiten diferir explícitamente el tipo y el vínculo con un interruptor, autor y fecha, aviso amarillo en listado y detalle, filtro con conteo y radar financiero. El pendiente interno no bloquea emisión, envío ni liquidación por ese vínculo. Al completar contrato con otrosí opcional u hosting exclusivo se retira el aviso y se conservan snapshots y PDF; los históricos esperan asociación administrativa. Muestra base, IVA y total coherentes en el PDF y el correo, pide un último aviso con los datos clave antes de emitir y enviar, e incluye historial por registro con fecha, autor y consulta de versiones. La cuenta de un ingreso ya pagado conserva el importe completo y el IVA, se emite pagada y no registra otro movimiento. Marcar pagada una cuenta vinculada a un esperado abre el modal compartido de liquidación, con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión del correo dentro del mismo diálogo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/cards",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Tarjetas",
+      "file": "frontend/pages/panel/accounting/cards.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.",
+      "features": [
+        {
+          "id": "panel-cash-credit",
+          "label": "Controlar caja y crédito",
+          "summary": "Reúne bolsillo, tarjetas y extractos mensuales. Cada movimiento del bolsillo muestra su pertenencia y abre un detalle compacto con saldo real posterior, vínculos a Ingresos o Gastos, reparto de abonos, pendientes actuales, saldo a favor y notas. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/statements",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Extractos",
+      "file": "frontend/pages/panel/accounting/statements.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.",
+      "features": [
+        {
+          "id": "panel-cash-credit",
+          "label": "Controlar caja y crédito",
+          "summary": "Reúne bolsillo, tarjetas y extractos mensuales. Cada movimiento del bolsillo muestra su pertenencia y abre un detalle compacto con saldo real posterior, vínculos a Ingresos o Gastos, reparto de abonos, pendientes actuales, saldo a favor y notas. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/collections",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Cuentas de cobro",
+      "file": "frontend/pages/panel/accounting/collections.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite buscar y seleccionar un contrato existente del proyecto o de sus propuestas sin copiar el documento: coincidencias sin distinguir mayúsculas, tildes ni guiones bajos, resaltado, contratos y otrosíes primero y todas las versiones con fecha y carpeta o propuesta. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. Las cuentas de proyecto permiten dejar explícitamente el tipo o vínculo pendiente mediante interruptor: registra autor y fecha, muestra aviso amarillo en fila y detalle, ofrece filtro con conteo y alerta en el radar, y se completa después con razón y versión. El pendiente es interno y no bloquea emisión, envío ni liquidación por ese vínculo; históricos sin asociación conservan su criterio. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir. Marcar pagada una cuenta de un ingreso esperado abre el mismo modal unificado de liquidación con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión de la confirmación de pago al cliente.",
+      "features": [
+        {
+          "id": "panel-service-revenue",
+          "label": "Seguir servicios y cobros",
+          "summary": "Relaciona hosting, recurrentes, publicidad y cuentas de cobro. La preparación de cuentas reutiliza nombre, identificación, correo, contacto y dirección del cliente y permite guardar cambios en su ficha. Los cobros de proyecto muestran las selecciones de contrato u hosting también desde Ingresos y explican el dato faltante. El hosting se reconoce por dominio y periodicidad y se confirma desde el cobro; su alta conserva cliente y proyecto. Las referencias contradictorias llevan a conciliación con regreso y formulario recuperable. Permiten buscar y registrar un contrato existente desde el cobro sin copiarlo, con coincidencias resaltadas sin distinguir mayúsculas, tildes ni guiones bajos, contratos y otrosíes primero y todas las versiones identificadas por fecha y ubicación. Permiten diferir explícitamente el tipo y el vínculo con un interruptor, autor y fecha, aviso amarillo en listado y detalle, filtro con conteo y radar financiero. El pendiente interno no bloquea emisión, envío ni liquidación por ese vínculo. Al completar contrato con otrosí opcional u hosting exclusivo se retira el aviso y se conservan snapshots y PDF; los históricos esperan asociación administrativa. Muestra base, IVA y total coherentes en el PDF y el correo, pide un último aviso con los datos clave antes de emitir y enviar, e incluye historial por registro con fecha, autor y consulta de versiones. La cuenta de un ingreso ya pagado conserva el importe completo y el IVA, se emite pagada y no registra otro movimiento. Marcar pagada una cuenta vinculada a un esperado abre el modal compartido de liquidación, con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión del correo dentro del mismo diálogo."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/collection-context/:id",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Asociación de cuenta",
+      "file": "frontend/pages/panel/accounting/collection-context/[id].vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "Sólo superusuarios mediante sesión y CSRF. Completa el documento vinculado pendiente o corrige una asociación con razón, control de versión y trazabilidad; retira el aviso al vincular, conserva la decisión original y no reescribe PDF, importes ni snapshot.",
+      "features": [
+        {
+          "id": "panel-billing-context",
+          "label": "Asociar y conciliar cobros de proyecto",
+          "summary": "Completa después el documento vinculado de una cuenta explícitamente pendiente, conservando quién y cuándo la difirió; asocia cada cuenta a un contrato con otrosí opcional o al único hosting e inventaría fuentes y vincula evidencias con resumen legible, motivo y versión. Explica bloqueos y permite volver a la cuenta con su formulario; la conciliación histórica, equivalencias y trazabilidad se consultan por separado."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/project-hosting/:id",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Conciliación de hosting",
+      "file": "frontend/pages/panel/accounting/project-hosting/[id].vue",
+      "audience": "admin",
+      "view_type": "edit",
+      "description": "Sólo superusuarios mediante sesión y CSRF. Explica referencias pendientes y contradictorias, presenta la decisión en un resumen legible y ofrece volver a la cuenta con el formulario conservado. Separa la asociación de las cuentas históricas, equivalencias y trazabilidad sin registrar dinero ni reemplazar PDF.",
+      "features": [
+        {
+          "id": "panel-billing-context",
+          "label": "Asociar y conciliar cobros de proyecto",
+          "summary": "Completa después el documento vinculado de una cuenta explícitamente pendiente, conservando quién y cuándo la difirió; asocia cada cuenta a un contrato con otrosí opcional o al único hosting e inventaría fuentes y vincula evidencias con resumen legible, motivo y versión. Explica bloqueos y permite volver a la cuenta con su formulario; la conciliación histórica, equivalencias y trazabilidad se consultan por separado."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/history",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Historial",
+      "file": "frontend/pages/panel/accounting/history.vue",
+      "audience": "admin",
+      "view_type": "readonly",
+      "description": "Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.",
+      "features": [
+        {
+          "id": "panel-financial-governance",
+          "label": "Auditar y configurar",
+          "summary": "Expone historial y preferencias transversales del módulo contable. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/accounting/settings",
+      "surface": "Panel",
+      "module": "Contabilidad (panel)",
+      "view": "Contabilidad — Configuración",
+      "file": "frontend/pages/panel/accounting/settings.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.",
+      "features": [
+        {
+          "id": "panel-financial-governance",
+          "label": "Auditar y configurar",
+          "summary": "Expone historial y preferencias transversales del módulo contable. Incluye historial por registro con fecha, autor y consulta de versiones."
+        }
+      ]
+    },
+    {
+      "id": "/panel/data-integrity",
+      "surface": "Panel",
+      "module": "Integridad de datos",
+      "view": "Integridad de datos",
+      "file": "frontend/pages/panel/data-integrity.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "description": "Administradores, incluida integridad financiera: revisiones diarias y a demanda, hallazgos pendientes/aceptados/resueltos, vista previa de lotes, motivo, historial y deshacer condicionado. No modifica la autorización del resto de Contabilidad.",
+      "features": [
+        {
+          "id": "panel-data-integrity",
+          "label": "Revisar integridad de datos",
+          "summary": "Revisa datos entre módulos, acepta hallazgos intencionales y corrige lotes con vista previa, motivo, historial y deshacer."
+        }
+      ]
+    },
+    {
+      "id": "/panel/mcps",
+      "surface": "Panel",
+      "module": "MCPs (panel)",
+      "view": "MCPs — Conectores",
+      "file": "frontend/pages/panel/mcps/index.vue",
+      "audience": "admin",
+      "view_type": "config",
+      "description": "Presenta los gestores principales por módulo con nombres «Gestor de …». Cada acordeón explica su alcance y muestra «Qué puedes gestionar» con recursos y acciones derivados de las herramientas publicadas, permisos y confirmaciones. Los conectores pendientes de retiro conservan reemplazo, último uso e inventario de consumidores hasta comprobar sus funciones y permisos y cumplir las ventanas; los ya retirados desaparecen del catálogo operativo y sus rutas rechazan la ejecución. Las credenciales antiguas conservan su alcance durante la transición. Los secretos requieren permiso explícito y confirmación; los registros emitidos conservan su evidencia.",
+      "features": [
+        {
+          "id": "panel-mcp-connectors",
+          "label": "Administrar conectores MCP",
+          "summary": "Administra gestores por módulo con nombres uniformes, descripción de alcance y «Qué puedes gestionar» derivado de las herramientas publicadas. Muestra acciones, permisos y confirmaciones. Conserva los accesos pendientes de retiro y su evidencia hasta verificar consumidores, funciones y ventanas; excluye los ya retirados del catálogo operativo. Las credenciales conservan su alcance y las lecturas de secretos requieren autorización explícita."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/secure-links",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Enlaces seguros propios del proyecto",
+      "file": "frontend/pages/platform/projects/[id]/secure-links.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "Crear, consultar metadatos e historial, copiar URL explícitamente, revocar y reactivar rotando token. Corregir revoca y crea una sustitución; conserva auditoría, sin lectura histórica del secreto ni archivos.",
+      "features": [
+        {
+          "id": "platform-client-secure-links",
+          "label": "Compartir información confidencial con el equipo",
+          "summary": "El cliente crea enlaces propios de texto o credenciales ligados a su proyecto; gestiona estados e historial sin leer el secreto guardado."
+        }
+      ]
+    },
+    {
+      "id": "/platform",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Entrada de plataforma (redirect)",
+      "file": "frontend/pages/platform/index.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-secure-entry",
+          "label": "Ingresar de forma segura",
+          "summary": "Ofrece contraseña, código por correo o Google para cuentas habilitadas. Código y Google verifican el primer acceso sin exigir contraseña, conservando el perfil inicial."
+        }
+      ]
+    },
+    {
+      "id": "/platform/dashboard",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Dashboard de plataforma (redirect)",
+      "file": "frontend/pages/platform/dashboard.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-project-portfolio",
+          "label": "Consultar los proyectos",
+          "summary": "Permite recorrer el portafolio y entrar al resumen de una iniciativa. Los fallos de acceso terminan la carga y explican el estado sin mostrar datos ni navegación del proyecto, con regreso al listado propio conservando idioma; administradores pueden volver a su ficha comercial. Appi consulta estado, salud y fuentes de proyectos propios, conserva historial privado y orienta con guías de uso cuando está habilitado."
+        }
+      ]
+    },
+    {
+      "id": "/platform/board",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Tablero global (redirect)",
+      "file": "frontend/pages/platform/board.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-project-board",
+          "label": "Validar las entregas del alcance",
+          "summary": "Organiza contratos y otrosíes con fuentes documentales o archivos del paquete confirmado de aprobación, incluidos los personalizados. Seleccionar una copia privada no acredita firma y los archivos sin PDF conservan su formato original. Incluye alcances, fases, etapas y requerimientos con documentos y rondas de revisión. Las guías explican accesos y casos permitidos o bloqueados para roles acreditados por las fuentes. Una etapa totalmente aprobada habilita un correo con el registro público completo de conversaciones y decisiones, vista previa, constancia PDF y documentos opcionales e historial privado."
+        }
+      ]
+    },
+    {
+      "id": "/platform/bugs",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Bugs globales (redirect)",
+      "file": "frontend/pages/platform/bugs.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-bug-follow-up",
+          "label": "Reportar y seguir bugs",
+          "summary": "Permite reportar un bug general sin guías o conservar la publicación original de una entrega. Con IA habilitada admite una nota de voz, transcripción corregible y propuesta revisable; sólo llena el formulario y comparte cupo con el chatbot."
+        }
+      ]
+    },
+    {
+      "id": "/platform/changes",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Cambios globales (redirect)",
+      "file": "frontend/pages/platform/changes.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-change-requests",
+          "label": "Gestionar solicitudes de cambio",
+          "summary": "Conserva el contexto contractual original y prepara respuestas con fuentes seleccionadas, citas verificadas y revisión humana. El cliente sólo recibe la respuesta y la conclusión de alcance, sin fuentes privadas."
+        }
+      ]
+    },
+    {
+      "id": "/platform/deliverables",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Entregables globales (redirect)",
+      "file": "frontend/pages/platform/deliverables.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-deliverable-library",
+          "label": "Consultar entregables",
+          "summary": "Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
+        }
+      ]
+    },
+    {
+      "id": "/platform/payments",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Hosting por proyecto",
+      "file": "frontend/pages/platform/payments.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "Vacío y reintento de lectura; conserva suscripción, pagos y facturación de cada proyecto.",
+      "features": [
+        {
+          "id": "platform-project-payments",
+          "label": "Consultar pagos y hosting",
+          "summary": "Lista los proyectos con hosting y muestra su único contexto, suscripción, pagos, ciclos y fuentes explícitamente reconciliadas."
+        }
+      ]
+    },
+    {
+      "id": "/platform/access",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Accesos globales (redirect)",
+      "file": "frontend/pages/platform/access.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-project-access",
+          "label": "Abrir accesos operativos",
+          "summary": "El equipo administra datos y una matriz de visibilidad por ambiente; el cliente recibe URLs autorizadas y revelación puntual de credenciales, sin notas internas ni repositorio. Conserva el enlace global anterior."
+        }
+      ]
+    },
+    {
+      "id": "/platform/collection-accounts",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Cuentas de cobro del cliente",
+      "file": "frontend/pages/platform/collection-accounts/index.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "Aislamiento del cliente en servidor; históricos sin vínculo muestran Pendiente de asociar.",
+      "features": [
+        {
+          "id": "platform-collection-accounts",
+          "label": "Consultar cuentas de cobro",
+          "summary": "Lista las cuentas emitidas del cliente y de cada proyecto, agrupadas y filtrables por contrato, otrosí, hosting o pendiente de asociar; abre detalle, estado e instrucciones de pago."
+        }
+      ]
+    },
+    {
+      "id": "/platform/collection-accounts/:id",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Detalle de cuenta de cobro",
+      "file": "frontend/pages/platform/collection-accounts/[id].vue",
+      "audience": "client",
+      "view_type": "detail",
+      "description": "La consulta y la asociación administrativa conservan el snapshot y el PDF archivado.",
+      "features": [
+        {
+          "id": "platform-collection-accounts",
+          "label": "Consultar cuentas de cobro",
+          "summary": "Lista las cuentas emitidas del cliente y de cada proyecto, agrupadas y filtrables por contrato, otrosí, hosting o pendiente de asociar; abre detalle, estado e instrucciones de pago."
+        }
+      ]
+    },
+    {
+      "id": "/platform/documents",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Documentos del cliente",
+      "file": "frontend/pages/platform/documents/index.vue",
+      "audience": "client",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "platform-document-portal",
+          "label": "Revisar y aprobar documentos",
+          "summary": "Reúne documentos del cliente y el flujo de firma del documento principal."
+        }
+      ]
+    },
+    {
+      "id": "/platform/login",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Login de plataforma",
+      "file": "frontend/pages/platform/login.vue",
+      "audience": "client",
+      "view_type": "auth",
+      "features": [
+        {
+          "id": "platform-secure-entry",
+          "label": "Ingresar de forma segura",
+          "summary": "Ofrece contraseña, código por correo o Google para cuentas habilitadas. Código y Google verifican el primer acceso sin exigir contraseña, conservando el perfil inicial."
+        }
+      ]
+    },
+    {
+      "id": "/platform/verify",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Verificacion de plataforma",
+      "file": "frontend/pages/platform/verify.vue",
+      "audience": "client",
+      "view_type": "auth",
+      "features": [
+        {
+          "id": "platform-secure-entry",
+          "label": "Ingresar de forma segura",
+          "summary": "Ofrece contraseña, código por correo o Google para cuentas habilitadas. Código y Google verifican el primer acceso sin exigir contraseña, conservando el perfil inicial."
+        }
+      ]
+    },
+    {
+      "id": "/platform/complete-profile",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Completar perfil",
+      "file": "frontend/pages/platform/complete-profile.vue",
+      "audience": "client",
+      "view_type": "auth",
+      "features": [
+        {
+          "id": "platform-secure-entry",
+          "label": "Ingresar de forma segura",
+          "summary": "Ofrece contraseña, código por correo o Google para cuentas habilitadas. Código y Google verifican el primer acceso sin exigir contraseña, conservando el perfil inicial."
+        }
+      ]
+    },
+    {
+      "id": "/platform/notifications",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Notificaciones",
+      "file": "frontend/pages/platform/notifications.vue",
+      "audience": "client",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "platform-notification-center",
+          "label": "Revisar novedades",
+          "summary": "Agrupa las notificaciones que requieren atención del usuario."
+        }
+      ]
+    },
+    {
+      "id": "/platform/unavailable",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Funcionalidad no disponible",
+      "file": "frontend/pages/platform/unavailable.vue",
+      "audience": "client",
+      "view_type": "readonly",
+      "features": [
+        {
+          "id": "platform-feature-unavailable",
+          "label": "Entender la disponibilidad",
+          "summary": "Explica una funcionalidad deshabilitada o una evaluación fallida y permite volver a Proyectos."
+        }
+      ]
+    },
+    {
+      "id": "/platform/profile",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Perfil",
+      "file": "frontend/pages/platform/profile.vue",
+      "audience": "client",
+      "view_type": "config",
+      "description": "Ayuda está disponible en el menú de clientes y abre los videos a petición, también después de completar un recorrido. Indica el idioma español y los subtítulos en ambas interfaces; los clips de Appi y voz sólo aparecen con su capacidad disponible. La navegación permite activar modo claro u oscuro en escritorio y móvil y conserva la elección al recargar. Personalizar apariencia permite cambiar el color y la portada o quitar la imagen guardada.",
+      "features": [
+        {
+          "id": "platform-profile-management",
+          "label": "Mantener el perfil al día",
+          "summary": "Centraliza los datos personales y la configuración de la cuenta. La navegación de escritorio y móvil permite elegir modo claro u oscuro y conservarlo al recargar; Personalizar apariencia guarda colores y portadas y permite retirar la imagen personalizada. Para clientes, Ayuda permite repetir recorridos guiados y consultar videos en un modal sin reproducción automática; los clips de Appi y voz dependen de las funciones disponibles. El primer ingreso y el primer proyecto ofrecen orientación por usuario."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Proyectos",
+      "file": "frontend/pages/platform/projects/index.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "Appi ofrece consultas sobre proyectos propios y guías de uso desde el layout de clientes, con historial privado, fuentes y cupo compartido de IA cuando está habilitado.",
+      "features": [
+        {
+          "id": "platform-project-portfolio",
+          "label": "Consultar los proyectos",
+          "summary": "Permite recorrer el portafolio y entrar al resumen de una iniciativa. Los fallos de acceso terminan la carga y explican el estado sin mostrar datos ni navegación del proyecto, con regreso al listado propio conservando idioma; administradores pueden volver a su ficha comercial. Appi consulta estado, salud y fuentes de proyectos propios, conserva historial privado y orienta con guías de uso cuando está habilitado."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Detalle de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/index.vue",
+      "audience": "client",
+      "view_type": "detail",
+      "description": "El retorno administrativo a Ficha comercial conserva idioma, proyecto resaltado y pestaña nueva. Appi permite consultar estado y salud del proyecto, revisar fuentes y seguir guías de uso; la consulta no modifica el proyecto ni registra reportes. Acceso denegado o proyecto no disponible termina la carga, explica el resultado sin datos ni navegación interna y permite volver al listado propio conservando el idioma. La vuelta a la ficha comercial está reservada a administradores.",
+      "features": [
+        {
+          "id": "platform-project-portfolio",
+          "label": "Consultar los proyectos",
+          "summary": "Permite recorrer el portafolio y entrar al resumen de una iniciativa. Los fallos de acceso terminan la carga y explican el estado sin mostrar datos ni navegación del proyecto, con regreso al listado propio conservando idioma; administradores pueden volver a su ficha comercial. Appi consulta estado, salud y fuentes de proyectos propios, conserva historial privado y orienta con guías de uso cuando está habilitado."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/board",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Tablero de proyecto (redirect)",
+      "file": "frontend/pages/platform/projects/[id]/board.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-project-board",
+          "label": "Validar las entregas del alcance",
+          "summary": "Organiza contratos y otrosíes con fuentes documentales o archivos del paquete confirmado de aprobación, incluidos los personalizados. Seleccionar una copia privada no acredita firma y los archivos sin PDF conservan su formato original. Incluye alcances, fases, etapas y requerimientos con documentos y rondas de revisión. Las guías explican accesos y casos permitidos o bloqueados para roles acreditados por las fuentes. Una etapa totalmente aprobada habilita un correo con el registro público completo de conversaciones y decisiones, vista previa, constancia PDF y documentos opcionales e historial privado."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/delivery",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Seguimiento contractual de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/delivery.vue",
+      "audience": "client",
+      "view_type": "detail",
+      "description": "El equipo puede seleccionar como fuente contractual los archivos conservados al confirmar la aprobación, incluidos los personalizados; esa selección queda privada y no acredita firma. Los archivos sin PDF conservan su descarga original y, al registrar la firma externa, el PDF firmado pasa a ser la copia contractual. El equipo redacta guías por los roles reales del producto cuando las fuentes los acreditan, conserva copias y verifica citas antes de aplicar borradores. El cliente responde por requerimiento y conserva sus conformidades entre rondas. Con IA habilitada puede dictar observaciones y motivos por requerimiento; revisa el texto antes de incorporarlo y decide la conformidad por separado. El cupo es compartido con el chatbot. Para una etapa totalmente aprobada, el administrador puede preparar, revisar y enviar manualmente un correo con el registro público completo de conversaciones y decisiones, autores, fechas y rondas, incluso sin adjuntos; puede agregar documentos públicos o la constancia PDF, consultar su historial privado y preparar un reenvío explícito. El administrador también consulta el historial de avisos de publicaciones, respuestas y revisiones con observaciones; sólo un fallo confirmado habilita previsualizar la copia exacta y confirmar un reintento, mientras que un resultado en curso o desconocido exige revisión humana.",
+      "features": [
+        {
+          "id": "platform-project-board",
+          "label": "Validar las entregas del alcance",
+          "summary": "Organiza contratos y otrosíes con fuentes documentales o archivos del paquete confirmado de aprobación, incluidos los personalizados. Seleccionar una copia privada no acredita firma y los archivos sin PDF conservan su formato original. Incluye alcances, fases, etapas y requerimientos con documentos y rondas de revisión. Las guías explican accesos y casos permitidos o bloqueados para roles acreditados por las fuentes. Una etapa totalmente aprobada habilita un correo con el registro público completo de conversaciones y decisiones, vista previa, constancia PDF y documentos opcionales e historial privado."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/bugs",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Bugs de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/bugs.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "Resuelto por equipo admite reapertura sin conformidad formal ni cambios de guías. Con IA habilitada el cliente dicta una nota de hasta 60 segundos, corrige la transcripción y revisa una propuesta estructurada que sólo llena el formulario. Muestra el cupo compartido con el chatbot. El equipo prepara respuestas con fuentes/citas y revisión humana; contexto y procedencia privados quedan fuera de la lectura cliente.",
+      "features": [
+        {
+          "id": "platform-bug-follow-up",
+          "label": "Reportar y seguir bugs",
+          "summary": "Permite reportar un bug general sin guías o conservar la publicación original de una entrega. Con IA habilitada admite una nota de voz, transcripción corregible y propuesta revisable; sólo llena el formulario y comparte cupo con el chatbot."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/changes",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Cambios de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/changes.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "La solicitud conserva contrato, publicación y versión originales; la ampliación requiere una etapa editable explícita. Con IA habilitada admite una nota de voz para el requerimiento seleccionado, con propuesta revisable antes de llenar el formulario y marcador del cupo compartido con el chatbot. La respuesta contractual verifica citas y exige revisión humana, con evidencia pública limitada y auditoría privada.",
+      "features": [
+        {
+          "id": "platform-change-requests",
+          "label": "Gestionar solicitudes de cambio",
+          "summary": "Conserva el contexto contractual original y prepara respuestas con fuentes seleccionadas, citas verificadas y revisión humana. El cliente sólo recibe la respuesta y la conclusión de alcance, sin fuentes privadas."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/collection-accounts",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Cuentas de cobro de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/collection-accounts.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "El enlace del proyecto está habilitado; no deduce contrato por compartir proyecto ni mezcla documentos contractuales.",
+      "features": [
+        {
+          "id": "platform-collection-accounts",
+          "label": "Consultar cuentas de cobro",
+          "summary": "Lista las cuentas emitidas del cliente y de cada proyecto, agrupadas y filtrables por contrato, otrosí, hosting o pendiente de asociar; abre detalle, estado e instrucciones de pago."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/data-model",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Modelo de datos de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/data-model.vue",
+      "audience": "client",
+      "view_type": "detail",
+      "features": [
+        {
+          "id": "platform-data-model",
+          "label": "Comprender la estructura funcional",
+          "summary": "Expone el modelo de datos asociado al proyecto cuando está disponible."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/deliverables",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Entregables de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/deliverables/index.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "La biblioteca permite consultar y descargar las copias privadas del paquete de aprobación confirmado, separadas de los adjuntos editables y sin inferir firmas o aprobaciones de entrega. También muestra contratos, otrosíes y anexos legales; las descargas del archivo actual y sus versiones se autentican, impiden solicitudes duplicadas y conservan el detalle abierto al mostrar un error de permiso o conexión.",
+      "features": [
+        {
+          "id": "platform-deliverable-library",
+          "label": "Consultar entregables",
+          "summary": "Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/deliverables/:deliverableId",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Detalle de entregable (redirect)",
+      "file": "frontend/pages/platform/projects/[id]/deliverables/[deliverableId]/index.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-deliverable-library",
+          "label": "Consultar entregables",
+          "summary": "Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/payments",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Hosting y pagos de proyecto",
+      "file": "frontend/pages/platform/projects/[id]/payments.vue",
+      "audience": "client",
+      "view_type": "list",
+      "description": "Conserva fases comerciales y automatismos existentes. Las fuentes pendientes no se suman ni se concilian por texto o importe.",
+      "features": [
+        {
+          "id": "platform-project-payments",
+          "label": "Consultar pagos y hosting",
+          "summary": "Lista los proyectos con hosting y muestra su único contexto, suscripción, pagos, ciclos y fuentes explícitamente reconciliadas."
+        }
+      ]
+    },
+    {
+      "id": "/platform/clients",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Clientes de plataforma",
+      "file": "frontend/pages/platform/clients/index.vue",
+      "audience": "admin",
+      "view_type": "list",
+      "features": [
+        {
+          "id": "platform-client-administration",
+          "label": "Administrar clientes",
+          "summary": "Permite al equipo consultar clientes y abrir su contexto operativo."
+        }
+      ]
+    },
+    {
+      "id": "/platform/clients/:id",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Detalle de cliente de plataforma",
+      "file": "frontend/pages/platform/clients/[id].vue",
+      "audience": "admin",
+      "view_type": "detail",
+      "features": [
+        {
+          "id": "platform-client-administration",
+          "label": "Administrar clientes",
+          "summary": "Permite al equipo consultar clientes y abrir su contexto operativo."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/packages",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Paquetes de requerimientos del proyecto",
+      "file": "frontend/pages/platform/projects/[id]/packages.vue",
+      "audience": "client",
+      "view_type": "edit",
+      "description": "Disponibilidad independiente en Feature flags, habilitada inicialmente. Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.",
+      "features": [
+        {
+          "id": "platform-requirement-packages",
+          "label": "Comprar y utilizar paquetes por talla",
+          "summary": "Explica las tallas con ejemplos propios o genéricos. Permite comprar, solicitar cambios, objetar propuestas o aceptarlas con cargo a un cupo vigente y consultar su historial. Su disponibilidad se controla de forma independiente desde Feature flags."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/ideas",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Ideas para el futuro",
+      "file": "frontend/pages/platform/projects/[id]/ideas.vue",
+      "audience": "client",
+      "view_type": "edit",
+      "description": "Registrar una idea no amplía el alcance ni constituye aprobación; recopilaciones exclusivas del equipo.",
+      "features": [
+        {
+          "id": "platform-project-ideas",
+          "label": "Conservar ideas del cliente",
+          "summary": "Registra texto con autor y fecha, corrige ideas propias conservando versiones y mantiene sugerencias archivadas."
+        }
+      ]
+    },
+    {
+      "id": "/platform/projects/:id/access",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Accesos del proyecto",
+      "file": "frontend/pages/platform/projects/[id]/access.vue",
+      "audience": "client",
+      "view_type": "edit",
+      "description": "Oculto por defecto sólo para accesos; la revelación verifica permisos vigentes y omite notas y repositorio al cliente. Editor administrativo también en /panel/projects.",
+      "features": [
+        {
+          "id": "platform-project-access",
+          "label": "Abrir accesos operativos",
+          "summary": "El equipo administra datos y una matriz de visibilidad por ambiente; el cliente recibe URLs autorizadas y revelación puntual de credenciales, sin notas internas ni repositorio. Conserva el enlace global anterior."
+        }
+      ]
+    },
+    {
+      "id": "/platform/admin-login",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Login de administrador (redirect de impersonación)",
+      "file": "frontend/pages/platform/admin-login.vue",
+      "audience": "client",
+      "view_type": "redirect",
+      "features": [
+        {
+          "id": "platform-account-recovery",
+          "label": "Recuperar el acceso",
+          "summary": "Guía la recuperación de contraseña y la verificación de códigos."
+        }
+      ]
+    },
+    {
+      "id": "/platform/forgot-password",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Olvide mi contraseña",
+      "file": "frontend/pages/platform/forgot-password.vue",
+      "audience": "client",
+      "view_type": "auth",
+      "features": [
+        {
+          "id": "platform-account-recovery",
+          "label": "Recuperar el acceso",
+          "summary": "Guía la recuperación de contraseña y la verificación de códigos."
+        }
+      ]
+    },
+    {
+      "id": "/platform/reset-password",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Restablecer contraseña",
+      "file": "frontend/pages/platform/reset-password.vue",
+      "audience": "client",
+      "view_type": "auth",
+      "features": [
+        {
+          "id": "platform-account-recovery",
+          "label": "Recuperar el acceso",
+          "summary": "Guía la recuperación de contraseña y la verificación de códigos."
+        }
+      ]
+    },
+    {
+      "id": "/platform/verify-code",
+      "surface": "Plataforma",
+      "module": "Plataforma de clientes",
+      "view": "Verificar código",
+      "file": "frontend/pages/platform/verify-code.vue",
+      "audience": "client",
+      "view_type": "auth",
+      "features": [
+        {
+          "id": "platform-account-recovery",
+          "label": "Recuperar el acceso",
+          "summary": "Guía la recuperación de contraseña y la verificación de códigos."
+        }
+      ]
+    }
+  ]
+}

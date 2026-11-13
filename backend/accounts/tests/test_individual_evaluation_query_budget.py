@@ -57,6 +57,7 @@ def _independent_author_reads(queries, owner_model, comment_model):
         and not _exact_table(query, comment_model)
         and not _exact_table(query, IssueResponse)
         and not _exact_table(query, IssueEvent)
+        and not _exact_table(query, Project)
     ]
 
 

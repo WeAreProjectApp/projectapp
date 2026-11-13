@@ -1,5 +1,6 @@
 <template>
   <aside
+    data-hosting-offset="top"
     :class="[
       'fixed inset-y-0 left-0 z-30 flex flex-col border-r transition-all duration-300 ease-in-out',
       'border-input-border/[0.06] bg-surface dark:border-white/[0.06] dark:bg-surface-muted',
@@ -64,10 +65,10 @@
           :disabled="item.disabled"
         />
         <PlatformHelpMenu :collapsed="isCollapsed" />
-        <!-- Personaliza button (opens theme picker, not a route) -->
+        <!-- A labelled row must keep icon and text as flex siblings. -->
         <BaseButton
           unstyled
-          icon-only
+          :icon-only="isCollapsed"
           type="button"
           aria-label="Personalizar apariencia"
           :class="[
@@ -120,7 +121,7 @@
             alt="Avatar"
             class="h-full w-full object-cover"
           />
-          <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary dark:bg-accent dark:text-on-accent">
+          <div v-else class="flex h-full w-full items-center justify-center bg-profile-avatar text-xs font-bold text-on-profile-avatar">
             {{ authStore.userInitials }}
           </div>
         </div>

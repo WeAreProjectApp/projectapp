@@ -82,6 +82,8 @@ class Command(BaseCommand):
 
         from procurement.fake_data import clear_examples
         clear_examples()
+        from content.management.commands._package_seed_helpers import clear_fake_package_data
+        clear_fake_package_data()
 
         # Signed and review PDF evidence protects documents and source messages.
         # A fake reset explicitly clears that graph before those source records.

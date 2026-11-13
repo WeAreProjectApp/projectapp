@@ -8,3 +8,6 @@ PA-263. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
 - display: navegación desde el Panel con valores iniciales o navegación de cliente filtrada.
 
 Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servicios continúa; este registro no acredita aprobación.
+
+
+Integración PA-251: la búsqueda de clientes consulta al escribir, descarta respuestas anteriores incluso durante el debounce, conserva carga/error/reintento y vuelve a la primera página al limpiar.

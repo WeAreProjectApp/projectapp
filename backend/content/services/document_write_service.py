@@ -3,7 +3,7 @@
 import hashlib
 from functools import wraps
 
-from content.services.contract_mirror_service import is_contract_mirror, mirror_markdown
+from content.services.contract_mirror_service import is_contract_mirror, mirror_markdown, module_contract_mirror
 from content.services.document_type_codes import COLLECTION_ACCOUNT
 from rest_framework import serializers
 from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
@@ -11,6 +11,10 @@ from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 
 def document_etag(document):
     stamp = document.updated_at.isoformat() if document.updated_at else ""
+    binding = module_contract_mirror(document)
+    if binding:
+        revision = binding[0].contract.current_revision
+        stamp += f':{binding[1]}:{revision.pk}:{hashlib.sha256(revision.markdown.encode()).hexdigest()}'
     return hashlib.sha256(f"document:{document.pk}:{stamp}".encode()).hexdigest()
 
 
@@ -39,12 +43,13 @@ def movement_blockers(document):
 def document_capabilities(document):
     blockers = movement_blockers(document)
     mirror = is_contract_mirror(document)
+    module_editable = bool(module_contract_mirror(document) and not document.is_archived)
     from content.services.uploaded_pdf_service import pdf_is_protected
     return {
-        "editable": not blockers and not mirror,
+        "editable": module_editable or (not blockers and not mirror),
         "movable": not blockers,
         "move_blockers": blockers,
-        "content_editable": not blockers and document.content_format != 'pdf',
+        "content_editable": module_editable or (not blockers and document.content_format != 'pdf'),
         "pdf_replaceable": (not blockers and document.content_format == 'pdf'
                             and not pdf_is_protected(document)),
     }
@@ -66,6 +71,8 @@ def document_write_payload(document, *, include_content=False):
     }
     if include_content:
         data["text_formats"] = document.text_formats
+        if module_contract_mirror(document):
+            data["text_formats"] = {**(document.text_formats or {}), '/content_markdown': 'markdown_html_v1'}
         data["markdown"] = (
             (mirror_markdown(document) or "")
             if is_contract_mirror(document)
@@ -123,6 +130,9 @@ DOCUMENT_WRITE_SCHEMA = {
         "pdf": {"type": ["object", "null"]},
         "movable": {"type": "boolean"},
         "move_blockers": {"type": "array", "items": {"type": "string"}},
+        "contract_variant": {"type": "string", "description": "Variante del contrato de programa, cuando corresponde."},
+        "contract_version": {"type": "integer", "description": "Versión contractual sincronizada después del guardado."},
+        "contract_synced_at": {"type": ["string", "null"], "description": "Fecha de sincronización de la revisión contractual."},
         "markdown": {"type": "string", "description": "Sólo con include_content=true."},
         "text_formats": TEXT_FORMATS_SCHEMA,
     },

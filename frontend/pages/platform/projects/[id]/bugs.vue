@@ -240,21 +240,12 @@
 
                 <div class="grid grid-cols-3 gap-3">
                   <div>
-                    <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Severidad</label>
-                    <select v-model="createForm.severity" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
-                      <option value="low">Baja</option>
-                      <option value="medium">Media</option>
-                      <option value="high">Alta</option>
-                      <option value="critical">Crítica</option>
-                    </select>
+                    <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70" for="bug-severity">Severidad</label>
+                    <BaseChoiceSelect id="bug-severity" v-model="createForm.severity" :options="severityOptions" aria-label="Severidad" />
                   </div>
                   <div>
-                    <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Entorno</label>
-                    <select v-model="createForm.environment" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-3 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
-                      <option value="production">Producción</option>
-                      <option value="staging">Staging</option>
-                      <option value="dev">Desarrollo</option>
-                    </select>
+                    <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70" for="bug-environment">Entorno</label>
+                    <BaseChoiceSelect id="bug-environment" v-model="createForm.environment" :options="environmentOptions" aria-label="Entorno" />
                   </div>
                   <div>
                     <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Navegador</label>
@@ -559,6 +550,9 @@
 </template>
 
 <script setup>
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue';
+const environmentOptions = [{"value": "production", "label": "Producción"}, {"value": "staging", "label": "Staging"}, {"value": "dev", "label": "Desarrollo"}];
+const severityOptions = [{"value": "low", "label": "Baja"}, {"value": "medium", "label": "Media"}, {"value": "high", "label": "Alta"}, {"value": "critical", "label": "Crítica"}];
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
 import { useIsMobile } from '~/composables/useIsMobile'

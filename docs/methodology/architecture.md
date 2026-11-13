@@ -1,3 +1,23 @@
+## PA-221 · cobertura MCP y retiro
+
+`content.mcp.presentation` centraliza nombres y grupos de capacidades desde herramientas publicadas. Operations adapta las ocho operaciones administrativas de Monitoring; ingestión conserva su credencial de fuente. `mcp_surface_matrix` cruza el Mapa de vistas con el registro real y conserva excepciones de identidad. La asignación es candidata hasta el cotejo funcional. `mcp_retirement` exige un reporte QA vigente y conserva su referencia/hash por catálogo en `McpConnector.retirement_evidence`; las ventanas y consumidores siguen siendo guardas independientes. Las rutas retiradas autentican y rechazan sin despacho. Los targets puros de raíces se comparten entre sincronización de proyecto y vista previa NM1 para evitar efectos de negocio ocultos.
+
+> **Contratos de programas — 2026-11-12:** Building with Us y Células comparten
+> la edición del Gestor y sus servicios versionados con MCP. El guardado verifica
+> la revisión, actualiza PDF e historial de forma atómica y conserva el documento
+> vinculado. Los módulos consultan, previsualizan, descargan y enlazan al editor.
+> Esta actualización sustituye la restricción histórica de edición exclusiva
+> mediante MCP para estos dos contratos; los demás espejos conservan sus bloqueos.
+> [Contrato técnico y validación](../PROGRAM_CONTRACT_DOCUMENTS.md).
+
+## PA-249 — prioridades y capacidad de Monitoreo
+
+La ampliación en rama de sesión conserva estados y agrupación de eventos; incorpora consultas estables de 15 minutos, KPIs del conjunto filtrado, fuente de mediciones reales de servidor (1 min, 90 días), capacidad informativa versionada y gestión compartida con MCP Proyectos. Migración monitoring.0006 aditiva, aplicada sólo mediante deploy. Contrato, límites y orden de activación en `docs/monitoring-dashboard.md`. CI y QA del SHA servido se registran en la entrega; esta nota no acredita despliegue ni aprobación manual.
+
+> **PA-264 — preparado en rama de sesión:** control visual de hosting por producción, independiente del ciclo comercial y los flags por cliente. Panel/MCP comparten modo, mensajes independientes, versión y auditoría; receptores externos confirman documento y huella. Integraciones, límites y validación pendiente en `docs/HOSTING_CONTROL.md`. QA manual y servicios continúan pausados.
+
+> **PA-254 — 2026-11-12:** órdenes únicas por proyecto, libro de cupos y consentimiento del cliente separados de hosting. Servicios compartidos por Panel, JWT y MCP; ejemplos versionados independientes de parámetros económicos. La aceptación reemplaza consumos de forma atómica. Contrato: `docs/PA254_REQUIREMENT_PACKAGES.md`. Implementación sin acreditar despliegue ni calibración económica.
+
 ## PA-263 — disponibilidad de Plataforma (2026-11-12)
 
 Catálogo compartido con globales y excepciones por cliente; la excepción prevalece. Todas las capacidades ordinarias parten habilitadas; IA y audio parten apagados. Panel, API y MCP comparten servicio, versión y auditoría; se conservan permisos y condiciones técnicas. Implementación en rama de sesión, migraciones por deploy y automatizadas exclusivamente en CI. La pausa de QA manual y servicios sigue vigente; esta nota no acredita validación ni despliegue. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).

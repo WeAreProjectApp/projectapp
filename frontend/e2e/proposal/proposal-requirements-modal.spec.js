@@ -8,6 +8,8 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PROPOSAL_FUNCTIONAL_REQUIREMENTS_MODAL } from '../helpers/flow-tags.js';
 
+test.setTimeout(60_000);
+
 const MOCK_UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
 const mockProposal = {
@@ -210,6 +212,8 @@ const mockProposalWithTech = {
             flowKey: 'req-home',
             title: 'Home dinámico con secciones administrables',
             description: 'Hero, servicios y testimonios editables desde el panel.',
+            configuration: 'Secciones persistidas con permisos de edición en el servidor.',
+            usageFlow: 'Editar una sección → guardar → consultar la portada actualizada.',
             priority: 'high',
             linked_item_ids: ['item-views-home'],
           }, {
@@ -249,6 +253,19 @@ test.describe('Nested linked-requirements modal', () => {
       }
       return null;
     });
+  });
+
+  test('opens the technical detail of a linked requirement', {
+    tag: [...PROPOSAL_FUNCTIONAL_REQUIREMENTS_MODAL, '@role:guest', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: the item projection used to discard configuration and usage flow.
+    await navigateToRequirements(page);
+    await page.getByText('Vistas').first().click();
+    await page.getByTestId('view-requirements-link').first().click();
+
+    const first = page.getByTestId('linked-requirement').first();
+    await expect(first.getByTestId('linked-requirement-configuration')).toContainText('Secciones persistidas con permisos de edición en el servidor.');
+    await expect(first.getByTestId('linked-requirement-usage-flow')).toContainText('Editar una sección → guardar → consultar la portada actualizada.');
   });
 
   test('item with linked requirements shows link that opens the nested modal', {

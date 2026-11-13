@@ -23,6 +23,8 @@ etiquetas ES/EN, módulos, referencias del Mapa de vistas, rutas, controles de a
 y nombres de endpoints. Las entradas sin página propia identifican sus componentes.
 No crear claves desde el Panel ni reutilizar una clave para otra finalidad.
 
+Paquetes de requerimientos usa `platform.requirement_packages`, habilitado inicialmente. Controla la pestaña del proyecto, sus enlaces directos y las API del cliente para consultar ejemplos, comprar y enviar o decidir requerimientos. Las operaciones administrativas conservan su acceso de soporte autorizado; apagar este flag no cancela obligaciones ni procesamiento financiero automático.
+
 `accounts.feature_permissions` añade la evaluación después de los permisos DRF
 existentes a las rutas de cuentas. Conserva autorización por registro; las
 descargas de evidencia compartidas resuelven primero su propietario y clase de
@@ -63,7 +65,7 @@ Las páginas de IA y Ayuda enlazan al administrador central. Sus endpoints/MCP
 anteriores conservan adaptadores: valores globales escriben globales; booleanos
 por cliente crean excepciones. Los campos legados sólo conservan proyecciones y
 versiones para compatibilidad; ninguna evaluación los usa como otra fuente.
-El contrato Proyectos pasa a 6.0.0 por el cambio de precedencia.
+El contrato Proyectos publica 6.1.0: conserva el cambio de precedencia de 6.0.0 y añade la disponibilidad independiente de Paquetes de requerimientos.
 
 ## API y MCP
 
@@ -103,7 +105,7 @@ Backlog con SHA, entorno, rol, reproducción y efecto; Backlog deduplica y regis
 TO DO en la ficha consolidada de la ronda cuando corresponda. sync-knowledge
 coordina publicación canónica; esta implementación no publica en Slack.
 
-Automatizadas sólo en CI. La pausa de QA manual y servicios se mantiene. Frontend
+Automatizadas en CI, con regresiones acotadas de integración en el worktree. La pausa de QA manual y servicios se mantiene. Frontend
 y su mismo DevQA validarán sobre un único SHA/entorno autorizado: valores
 iniciales, ambos globales, ambas excepciones, retirada, dos clientes, persistencia,
 permisos, acceso directo, MCP y detección de brecha. El generador canónico añade

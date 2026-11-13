@@ -103,7 +103,8 @@ test.describe('Admin Proposal Contract Generate', () => {
     });
     await page.goto('/es-co/panel/proposals', { waitUntil: 'domcontentloaded' });
     const status = page.getByLabel('Cambiar estado de la propuesta');
-    await status.selectOption('negotiating');
+    await status.click();
+    await page.getByRole('option', { name: 'En negociación', exact: true }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('tab', { name: 'Contrato personalizado' }).click();
     const customContract = richTextEditorByPlaceholder(dialog, /Pega o escribe tu contrato/);
@@ -115,7 +116,7 @@ test.describe('Admin Proposal Contract Generate', () => {
     await expect(customContract.getByTestId('rich-text-source-input')).toHaveValue('# Acuerdo negociado');
     await dialog.getByRole('button', { name: 'Generar contrato y negociar', exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(status).toHaveValue('negotiating');
+    await expect(status).toHaveText('En negociación');
   });
 
   test('Documents tab visible for negotiating proposal with contract section', {

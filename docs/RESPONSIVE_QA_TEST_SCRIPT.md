@@ -2,7 +2,7 @@
 
 **Estado:** obligatorio
 
-**Cobertura automatizada:** 143 vistas × 5 perfiles = 715 celdas
+**Cobertura automatizada:** 146 vistas × 5 perfiles = 730 celdas
 
 **Fuente de verdad:** `frontend/config/viewCatalog.js`, `frontend/config/responsive.js` y `frontend/e2e/responsive/catalog-scenarios.js`
 
@@ -60,7 +60,7 @@ de compatibilidad y nunca acreditan layout, tablas o modales.
 | Accounting | 14 | doce tabs, asociación de cobros, conciliación del hosting, indicadores, agrupación, filtros guardados y modales largos |
 | Documents | 2 | carpetas, activo/archivado, listado y acciones de fila |
 | Clients | 36 | filtros de dos niveles, tarjetas, administración, guías de validación y plataforma autenticada |
-| Projects | 8 | listado, crear/editar, cambio guiado de cliente y seguimiento de monitoreo |
+| Projects | 9 | listado, crear/editar, cambio guiado de cliente, control visual de hosting y seguimiento de monitoreo |
 | Commercial | 23 | propuestas, diagnósticos, paquetes, módulos adicionales, financiación, Building with Us y Células de Building on Demand (Programa, Economía y Contrato) |
 | Emails | 3 | compositor, adjuntos, preview, historial y entregabilidad |
 | Communications | 3 | ordenar, abrir hilo, leer estados/adjuntos y registrar mensaje; abrir un enlace seguro y ver su contenido |
@@ -147,7 +147,7 @@ Cada batch de matriz contiene como máximo cuatro vistas y, por tanto, veinte
 pruebas (cuatro escenarios × cinco perfiles). Los batches especiales también
 se parten al llegar a veinte casos. Todos corren con cero reintentos; CI ejecuta
 sólo los batches de los módulos afectados en PR, mientras que el comando
-completo y la programación mensual recorren las 715 celdas más los especiales.
+completo y la programación mensual recorren las 730 celdas más los especiales.
 
 ## Reporte y criterio de cierre
 

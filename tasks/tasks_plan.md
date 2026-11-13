@@ -1,3 +1,22 @@
+## Contratos de programas editables desde el Gestor — 2026-11-12
+
+PA-255/PA-256: el Gestor permite editar contenido y presentación de los contratos
+Building with Us y Células con motivo y versión obligatorios. El escritor de cada
+programa conserva revisión, historial y PDF en una transacción; los módulos
+consultan, descargan y enlazan al documento exacto. Se mantienen los MCP y la
+protección de ubicación, identidad y privacidad. No cambia el contenido jurídico
+ni acredita aprobación contractual. Sin migraciones ni cambios productivos.
+Contrato técnico y validación: [Contratos de programas](../docs/PROGRAM_CONTRACT_DOCUMENTS.md).
+Implementación en rama de sesión; la validación automatizada se ejecuta en CI.
+
+## PA-249 — prioridades y capacidad de Monitoreo
+
+La ampliación en rama de sesión conserva estados y agrupación de eventos; incorpora consultas estables de 15 minutos, KPIs del conjunto filtrado, fuente de mediciones reales de servidor (1 min, 90 días), capacidad informativa versionada y gestión compartida con MCP Proyectos. Migración monitoring.0006 aditiva, aplicada sólo mediante deploy. Contrato, límites y orden de activación en `docs/monitoring-dashboard.md`. CI y QA del SHA servido se registran en la entrega; esta nota no acredita despliegue ni aprobación manual.
+
+> **PA-264 — preparado en rama de sesión:** control visual de hosting por producción, independiente del ciclo comercial y los flags por cliente. Panel/MCP comparten modo, mensajes independientes, versión y auditoría; receptores externos confirman documento y huella. Integraciones, límites y validación pendiente en `docs/HOSTING_CONTROL.md`. QA manual y servicios continúan pausados.
+
+> **PA-254 — 2026-11-12, en implementación:** paquetes, ejemplos por proyecto, compras online/externas, evaluación manual y consumo tras consentimiento. CI, QA manual y entrega se documentan por separado; sin despliegue ni evidencia económica real. Ver `docs/PA254_REQUIREMENT_PACKAGES.md`.
+
 ## PA-263 — Feature flags de Plataforma
 
 Implementación en rama de sesión: catálogo, precedencia global/cliente, protección de operaciones, Panel, compatibilidad de IA/Ayuda y MCP. Entrega técnica pendiente de CI; QA manual y servicios siguen pausados. Ver `docs/PLATFORM_FEATURE_FLAGS.md`.

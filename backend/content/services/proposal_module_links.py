@@ -115,6 +115,9 @@ def build_item_requirements_map(technical_content_json: Any) -> dict[str, list[d
                     'priority': requirement.get('priority') or '',
                     'epicKey': epic.get('epicKey') or '',
                     'flowKey': requirement.get('flowKey') or '',
+                    **{key: copy.deepcopy(requirement[key])
+                       for key in ('configuration', 'usageFlow', 'text_formats')
+                       if requirement.get(key)},
                 })
     return result
 

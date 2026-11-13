@@ -4,16 +4,32 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 
 from .authentication import IngestAuthentication
-from .models import Case, CaseActivity, Report, Resource, Source
+from .dashboard import frozen_page, host_status, revision, save_capacity, series
+from .models import CapacityAllocation, Case, CaseActivity, Report, Resource, Source
 from .serializers import (
-    ActivitySerializer, CaseSerializer, DeliverySerializer, FilterSerializer,
-    IngestSerializer, NoteSerializer, ReportSerializer, ResourceLinkSerializer, ResourceSerializer,
-    SourceSerializer, StateSerializer,
+    ActivitySerializer,
+    CapacityChangeSerializer,
+    CapacitySerializer,
+    CaseSerializer,
+    DeliverySerializer,
+    FilterSerializer,
+    IngestSerializer,
+    NoteSerializer,
+    ReportSerializer,
+    ResourceLinkSerializer,
+    ResourceSerializer,
+    SeriesFilterSerializer,
+    SourceSerializer,
+    StateSerializer,
 )
 from .services import change_state, ingest, link_resource
 
@@ -60,9 +76,11 @@ def filtered(request, model):
         if parameter in data:
             query = query.filter(**{field: data[parameter]})
     if model is Case:
-        for parameter in ['state', 'severity']:
+        for parameter in ['state', 'severity', 'condition']:
             if parameter in data:
                 query = query.filter(**{parameter: data[parameter]})
+        if data.get('followup'):
+            query = query.filter(state__in=['pending', 'reviewing'])
     if data.get('search'):
         query = query.filter(title__icontains=data['search'])
     date_field = 'last_seen_at' if model is Case else 'observed_at'
@@ -86,25 +104,40 @@ def filtered(request, model):
 @admin_api(['GET'])
 def cases(request):
     query, page = filtered(request, Case)
+    data = validated(FilterSerializer, request.query_params)
+    if data.get('snapshot'):
+        return Response(frozen_page(query, data, request.user))
     return Response(paginated(query, CaseSerializer, page))
 
 
 @admin_api(['GET'])
-def case_detail(request, pk):
-    case = get_object_or_404(Case.objects.select_related('source__resource__server'), pk=pk)
-    page = validated(FilterSerializer, request.query_params)['page']
-    return Response({**CaseSerializer(case).data, 'evidence': case.evidence, 'activities': paginated(case.activities.all(), ActivitySerializer, page), 'deliveries': paginated(case.deliveries.all(), DeliverySerializer, page)})
+def case_detail(request, case_id):
+    case = get_object_or_404(Case.objects.select_related('source__resource__server'), pk=case_id)
+    data = validated(FilterSerializer, request.query_params)
+    activities, deliveries = case.activities.all(), case.deliveries.all()
+    bounds = {}
+    if data['history_snapshot']:
+        for key, query in [('activities', activities), ('deliveries', deliveries)]:
+            bounds[key] = data.get(f'{key}_before')
+            if bounds[key] is None:
+                bounds[key] = query.order_by('-pk').values_list('pk', flat=True).first() or 0
+        activities = activities.filter(pk__lte=bounds['activities'])
+        deliveries = deliveries.filter(pk__lte=bounds['deliveries'])
+    return Response({**CaseSerializer(case).data, 'evidence': case.evidence,
+                     'history_bounds': bounds,
+                     'activities': paginated(activities, ActivitySerializer, data.get('activities_page', data['page'])),
+                     'deliveries': paginated(deliveries, DeliverySerializer, data.get('deliveries_page', data['page']))})
 
 
 @admin_api(['POST'])
-def case_state(request, pk):
-    case = change_state(pk, request.user, validated(StateSerializer, request.data))
+def case_state(request, case_id):
+    case = change_state(case_id, request.user, validated(StateSerializer, request.data))
     return Response(CaseSerializer(case).data)
 
 
 @admin_api(['POST'])
-def case_note(request, pk):
-    case = get_object_or_404(Case, pk=pk)
+def case_note(request, case_id):
+    case = get_object_or_404(Case, pk=case_id)
     data = validated(NoteSerializer, request.data)
     activity = CaseActivity.objects.create(case=case, actor=request.user, actor_name=request.user.get_username(), kind='note', text=data['text'])
     return Response(ActivitySerializer(activity).data, status=201)
@@ -113,17 +146,62 @@ def case_note(request, pk):
 @admin_api(['GET'])
 def reports(request):
     query, page = filtered(request, Report)
+    data = validated(FilterSerializer, request.query_params)
+    if data.get('snapshot'):
+        return Response(frozen_page(query, data, request.user, reports=True))
     return Response(paginated(query, ReportSerializer, page))
 
 
 @admin_api(['GET'])
-def report_detail(request, pk):
-    report = get_object_or_404(Report.objects.select_related('source__resource__server'), pk=pk)
+def report_detail(request, report_id):
+    report = get_object_or_404(Report.objects.select_related('source__resource__server'), pk=report_id)
     return Response({**ReportSerializer(report).data, 'text': report.text})
 
 
 @admin_api(['PATCH'])
-def resource_link(request, pk):
+def resource_link(request, resource_id):
     data = validated(ResourceLinkSerializer, request.data)
-    resource = link_resource(pk, data['project'])
+    resource = link_resource(resource_id, data['project'])
     return Response(ResourceSerializer(resource).data)
+
+
+@admin_api(['GET'])
+def dashboard_status(request):
+    data = validated(FilterSerializer, request.query_params)
+    return Response({'revision': revision(), 'hosts': host_status(data), 'checked_at': timezone.now()})
+
+
+@admin_api(['GET'])
+def server_series(request, server_id):
+    resource = get_object_or_404(Resource, pk=server_id, kind='server')
+    data = validated(SeriesFilterSerializer, request.query_params)
+    return Response(series(resource, data['period']))
+
+
+@admin_api(['GET', 'PUT'])
+def resource_capacity(request, resource_id):
+    resource = get_object_or_404(Resource.objects.select_related('server'), pk=resource_id, kind='project')
+    if request.method == 'PUT':
+        data = validated(CapacitySerializer, request.data)
+        allocation = save_capacity(resource, request.user, data)
+    else:
+        allocation = CapacityAllocation.objects.filter(resource=resource).first()
+    return Response({'resource': ResourceSerializer(resource).data,
+                     'server_name': resource.server.name if resource.server else None,
+                     'allocation': CapacitySerializer(allocation).data if allocation else None,
+                     'consumption': None, 'consumption_status': 'unavailable'})
+
+
+@admin_api(['GET'])
+def capacity_history(request, resource_id):
+    resource = get_object_or_404(Resource, pk=resource_id, kind='project')
+    allocation = get_object_or_404(CapacityAllocation, resource=resource)
+    data = validated(FilterSerializer, request.query_params)
+    changes = allocation.changes.all()
+    before = data.get('changes_before')
+    if before is None:
+        before = changes.order_by('-pk').values_list('pk', flat=True).first() or 0
+    return Response({
+        **paginated(changes.filter(pk__lte=before), CapacityChangeSerializer, data['page']),
+        'history_bounds': {'changes': before},
+    })

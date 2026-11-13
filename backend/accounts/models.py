@@ -1925,4 +1925,9 @@ from accounts.models_ai import (  # noqa: E402,F401
 
 
 from accounts.access_models import AccessEvent, AccessRateBucket, GoogleIdentity, LoginChallenge  # noqa: E402, F401
+
+from accounts.models_requirement_packages import (  # noqa: E402, F401
+    PackageDecision, PackageExampleRevision, PackageMovement, PackageOperation,
+    PackageOrder, PackageProjectSettings, PackageRequest, PackageSizingProposal,
+)
 from accounts.models_feature_flags import ClientPlatformFeatureSettings, PlatformFeatureEvent, PlatformFeatureSettings  # noqa: E402,F401

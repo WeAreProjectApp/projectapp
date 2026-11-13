@@ -116,8 +116,11 @@ def ensure_fake_data_allowed(command_name: str) -> None:
 # contract test compares this set with Django's app registry, turning the
 # maintenance rule into an executable check for every future model delivery.
 SEEDED_MODELS = {
+    'accounts.PackageOrder', 'accounts.PackageRequest', 'accounts.PackageProjectSettings',
     'accounts.ClientPlatformFeatureSettings',
     'monitoring.Resource', 'monitoring.Source', 'monitoring.Case', 'monitoring.Report',
+    # Explicitly marked demo capacity and samples from create_fake_monitoring.
+    'monitoring.CapacityAllocation', 'monitoring.TelemetrySample',
     'secure_links.SecureLink', 'secure_links.SecureLinkFolder',
     'accounts.BugReport', 'accounts.ChangeRequest', 'accounts.DataModelEntity',
     'accounts.CommunicationPanelPreference',
@@ -153,7 +156,10 @@ SEEDED_MODELS = {
 }
 
 DERIVED_MODELS = {
+    'accounts.PackageMovement', 'accounts.PackageOperation', 'accounts.PackageSizingProposal',
+    'accounts.PackageDecision', 'accounts.PackageExampleRevision',
     'monitoring.CaseActivity', 'secure_links.SecureLinkEvent',
+    'monitoring.CapacityChange',
     'content.ConsultingProgramRevision',
     'content.BuildingOnDemandProgramRevision',
     'content.BuildingOnDemandContractRevision', 'content.BuildingOnDemandContractMirror',

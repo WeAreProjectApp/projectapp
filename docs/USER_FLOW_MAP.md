@@ -5037,6 +5037,12 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-requirements-modal.spec.js` (includes nested-modal, executive-mode, and legacy-fallback tests)
 
+
+**PA-251/253/257/261 · delta de interfaz:** El modal conserva uno o varios requerimientos por elemento y muestra configuration y usageFlow con su formato cuando existen, manteniendo propuestas antiguas sin esos campos.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace del elemento y leer configuración/flujo. Error y failure propios del modal: no aplican, porque este modal de lectura usa datos ya cargados y no envía peticiones ni formularios; los fallos al cargar la propuesta pertenecen al flujo de entrada.
+
 ### FLOW: `proposal-negotiate`
 
 - **Module:** proposal
@@ -6219,6 +6225,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-financing-explainer-visibility` | admin | P2 | success,failure | 2 |
 | `admin-financing-settings` | admin | P1 | display,success,error,failure | 4 |
 | `admin-high-engagement-alert` | admin | P2 | — | 0 |
+| `admin-hosting-controls` | admin | P1 | success,error,failure,display | 11 |
 | `admin-hour-packages-config` | admin | P3 | success,error,failure,display | — |
 | `admin-hour-packages-create` | admin | P2 | display,success,error | 1 |
 | `admin-hour-packages-delete` | admin | P2 | success,failure | 1 |
@@ -6234,12 +6241,14 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
 | `admin-managed-calculator-document` | documents | P2 | display | — |
-| `admin-mcps` | admin | P2 | display,success,error,failure | 14 |
+| `admin-mcps` | admin | P2 | display,success,error,failure | 16 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
-| `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |
-| `admin-monitoring-case-note` | monitoring | P2 | success,error,failure,display | — |
-| `admin-monitoring-reports` | monitoring | P2 | display,success,failure | — |
+| `admin-monitoring-case-list` | monitoring | P1 | display,success,error,failure | — |
+| `admin-monitoring-case-note` | monitoring | P2 | display,success,error,failure | — |
+| `admin-monitoring-project-capacity` | monitoring | P1 | display,success,error,failure | — |
+| `admin-monitoring-reports` | monitoring | P2 | display,success,error,failure | — |
+| `admin-monitoring-server-trends` | monitoring | P1 | display,success,failure | — |
 | `admin-outbound-email-history-attachments` | admin | P1 | display | — |
 | `admin-outbound-email-history-body` | admin | P1 | display | 1 |
 | `admin-outbound-email-history-filter` | admin | P1 | display | 1 |
@@ -6264,6 +6273,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-procurement-opportunity-list` | procurement | P1 | display,success,failure | — |
 | `admin-procurement-saved-searches` | procurement | P2 | display,success,error,failure | — |
 | `admin-procurement-settings-sync` | procurement | P2 | display,success,error,failure | — |
+| `admin-program-contract-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-detail` | admin | P1 | display,failure | — |
 | `admin-project-access-field-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-notes` | admin | P2 | display,success,error,failure | — |
@@ -6366,6 +6376,10 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-requirement-calculator-calibration` | commercial | P2 | display,success,error,failure | — |
 | `admin-requirement-calculator-definition` | commercial | P1 | display,success,error,failure | — |
 | `admin-requirement-calculator-revision-restore` | commercial | P2 | display,success,failure | — |
+| `admin-requirement-package-commerce` | projects | P1 | display,success,error,failure | — |
+| `admin-requirement-package-evaluation` | projects | P1 | display,success,error,failure | — |
+| `admin-requirement-package-examples` | projects | P2 | display,success,error,failure | — |
+| `admin-requirement-packages-queue` | projects | P1 | display,success,error,failure | — |
 | `admin-secure-link-create` | admin | P1 | success,error,failure,display | — |
 | `admin-secure-link-folder-panel-resize` | admin | P3 | display,success | — |
 | `admin-secure-link-manage` | admin | P1 | success,error,failure,display | — |
@@ -6450,6 +6464,10 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
+| `platform-requirement-package-decision` | platform | P1 | display,success,error,failure | — |
+| `platform-requirement-packages-access` | platform | P1 | display,success,error,failure | — |
+| `platform-requirement-packages-purchase` | platform | P1 | display,success,error,failure | — |
+| `platform-requirement-packages-request` | platform | P1 | display,success,error,failure | — |
 | `platform-secure-link-create` | platform | P1 | display,success,error,failure | — |
 | `platform-secure-link-manage` | platform | P1 | display,success,error,failure | — |
 | `platform-secure-link-replace` | platform | P1 | display,success,error,failure | — |
@@ -6467,7 +6485,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `proposal-engagement-tracking` | proposal | P2 | success | 1 |
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
-| `proposal-functional-requirements-modal` | proposal | P2 | display | 1 |
+| `proposal-functional-requirements-modal` | proposal | P2 | success,display | 1 |
 | `proposal-gateway-guide` | proposal | P2 | display,success | 1 |
 | `proposal-hosting-plan-terms` | proposal | P2 | display | 2 |
 | `proposal-kickoff-disclosure` | proposal | P2 | display | 1 |
@@ -6546,6 +6564,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `public-financing-terms` | public | P2 | success | — |
 | `public-financing-theme` | public | P2 | success,failure | — |
 | `public-home` | public | P1 | display | 1 |
+| `public-hosting-presentation` | public | P1 | success,failure,display | 6 |
 | `public-landing-apps` | public | P3 | display | 1 |
 | `public-landing-software` | public | P3 | display | 1 |
 | `public-landing-web-design` | public | P2 | display | 1 |
@@ -6713,6 +6732,11 @@ Uno o varios ingresos se liquidan sin cuenta emitida desde el mismo modal.
 Ya no existe la transición Liquidación con ajustes ni un formulario que
 reinicie los datos. Al completarse, la fila conserva Cuenta pendiente de emitir
 y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
+
+Actualización 2026-11-12: Detalle e historial distingue la cuenta en borrador, emitida o pagada por commercial_status, presenta la fecha del documento para borrador y fecha de emisión para emitida/pagada, sin emitir ni numerar durante la consulta (PA-259). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
+**PA-251/253/257/261 · delta de interfaz:** Los importes fraccionarios conservan centavos en filas clásicas/agrupadas, menús y detalle de Participaciones, sin alterar reparto ni payload de liquidación.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-accounting-income-bulk-settle`
 
@@ -7219,6 +7243,7 @@ Management UI for remote MCP connectors that expose panel modules to Claude (cla
   - [Failure] Un 4xx/5xx conserva el formulario o estado anterior y muestra el detalle accionable.
   - [Security] El plaintext no puede recuperarse al recargar; sólo quedan prefijo y hash. Las escrituras —incluidos `created_by` y `linked_by` de hilos documentales, ingresos y extractos— se atribuyen a un principal técnico no interactivo del conector, nunca al superusuario humano del Panel.
   - [Contract] El servidor rechaza envelopes MCP incoherentes, alcances o vencimientos inválidos, confirmaciones vencidas/alteradas y assets temporales con tamaño, hash, MIME o firma incompatibles; un fallo de auditoría no interrumpe la respuesta del transporte.
+- **PA-221:** el nombre visible es «Gestor de …» y el acordeón muestra «Qué puedes gestionar» desde capacidades recibidas del servidor. Los conectores pendientes conservan su migración; los retirados no aparecen ni ejecutan herramientas. La lista larga conserva el ancho disponible; un fallo de carga permite reintentar. El resultado funcional de este refinamiento se acredita sólo con el CI del nuevo corte y la ronda DEV correspondiente.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-mcps.spec.js`
 
@@ -7956,9 +7981,11 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Role:** admin
 - **Priority:** P1
 - **Route:** `/:locale/panel/building-with-us`
-- **Interaction:** Abrir Contrato, consultar Markdown y el espejo sincronizado en ProjectApp/Contratos; leer la advertencia desactualizada o sin inicializar, descargar PDF y reintentar un fallo del contrato.
+- **Interaction:** Abrir Contrato, consultar la versión y el documento sincronizado; previsualizar y descargar PDF, abrir el documento exacto en el Gestor, editar con motivo y volver para consultar la nueva versión. Conservar el borrador ante conflicto o fallo de guardado; consultar estados desactualizado o sin inicializar y reintentar fallos de lectura.
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidence:** frontend/components/BuildingWithUs/admin/ContractPanel.vue; frontend/pages/panel/building-with-us/index.vue; GET /api/building-with-us/admin/contract/; GET /api/building-with-us/admin/contract/pdf/; `frontend/e2e/admin/admin-building-with-us.spec.js`.
+
+La edición compartida y sus errores se registran en `admin-program-contract-edit`.
 
 
 ## Section 35 — Building on Demand (Oct 10, 2026)
@@ -8125,11 +8152,13 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Role:** admin
 - **Priority:** P1
 - **Route:** `/:locale/panel/cells?tab=contract`
-- **Interaction:** Abrir Contrato desde Células para consultar la revisión, el contenido y su copia en ProjectApp › Contratos; leer los estados Sincronizado, Desactualizado, Sin inicializar o todavía no disponible, descargar PDF y reintentar un fallo de carga.
+- **Interaction:** Abrir Contrato, consultar la versión y el documento sincronizado; previsualizar y descargar PDF, abrir el documento exacto en el Gestor, editar con motivo y volver para consultar la nueva versión. Conservar el borrador ante conflicto o fallo de guardado; consultar estados no disponible, desactualizado o sin inicializar y reintentar fallos de lectura.
 - **Outcomes:** `display`, `success`, `failure`
 - **Result:** La copia muestra el estado y los metadatos de sincronización y permite abrir el documento del Gestor Documental cuando existe. El contrato y su copia se administran desde MCP; el panel no edita ni sincroniza. `contract: null` con respuesta 404 muestra que el contrato todavía no está disponible, mientras un fallo del servidor presenta Reintentar.
 - **Evidence:** `frontend/pages/panel/cells/index.vue:124`; `frontend/components/BuildingOnDemand/admin/ContractPanel.vue:42`; `frontend/stores/building_on_demand.js:48`; GET `/api/building-on-demand/admin/contract/`; GET `/api/building-on-demand/admin/contract/pdf/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
 - **Scope:** Los estados del espejo son resultados de consulta, no errores de entrada. Su historial y el fallo de descarga de PDF requieren evidencia adicional a la lectura del contrato.
+
+La edición compartida y sus errores se registran en `admin-program-contract-edit`.
 
 
 ## Platform Help and Guided Tours
@@ -8150,6 +8179,8 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
+Actualización 2026-11-12: Saltar recorrido conserva contraste mínimo 4.5:1 desde la apertura automática con foco inicial, en normal, hover y pulsación, y en la repetición manual, en ambos temas y cinco tamaños (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `platform-guided-tour-project`
 
 - **Módulo:** platform
@@ -8165,6 +8196,8 @@ Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirl
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+Actualización 2026-11-12: Saltar recorrido es legible desde el primer paso automático y al repetir desde Ayuda, en ambos temas y cinco tamaños, conservando skipped/completed (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 ### FLOW: `platform-guided-tour-voice`
 
@@ -8197,6 +8230,13 @@ Administración de Ayuda, contenido e historial de vistos, con enlace a Feature 
 | success | Abrir la gestión central o guardar contenido de ayuda desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+
+**PA-251/253/257/261 · delta de interfaz:** La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+
+Integración PA-263/PA-251: la disponibilidad por cliente y su búsqueda al escribir se gestionan en Feature flags. Ayuda enlaza al administrador central y conserva recursos, recorridos y progreso.
 
 ### FLOW: `admin-platform-guided-tour-authoring`
 
@@ -8487,6 +8527,113 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Steps:** Abrir documento de una versión → comprobar doc-calculator-alert y contenido → seguir enlace a la calculadora → comprobar contexto de proyecto.
 - **Branches:** Los errores de carga y permiso pertenecen a los flujos existentes del editor documental.
 - **Coverage:** ✅ Covered — `display`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-managed-calculator-document.spec.js`.
+
+
+## Section 41 — Paquetes por tallas (PA-254)
+
+### FLOW: `admin-requirement-packages-queue`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P1
+- **Ruta:** `/panel/requirement-packages`
+- **Interacción:** Buscar y filtrar solicitudes, consultar pendientes y abrir el proyecto correcto.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `admin-requirement-package-examples`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P2
+- **Ruta:** `/panel/requirement-packages`
+- **Interacción:** Publicar ejemplos con motivo, consultar historial y restaurar el genérico al vaciar una talla propia.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `admin-requirement-package-evaluation`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P1
+- **Ruta:** `/panel/requirement-packages?project=:id`
+- **Interacción:** Publicar una propuesta manual de talla y agenda sin consumir; responder objeciones conservando revisiones.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `admin-requirement-package-commerce`
+
+- **Módulo:** projects
+- **Rol:** admin
+- **Prioridad:** P1
+- **Ruta:** `/panel/requirement-packages?project=:id`
+- **Interacción:** Confirmar pagos externos, revisar saldo, revertir consumos con motivo y configurar futuras compras.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/admin/admin-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-packages-purchase`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Revisar ejemplos, condiciones y precio total; solicitar pago externo o continuar checkout COP sin acreditar anticipadamente.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-packages-request`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Describir un resultado nuevo, enviarlo sin entrega previa obligatoria y consultar su estado.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-package-decision`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Objetar con motivo o aceptar con consentimiento y consumo único de un cupo vigente; garantías no consumen.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
+
+### FLOW: `platform-requirement-packages-access`
+
+- **Módulo:** platform
+- **Rol:** platform-client
+- **Prioridad:** P1
+- **Ruta:** `/platform/projects/:id/packages`
+- **Interacción:** Aislar proyectos y exigir sesión personal del cliente; la administración no sustituye su consentimiento.
+- **Éxito:** La operación conserva su resultado y actualiza la vista correspondiente.
+- **Error:** Entradas inválidas, permisos o versión obsoleta no dejan efectos parciales.
+- **Fallo:** El servicio muestra un error recuperable y conserva el trabajo pendiente.
+- **Presentación:** El recorrido comienza en la navegación correspondiente y usa datos ficticios identificables.
+- **Cobertura:** Pendiente de ejecución CI; escenarios en `frontend/e2e/platform/platform-requirement-packages.spec.js`. El registro no acredita recorrido Chrome.
 
 
 ## Unsectioned flows
@@ -8862,6 +9009,12 @@ Cobertura: `frontend/e2e/admin/admin-document-move-folder.spec.js`.
 - **E2E Spec:** `e2e/admin/admin-financing-settings.spec.js`
 - **Backend Tests:** `content/tests/views/test_financing_agreements.py`, `content/tests/services/test_financing_policy_service.py`
 
+# Control administrativo de hosting
+
+Seleccionar producción y verificar destino; cambiar entre tres modos excluyentes; editar mensajes independientes; distinguir intención y recibo; conservar borrador ante conflicto o fallo. Gestión equivalente por MCP cubierta en backend.
+
+Validación manual pendiente por pausa vigente. Tests autorados en CI; sin evidencia de producción.
+
 # Personalizar la marca del Linktree
 
 - **Rol:** admin. **Ruta:** `/panel/linktrees/:id/edit`.
@@ -8897,43 +9050,68 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 ### FLOW: `admin-monitoring-case-follow-up`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
-- **Ruta:** `/panel/monitoring`, modal desde el título de un caso.
-- **Display:** evidencia, condición técnica y estado manual separados; historial paginado y enlace al reporte de origen cuando existe.
-- **Success:** cambiar Pendiente / En revisión / Resuelto persiste el estado y la autoría.
-- **Error:** una versión desactualizada devuelve conflicto y solicita actualizar.
-- **Failure:** un fallo de guardado se anuncia sin perder la selección.
-- **API:** detalle del caso y `POST /api/monitoring/cases/:id/state/`.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`.
+- **Ruta:** `/panel/monitoring`, detalle desde evento o atención prioritaria.
+- **Display:** condición técnica y estado humano separados, observaciones etiquetadas que conservan cero/false, JSON original desplegable y notas/entregas con páginas independientes.
+- **Success:** guardar estado con versión vigente y consultar el reporte relacionado conservando el regreso al caso.
+- **Error:** un conflicto de versión exige actualizar, sin sobrescribir el seguimiento vigente.
+- **Failure:** un fallo de carga o guardado mantiene abierto el detalle y permite reintentar.
+- **API:** GET cases/:id y POST cases/:id/state de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-monitoring-case-list`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
 - **Ruta:** `/panel/monitoring` desde Monitoreo en la navegación.
-- **Display:** casos de proyectos, identidad del recurso y salud de las fuentes.
-- **Success:** cambiar a Servidores o aplicar filtros muestra la lista correspondiente, con paginación de 25.
-- **Failure:** una carga fallida muestra un aviso y permite actualizar, sin simular una lista saludable.
-- **API:** `GET /api/monitoring/catalog/`, `GET /api/monitoring/cases/`.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-list.spec.js`.
+- **Display:** indicadores del conjunto filtrado completo, atención prioritaria, salud de fuentes y tarjetas compactas con identidad y fechas.
+- **Success:** elegir proyecto/servidor, fuente, estado, gravedad, condición, seguimiento, texto o fechas; abrir filtros desde indicadores y detalle de salud de una fuente; Limpiar filtros; navegar una consulta estable de 25 registros y conservar selección en URL.
+- **Error:** fechas invertidas o consulta vencida muestran explicación y permiten recuperar la consulta sin perder filtros.
+- **Failure:** fallos de lista, catálogo o chequeo de estado quedan visibles; no se simula una lista saludable.
+- **API:** catalog, cases y status de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-list.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-monitoring-case-note`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
 - **Ruta:** `/panel/monitoring`, modal de caso.
-- **Display:** historial con texto, autor y fecha de la nota.
-- **Success:** escribir y agregar una nota la incorpora al historial compartido.
-- **Error / failure:** un rechazo o fallo de API muestra el error y conserva el texto escrito.
-- **API:** `POST /api/monitoring/cases/:id/notes/` y detalle del caso.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`.
+- **Display:** notas con autor y fecha dentro del historial paginado.
+- **Success:** agregar una nota la incorpora al historial compartido; cambiar páginas no borra el borrador.
+- **Error:** nota vacía no se envía; validación rechazada conserva el texto y muestra el error.
+- **Failure:** un fallo del servidor conserva la nota para reintentar.
+- **API:** POST cases/:id/notes y GET cases/:id de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`; ejecución y SHA se acreditan en CI.
+
+### FLOW: `admin-monitoring-project-capacity`
+
+- **Módulo / rol:** monitoreo / administrador del panel.
+- **Ruta:** `/panel/monitoring`, Proyectos al elegir un proyecto.
+- **Display:** servidor relacionado, asignación/compartido/sin configurar y unidades; consumo por proyecto no disponible e historial de cambios.
+- **Success:** registrar cantidades informativas y consultar el historial con autor y antes/después, conservando filas y total entre páginas aunque otro operador añada cambios. Guardar no cambia cuotas reales.
+- **Error:** cantidades inválidas o versión en conflicto se explican, conservando la edición.
+- **Failure:** carga o guardado fallido permite reintentar sin inventar consumo.
+- **API:** GET/PUT resources/:id/capacity y GET resources/:id/capacity/history de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-project-capacity.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-monitoring-reports`
 
 - **Módulo / rol:** monitoreo / administrador del panel.
 - **Ruta:** `/panel/monitoring`, pestaña Reportes.
-- **Display:** reportes informativos y aviso de retención de 90 días.
-- **Success:** abrir un reporte presenta texto plano, sin controles de seguimiento de casos.
-- **Failure:** una carga fallida se comunica y permite volver a intentar.
-- **API:** `GET /api/monitoring/reports/` y `GET /api/monitoring/reports/:id/`.
-- **Cobertura:** `e2e/admin/admin-monitoring-case-list.spec.js`.
+- **Display:** total filtrado, última observación, reportes paginados y retención; detalle original como texto sin controles de casos.
+- **Success:** filtrar por recurso/fuente/texto/fechas, limpiar y navegar páginas de una consulta estable; abrir un reporte.
+- **Error:** fechas invertidas o snapshot vencido tienen recuperación explícita.
+- **Failure:** fallo de carga visible sin simular éxito.
+- **API:** GET reports y reports/:id de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-case-follow-up.spec.js`; ejecución y SHA se acreditan en CI.
+
+### FLOW: `admin-monitoring-server-trends`
+
+- **Módulo / rol:** monitoreo / administrador del panel.
+- **Ruta:** `/panel/monitoring`, pestaña Servidores.
+- **Display:** capacidad y última muestra por servidor; gráficas de RAM, disco, CPU y carga con unidades, leyenda y huecos reales. Ausencia explícita de histórico.
+- **Success:** elegir servidor y periodos 24 h/7 d/30 d/90 d solicita las muestras correspondientes.
+- **Error:** no aplica al selector cerrado de periodos; su validación del servidor pertenece a backend.
+- **Failure:** una serie fallida muestra aviso y reintento.
+- **API:** GET status y servers/:id/series de `/api/monitoring/`.
+- **Pruebas:** `e2e/admin/admin-monitoring-server-trends.spec.js`; ejecución y SHA se acreditan en CI.
 
 ### FLOW: `admin-outbound-email-history-attachments`
 
@@ -9013,6 +9191,18 @@ Los siete filtros muestran sus etiquetas, se distribuyen según el ancho real y 
 - **Outcomes:** `display`, `success`, `error`, `failure`
 - **Evidence:** frontend/pages/panel/platform/help.vue; frontend/components/platform/PlatformVideoResourcesManager.vue; frontend/components/resources/VideoResourceManager.vue.
 - **Scope:** Se llega desde la navegación del panel y se comprueba el contenido de las tres piezas. La sustitución, la validación local de MP4 y el rechazo del servidor se ejercitan en la interfaz; los permisos, la concurrencia y el ciclo completo de carga, retirada y restauración por MCP se prueban en backend. Los interruptores compartidos pertenecen al flujo de administración de Ayuda.
+
+### FLOW: `admin-program-contract-edit`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/documents/:id/edit`
+- **Interaction:** Abrir el documento vinculado desde Contrato en Building with Us o Células, editar la fuente y guardar con motivo. Volver al módulo y consultar la misma versión guardada.
+- **Outcomes:** `success`, `error`, `failure`
+- **Evidence:** frontend/pages/panel/documents/[id]/edit.vue; frontend/composables/useProgramContractRefresh.js; PATCH /api/documents/:id/update/; frontend/e2e/admin/admin-module-contract-document-editor.spec.js.
+
+El guardado exige la versión leída. Motivo ausente impide guardar. Ante conflicto o fallo del servicio se conserva la fuente local; los metadatos contractuales permanecen protegidos. Los contratos de propuestas siguen en sólo lectura. Los casos parametrizados cubren ambos módulos sin atribuir aprobación o firma al documento.
 
 # Marca y recursos del proyecto
 
@@ -9134,6 +9324,8 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresi�
 - **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
 
 PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
+
+Actualización 2026-11-12: Tras confirmar con mouse, el foco vuelve al disparador si sigue disponible o a un destino visible del mismo registro cuando Revisar desaparece; cancelar conserva el disparador (PA-260/D1). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 ### FLOW: `admin-proposal-change-history`
 
@@ -9405,6 +9597,10 @@ acreditan persistencia real por sí solos; su resultado se registra en CI.
 - **Copiar página para clientes:** copia exactamente la URL pública informada por el servidor y conserva el texto «Enlace para clientes». Sólo tras éxito muestra check y «Copiado» flotante durante 2 segundos, con anuncio accesible; el encabezado, descripción, botones, pestañas y listado permanecen en su sitio en los cinco perfiles responsive. Un fallo mantiene el icono de copiar, muestra el error durante 3 segundos y permite reintentar; el teclado conserva el foco y el movimiento reducido conserva la confirmación.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js` y `e2e/admin/admin-secure-links-copy-public.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
 
+
+**PA-251/253/257/261 · delta de interfaz:** El detalle ofrece Copiar título junto al lápiz: copia el título completo vigente, preserva acentos y signos y permite reintentar ante rechazo de portapapeles sin revelar ni mutar el enlace.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
 ### FLOW: `admin-service-contract-settings`
 
 - **Módulo:** admin
@@ -9427,6 +9623,9 @@ PA-263. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
 - display: navegación desde el Panel con valores iniciales o navegación de cliente filtrada.
 
 Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servicios continúa; este registro no acredita aprobación.
+
+
+Integración PA-251: la búsqueda de clientes consulta al escribir, descarta respuestas anteriores incluso durante el debounce, conserva carga/error/reintento y vuelve a la primera página al limpiar.
 
 ### Platform: reportar y seguir bugs de proyecto
 
@@ -9716,6 +9915,8 @@ Las pruebas automatizadas se ejecutan sólo en CI. La pausa de QA manual y servi
 - **Error:** 403 o 404 muestra una explicación sin datos ni navegación interna del proyecto; un error recuperable ofrece reintentar. Una sesión sin autenticación se dirige al inicio de sesión.
 - **Validación:** automatizada exclusivamente en CI; acceso real por roles en Chrome coordinado con dev-qa.
 
+Actualización 2026-11-12: El acceso directo ajeno termina la carga con 403, permite regresar al listado propio y abrir un proyecto autorizado, en ambos sentidos entre clientes. Mensajes 403/404 y recuperación conservan idioma es-co/en-us (PA-252). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `platform-project-hosting-context`
 
 - **Módulo:** platform
@@ -9790,6 +9991,33 @@ conservan para la reprueba; CI añade esas longitudes a las dos variantes de
 - **Error:** Contenido faltante, sustitución duplicada/cruzada/no revocada o conflicto del UUID no cambia el contenido anterior.
 - **Failure:** Si falla revocar no se abre el formulario. Si falla crear, el anterior permanece revocado y su historial conservado.
 - **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links-replace.spec.js` cubre display/success/error/failure. API SQLite verifica unicidad del sucesor, conservación del cifrado anterior y rechazo de asociaciones entre proyectos.
+
+### FLOW: `platform-sidebar-navigation`
+
+- **Módulo:** platform
+- **Roles:** platform-admin, platform-client
+- **Prioridad:** P2
+- **E2E:** `frontend/e2e/platform/platform-sidebar.spec.js`
+
+La navegación conserva los destinos y opciones permitidos por rol, el estado
+activo, el cierre del cajón móvil y las acciones de cuenta. Personaliza abre
+el selector de apariencia; Configuración navega al perfil.
+
+**PA-258:** las iniciales de escritorio, cajón y encabezado móvil usan blanco
+sobre verde de marca con tokens independientes de la paleta personal, en claro
+y oscuro. La separación icono/texto de Cuenta y Personaliza es coherente.
+Modelo de datos conserva PRONTO y su condición pendiente.
+
+| Resultado | Interacción |
+|---|---|
+| success | Navegar desde un enlace del menú y conservar el destino permitido. |
+| display | Llegar al perfil desde Configuración y comprobar nombre, iniciales y el par de colores con una paleta personal clara. |
+| error | No aplica al ajuste de presentación: la denegación por rol sigue en el flujo de destino. |
+| failure | No aplica al ajuste: no se añade una petición de guardado o carga. |
+
+La extensión del contrato se valida en CI sobre el SHA del PR. Las fotografías,
+los tamaños CSS y las variantes móviles se cotejan también en el turno visual
+acordado; la autoría de estos casos no acredita su ejecución manual.
 
 ### FLOW: `proposal-closing-contact`
 
@@ -10115,6 +10343,12 @@ conservan para la reprueba; CI añade esas longitudes a las dos variantes de
   no disponible no impide usar el tema durante la visita.
 - **Display:** no se registra una interacción adicional; se valida como parte
   del cambio de tema.
+
+# Presentación pública de hosting
+
+Consumo del adaptador público: banner utilizable, suspensión de vistas, navegación, recarga, retirada en pestaña abierta, desconexión y legibilidad móvil. Integración HTTP simulada en CI; no acredita despliegue real.
+
+Validación manual pendiente por pausa vigente. Tests autorados en CI; sin evidencia de producción.
 
 ### FLOW: `public-secure-link-create`
 

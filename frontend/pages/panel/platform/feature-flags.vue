@@ -32,8 +32,12 @@ const options = item => [
 const choice = item => scope.value === 'client' && item.override === null ? t('platformFeatures.inherit')
   : t((scope.value === 'client' ? item.override : item.global_value) ? 'platformFeatures.enabled' : 'platformFeatures.disabled')
 let searchTimer
-watch(search, () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => store.searchClients(search.value).catch(() => { error.value = t('platformFeatures.error') }), 300) })
-onBeforeUnmount(() => clearTimeout(searchTimer))
+watch(search, () => {
+  clearTimeout(searchTimer)
+  store.invalidateClients()
+  searchTimer = setTimeout(() => store.searchClients(search.value.trim()), 200)
+}, { flush: 'sync' })
+onBeforeUnmount(() => { clearTimeout(searchTimer); store.cancelClients() })
 onMounted(() => run(() => Promise.all([store.load(), store.searchClients(), store.loadEvents()])))
 </script>
 
@@ -52,14 +56,18 @@ onMounted(() => run(() => Promise.all([store.load(), store.searchClients(), stor
       <BaseFormField :label="t('platformFeatures.search')" for="feature-client-search">
         <BaseInput id="feature-client-search" v-model="search" :placeholder="t('platformFeatures.search')" />
       </BaseFormField>
+      <div :aria-busy="store.clientsLoading" class="space-y-3" data-testid="feature-client-results">
+      <p v-if="store.clientsLoading" role="status">{{ t('platformHelp.loading') }}</p>
+      <p v-else-if="store.clientsError" role="alert">{{ t('platformHelp.clientsLoadError') }} <BaseButton variant="link" size="sm" @click="store.searchClients(search.trim())">{{ t('platformHelp.retry') }}</BaseButton></p>
       <BaseDropdown align="left" :items="store.clients.results.map(client => ({ label: client.name, onClick: () => run(() => store.selectClient(client.user_id)) }))">
         <template #trigger><BaseButton variant="secondary" :loading="busy" data-testid="feature-client-picker">{{ store.client?.name || t('platformFeatures.chooseClient') }}</BaseButton></template>
       </BaseDropdown>
-      <p v-if="!store.clients.results.length" class="text-sm text-text-muted">{{ t('platformFeatures.empty') }}</p>
+      <p v-if="!store.clientsLoading && !store.clientsError && !store.clients.results.length" class="text-sm text-text-muted">{{ t('platformFeatures.empty') }}</p>
       <div class="flex flex-wrap items-center gap-3">
-        <BaseButton v-if="store.clients.page > 1" variant="ghost" @click="run(() => store.searchClients(search, store.clients.page - 1))">{{ t('platformFeatures.previous') }}</BaseButton>
+        <BaseButton v-if="store.clients.page > 1" variant="ghost" @click="run(() => store.searchClients(search.trim(), store.clients.page - 1))">{{ t('platformFeatures.previous') }}</BaseButton>
         <span class="text-sm text-text-muted">{{ store.clients.page }} · {{ store.clients.count }}</span>
-        <BaseButton v-if="store.clients.page * 20 < store.clients.count" variant="ghost" @click="run(() => store.searchClients(search, store.clients.page + 1))">{{ t('platformFeatures.next') }}</BaseButton>
+        <BaseButton v-if="store.clients.page * 20 < store.clients.count" variant="ghost" @click="run(() => store.searchClients(search.trim(), store.clients.page + 1))">{{ t('platformFeatures.next') }}</BaseButton>
+      </div>
       </div>
     </section>
     <p v-if="!selected && !error" class="text-sm text-text-muted" role="status">{{ t(scope === 'client' ? 'platformFeatures.chooseClient' : 'platformFeatures.loading') }}</p>

@@ -85,7 +85,7 @@ test.describe('Platform help administration', () => {
     await setupAdmin(page, { fixture: helpFixture({ progress: [{ user_id: 9002, user: 'client@e2e-test.com', tour: 'platform-basics', status: 'completed' }] }) })
 
     await openPlatformHelp(page)
-    await expect(page.getByLabel('Seleccionar recorrido')).toHaveValue(String(authoredTour.id))
+    await expect(page.getByLabel('Seleccionar recorrido')).toContainText(authoredTour.content.title_es)
     await expect(page.getByTestId('platform-help-admin')).toContainText('client@e2e-test.com')
   })
 

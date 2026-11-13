@@ -15,6 +15,8 @@ from content.mcp.entity_history_tools import history_tools
 from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
 from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.operation_builder import _op
+from content.mcp.monitoring_tools import MONITORING_TOOLS
+from content.mcp.operations_monitoring_tools import OPERATIONS_MONITORING_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
 from content.mcp.platform_help_video_tools import PLATFORM_HELP_VIDEO_TOOLS
@@ -120,6 +122,7 @@ def _editorial_catalog_op(name, description, route, serializer_class, *, partial
 
 
 OPERATIONS_TOOLS = [
+    *OPERATIONS_MONITORING_TOOLS,
     _op(
         'get_operations_dashboard',
         'Obtiene el dashboard transversal del Panel con indicadores y alertas.',
@@ -167,6 +170,11 @@ def _project_create_tool():
 
 
 PROJECT_TOOLS = [
+    *(tool for tool in MONITORING_TOOLS if tool['name'] in {
+        'get_monitoring_status', 'get_monitoring_server_series',
+        'get_monitoring_capacity', 'update_monitoring_capacity',
+        'list_monitoring_capacity_history',
+    }),
     *PLATFORM_HELP_TOOLS,
     _op('list_projects', 'Lista proyectos y sus indicadores por estado; client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_projects']),
     _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['get_project']),

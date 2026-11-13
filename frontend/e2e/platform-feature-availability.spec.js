@@ -5,12 +5,12 @@ import catalog from '../../contracts/platform-features.json' with { type: 'json'
 
 const json = (data, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(data) })
 
-async function setup(page, { failure = false } = {}) {
+async function setup(page, { failure = false, disabled = 'platform.documents' } = {}) {
   await setPlatformAuth(page, { user: mockPlatformClient })
   await mockApi(page, ({ apiPath }) => {
     if (apiPath === 'accounts/me/') return json(mockPlatformClient)
     if (apiPath === 'platform/features/') return json({ user_id: mockPlatformClient.user_id,
-      features: { ...Object.fromEntries(catalog.features.map(item => [item.key, item.default_enabled])), 'platform.documents': false } }, failure ? 503 : 200)
+      features: { ...Object.fromEntries(catalog.features.map(item => [item.key, item.default_enabled])), [disabled]: false } }, failure ? 503 : 200)
     if (apiPath === 'accounts/projects/') return json([])
     if (apiPath === 'platform/help/') return json({ tours: [], tour_enabled: true, video_enabled: true })
     if (apiPath === 'platform/ai/capabilities/') return json({ chatbot: { enabled: false, available: false }, voice_reporting: { enabled: false, available: false } })
@@ -32,15 +32,20 @@ test.describe('Client feature availability', () => {
     await expect(page).toHaveURL(/\/platform\/profile$/)
   })
 
-  test('direct entry cannot open a disabled feature', { tag: ['@flow:platform-feature-availability', '@outcome:error'] }, async ({ page }) => {
-    await setup(page)
-    await page.goto('/es-co/platform/documents', { waitUntil: 'domcontentloaded' })
+  for (const { key, path, label } of [
+    { key: 'platform.documents', path: '/es-co/platform/documents', label: 'documents' },
+    { key: 'platform.requirement_packages', path: '/es-co/platform/projects/1/packages', label: 'packages' },
+  ]) {
+    test(`direct entry cannot open disabled ${label}`, { tag: ['@flow:platform-feature-availability', '@outcome:error'] }, async ({ page }) => {
+      await setup(page, { disabled: key })
+      await page.goto(path, { waitUntil: 'domcontentloaded' })
 
-    await expect(page.getByTestId('platform-feature-unavailable')).toContainText('Esta funcionalidad está deshabilitada')
-    await expect(page).toHaveURL(/\/platform\/unavailable$/)
-    await page.getByRole('link', { name: 'Volver a Proyectos', exact: true }).click()
-    await expect(page).toHaveURL(/\/platform\/projects$/)
-  })
+      await expect(page.getByTestId('platform-feature-unavailable')).toContainText('Esta funcionalidad está deshabilitada')
+      await expect(page).toHaveURL(/\/platform\/unavailable$/)
+      await page.getByRole('link', { name: 'Volver a Proyectos', exact: true }).click()
+      await expect(page).toHaveURL(/\/platform\/projects$/)
+    })
+  }
 
   test('blocked client returns to the project structure', { tag: ['@flow:platform-feature-availability', '@outcome:success'] }, async ({ page }) => {
     await setup(page)

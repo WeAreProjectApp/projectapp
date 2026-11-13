@@ -400,6 +400,19 @@
         "admin-requirement-calculator-calibration",
         "admin-managed-calculator-document"
       ]
+    },
+    {
+      "title": "Section 41 — Paquetes por tallas (PA-254)",
+      "flows": [
+        "admin-requirement-packages-queue",
+        "admin-requirement-package-examples",
+        "admin-requirement-package-evaluation",
+        "admin-requirement-package-commerce",
+        "platform-requirement-packages-purchase",
+        "platform-requirement-packages-request",
+        "platform-requirement-package-decision",
+        "platform-requirement-packages-access"
+      ]
     }
   ]
 }

@@ -53,7 +53,7 @@ def run_checks():
     for app in ('monitoring', 'secure_links'):
         migration = executor.loader.get_migration(app, '0003_project_data_retention' if app == 'monitoring' else '0005_project_data_retention')
         previous[app] = next(name for dependency_app, name in migration.dependencies if dependency_app == app)
-    old_targets = [(app, previous.get(app, name)) for app, name in new_targets]
+    old_targets = list(previous.items())
     executor.migrate(old_targets)
     before = executor.loader.project_state(old_targets).apps
     user = before.get_model('auth', 'User').objects.create(username='retention-fixture')

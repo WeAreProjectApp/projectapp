@@ -17,12 +17,13 @@
       />
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <ReceivableConfidenceDot :confidence="row.collection_confidence" />
-        <BaseSelect
+        <BaseChoiceSelect
           :model-value="row.collection_confidence || ''"
           :options="RECEIVABLE_CONFIDENCE_OPTIONS"
           size="sm"
           class="min-w-0 flex-1"
           :disabled="busy"
+          disabled-reason="Guardando la previsión de cobro."
           :aria-label="`Probabilidad de cobro de ${row.concept}`"
           @update:model-value="emit('change', { collection_confidence: $event })"
         />
@@ -41,7 +42,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import BaseSelect from '~/components/base/BaseSelect.vue';
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue';
 import BaseToggle from '~/components/base/BaseToggle.vue';
 import ReceivableConfidenceBadge from '~/components/accounting/ReceivableConfidenceBadge.vue';
 import ReceivableConfidenceDot from '~/components/accounting/ReceivableConfidenceDot.vue';

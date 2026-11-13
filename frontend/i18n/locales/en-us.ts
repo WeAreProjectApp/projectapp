@@ -57,6 +57,7 @@ export default defineI18nLocale(async () => {
     hostingBilling,
 
     requirementCalculator,
+    requirementPackages,
   ] = await Promise.all([
     import('../../locales/panelUsability/en.js').then(m => m.default),
     import('~/locales/global/en.js'),
@@ -115,6 +116,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/hostingBilling/en.js'),
 
     import('~/locales/requirementCalculator/en.js'),
+    import('~/locales/requirementPackages/en.js'),
   ])
 
   return {
@@ -175,5 +177,6 @@ export default defineI18nLocale(async () => {
     hostingBilling: hostingBilling.default,
 
     requirementCalculator: requirementCalculator.default,
+    requirementPackages: requirementPackages.default,
   }
 })

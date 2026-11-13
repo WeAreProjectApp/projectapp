@@ -133,6 +133,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       label: 'Plataforma',
       items: [
         { label: 'Proyectos', href: lp('/panel/projects'), icon: 'folder' },
+        { label: 'Solicitudes por tallas', href: lp('/panel/requirement-packages'), icon: 'package' },
         { label: 'Accesos', href: lp('/panel/access'), icon: 'shield' },
         { label: 'Monitoreo', href: lp('/panel/monitoring'), icon: 'search' },
         { label: 'Ayuda de la plataforma', href: lp('/panel/platform/help'), icon: 'settings' },

@@ -444,6 +444,30 @@
         "frontend/components/platform/AppiWidget.vue",
         "frontend/components/platform/VoiceReportInput.vue"
       ]
+    },
+    {
+      "key": "platform.requirement_packages",
+      "label_es": "Paquetes de requerimientos",
+      "label_en": "Requirement packages",
+      "module": "Plataforma",
+      "default_enabled": true,
+      "routes": [
+        "/platform/projects/:id/packages"
+      ],
+      "capabilities": [
+        "platform-requirement-packages"
+      ],
+      "targets": [],
+      "api_routes": [
+        "package-overview",
+        "package-examples",
+        "package-examples-general",
+        "package-order-create",
+        "package-order-action",
+        "package-request-create",
+        "package-request-detail",
+        "package-request-action"
+      ]
     }
   ],
   "api_exemptions": {
@@ -523,7 +547,14 @@
     "platform-feature-settings": "Consulta propia o gestión administrativa de disponibilidad.",
     "platform-feature-clients": "Consulta propia o gestión administrativa de disponibilidad.",
     "platform-feature-client": "Consulta propia o gestión administrativa de disponibilidad.",
-    "platform-feature-events": "Consulta propia o gestión administrativa de disponibilidad."
+    "platform-feature-events": "Consulta propia o gestión administrativa de disponibilidad.",
+    "package-admin-queue": "Administración interna de paquetes; conserva los permisos y validaciones del Panel/MCP.",
+    "package-admin-projects": "Administración interna de paquetes; conserva los permisos y validaciones del Panel/MCP.",
+    "package-examples-general-history": "Administración interna de paquetes; conserva los permisos y validaciones del Panel/MCP.",
+    "package-examples-history": "Administración interna de paquetes; conserva los permisos y validaciones del Panel/MCP.",
+    "package-settings": "Administración interna de paquetes; conserva los permisos y validaciones del Panel/MCP.",
+    "package-evaluation-context": "Administración interna de paquetes; conserva los permisos y validaciones del Panel/MCP.",
+    "package-reverse": "Administración interna de paquetes; conserva los permisos y validaciones del Panel/MCP."
   },
   "api_dynamic": {
     "platform-issue-context-options": "context",

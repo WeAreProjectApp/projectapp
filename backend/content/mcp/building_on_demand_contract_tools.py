@@ -80,7 +80,7 @@ def _prepare_sync(arguments):
 
 def _sync_impact(arguments):
     prepared = _run(service.prepare_sync, arguments.get('folder_id'))
-    return {'summary': 'Sincroniza el espejo interno de sólo lectura, su PDF y notas; sin folder_id usa la carpeta contractual fijada.', **prepared}
+    return {'summary': 'Sincroniza el documento contractual, su PDF y notas; sin folder_id usa la carpeta contractual fijada.', **prepared}
 
 
 def _sync(arguments):
@@ -131,7 +131,7 @@ def _render(arguments):
 _RENDER['handler'] = _render
 BUILDING_ON_DEMAND_CONTRACT_TOOLS = [
     {'name': 'get_building_on_demand_contract', 'risk': 'read', 'strict_arguments': True,
-     'description': 'Lee el contrato privado vigente: markdown, versión, autor, motivo, etag y estado del espejo de sólo lectura del Gestor.',
+     'description': 'Lee el contrato privado vigente: markdown, versión, autor, motivo, etag y estado del documento sincronizado y editable desde el Gestor.',
      'input_schema': closed_object({}), 'handler': _read, 'annotations': dict(_READ_ANNOTATIONS)},
     {'name': 'preview_building_on_demand_contract_update', 'risk': 'read', 'strict_arguments': True,
      'description': 'Valida exactamente markdown o patches literales y muestra diff y espejo por sincronizar sin guardar; if_match es opcional y no admite placeholders.',

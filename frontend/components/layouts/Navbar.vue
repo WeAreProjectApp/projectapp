@@ -1,6 +1,7 @@
 <template>
   <!--Navbar Desktop — Glassmorphism pill with sliding lemon indicator -->
   <nav
+    data-hosting-offset="floating"
     class="hidden lg:flex fixed top-6 left-1/2 -translate-x-1/2 z-50 items-center gap-2 pl-7 pr-3 py-3.5 rounded-full bg-surface/60 backdrop-blur-2xl border border-white/30 shadow-xl"
     aria-label="Main navigation"
   >
@@ -57,7 +58,7 @@
   </nav>
 
   <!--Navbar Mobile — Fixed glassmorphism bar -->
-  <nav class="flex lg:hidden fixed top-0 left-0 right-0 z-50 items-center justify-between px-5 py-4 bg-surface/60 backdrop-blur-2xl border-b border-white/20" aria-label="Mobile navigation">
+  <nav data-hosting-offset="top" class="flex lg:hidden fixed top-0 left-0 right-0 z-50 items-center justify-between px-5 py-4 bg-surface/60 backdrop-blur-2xl border-b border-white/20" aria-label="Mobile navigation">
     <NuxtLink
       :to="localePath('/')"
       class="text-text-brand font-bold text-lg tracking-tight"

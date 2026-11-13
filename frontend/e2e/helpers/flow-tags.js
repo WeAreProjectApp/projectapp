@@ -184,6 +184,7 @@ export const ADMIN_FINANCING_EXPLAINER = ['@flow:admin-financing-explainer', '@m
 export const ADMIN_FINANCING_EXPLAINER_VISIBILITY = ['@flow:admin-financing-explainer-visibility', '@module:admin', '@priority:P2'];
 export const ADMIN_FINANCING_SETTINGS = ['@flow:admin-financing-settings', '@module:admin', '@priority:P1'];
 export const ADMIN_HIGH_ENGAGEMENT_ALERT = ['@flow:admin-high-engagement-alert', '@module:admin', '@priority:P2'];
+export const ADMIN_HOSTING_CONTROLS = ['@flow:admin-hosting-controls', '@module:admin', '@priority:P1'];
 export const ADMIN_HOUR_PACKAGES_CONFIG = ['@flow:admin-hour-packages-config', '@module:admin', '@priority:P3'];
 export const ADMIN_HOUR_PACKAGES_CREATE = ['@flow:admin-hour-packages-create', '@module:admin', '@priority:P2'];
 export const ADMIN_HOUR_PACKAGES_DELETE = ['@flow:admin-hour-packages-delete', '@module:admin', '@priority:P2'];
@@ -215,6 +216,7 @@ export const ADMIN_PORTFOLIO_CREATE = ['@flow:admin-portfolio-create', '@module:
 export const ADMIN_PORTFOLIO_DELETE = ['@flow:admin-portfolio-delete', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_EDIT = ['@flow:admin-portfolio-edit', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_LIST = ['@flow:admin-portfolio-list', '@module:admin', '@priority:P2'];
+export const ADMIN_PROGRAM_CONTRACT_EDIT = ['@flow:admin-program-contract-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_DETAIL = ['@flow:admin-project-access-detail', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_FIELD_EDIT = ['@flow:admin-project-access-field-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_NOTES = ['@flow:admin-project-access-notes', '@module:admin', '@priority:P2'];
@@ -370,7 +372,9 @@ export const LAYOUT_NAVBAR_NAVIGATION = ['@flow:layout-navbar-navigation', '@mod
 export const ADMIN_MONITORING_CASE_FOLLOW_UP = ['@flow:admin-monitoring-case-follow-up', '@module:monitoring', '@priority:P1'];
 export const ADMIN_MONITORING_CASE_LIST = ['@flow:admin-monitoring-case-list', '@module:monitoring', '@priority:P1'];
 export const ADMIN_MONITORING_CASE_NOTE = ['@flow:admin-monitoring-case-note', '@module:monitoring', '@priority:P2'];
+export const ADMIN_MONITORING_PROJECT_CAPACITY = ['@flow:admin-monitoring-project-capacity', '@module:monitoring', '@priority:P1'];
 export const ADMIN_MONITORING_REPORTS = ['@flow:admin-monitoring-reports', '@module:monitoring', '@priority:P2'];
+export const ADMIN_MONITORING_SERVER_TRENDS = ['@flow:admin-monitoring-server-trends', '@module:monitoring', '@priority:P1'];
 
 // ── platform ──
 export const PLATFORM_ACCESS_VIEW = ['@flow:platform-access-view', '@module:platform', '@priority:P2'];
@@ -426,6 +430,10 @@ export const PLATFORM_PROJECT_HOSTING_CONTEXT = ['@flow:platform-project-hosting
 export const PLATFORM_PROJECT_IDEAS = ['@flow:platform-project-ideas', '@module:platform', '@priority:P1'];
 export const PLATFORM_PROJECT_LIST = ['@flow:platform-project-list', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROPOSAL_AUTO_ONBOARDING = ['@flow:platform-proposal-auto-onboarding', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGE_DECISION = ['@flow:platform-requirement-package-decision', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGES_ACCESS = ['@flow:platform-requirement-packages-access', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGES_PURCHASE = ['@flow:platform-requirement-packages-purchase', '@module:platform', '@priority:P1'];
+export const PLATFORM_REQUIREMENT_PACKAGES_REQUEST = ['@flow:platform-requirement-packages-request', '@module:platform', '@priority:P1'];
 export const PLATFORM_SECURE_LINK_CREATE = ['@flow:platform-secure-link-create', '@module:platform', '@priority:P1'];
 export const PLATFORM_SECURE_LINK_MANAGE = ['@flow:platform-secure-link-manage', '@module:platform', '@priority:P1'];
 export const PLATFORM_SECURE_LINK_REPLACE = ['@flow:platform-secure-link-replace', '@module:platform', '@priority:P1'];
@@ -445,6 +453,10 @@ export const ADMIN_PROCUREMENT_SETTINGS_SYNC = ['@flow:admin-procurement-setting
 // ── projects ──
 export const ADMIN_PROJECT_REQUIREMENT_CALCULATOR_APPROVE = ['@flow:admin-project-requirement-calculator-approve', '@module:projects', '@priority:P1'];
 export const ADMIN_PROJECT_REQUIREMENT_CALCULATOR_DRAFT = ['@flow:admin-project-requirement-calculator-draft', '@module:projects', '@priority:P1'];
+export const ADMIN_REQUIREMENT_PACKAGE_COMMERCE = ['@flow:admin-requirement-package-commerce', '@module:projects', '@priority:P1'];
+export const ADMIN_REQUIREMENT_PACKAGE_EVALUATION = ['@flow:admin-requirement-package-evaluation', '@module:projects', '@priority:P1'];
+export const ADMIN_REQUIREMENT_PACKAGE_EXAMPLES = ['@flow:admin-requirement-package-examples', '@module:projects', '@priority:P2'];
+export const ADMIN_REQUIREMENT_PACKAGES_QUEUE = ['@flow:admin-requirement-packages-queue', '@module:projects', '@priority:P1'];
 
 // ── proposal ──
 export const PROPOSAL_CLOSING_CONTACT = ['@flow:proposal-closing-contact', '@module:proposal', '@priority:P2'];
@@ -539,6 +551,7 @@ export const PUBLIC_FINANCING_SHARE = ['@flow:public-financing-share', '@module:
 export const PUBLIC_FINANCING_TERMS = ['@flow:public-financing-terms', '@module:public', '@priority:P2'];
 export const PUBLIC_FINANCING_THEME = ['@flow:public-financing-theme', '@module:public', '@priority:P2'];
 export const PUBLIC_HOME = ['@flow:public-home', '@module:public', '@priority:P1'];
+export const PUBLIC_HOSTING_PRESENTATION = ['@flow:public-hosting-presentation', '@module:public', '@priority:P1'];
 export const PUBLIC_LANDING_APPS = ['@flow:public-landing-apps', '@module:public', '@priority:P3'];
 export const PUBLIC_LANDING_SOFTWARE = ['@flow:public-landing-software', '@module:public', '@priority:P3'];
 export const PUBLIC_LANDING_WEB_DESIGN = ['@flow:public-landing-web-design', '@module:public', '@priority:P2'];

@@ -4,13 +4,32 @@ import { get_request, patch_request } from '~/stores/services/request_http'
 const base = 'platform/features/admin/'
 
 export const usePlatformFeatureAdminStore = defineStore('platform_feature_admin', {
-  state: () => ({ settings: null, clients: { results: [], page: 1, count: 0 }, client: null, events: null, searchGeneration: 0 }),
+  state: () => ({ settings: null, clients: { results: [], page: 1, count: 0 }, client: null, events: null, searchGeneration: 0, clientsLoading: false, clientsError: false }),
   actions: {
     async load() { this.settings = (await get_request(base)).data },
+    invalidateClients() {
+      this.searchGeneration += 1
+      this.clients = { results: [], page: 1, count: 0 }
+      this.clientsLoading = true
+      this.clientsError = false
+    },
+    cancelClients() {
+      this.searchGeneration += 1
+      this.clientsLoading = false
+    },
     async searchClients(search = '', page = 1) {
       const generation = ++this.searchGeneration
-      const { data } = await get_request(`${base}clients/?search=${encodeURIComponent(search)}&page=${page}`)
-      if (generation === this.searchGeneration) this.clients = data
+      this.clients = { results: [], page, count: 0 }
+      this.clientsLoading = true
+      this.clientsError = false
+      try {
+        const { data } = await get_request(`${base}clients/?search=${encodeURIComponent(search)}&page=${page}`)
+        if (generation === this.searchGeneration) this.clients = data
+      } catch {
+        if (generation === this.searchGeneration) this.clientsError = true
+      } finally {
+        if (generation === this.searchGeneration) this.clientsLoading = false
+      }
     },
     async selectClient(id) { this.client = (await get_request(`${base}clients/${id}/`)).data },
     async save(values, client = false) {

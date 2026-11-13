@@ -22,8 +22,8 @@ def test_read_only_message_identifies_building_with_us(initialized_building_with
     message = service.mirror_read_only_message(initialized_building_with_us_mirror.document)
 
     assert message == (
-        'Este contrato es de sólo lectura y permanece en Contratos. '
-        'Su contenido se actualiza mediante el MCP de Building with Us.'
+        'Este contrato permanece en Contratos; su identidad y ubicación están protegidas. '
+        'Edita el contenido desde el Gestor de documentos o mediante el MCP de Programas.'
     )
 
 

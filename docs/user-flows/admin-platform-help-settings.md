@@ -13,3 +13,10 @@ Administración de Ayuda, contenido e historial de vistos, con enlace a Feature 
 | success | Abrir la gestión central o guardar contenido de ayuda desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+
+**PA-251/253/257/261 · delta de interfaz:** La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+
+Integración PA-263/PA-251: la disponibilidad por cliente y su búsqueda al escribir se gestionan en Feature flags. Ayuda enlaza al administrador central y conserva recursos, recorridos y progreso.
