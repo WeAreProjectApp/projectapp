@@ -71,7 +71,10 @@ def get_ticket(project_id, actor, kind, ticket_id, *, include_archived=False, lo
 
 
 def _load_ticket(project_id, actor, kind, ticket_id, *, include_archived=False, lock=False):
-    qs = MODELS[kind].objects.select_related('issue_context')
+    related = ['issue_context']
+    if kind == 'change':
+        related.append('package_request')
+    qs = MODELS[kind].objects.select_related(*related)
     if lock:
         qs = qs.select_for_update()
     ticket = qs.filter(pk=ticket_id, project_id=project_id).first()

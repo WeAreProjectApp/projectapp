@@ -28,7 +28,7 @@ async function openQueue(page) {
 
 async function openProjectWorkspace(page) {
   await page.getByRole('button', { name: 'Seleccionar proyecto', exact: true }).click();
-  await page.getByRole('button', { name: REQUIREMENT_PACKAGE_PROJECT.name, exact: true }).click();
+  await page.getByRole('menuitem', { name: REQUIREMENT_PACKAGE_PROJECT.name, exact: true }).click();
   await expect(page.getByTestId('requirement-packages-workspace')).toContainText('Tus cupos disponibles');
 }
 
@@ -69,7 +69,7 @@ test.describe('Admin requirement packages', () => {
     await mockRequirementPackagesWorkspace(page, { admin: true });
     await openQueue(page);
 
-    await page.getByRole('link', { name: 'Ver detalle', exact: true }).click();
+    await page.getByRole('link', { name: 'Ver solicitud', exact: true }).click();
 
     await expect(page).toHaveURL(/\/panel\/requirement-packages\?project=1&request=701$/);
     await expect(page.getByTestId('package-request-detail')).toContainText('Mostrar el estado del pedido');

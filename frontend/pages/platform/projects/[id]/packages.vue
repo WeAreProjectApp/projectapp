@@ -15,8 +15,8 @@ const projectId = computed(() => Number(route.params.id));
 const api = computed(() =>
   createRequirementPackagesApi(
     {
-      get: (path) => transport.get(`/api/${path}`),
-      post: (path, data) => transport.post(`/api/${path}`, data),
+      get: (path) => transport.get(path, { baseURL: "/api/" }),
+      post: (path, data) => transport.post(path, data, { baseURL: "/api/" }),
     },
     projectId.value,
   ),

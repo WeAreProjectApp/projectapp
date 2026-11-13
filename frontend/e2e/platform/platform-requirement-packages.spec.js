@@ -24,7 +24,7 @@ const personalClientToken = 'eyJhbGciOiJub25lIn0.eyJ1c2VyX2lkIjo5MDAyfQ.signatur
 
 async function openPackagesFromProject(page) {
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: /^(Mis )?proyectos$/, exact: false })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Mis )?proyectos$/i })).toBeVisible();
   await page.getByTestId(`project-row-${REQUIREMENT_PACKAGE_PROJECT.id}`).click();
   await expect(page.getByRole('heading', { name: REQUIREMENT_PACKAGE_PROJECT.name, exact: true })).toHaveText(REQUIREMENT_PACKAGE_PROJECT.name);
   await page.getByRole('link', { name: 'Paquetes de requerimientos', exact: true }).click();

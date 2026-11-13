@@ -19,6 +19,7 @@ from accounts.models_requirement_packages import (
     PackageExampleRevision,
     PackageMovement,
     PackageOrder,
+    PackageRequest,
 )
 from accounts.services import package_commerce as commerce
 from accounts.services import package_examples, package_requests
@@ -60,7 +61,7 @@ def has_blocking_package_ownership(plan, relation):
     """Report whether a merge plan blocks one retained package ownership relation."""
     return any(
         row['relation'] == relation and row['policy'] == 'blocks_merge'
-        for row in plan['relations']
+        for row in plan['preview']['relations']
     )
 
 
@@ -385,13 +386,23 @@ def test_package_history_blocks_client_merge_ownership_rewrite(package_context, 
     assert record.client_id == package_context.client.pk
 
 
-def test_force_delete_preview_names_requirement_package_history_as_a_blocker(package_context):
+@pytest.mark.parametrize(
+    ('record_factory', 'model', 'model_key'),
+    [
+        (paid_order, PackageOrder, 'accounts.packageorder'),
+        (request_row, PackageRequest, 'accounts.packagerequest'),
+    ],
+    ids=['package-order', 'package-request'],
+)
+def test_force_delete_preview_names_requirement_package_history_as_a_blocker(
+        package_context, record_factory, model, model_key,
+):
     """Fails if force deletion hides protected package purchases behind a generic relation error."""
-    paid_order(package_context)
+    record_factory(package_context)
     operator = User.objects.create_superuser('package-superuser', email='package-superuser@example.test')
 
     preview = forced_deletion_preview(package_context.project, actor=operator)
 
     assert preview['can_delete'] is False
-    assert {'key': 'accounts.packageorder', 'id': str(PackageOrder.objects.get().pk),
+    assert {'key': model_key, 'id': str(model.objects.get().pk),
             'message': 'El historial de paquetes por tallas, compras y consentimiento se conserva y bloquea la eliminación automática.'} in preview['blockers']

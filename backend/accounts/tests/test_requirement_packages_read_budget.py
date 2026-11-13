@@ -60,6 +60,11 @@ def response_key_sets(rows):
 
 def test_requirement_catalog_query_budget_is_constant_from_one_to_twenty_packages(package_context):
     """Fails if quoting each extra requirement package restores a settings query per row."""
+    HourPackage.objects.filter(
+        is_active=True,
+        pricing_model='requirements',
+        nationality=package_context.package.nationality,
+    ).exclude(pk=package_context.package.pk).update(is_active=False)
     HourPackageSettings.load()
 
     with CaptureQueriesContext(connection) as one_package_queries:
