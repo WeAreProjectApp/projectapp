@@ -39,6 +39,11 @@ const mockChangeRequests = [
 
 const meResponse = (user) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(user) });
 
+async function chooseIssueSource(page, title) {
+  await page.getByTestId('issue-source').click();
+  await page.getByRole('option', { name: new RegExp(`^${title} ·`) }).click();
+}
+
 // Change requests keep their published source and original round.
 const mockProjectRequirements = [
   { id: 501, title: 'Checkout flow', phase_title: 'Fase 1', stage_title: 'Etapa 1', source_publication_id: 101, source_requirement_version: 1 },
@@ -92,7 +97,7 @@ test.describe('Platform Change Requests — Client', () => {
       });
       await page.goto('/es-co/platform/projects/1/changes', { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: /nueva solicitud/i }).click();
-      await page.getByTestId('issue-source').selectOption('501');
+      await chooseIssueSource(page, 'Checkout flow');
       await page.getByPlaceholder('¿Qué cambio necesitas?').fill(title);
       const rejected = page.waitForResponse((response) => response.url().includes('/change-requests/') && response.request().method() === 'POST');
 
@@ -101,7 +106,7 @@ test.describe('Platform Change Requests — Client', () => {
       expect((await rejected).status()).toBe(400);
       await expect(page.getByRole('alert')).toHaveText('El título admite hasta 300 caracteres.');
       await expect(page.getByPlaceholder('¿Qué cambio necesitas?')).toHaveValue(title);
-      await expect(page.getByTestId('issue-source')).toHaveValue('501');
+      await expect(page.getByTestId('issue-source')).toContainText('Checkout flow');
       await expect(page.getByRole('heading', { name: 'Nueva solicitud de cambio', exact: true })).toBeVisible();
       await expect(page.getByText(title, { exact: true })).toHaveCount(0);
     });
@@ -120,7 +125,7 @@ test.describe('Platform Change Requests — Client', () => {
   });
 
   test('client can create a new change request', {
-    tag: [...PLATFORM_CHANGE_REQUESTS, '@role:platform-client'],
+    tag: [...PLATFORM_CHANGE_REQUESTS, '@role:platform-client', '@outcome:success'],
   }, async ({ page }) => {
     await setupMocks(page, { user: mockPlatformClient });
     await page.goto('/platform/projects/1/changes', { waitUntil: 'domcontentloaded' });
@@ -128,8 +133,8 @@ test.describe('Platform Change Requests — Client', () => {
 
     await page.getByRole('button', { name: /nueva solicitud/i }).click();
     await page.getByPlaceholder('¿Qué cambio necesitas?').fill('New change request');
-    // A change request now requires a source requirement — pick the first option.
-    await page.getByTestId('issue-source').selectOption({ index: 1 });
+    // A change request requires its published source requirement.
+    await chooseIssueSource(page, 'Checkout flow');
     await page.getByRole('button', { name: /crear solicitud/i }).click();
 
     // On a successful submit the create form closes.

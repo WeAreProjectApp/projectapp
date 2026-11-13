@@ -40,14 +40,20 @@ function helpFixture({ settings = { tour_enabled: true, video_enabled: true, ver
   return { settings: { ...settings }, tours: tours.map((tour) => structuredClone(tour)), clients, progress }
 }
 
-async function setupAdmin(page, { fixture = helpFixture(), settingsStatus = 200, tourStatus = 200 } = {}) {
+async function setupAdmin(page, {
+  fixture = helpFixture(), settingsStatus = 200, tourStatus = 200, clientResponse = null,
+} = {}) {
   const writes = []
   await setAuthLocalStorage(page, { token: 'platform-help-admin', userAuth: { id: 51, role: 'admin', is_staff: true, is_superuser: true } })
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/' && method === 'GET') return json({ user: { username: 'help-admin', is_staff: true, is_superuser: true } })
     if (apiPath === 'platform/help/settings/' && method === 'GET') return json(fixture.settings)
     if (apiPath === 'platform/help/admin/tours/' && method === 'GET') return json({ results: fixture.tours, targets })
-    if (apiPath === 'platform/help/clients/' && method === 'GET') return json({ results: fixture.clients, page: 1, count: fixture.clients.length })
+    if (apiPath === 'platform/help/clients/' && method === 'GET') {
+      return clientResponse
+        ? clientResponse({ route, fixture })
+        : json({ results: fixture.clients, page: 1, count: fixture.clients.length })
+    }
     if (apiPath === 'platform/help/admin/progress/' && method === 'GET') return json({ results: fixture.progress, page: 1, count: fixture.progress.length })
     if (apiPath === 'platform/help/settings/' && method === 'PATCH') {
       const body = JSON.parse(route.request().postData() || '{}')
@@ -92,8 +98,125 @@ test.describe('Platform help administration', () => {
     await setupAdmin(page, { fixture: helpFixture({ progress: [{ user_id: 9002, user: 'client@e2e-test.com', tour: 'platform-basics', status: 'completed' }] }) })
 
     await openPlatformHelp(page)
-    await expect(page.getByLabel('Seleccionar recorrido')).toHaveValue(String(authoredTour.id))
+    await expect(page.getByLabel('Seleccionar recorrido')).toHaveText('Conoce tu espacio · 2')
     await expect(page.getByTestId('platform-help-admin')).toContainText('client@e2e-test.com')
+  })
+
+  test('typing a client fragment loads results without submitting', {
+    tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: typing in the client field could leave stale results until the search button was submitted.
+    const requests = []
+    await setupAdmin(page, {
+      clientResponse: ({ route }) => {
+        const url = new URL(route.request().url())
+        const request = { page: Number(url.searchParams.get('page')), search: url.searchParams.get('search') }
+        requests.push(request)
+        return json(request.search === 'Diego'
+          ? { results: [{ user_id: 82, name: 'Diego Duarte', tour_enabled: true, video_enabled: false }], page: 1, count: 1 }
+          : { results: [], page: 1, count: 0 })
+      },
+    })
+
+    await openPlatformHelp(page)
+    const results = page.getByTestId('help-client-results')
+    await page.getByLabel('Buscar cliente', { exact: true }).fill('Diego')
+
+    await expect(results).toHaveAttribute('aria-busy', 'true')
+    await expect.poll(() => requests.some((request) => request.search === 'Diego' && request.page === 1)).toBe(true)
+    await expect(results).toContainText('Diego Duarte')
+  })
+
+  test('latest client search response wins when requests resolve out of order', {
+    tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: a slower prior fragment could overwrite the results for the latest client search.
+    const pending = new Map()
+    await setupAdmin(page, {
+      clientResponse: ({ route }) => {
+        const search = new URL(route.request().url()).searchParams.get('search')
+        if (!search) return json({ results: [], page: 1, count: 0 })
+        return new Promise((resolve) => pending.set(search, resolve))
+      },
+    })
+
+    await openPlatformHelp(page)
+    const search = page.getByLabel('Buscar cliente', { exact: true })
+    const results = page.getByTestId('help-client-results')
+    await search.fill('Die')
+    await expect.poll(() => pending.has('Die')).toBe(true)
+    await search.fill('Diego')
+    await expect.poll(() => pending.has('Diego')).toBe(true)
+
+    pending.get('Diego')(json({ results: [{ user_id: 83, name: 'Diego Duarte', tour_enabled: true, video_enabled: false }], page: 1, count: 1 }))
+    await expect(results).toContainText('Diego Duarte')
+    pending.get('Die')(json({ results: [{ user_id: 84, name: 'Diego Serrano', tour_enabled: false, video_enabled: true }], page: 1, count: 1 }))
+
+    await expect(results).toContainText('Diego Duarte')
+    await expect(results).not.toContainText('Diego Serrano')
+  })
+
+  test('clearing the client filter returns to the first page', {
+    tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: clearing a paged search could retain page two instead of restoring the first client results.
+    const requests = []
+    await setupAdmin(page, {
+      clientResponse: ({ route }) => {
+        const url = new URL(route.request().url())
+        const pageNumber = Number(url.searchParams.get('page'))
+        const search = url.searchParams.get('search')
+        requests.push({ page: pageNumber, search })
+        if (!search) return json({ results: [{ user_id: 85, name: 'Ana Inicio', tour_enabled: true, video_enabled: true }], page: 1, count: 1 })
+        if (pageNumber === 2) return json({ results: [{ user_id: 87, name: 'Diego Página dos', tour_enabled: true, video_enabled: false }], page: 2, count: 22 })
+        return json({ results: [{ user_id: 86, name: 'Diego Página uno', tour_enabled: true, video_enabled: false }], page: 1, count: 22 })
+      },
+    })
+
+    await openPlatformHelp(page)
+    const results = page.getByTestId('help-client-results')
+    const clientsSection = results.locator('xpath=..')
+    const search = page.getByLabel('Buscar cliente', { exact: true })
+    await search.fill('Diego')
+    await expect(results).toContainText('Diego Página uno')
+    await clientsSection.getByRole('button', { name: 'Página siguiente', exact: true }).click()
+    await expect(results).toContainText('Diego Página dos')
+    await search.fill('')
+
+    await expect(results).toContainText('Ana Inicio')
+    await expect.poll(() => requests.at(-1)).toEqual({ page: 1, search: '' })
+  })
+
+  test('retrying a failed client search restores the current results', {
+    tag: [...ADMIN_PLATFORM_HELP_SETTINGS, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Bug caught: retrying a failed client lookup could drop the current fragment or leave the list unavailable.
+    let unavailable = true
+    const requests = []
+    const writes = await setupAdmin(page, {
+      clientResponse: ({ route }) => {
+        const url = new URL(route.request().url())
+        const request = { page: Number(url.searchParams.get('page')), search: url.searchParams.get('search') }
+        requests.push(request)
+        if (request.search === 'Diego' && unavailable) return json({ detail: 'Temporalmente no disponible.' }, 503)
+        if (request.search === 'Diego') return json({ results: [{ user_id: 88, name: 'Diego Recuperado', tour_enabled: true, video_enabled: false }], page: 1, count: 1 })
+        return json({ results: [], page: 1, count: 0 })
+      },
+    })
+
+    await openPlatformHelp(page)
+    const results = page.getByTestId('help-client-results')
+    await page.getByLabel('Buscar cliente', { exact: true }).fill('Diego')
+    await expect(results.getByRole('alert')).toHaveText('No se pudieron cargar los clientes. Reintentar')
+    await expect.poll(() => requests.at(-1)).toEqual({ page: 1, search: 'Diego' })
+    expect(writes).toEqual([])
+
+    unavailable = false
+    await results.getByRole('button', { name: 'Reintentar', exact: true }).click()
+
+    await expect(results).toContainText('Diego Recuperado')
+    await expect.poll(() => requests.at(-1)).toEqual({ page: 1, search: 'Diego' })
+    expect(writes).toEqual([])
   })
 
   test('saving global availability sends the current version', {
@@ -109,7 +232,7 @@ test.describe('Platform help administration', () => {
     await page.getByRole('heading', { name: 'Disponibilidad global', exact: true })
       .locator('xpath=..').getByRole('button', { name: 'Guardar', exact: true }).click()
 
-    await expect(page.getByRole('status')).toHaveText('Cambios guardados.')
+    await expect(page.getByTestId('platform-help-admin').getByRole('status').filter({ hasText: /^Cambios guardados\.$/ })).toHaveText('Cambios guardados.')
     await expect.poll(() => writes.find((item) => item.type === 'settings')?.body).toMatchObject({ expected_version: 3, tour_enabled: false, video_enabled: true })
   })
 

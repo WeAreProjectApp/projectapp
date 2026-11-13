@@ -41,6 +41,10 @@ function actionIds(wrapper) {
 }
 
 describe('IncomeActionsModal', () => {
+  it('keeps cents in the income named by the action menu', () => {
+    const wrapper = mountModal({ ...EXPECTED, total_amount: '119.03' });
+    expect(wrapper.get('[data-testid="income-actions-modal"]').text()).toContain('$119,03 COP');
+  });
   it('names the income being acted on, with its client and project', () => {
     const wrapper = mountModal(EXPECTED);
 

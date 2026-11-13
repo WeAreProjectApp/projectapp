@@ -29,14 +29,15 @@
   </NuxtLink>
   <div
     v-else
-    :class="[itemClasses, 'cursor-default opacity-40']"
+    :class="[itemClasses, 'cursor-not-allowed']"
+    aria-disabled="true"
     :title="isCollapsed ? `${item.label} (próximamente)` : undefined"
   >
     <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" />
     <span v-if="!isCollapsed" :class="labelClass">{{ item.label }}</span>
     <span
       v-if="!isCollapsed"
-      class="ml-auto text-[9px] font-medium uppercase tracking-wider text-text-muted dark:text-text-subtle/70"
+      class="ml-auto rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-default"
     >
       pronto
     </span>
@@ -62,7 +63,9 @@ const labelClass = computed(() => props.wrapLabel
 const itemClasses = computed(() => [
   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
   props.isCollapsed ? 'justify-center' : '',
-  props.isActive && !props.disabled
+  props.disabled
+    ? 'text-text-muted'
+    : props.isActive
     ? 'bg-primary text-on-primary dark:bg-white/10 dark:text-white'
     : 'text-text-muted dark:text-text-muted hover:bg-primary-soft hover:text-text-brand dark:hover:bg-surface/[0.06] dark:hover:text-white',
 ])

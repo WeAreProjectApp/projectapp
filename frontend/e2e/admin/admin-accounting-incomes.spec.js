@@ -911,13 +911,16 @@ test.describe('Admin Accounting Incomes CRUD', () => {
   test('assigning a collection color preserves the manual switch', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
+    // Bug caught: the floating confidence choice could stop persisting its selected collection level.
     const calls = [];
     await mockApi(page, buildHandler({ rows: [incomeRow()], calls }));
     await gotoIncomes(page);
 
-    await page.getByRole('combobox', {
+    const confidence = page.getByRole('combobox', {
       name: 'Probabilidad de cobro de Kore - Inicio 40%',
-    }).selectOption('high');
+    });
+    await confidence.click();
+    await page.getByRole('option', { name: 'Cobro muy probable', exact: true }).click();
 
     await expect(page.getByRole('switch', {
       name: 'Agregar Kore - Inicio 40% de pendientes por cobrar',
