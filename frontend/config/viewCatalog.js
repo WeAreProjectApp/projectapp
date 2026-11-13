@@ -871,6 +871,13 @@ export const viewCatalogSections = [
         notes: 'Selecciona producción y dominio; switches excluyentes de pantalla y banner, títulos y textos independientes por modo, vista previa e historial. Distingue configuración guardada de aplicación confirmada por cada destino; estados sin integrar, pendiente, desconectado y error. Panel y MCP comparten permisos y versiones. No detiene servicios ni modifica datos.',
       },
       {
+        label: 'Solicitudes por tallas', url: '/panel/requirement-packages', group: 'Plataforma',
+        file: 'frontend/pages/panel/requirement-packages/index.vue',
+        reference: 'bandeja de evaluación manual, compras, saldos y ejemplos por proyecto',
+        audience: 'admin', viewType: 'list',
+        notes: 'Busca solicitudes y proyectos, propone talla y agenda, revisa objeciones y confirma pagos externos. Ejemplos genéricos o por proyecto con historial y MCP. La aceptación y consumo corresponden al cliente.',
+      },
+      {
         label: 'Proyectos (Plataforma)',
         url: '/panel/projects',
         group: 'Plataforma',
@@ -1392,6 +1399,13 @@ export const viewCatalogSections = [
         reference: 'vista de detalle de cliente de plataforma',
         audience: 'admin',
         viewType: 'detail',
+      },
+      {
+        label: 'Paquetes de requerimientos del proyecto', url: '/platform/projects/:id/packages', group: 'Proyectos',
+        file: 'frontend/pages/platform/projects/[id]/packages.vue',
+        reference: 'compra de cupos y solicitudes con talla y aceptación explícita del cliente',
+        audience: 'client', viewType: 'edit',
+        notes: 'Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.',
       },
       {
         label: 'Ideas para el futuro',

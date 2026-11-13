@@ -1,0 +1,16 @@
+{
+  "id": "admin-requirement-package-commerce",
+  "name": "Administrar compras y correcciones de cupos",
+  "module": "projects",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Confirmar pagos externos, revisar saldo, revertir consumos con motivo y configurar futuras compras.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

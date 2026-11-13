@@ -93,6 +93,16 @@ _PLATFORM_AI_BRIDGE_NAMES = {
     'list_platform_ai_events', 'invalidate_platform_ai_cache',
     'test_platform_ai_credential', 'delete_platform_ai_credential',
 }
+_PACKAGE_PROJECT_BRIDGE_NAMES = {
+    'list_package_request_queue', 'get_project_requirement_packages',
+    'get_project_package_examples', 'publish_project_package_examples',
+    'list_project_package_example_history', 'get_package_request',
+    'get_package_evaluation_context', 'create_package_purchase',
+    'create_package_request', 'update_project_package_settings',
+    'prepare_package_checkout', 'verify_package_payment',
+    'confirm_external_package_payment', 'begin_package_request_evaluation',
+    'publish_package_size_proposal', 'reverse_package_consumption',
+}
 
 
 def _serializer_class(path):
@@ -200,11 +210,12 @@ def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tool
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 101
+    assert len(original_bridge_tools) == 117
     assert (
         set(PROJECTS_BRIDGE_SCHEMAS) | _PLATFORM_HELP_BRIDGE_NAMES
         | _PLATFORM_AI_BRIDGE_NAMES
         | _MONITORING_BRIDGE_NAMES
+        | _PACKAGE_PROJECT_BRIDGE_NAMES
         | {'get_project_calculator_version', 'get_project_requirement_calculator',
            'create_project_calculator_draft', 'update_project_calculator_parameters',
            'approve_project_requirement_calculator',

@@ -8,6 +8,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PLATFORM_NOTIFICATIONS } from '../helpers/flow-tags.js';
+import { PLATFORM_REQUIREMENT_PACKAGES_REQUEST } from '../helpers/flow-tags.js';
 import {
   setPlatformAuth,
   mockPlatformAdmin,
@@ -35,6 +36,13 @@ const mockNotifications = [
     project: 1, project_name: 'E-commerce Platform',
     related_object_type: 'payment', related_object_id: 1,
     created_at: '2025-03-18T08:00:00Z',
+  },
+  {
+    id: 4, type: 'general', title: 'Solicitud por tallas: estado del pedido',
+    message: 'El equipo respondió tu solicitud para Atlas.', is_read: false,
+    project: 1, project_name: 'E-commerce Platform',
+    related_object_type: 'package_request', related_object_id: 701,
+    created_at: '2025-03-21T10:00:00Z',
   },
 ];
 
@@ -120,5 +128,19 @@ test.describe('Platform Notifications — Client', () => {
     await page.getByRole('heading', { name: /notificaciones/i }).waitFor({ state: 'visible', timeout: 30000 });
 
     await expect(page.getByText('Requerimiento actualizado: Login')).toBeVisible();
+  });
+
+  test('package-request notification opens the exact package request', {
+    tag: ['@outcome:success', ...PLATFORM_REQUIREMENT_PACKAGES_REQUEST, '@role:platform-client'],
+  }, async ({ page }) => {
+    // Bug caught: a package-request notification loses its request id or routes the client to the project summary.
+    await setPlatformAuth(page, { user: mockPlatformClient });
+    await setupMocks(page, { user: mockPlatformClient });
+    await page.goto('/platform/notifications', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('heading', { name: /notificaciones/i }).waitFor({ state: 'visible', timeout: 30_000 });
+
+    await page.getByText('Solicitud por tallas: estado del pedido', { exact: true }).click();
+
+    await expect(page).toHaveURL(/\/platform\/projects\/1\/packages\?request=701$/);
   });
 });
