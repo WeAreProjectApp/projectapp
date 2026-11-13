@@ -52,7 +52,25 @@
         "delivery-document-delete",
         "delivery-document-pdf",
         "delivery-review-evidence",
-        "delivery-review-evidence-pdf"
+        "delivery-review-evidence-pdf",
+        "delivery-contracts",
+        "delivery-contracts-detail",
+        "delivery-amendments",
+        "delivery-amendments-detail",
+        "delivery-scopes",
+        "delivery-scopes-detail",
+        "delivery-phases",
+        "delivery-phases-detail",
+        "delivery-stages",
+        "delivery-stages-detail",
+        "delivery-requirements",
+        "delivery-requirements-detail",
+        "delivery-contracts-signature",
+        "delivery-contracts-pdf",
+        "delivery-contracts-source",
+        "delivery-amendments-signature",
+        "delivery-amendments-pdf",
+        "delivery-amendments-source"
       ]
     },
     {

@@ -1,7 +1,7 @@
 import { test, expect } from './helpers/test.js'
 import { mockApi } from './helpers/api.js'
 import { setPlatformAuth, mockPlatformClient } from './helpers/platform-auth.js'
-import catalog from '../../contracts/platform-features.json'
+import catalog from '../../contracts/platform-features.json' with { type: 'json' };
 
 const json = (data, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(data) })
 
@@ -23,6 +23,7 @@ test.describe('Client feature availability', () => {
   test.setTimeout(60_000)
 
   test('navigation omits the disabled document portal', { tag: ['@flow:platform-feature-availability', '@outcome:display'] }, async ({ page }) => {
+    // quality: allow-deep-link (Projects is the client entry point; the test uses the navigation to reach profile.)
     await setup(page)
     await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
 
@@ -37,6 +38,8 @@ test.describe('Client feature availability', () => {
 
     await expect(page.getByTestId('platform-feature-unavailable')).toContainText('Esta funcionalidad está deshabilitada')
     await expect(page).toHaveURL(/\/platform\/unavailable$/)
+    await page.getByRole('link', { name: 'Volver a Proyectos', exact: true }).click()
+    await expect(page).toHaveURL(/\/platform\/projects$/)
   })
 
   test('blocked client returns to the project structure', { tag: ['@flow:platform-feature-availability', '@outcome:success'] }, async ({ page }) => {
@@ -54,5 +57,7 @@ test.describe('Client feature availability', () => {
     await page.goto('/es-co/platform/documents', { waitUntil: 'domcontentloaded' })
 
     await expect(page.getByTestId('platform-feature-unavailable')).toContainText('No se pudo comprobar la disponibilidad')
+    await page.getByRole('link', { name: 'Volver a Proyectos', exact: true }).click()
+    await expect(page).toHaveURL(/\/platform\/projects$/)
   })
 })

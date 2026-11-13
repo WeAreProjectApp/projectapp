@@ -31,13 +31,20 @@ historial y trabajos pendientes antes de llamar proveedores. La biblioteca de
 Documentos y los documentos de Entregas son capacidades de entrada distintas;
 sus endpoints corresponden al flag del módulo que los ofrece.
 
+La autenticación JWT lee las preferencias del cliente y el global junto con el
+perfil vigente, mediante relaciones y una subconsulta. Ese resultado pertenece
+solo a la petición autenticada; no se guarda en el token ni se comparte entre
+peticiones. Los servicios fuera de HTTP vuelven a leer su propio corte. El
+inventario incluye los endpoints de Entrega generados por tipo de documento.
+
 Nuxt consume el mismo inventario para navegación de escritorio/móvil, pestañas,
 enlaces directos y controles asociados. La API propia devuelve exclusivamente
 la cuenta autenticada. El estado en memoria se liga a `user_id`, se descartan
 respuestas de cuentas anteriores y se revalida al navegar o recuperar el foco.
 El servidor decide en cada operación. No se promete difusión instantánea entre
 pestañas; una denegación de API invalida la disponibilidad de la superficie.
-Si la evaluación falla, se ofrece recuperación sin habilitar por defecto.
+Si la evaluación falla, las funcionalidades controladas siguen bloqueadas y el
+cliente puede volver a la estructura básica de Proyectos.
 
 Acceso, recuperación, perfil, estructura y resumen de proyectos y administración
 interna están inventariados como exclusiones. Un cliente bloqueado vuelve a

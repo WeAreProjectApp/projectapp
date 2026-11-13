@@ -1,7 +1,7 @@
 """Single precedence and write boundary for Panel, MCP and client availability."""
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q, F
+from django.db.models import Q, F, Subquery
 from django.utils import timezone
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
@@ -55,29 +55,60 @@ def configuration(user_id=None):
 
 
 def values_for(user_id=None):
-    global_config = configuration()
-    overrides = configuration(user_id).values if user_id is not None else {}
-    return {key: overrides.get(key, global_config.values.get(key, item['default_enabled']))
+    if user_id is None:
+        return merge_values(configuration().values, {})
+    user = get_user_model().objects.select_related('platform_feature_settings').annotate(
+        _global_feature_values=Subquery(PlatformFeatureSettings.objects.filter(pk=1).values('values')[:1]),
+    ).get(pk=user_id)
+    return values_from_user(user)
+
+
+def merge_values(defaults, overrides):
+    return {key: overrides.get(key, defaults.get(key, item['default_enabled']))
             for key, item in FEATURES.items()}
 
 
-def enabled(actor, key):
+def profile_queryset():
+    from accounts.models import UserProfile
+    return UserProfile.objects.select_related('user', 'user__platform_feature_settings').annotate(
+        _global_feature_values=Subquery(PlatformFeatureSettings.objects.filter(pk=1).values('values')[:1]),
+    )
+
+
+def values_from_user(user, defaults=None):
+    scope = getattr(user, 'platform_feature_settings', None)
+    global_values = getattr(user, '_global_feature_values', {}) if defaults is None else defaults
+    return merge_values(global_values or {}, scope.values if scope else {})
+
+
+def values_from_profile(profile):
+    return values_from_user(profile.user, profile._global_feature_values or {})
+
+
+def request_values(request):
+    from accounts.authentication import SessionJWTAuthentication
+    if isinstance(request.successful_authenticator, SessionJWTAuthentication):
+        return request.user._platform_feature_values
+    return values_for(request.user.pk)
+
+
+def enabled(actor, key, *, request=None):
     if key not in FEATURES:
         raise ValidationError('Clave de funcionalidad desconocida.')
     if not actor or not actor.is_authenticated or not actor.is_active:
         raise PermissionDenied('Se requiere una cuenta activa.')
-    # Re-read role and settings. No actor relation or process-wide evaluation cache.
-    from accounts.models import UserProfile
-    role = UserProfile.objects.filter(user_id=actor.pk).values_list('role', flat=True).first()
+    profile = (getattr(actor, 'profile', None) if request is not None
+               else profile_queryset().filter(user_id=actor.pk).first())
+    role = profile.role if profile else None
     if role == 'admin':
         return True
     if role != 'client':
         raise PermissionDenied('Se requiere una cuenta de Plataforma.')
-    return values_for(actor.pk)[key]
+    return (request_values(request) if request is not None else values_from_profile(profile))[key]
 
 
-def require_feature(actor, key):
-    if not enabled(actor, key):
+def require_feature(actor, key, *, request=None):
+    if not enabled(actor, key, request=request):
         raise FeatureDisabled(key)
 
 
@@ -185,4 +216,3 @@ def events(actor, page=1, user_id=None):
     return paginate(qs, page, lambda event: {'id': event.pk, 'actor_id': event.actor_id,
         'client_id': event.client_id, 'scope': event.scope, 'changes': event.changes,
         'version': event.version, 'created_at': event.created_at})
-

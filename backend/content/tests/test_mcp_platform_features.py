@@ -9,6 +9,14 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
+def client_user(django_user_model):
+    from accounts.models import UserProfile
+    user = django_user_model.objects.create_user(username='feature-client', email='feature-client@example.test')
+    UserProfile.objects.create(user=user, role=UserProfile.ROLE_CLIENT, is_onboarded=True)
+    return user
+
+
+@pytest.fixture
 def credential(admin_user):
     admin_user.is_staff = True
     admin_user.save(update_fields=['is_staff'])

@@ -79,7 +79,7 @@ def ai_capabilities(actor):
     if not actor or not actor.is_authenticated or not actor.is_active:
         raise PermissionDenied('Se requiere una cuenta activa.')
     # Never reuse actor.profile's relation cache across a billed request.
-    profile = UserProfile.objects.select_related('user').filter(user_id=actor.pk).first()
+    profile = features.profile_queryset().filter(user_id=actor.pk).first()
     if profile and not profile.user.is_active:
         raise PermissionDenied('Se requiere una cuenta activa.')
     if not profile:
@@ -89,7 +89,7 @@ def ai_capabilities(actor):
     config = configuration()
     keys = credential_status()
     client = bool(profile and profile.is_client)
-    flag_values = features.values_for(actor.pk)
+    flag_values = features.values_from_profile(profile) if profile else features.values_for()
     result = {}
     for name, flag, model in [('chatbot', 'chatbot_enabled', config.chatbot_model),
                               ('voice_reporting', 'voice_reporting_enabled', config.voice_report_model)]:

@@ -127,3 +127,25 @@ def test_project_summary_omits_disabled_module_data(client_api, client_user, pro
     assert response.data['bugs_open_count'] is None
     assert response.data['phases_total_amount'] is None
     assert response.data['next_hosting_payment'] is None
+
+
+def test_disabled_delivery_blocks_generated_contract_route(client_api, client_user, project):
+    ClientPlatformFeatureSettings.objects.create(user=client_user, values={'platform.delivery': False})
+
+    response = client_api.get(f'/api/accounts/projects/{project.pk}/delivery/contracts/')
+
+    assert response.status_code == 403
+    assert response.data['code'] == 'feature_disabled'
+
+
+def test_jwt_request_reloads_changed_availability(client_user):
+    from accounts.services.tokens import get_tokens_for_user
+    api = APIClient()
+    api.credentials(HTTP_AUTHORIZATION=f'Bearer {get_tokens_for_user(client_user)["access"]}')
+    assert api.get('/api/accounts/bug-reports/').status_code == 200
+    ClientPlatformFeatureSettings.objects.create(user=client_user, values={'platform.bugs': False})
+
+    response = api.get('/api/accounts/bug-reports/')
+
+    assert response.status_code == 403
+    assert response.data['code'] == 'feature_disabled'

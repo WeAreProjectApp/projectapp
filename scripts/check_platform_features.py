@@ -19,6 +19,30 @@ def normalized(route):
     return re.sub(r':[^/]+', ':param', route)
 
 
+def path_names(nodes, bindings=None):
+    bindings = bindings or {}
+    names = set()
+    for node in nodes:
+        if (isinstance(node, ast.For) and isinstance(node.target, ast.Name)
+                and isinstance(node.iter, (ast.Tuple, ast.List))):
+            for item in ast.literal_eval(node.iter):
+                names.update(path_names(node.body, {**bindings, node.target.id: item}))
+            continue
+        for call in ast.walk(node):
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == 'path'):
+                continue
+            for keyword in call.keywords:
+                if keyword.arg != 'name':
+                    continue
+                value = keyword.value
+                if isinstance(value, ast.Constant):
+                    names.add(value.value)
+                elif isinstance(value, ast.JoinedStr):
+                    names.add(''.join(part.value if isinstance(part, ast.Constant)
+                                      else str(bindings[part.value.id]) for part in value.values))
+    return names
+
+
 def audit(catalog, pages, api_names, capabilities):
     problems = []
     keys, routes, apis, mapped_capabilities = set(), {}, {}, set()
@@ -62,9 +86,7 @@ def inventory(root):
     names = {'platform-help-videos'}
     for filename in API_FILES:
         tree = ast.parse((root / 'backend' / filename).read_text())
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'path':
-                names.update(kw.value.value for kw in node.keywords if kw.arg == 'name' and isinstance(kw.value, ast.Constant))
+        names.update(path_names(tree.body))
     source = (root / 'frontend/config/viewCapabilityCatalog.js').read_text().split('const platformCapabilities = [', 1)[1].split('const public', 1)[0]
     capabilities = re.findall(r"feature\('([^']+)'", source)
     return pages, names, capabilities
@@ -82,4 +104,3 @@ def main():
 
 if __name__ == '__main__':
     raise SystemExit(main())
-

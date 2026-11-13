@@ -1,5 +1,6 @@
 """The delivery gate must detect a real missing mapping."""
 from copy import deepcopy
+import ast
 import importlib.util
 import json
 from pathlib import Path
@@ -42,3 +43,11 @@ def test_new_endpoint_requires_a_policy():
     result = inventory.audit(catalog, pages, apis | {'platform-new-operation'}, capabilities)
 
     assert 'API sin clasificación: platform-new-operation' in result
+
+
+def test_generated_endpoint_names_are_inventoried():
+    source = "for kind in ('contracts', 'scopes'):\n    urlpatterns += [path('node/', view, name=f'delivery-{kind}-detail')]"
+
+    names = inventory.path_names(ast.parse(source).body)
+
+    assert names == {'delivery-contracts-detail', 'delivery-scopes-detail'}

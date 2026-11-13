@@ -29,9 +29,10 @@ class PlatformFeatureAvailable(BasePermission):
             elif dynamic == 'kind':
                 key = 'platform.bugs' if match.kwargs.get('kind') == 'bug' else 'platform.change_requests'
             else:
-                return service.enabled(request.user, 'platform.bugs') or service.enabled(request.user, 'platform.change_requests')
+                return (service.enabled(request.user, 'platform.bugs', request=request)
+                        or service.enabled(request.user, 'platform.change_requests', request=request))
         if key:
-            service.require_feature(request.user, key)
+            service.require_feature(request.user, key, request=request)
         elif name not in CATALOG['api_exemptions']:
             raise PermissionDenied('Esta operación no tiene disponibilidad definida.')
         return True
@@ -45,4 +46,3 @@ def bind_feature_permissions(patterns):
         cls = getattr(pattern.callback, 'cls', None)
         if cls and PlatformFeatureAvailable not in cls.permission_classes:
             cls.permission_classes = [*cls.permission_classes, PlatformFeatureAvailable]
-

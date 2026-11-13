@@ -1,4 +1,4 @@
-import featureCatalog from '../../../contracts/platform-features.json';
+import featureCatalog from '../../../contracts/platform-features.json' with { type: 'json' };
 
 export function getApiPath(requestUrl) {
   const url = new URL(requestUrl);

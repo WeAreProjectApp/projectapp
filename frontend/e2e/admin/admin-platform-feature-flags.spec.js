@@ -1,7 +1,7 @@
 import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
 import { setAuthLocalStorage } from '../helpers/auth.js'
-import catalog from '../../../contracts/platform-features.json'
+import catalog from '../../../contracts/platform-features.json' with { type: 'json' };
 
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) })
 const flags = () => Object.fromEntries(catalog.features.map(item => [item.key, item.default_enabled]))
@@ -56,6 +56,7 @@ test.describe('PA-263 availability administration', () => {
   test.setTimeout(60_000)
 
   test('panel navigation exposes the initial availability', { tag: ['@flow:panel-platform-feature-flags', '@outcome:display'] }, async ({ page }) => {
+    // quality: allow-deep-link (The authenticated Panel is the entry point; Feature flags is reached through its navigation.)
     await setup(page)
     await open(page)
 

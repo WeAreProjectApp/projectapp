@@ -18,7 +18,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const landing = async () => {
     if (!authStore.isClient) return '/platform/dashboard'
     const features = usePlatformFeaturesStore()
-    if (!await features.refresh()) return '/platform/unavailable?reason=load'
+    if (!await features.refresh()) return '/platform/projects'
     return features.enabled('platform.documents') ? '/platform/documents' : '/platform/projects'
   }
 
@@ -98,7 +98,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (authStore.isClient && rawPath !== '/platform/unavailable') {
     const features = usePlatformFeaturesStore()
     const loaded = await features.refresh()
-    if (!loaded) return navigateTo(lp('/platform/unavailable?reason=load'))
+    if (!loaded && !features.routeAllowed(rawPath)) return navigateTo(lp('/platform/unavailable?reason=load'))
     if (!features.routeAllowed(rawPath)) return navigateTo(lp('/platform/unavailable'))
   }
 

@@ -335,9 +335,9 @@ class ProjectListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         profile = getattr(request.user, 'profile', None) if request else None
         if profile and profile.is_client:
-            from accounts.services.platform_features import values_for
+            from accounts.services.platform_features import request_values
             if '_feature_values' not in self.context:
-                self.context['_feature_values'] = values_for(request.user.pk)
+                self.context['_feature_values'] = request_values(request)
             values = self.context['_feature_values']
             for field, key in {'bugs_open_count': 'platform.bugs',
                                'changes_pending_count': 'platform.change_requests',

@@ -16,7 +16,7 @@ from accounts.serializers_platform_help import (
     TourVersionSerializer, TourWriteSerializer, validated,
 )
 from accounts.services.platform_help_targets import TARGETS, target_available
-from accounts.services.project_collaboration_access import check_version, paginate, project_for_actor
+from accounts.services.project_collaboration_access import CollaborationConflict, check_version, paginate, project_for_actor
 
 
 def require_admin(actor):
@@ -100,8 +100,11 @@ def list_clients(actor, page=1, search=''):
 def update_flags(actor, data, user_id=None):
     require_admin(actor)
     values = validated(HelpFlagsSerializer, data)
-    result = features.update(actor, {'expected_version': values.pop('expected_version'),
-        'values': {HELP_FLAGS[field]: value for field, value in values.items()}}, user_id)
+    try:
+        result = features.update(actor, {'expected_version': values.pop('expected_version'),
+            'values': {HELP_FLAGS[field]: value for field, value in values.items()}}, user_id)
+    except features.FeatureConflict as error:
+        raise CollaborationConflict() from error
     return {**{field: next(item['effective'] for item in result['features'] if item['key'] == key)
                for field, key in HELP_FLAGS.items()}, 'version': result['version']}
 
