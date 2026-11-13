@@ -11,6 +11,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  deployment-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend tooling
+        run: npm --prefix frontend ci --ignore-scripts
+      - name: Verify build identity behavior
+        run: node --test frontend/scripts/tests/build-identity.test.mjs
+      - name: Verify deployment event policy
+        run: node --test frontend/scripts/tests/deployment-events.test.mjs
+      - name: Reject deployment event consumers
+        run: npm --prefix frontend run check:deployment-events
+
   # ───────────────────────────────────────────
   # E2E — flow-definitions.json must match @flow: tags in specs (no npm/Playwright)
   # ───────────────────────────────────────────
@@ -584,6 +602,11 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Generate the Django frontend
         run: npm --prefix frontend run build:django
+      - name: Collect the generated version manifest in isolation
+        working-directory: backend
+        run: python manage.py collectstatic --clear --noinput --settings=projectapp.settings_test
+      - name: Verify the published build identity
+        run: node frontend/scripts/check-build-version.mjs
       - name: Exercise installation and offline recovery against Django
         working-directory: frontend
         run: npx playwright test --config playwright.pwa.config.js admin/admin-pwa-install.spec.js pwa/panel-offline.spec.js --reporter=blob

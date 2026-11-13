@@ -93,27 +93,31 @@ sudo systemctl status projectapp-huey
 
 ---
 
-## Updates (future deploys)
+## Actualizaciones de producción en el fleet
 
-```bash
-cd /home/ryzepeck/webapps/projectapp
-./scripts/deploy.sh
-```
+El punto de entrada es `/deploy-and-check` del toolkit `vps-ops-toolkit`, que
+invoca `scripts/deployment/deploy-project.sh` como el usuario autorizado dentro
+de una operación de Integrity de tipo deploy. Prepara código, dependencias y
+los cuatro artefactos en una copia aparte; publica en la transacción y sólo da
+éxito después del control de salud y del cierre de Integrity. Un cierre
+rechazado puede necesitar abort y restaurar la versión anterior.
 
-The deploy script handles: git pull, backend deps + migrations, frontend build,
-static collection, and service restart. It installs Chromium and checks that it can launch before migrations; run it as the Huey service user so browser caches have the correct ownership. The final smoke check requires a JSON authentication response from the template API; a 200 HTML homepage is a failed deployment. Run `./scripts/deploy.sh --help` for options.
+`scripts/deploy.sh` está retirado: todas sus invocaciones terminan con código 2
+antes de hacer cambios. Sus opciones antiguas no son opciones del toolkit.
+La configuración del servidor también se gestiona mediante el procedimiento
+autorizado del toolkit. Las instrucciones de instalación inicial de esta guía
+no sustituyen el procedimiento operativo del fleet.
 
-| Flag | Effect |
-|------|--------|
-| `--sync-configs` | Also sync systemd/nginx configs from repo to server |
-| `--skip-frontend` | Skip frontend build (backend-only deploy) |
-| `--yes` | Skip confirmation prompts |
-| `--dry-run` | Show what would be done without executing |
+Consultar `/api/version/` para el backend y `/version.json` para el frontend.
+Ambos usan el SHA completo fijado durante el build, sin Git durante las
+peticiones. Una versión desconocida responde 503; el control `/api/health/`
+conserva su contrato. El reconciliador externo debe contrastar estas lecturas
+con el estado acreditado por Integrity y esperar que no haya operaciones abiertas.
 
-To sync server configs independently:
-```bash
-./scripts/sync-configs.sh
-```
+El chequeo de API de plantillas se conserva en el repositorio; su conexión
+antes del cierre y la preparación/comprobación de Chromium se entregan a la
+sesión del toolkit. No se dan por incorporadas desde este PR.
+Ver [contrato, inventario de controles y eventos](DEPLOYMENT_VERSION_INTERFACE.md).
 
 ---
 

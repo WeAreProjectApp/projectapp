@@ -5,9 +5,11 @@ import { fileURLToPath } from 'url';
 import { execSync, spawn } from 'child_process';
 
 import { assertValidSpaFallbackHtml } from './utils/spaFallback.js';
+import { resolveBuildCommit, writeBuildVersion } from './utils/buildIdentity.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const buildCommit = resolveBuildCommit(path.resolve(__dirname, '..'));
 
 const sourceDir = path.resolve(__dirname, '.output/public');
 const targetDir = path.resolve(__dirname, '../backend/static/frontend');
@@ -146,6 +148,10 @@ for (const asset of ['sw.js', ...manifest.icons.map((icon) => icon.src.replace(/
     throw new Error(`Empty PWA asset: ${asset}`);
   }
 }
+
+// Stamp only validated output. The manifest is copied and collected with the
+// same artifacts; a failed generate never relabels the published frontend.
+writeBuildVersion(sourceDir, buildCommit);
 
 // 3. Copy output to a staging dir next to the live one, then swap with two
 // renames. Gunicorn serves these files straight from disk on every request,

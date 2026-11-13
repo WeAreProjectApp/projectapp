@@ -1,3 +1,13 @@
+## PA-267 — Identidad de build y procedimiento del fleet
+
+`build:django` fija un SHA completo antes de generar y escribe un manifiesto
+junto al frontend validado. En el stage sin Git usa el objetivo exportado por
+Integrity. `collectstatic` lleva la misma identidad al artefacto de estáticos;
+Django la captura al arrancar para `/api/version/`. `/version.json` lee el
+frontend publicado; ambas respuestas evitan caché y Git en tiempo de ejecución.
+El guion antiguo está retirado. Registro GitHub y custodia de claves pertenecen
+al toolkit. Contrato: [PA-267](../DEPLOYMENT_VERSION_INTERFACE.md).
+
 ## Validación PA-221
 
 El exportador `frontend/scripts/export-mcp-surfaces.mjs` deriva superficies y funciones del Mapa de vistas. `mcp_surface_matrix --check` detecta falta de asignación y drift del manifiesto; no demuestra cobertura funcional. CI conserva JSON/CSV con revisión y resultados pendientes. QA completa evidencias por herramienta, permiso, confirmación, vista y función antes del retiro. La migración aditiva 0308 se aplica sólo por deploy. Pruebas automatizadas en CI y validación DEV/Chrome por separado conforme al acuerdo ProjectApp.
@@ -901,7 +911,7 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 ### Static payload and collection policy
 
 - Production sets `experimental.payloadExtraction: false`. The generated site is mounted below Django's `/static/frontend/` CDN prefix; keeping payloads inline prevents Nitro from treating CDN payload URLs as prerenderable HTML routes.
-- `scripts/deploy.sh`, the ops toolkit's regeneration and the in-app `inline` rebuild (local development) call `collectstatic` with `clear=True`/`--clear`. `staticfiles/` is generated output and must not retain hashed chunks or file/directory shapes from older Nuxt builds.
+- The transactional deploy, the ops toolkit's regeneration and the in-app `inline` rebuild (local development) call `collectstatic` with `clear=True`/`--clear`. `staticfiles/` is generated output and must not retain hashed chunks or file/directory shapes from older Nuxt builds.
 - A production-equivalent build must contain zero `_payload.json` artifacts and zero JavaScript chunks above 500,000 bytes before publication.
 
 ### MCP connector concurrency
