@@ -14,14 +14,21 @@ const json = (body) => ({ status: 200, contentType: 'application/json', body: JS
 const LONG_LABEL = 'credencial-auditoria-externa-con-etiqueta-deliberadamente-extensa-para-medicion';
 const LONG_ACTOR = 'mcp_content_actor_with_an_intentionally_long_service_identity';
 const LONG_REQUEST_ID = 'request-123e4567-e89b-12d3-a456-426614174000-with-a-long-trace-suffix';
+const LONG_CAPABILITY_LABEL = 'Gestión-documental-y-editorial-con-alcance-deliberadamente-extenso-para-medición:';
 const connector = {
   slug: 'content',
-  name: 'Contenido',
+  name: 'Gestor de contenido',
   description: 'Publica contenido fixture.',
   is_active: false,
   has_token: false,
   token_prefix: '',
   is_legacy: false,
+  capabilities: [{
+    label: LONG_CAPABILITY_LABEL.slice(0, -1),
+    actions: ['Consultar', 'Crear'],
+    tools: ['get_blog_template', 'create_blog_post'],
+    requires_confirmation: true,
+  }],
   connection_status: 'error',
   credentials: [{
     id: 7,
@@ -44,7 +51,7 @@ const connector = {
   }],
   tools: [
     { name: 'get_blog_template', description: 'Consulta el template de contenido.', risk: 'read' },
-    { name: 'create_blog_post', description: 'Crea un post.', risk: 'write' },
+    { name: 'create_blog_post', description: 'Crea un post.', risk: 'sensitive', requires_confirmation: true },
   ],
 };
 const scenario = getResponsiveScenario('frontend/pages/panel/mcps/index.vue');
@@ -75,7 +82,7 @@ async function navigateToMcps(page) {
   await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
   await expect(page.getByTestId('mcp-card-content')).toBeVisible();
-  await expect(page.getByTestId('mcp-card-content')).toContainText('Contenido');
+  await expect(page.getByTestId('mcp-card-content')).toContainText('Gestor de contenido');
 }
 
 async function expectInsideViewport(page, locator, expectedText) {
@@ -121,7 +128,7 @@ for (const profile of MCP_DISPLAY_PROFILES) {
     test.use(viewportUse(profile));
     test('connector reveals long MCP values inside the viewport', { tag: ['@flow:admin-mcps', '@outcome:display', '@responsive:mcp', `@responsive-scenario:${scenario.catalogKey}`, `@responsive-batch:${batchForScenario(scenario.catalogKey)}`, `@viewport:${profile}`] }, async ({ page }, testInfo) => {
       // Bug this catches: accordions can remain collapsed or let a long label,
-      // actor, or request ID escape the screen at a supported viewport.
+      // capability, actor, or request ID escape the screen at a supported viewport.
       await setup(page);
       // quality: allow-deep-link (the authenticated MCP fixture enters the owned page, then operates its real accordions and controls)
       await navigateToMcps(page);
@@ -131,10 +138,14 @@ for (const profile of MCP_DISPLAY_PROFILES) {
       const label = credential.getByText(LONG_LABEL, { exact: true });
       const actor = credential.getByText(`Actor: ${LONG_ACTOR}`);
       const requestId = page.getByTestId('mcp-activity-list-content').getByText(`Request ${LONG_REQUEST_ID}`, { exact: true });
+      const capability = page.getByTestId('mcp-capabilities-content').getByText(LONG_CAPABILITY_LABEL, { exact: true });
       const priorityLocator = page.getByText('create_blog_post', { exact: true });
       await expectInsideViewport(page, label, LONG_LABEL);
       await expectInsideViewport(page, actor, `Actor: ${LONG_ACTOR}`);
       await expectInsideViewport(page, requestId, `Request ${LONG_REQUEST_ID}`);
+      await expectInsideViewport(page, capability, LONG_CAPABILITY_LABEL);
+      await expect(page.getByTestId('mcp-capabilities-content')).toContainText('Consultar · Crear.');
+      await expect(page.getByTestId('mcp-capabilities-content')).toContainText('Las acciones sensibles requieren confirmación.');
       await expect(priorityLocator).toBeVisible();
       await expect(priorityLocator).toHaveText('create_blog_post');
       await assertResponsiveScenario(page, testInfo, scenario, { profile, priorityLocator });

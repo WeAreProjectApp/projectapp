@@ -8,6 +8,8 @@ sin reiniciar terminales históricos; automatizadas exclusivamente en CI. La ent
 requiere PR abierto, CI verde y traspaso con SHA propio; la aceptación manual se
 registra por separado. Sin migraciones, emisión, cambios financieros ni deploy.
 
+> **PA-221 — implementación en el PR #584:** NM1 muestra los efectos de las tres raíces gestionadas antes de confirmar; catálogo con nombres y capacidades reales, Operations con seguimiento de Monitoring y matriz Panel/Plataforma. El retiro exige reporte QA vigente además de consumidores y ventanas; evidencia anexada por catálogo. Ticket TO DO sin cambio de acceso ni nuevo dictamen. Expediente: `docs/audits/PA-221/README.md`. El código del corte `a6a68ef` pasó 103 controles CI; evidencia en el expediente. El cierre acordado de la sesión es toda la implementación dentro del mismo PR; DEV y despliegue son posteriores y se acreditan por separado.
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.

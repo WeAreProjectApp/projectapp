@@ -22,7 +22,7 @@ CANONICAL = {
     **{slug: 'accounting' for slug in ('accounting', 'accounting-ledger', 'accounting-billing', 'accounting-cards')},
     **{slug: 'commercial' for slug in ('commercial', 'clients', 'proposals', 'diagnostics')},
     **{slug: 'content' for slug in ('content', 'blog', 'linkedin-personal')},
-    **{slug: slug for slug in ('projects', 'documents', 'communications', 'tasks', 'operations', 'data-integrity')},
+    **{slug: slug for slug in ('projects', 'documents', 'communications', 'tasks', 'operations', 'data-integrity', 'procurement')},
 }
 
 

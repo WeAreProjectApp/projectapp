@@ -68,6 +68,11 @@ def inventory(*, include_usage=False):
             if connector:
                 row['is_active'] = connector.is_active
                 row['retirement'] = retirement_status(connector)
+                row['operational'] = connector.retired_at is None
+                if connector.retired_at:
+                    row['lifecycle'] = 'retired'
+                    row['historical_published_tools'] = row['published_tools']
+                    row['published_tools'] = []
                 row['consumers'] = [
                     {'credential_id': item.pk, 'label': item.label, 'catalog': item.catalog,
                      'migrated': item.migrated_at is not None, 'revoked': item.revoked_at is not None}

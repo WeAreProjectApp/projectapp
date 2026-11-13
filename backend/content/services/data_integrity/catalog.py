@@ -12,7 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from content.services.data_integrity.types import DOMAIN_LABELS, DOMAINS, EXISTING_TOOL, FIX_KINDS, REPORT_ONLY, SEVERITIES
 
-CATALOG_VERSION = '1.2.0'
+CATALOG_VERSION = '1.2.1'
 RULE_MODULES = tuple(f'content.services.data_integrity.rules.{name}' for name in (
     'clients', 'projects', 'documents', 'communications', 'accounting', 'proposals', 'naming',
 ))

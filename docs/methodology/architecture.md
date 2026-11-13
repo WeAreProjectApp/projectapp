@@ -1,3 +1,7 @@
+## PA-221 · cobertura MCP y retiro
+
+`content.mcp.presentation` centraliza nombres y grupos de capacidades desde herramientas publicadas. Operations adapta las ocho operaciones administrativas de Monitoring; ingestión conserva su credencial de fuente. `mcp_surface_matrix` cruza el Mapa de vistas con el registro real y conserva excepciones de identidad. La asignación es candidata hasta el cotejo funcional. `mcp_retirement` exige un reporte QA vigente y conserva su referencia/hash por catálogo en `McpConnector.retirement_evidence`; las ventanas y consumidores siguen siendo guardas independientes. Las rutas retiradas autentican y rechazan sin despacho. Los targets puros de raíces se comparten entre sincronización de proyecto y vista previa NM1 para evitar efectos de negocio ocultos.
+
 > **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
 > pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
 > lo elimina. Proyectos MCP 4.5.0 incorpora eliminación forzada con grant
