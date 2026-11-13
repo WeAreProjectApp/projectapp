@@ -19,6 +19,7 @@ REPLACED_INCOME_NAMES = frozenset({
     'update_expected_income', 'duplicate_expected_income',
 })
 CATALOG_VERSIONS = {
+    'operations': '3.1.1',
     'commercial': '6.6.0', 'accounting': '2.2.0', 'accounting-ledger': '3.1.0',
     'accounting-billing': '3.1.0',
     'blog': '2.1.1', 'documents': '8.3.0', 'communications': '3.2.0',

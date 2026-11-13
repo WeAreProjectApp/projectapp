@@ -1,5 +1,8 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { ref } from 'vue';
+import es from '~/locales/panelUsability/es';
+import en from '~/locales/panelUsability/en';
 import IncomeDetailModal from '~/components/accounting/IncomeDetailModal.vue';
 import { get_request } from '~/stores/services/request_http';
 
@@ -117,7 +120,13 @@ async function open(props = {}) {
 const historyRows = (w) => w.findAll('[data-testid="income-detail-settlement-row"]');
 const repartoRows = (w) => w.findAll('[data-testid="pocket-allocation-row"]');
 
+let mockLocale;
 beforeEach(() => {
+  mockLocale = ref('es-co');
+  global.useI18n = () => ({
+    locale: mockLocale,
+    t: (key) => (mockLocale.value.startsWith('en') ? en : es).incomeCollection[key.split('.').at(-1)],
+  });
   setActivePinia(createPinia());
   get_request.mockReset();
   get_request.mockResolvedValue({ data: detail() });
@@ -289,5 +298,75 @@ describe('IncomeDetailModal — the edges', () => {
 
     expect(wrapper.emitted('duplicate')).toHaveLength(1);
     expect(wrapper.emitted('duplicate')[0][0].id).toBe(11);
+  });
+});
+
+
+afterEach(() => { delete global.useI18n; });
+
+describe('IncomeDetailModal collection status (PA-259)', () => {
+  const account = (overrides = {}) => ({
+    id: 601, public_number: '', commercial_status: 'draft', total: '119000.00',
+    issue_date: '2026-11-08', ...overrides,
+  });
+
+  it.each([
+    ['draft', 'Borrador', 'Fecha del documento'],
+    ['issued', 'Emitida', 'Fecha de emisión'],
+    ['paid', 'Pagada', 'Fecha de emisión'],
+    [null, 'Estado no disponible', 'Fecha del documento'],
+  ])('presents the real %s collection status', async (status, label, dateLabel) => {
+    get_request.mockResolvedValue({ data: detail({ collection_account: account({ commercial_status: status }) }) });
+    const wrapper = await open();
+
+    const section = wrapper.get('[data-testid="income-detail-collection"]');
+    expect(section.text()).toContain(label);
+    expect(section.text()).toContain(`${dateLabel}: Dom, 8 nov 2026`);
+    expect(section.text()).toContain('119.000');
+    wrapper.unmount();
+  });
+
+  it('explains the unassigned number on a draft', async () => {
+    get_request.mockResolvedValue({ data: detail({ collection_account: account() }) });
+    const wrapper = await open();
+
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).toContain('Sin número asignado');
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).not.toMatch(/emitida|emisión/i);
+    wrapper.unmount();
+  });
+
+  it('preserves an issued public number', async () => {
+    get_request.mockResolvedValue({ data: detail({ collection_account: account({ commercial_status: 'issued', public_number: 'PA-FICT-001' }) }) });
+    const wrapper = await open();
+
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).toContain('PA-FICT-001');
+    wrapper.unmount();
+  });
+
+  it('omits the date when the document has none', async () => {
+    get_request.mockResolvedValue({ data: detail({ collection_account: account({ issue_date: null }) }) });
+    const wrapper = await open();
+
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).toContain('Borrador');
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).not.toContain('Fecha');
+    wrapper.unmount();
+  });
+
+  it('omits the collection block without a linked account', async () => {
+    const wrapper = await open();
+
+    expect(wrapper.get('[data-testid="income-detail-total"]').text()).toContain('900.000');
+    expect(wrapper.find('[data-testid="income-detail-collection"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('translates the draft date in English', async () => {
+    mockLocale.value = 'en-us';
+    get_request.mockResolvedValue({ data: detail({ collection_account: account() }) });
+    const wrapper = await open();
+
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).toContain('Draft');
+    expect(wrapper.get('[data-testid="income-detail-collection"]').text()).toContain('Document date: Sun, Nov 8, 2026');
+    wrapper.unmount();
   });
 });

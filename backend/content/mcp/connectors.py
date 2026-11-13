@@ -178,7 +178,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         'linkedin-personal', '1.1.0', (LINKEDIN_TOOLS,),
         compatibility=True, canonical_area='content',
     ),
-    'operations': ConnectorSpec('operations', '2.1.0', (OPERATIONS_TOOLS,)),
+    'operations': ConnectorSpec('operations', '2.2.0', (OPERATIONS_TOOLS,)),
     'building-with-us': ConnectorSpec(
         'building-with-us', '2.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
     ),
@@ -269,6 +269,8 @@ CONNECTORS, TOOLS_BY_SLUG, LEGACY_TOOLS_BY_SLUG = build_catalogs(
 
 
 def tools_for_credential(slug, credential):
+    if credential is not None and credential.connector.retired_at:
+        return []
     if credential is not None and getattr(credential, 'catalog', '') == 'pre_split':
         return PRE_SPLIT_TOOLS_BY_SLUG[slug]
     if credential is not None and getattr(credential, 'catalog', '') == 'legacy':

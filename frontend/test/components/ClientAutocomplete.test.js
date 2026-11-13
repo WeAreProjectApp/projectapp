@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import ClientAutocomplete from '../../components/ui/ClientAutocomplete.vue';
+import globalEs from '../../locales/global/es';
 
 const mockStore = {
   searchClients: jest.fn(),
@@ -21,7 +22,7 @@ function mountAutocomplete(props = { modelValue: null }) {
     props,
     global: {
       mocks: {
-        $t: (key) => key,
+        $t: (key) => key === 'global.clearClientSelection' ? globalEs.clearClientSelection : key,
       },
       stubs: {
         NuxtLink: { template: '<a><slot /></a>' },
@@ -382,7 +383,7 @@ describe('ClientAutocomplete', () => {
     const focusSpy = jest.spyOn(HTMLInputElement.prototype, 'focus').mockImplementation(() => {});
     const wrapper = mountAutocomplete({ modelValue: 9, initialLabel: 'Cliente X' });
 
-    await wrapper.get('button[aria-label="clients.autocomplete.clear"]').trigger('click');
+    await wrapper.get('button[aria-label="Limpiar selección de cliente"]').trigger('click');
 
     expect(wrapper.emitted('update:modelValue')).toEqual([[null]]);
     expect(wrapper.emitted('select')).toEqual([[null]]);

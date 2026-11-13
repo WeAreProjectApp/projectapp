@@ -1,3 +1,48 @@
+## PA-221 — impacto, catálogo y cobertura (2026-11-12)
+
+El ticket conserva **TO DO por indicación de Carlos**. Este guion no acredita
+una nueva aprobación de QA ni autoriza cambios de estado o acceso. Expediente,
+inventario estático y matriz: [PA-221](audits/PA-221/README.md).
+
+1. Con el catálogo de reglas **1.2.1** del Gestor de integridad (MCP **1.0.1**),
+   preparar un proyecto ficticio con NM1 activo y sus
+   raíces documental, de conversación y de Enlaces seguros. Comparar todos los
+   valores antes/después de la vista previa con el registro de aplicación;
+   incluir asociaciones, archivado y descendientes afectados. La vista previa
+   no escribe. Confirmar exige hash vigente y motivo. Una raíz gestionada ausente
+   bloquea la corrección para evitar creaciones fuera del impacto anunciado.
+2. Deshacer restaura exactamente el estado previo. Cambios posteriores de datos
+   o composición de raíces bloquean la operación sin sobrescribirlos. Repetir
+   barridos general y por entidad, acceso desde la skill, fusión y reasignación
+   con datos ficticios; conservar duplicados archivados y registros emitidos.
+3. Cotejar los doce nombres «Gestor de …», descripciones y «Qué puedes gestionar»
+   con `tools/list`, permisos y confirmaciones reales. Los pendientes de retiro
+   siguen visibles; los retirados se excluyen del catálogo operativo, no ofrecen
+   herramientas y rechazan el acceso con 410.
+4. En Operations **3.1.1**, comprobar las ocho acciones de Monitoring para
+   catálogo, casos, notas, estados, reportes y vínculo de recursos. Usan las
+   mismas vistas y validaciones administrativas del Panel. Estado y vínculo
+   exigen confirmación sensible; el estado exige además versión vigente.
+   Contrastar autoría, ausencia de escritura previa y rechazo de permisos o
+   versiones de caso obsoletas.
+   La ingestión de fuentes conserva su autenticación específica.
+5. Generar `mcp_surface_matrix --check` en el SHA servido y completar el reporte
+   funcional por herramienta, función de vista, rol y evidencia. El inventario
+   de 111 vistas y 831 herramientas es estático; `mapped_unverified` no equivale
+   a una prueba. Verificar el reporte con `--verify` y revisar su veracidad.
+6. Cotejar consumidores y reemplazos según
+   [el procedimiento de retiro](MCP_MODULE_UNIFICATION.md). `mcp_retirement`
+   exige `--coverage-report` vigente además de sus guardas de uso, transición,
+   consumidores y confirmaciones. Un dry run no guarda evidencia ni retira.
+   El retiro exitoso conserva la trazabilidad por catálogo; un catálogo de
+   compatibilidad no desactiva al gestor canónico.
+
+Pruebas automatizadas exclusivamente en CI: regresiones NM1,
+`test_mcp_monitoring.py`, `test_mcp_surface_matrix.py`, `test_mcp_retirement.py`,
+descubrimiento/catálogo y recorridos MCP del Panel. La ejecución DEV/Chrome,
+la skill y la matriz funcional completa se acreditan por separado. La migración
+aditiva 0308 corresponde al deploy; no se aplica desde el worktree.
+
 ## PA-255/PA-256 — contratos de programas en el Gestor (2026-11-12)
 
 Documentos 8.3.0 permite editar los contratos de Building with Us y Células mediante

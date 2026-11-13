@@ -40,16 +40,21 @@ def require_project_thread(project):
     return thread
 
 
-def _synchronize_root(thread, project, profile):
-    """Mantiene la madre coherente con el proyecto que representa."""
-    update_fields = []
-    expected = {
+def project_thread_values(project, profile):
+    """Read-only target shared by synchronization and integrity previews."""
+    return {
         'title': project.name,
         'project_id': project.pk,
         'client_id': profile.pk,
         'is_archived': False,
         'archived_at': None,
     }
+
+
+def _synchronize_root(thread, project, profile):
+    """Mantiene la madre coherente con el proyecto que representa."""
+    update_fields = []
+    expected = project_thread_values(project, profile)
     for field, value in expected.items():
         if getattr(thread, field) != value:
             setattr(thread, field, value)
