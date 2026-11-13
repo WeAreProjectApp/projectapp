@@ -63,7 +63,7 @@ onMounted(() => run(() => Promise.all([store.load(), store.searchClients(), stor
       </div>
     </section>
     <p v-if="!selected && !error" class="text-sm text-text-muted" role="status">{{ t(scope === 'client' ? 'platformFeatures.chooseClient' : 'platformFeatures.loading') }}</p>
-    <section v-else class="grid gap-4 panel-portrait:grid-cols-2">
+    <section v-if="selected" class="grid gap-4 panel-portrait:grid-cols-2">
       <article v-for="item in selected.features" :key="item.key" class="min-w-0 space-y-3 rounded-xl border border-border-default bg-surface p-4" :data-testid="`feature-${item.key}`">
         <h2 class="font-semibold text-text-default">{{ label(item) }}</h2>
         <p class="break-all font-mono text-xs text-text-muted">{{ item.key }}</p>
@@ -87,4 +87,3 @@ onMounted(() => run(() => Promise.all([store.load(), store.searchClients(), stor
     <NuxtLink :to="localePath('/panel/views')" class="text-text-brand underline">{{ t('platformFeatures.viewMap') }}</NuxtLink>
   </div>
 </template>
-

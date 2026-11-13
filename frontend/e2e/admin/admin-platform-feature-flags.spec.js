@@ -6,7 +6,7 @@ import catalog from '../../../contracts/platform-features.json' with { type: 'js
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) })
 const flags = () => Object.fromEntries(catalog.features.map(item => [item.key, item.default_enabled]))
 
-async function setup(page, { failure = 0 } = {}) {
+async function setup(page, { failure = 0, loadFailure = 0 } = {}) {
   const state = { values: flags(), version: 0, overrides: {}, clientVersion: 0 }
   const payload = (client = false) => ({ version: client ? state.clientVersion : state.version,
     global_version: state.version, user_id: client ? 9002 : null, name: client ? 'Cliente QA' : null,
@@ -21,6 +21,11 @@ async function setup(page, { failure = 0 } = {}) {
     if (apiPath === 'platform/features/admin/events/') return json({ results: [], page: 1, count: 0 })
     if (apiPath === 'platform/features/admin/' || apiPath === 'platform/features/admin/clients/9002/') {
       const client = apiPath.includes('/clients/')
+      if (method === 'GET' && loadFailure) {
+        const status = loadFailure
+        loadFailure = 0
+        return json({ detail: 'Configuración temporalmente inaccesible.' }, status)
+      }
       if (method === 'PATCH') {
         if (failure) return json({ detail: 'Cambio rechazado.' }, failure)
         const body = route.request().postDataJSON()
@@ -110,5 +115,16 @@ test.describe('PA-263 availability administration', () => {
 
     await expect(page.getByRole('alert')).toContainText('Vuelve a intentarlo')
     await expect(page.getByTestId('feature-platform.documents').getByRole('button')).toBeEnabled()
+  })
+
+  test('initial configuration failure can be retried', { tag: ['@flow:panel-platform-feature-flags', '@outcome:failure'] }, async ({ page }) => {
+    await setup(page, { loadFailure: 503 })
+    await open(page)
+    await expect(page.getByRole('alert')).toContainText('Vuelve a intentarlo')
+    await expect(page.getByTestId('feature-platform.documents')).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Recargar', exact: true }).first().click()
+
+    await expect(page.getByTestId('feature-platform.documents').getByTestId('feature-effective')).toHaveText('Valor efectivo: Habilitada')
   })
 })
