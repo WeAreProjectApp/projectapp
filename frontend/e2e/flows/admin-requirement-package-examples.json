@@ -1,0 +1,16 @@
+{
+  "id": "admin-requirement-package-examples",
+  "name": "Publicar ejemplos genéricos y por proyecto",
+  "module": "projects",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Publicar ejemplos con motivo, consultar historial y restaurar el genérico al vaciar una talla propia.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

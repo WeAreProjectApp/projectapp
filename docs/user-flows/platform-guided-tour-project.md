@@ -13,3 +13,5 @@ Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirl
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+Actualización 2026-11-12: Saltar recorrido es legible desde el primer paso automático y al repetir desde Ayuda, en ambos temas y cinco tamaños, conservando skipped/completed (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.

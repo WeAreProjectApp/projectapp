@@ -1,19 +1,22 @@
 """One domain boundary for the client, panel and projects MCP."""
 from copy import deepcopy
+from accounts.services import platform_features as features
+
+HELP_FLAGS = {'tour_enabled': 'platform.help_tours', 'video_enabled': 'platform.help_videos'}
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F, Q
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from accounts.models_platform_help import (
-    ClientPlatformHelpSettings, PlatformGuidedTour, PlatformGuidedTourRevision,
-    PlatformHelpEvent, PlatformHelpSettings, PlatformTourProgress,
+    PlatformGuidedTour, PlatformGuidedTourRevision,
+    PlatformHelpEvent, PlatformTourProgress,
 )
 from accounts.serializers_platform_help import (
     HelpFlagsSerializer, TourContentSerializer, TourProgressSerializer,
     TourVersionSerializer, TourWriteSerializer, validated,
 )
 from accounts.services.platform_help_targets import TARGETS, target_available
-from accounts.services.project_collaboration_access import check_version, paginate, project_for_actor
+from accounts.services.project_collaboration_access import CollaborationConflict, check_version, paginate, project_for_actor
 
 
 def require_admin(actor):
@@ -28,17 +31,10 @@ def require_client(actor):
     return profile
 
 
-def _flags(instance):
-    return {'tour_enabled': instance.tour_enabled if instance else True,
-            'video_enabled': instance.video_enabled if instance else True,
-            'version': instance.version if instance else 0}
-
-
 def effective_flags(user):
     require_client(user)
-    global_flags = _flags(PlatformHelpSettings.objects.filter(pk=1).first())
-    client_flags = _flags(ClientPlatformHelpSettings.objects.filter(user=user).first())
-    return {key: global_flags[key] and client_flags[key] for key in ('tour_enabled', 'video_enabled')}
+    values = features.values_for(user.pk)
+    return {field: values[key] for field, key in HELP_FLAGS.items()}
 
 
 def effective_video_enabled(user):
@@ -66,7 +62,9 @@ def _event(actor, action, subject, changes):
 
 def settings_payload(actor):
     require_admin(actor)
-    return _flags(PlatformHelpSettings.objects.filter(pk=1).first())
+    scope = features.configuration()
+    return {**{field: scope.values.get(key, features.FEATURES[key]['default_enabled']) for field, key in HELP_FLAGS.items()},
+            'version': scope.version}
 
 
 def _client(user_id):
@@ -78,38 +76,37 @@ def client_payload(actor, user_id):
     user = _client(user_id)
     if not user:
         raise NotFound('Cliente no encontrado.')
+    scope = features.configuration(user_id)
+    values = {**features.values_for(), **scope.values}
     return {'user_id': user.pk, 'name': user.get_full_name() or user.email,
-            **_flags(ClientPlatformHelpSettings.objects.filter(user=user).first())}
+            **{field: values[key] for field, key in HELP_FLAGS.items()}, 'version': scope.version}
 
 
 def list_clients(actor, page=1, search=''):
     require_admin(actor)
-    users = get_user_model().objects.filter(profile__role='client').select_related('platform_help_settings').order_by('pk')
+    users = get_user_model().objects.filter(profile__role='client').select_related('platform_feature_settings').order_by('pk')
     if search:
         users = users.filter(Q(email__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search))
-    return paginate(users, page, lambda user: {'user_id': user.pk, 'name': user.get_full_name() or user.email,
-                                            **_flags(getattr(user, 'platform_help_settings', None))})
+    defaults = features.values_for()
+    def project(user):
+        scope = getattr(user, 'platform_feature_settings', None)
+        values = {**defaults, **(scope.values if scope else {})}
+        return {'user_id': user.pk, 'name': user.get_full_name() or user.email,
+                **{field: values[key] for field, key in HELP_FLAGS.items()}, 'version': scope.version if scope else 0}
+    return paginate(users, page, project)
 
 
 @transaction.atomic
 def update_flags(actor, data, user_id=None):
     require_admin(actor)
     values = validated(HelpFlagsSerializer, data)
-    if user_id is None:
-        instance, _ = PlatformHelpSettings.objects.get_or_create(pk=1)
-    else:
-        user = _client(user_id)
-        if not user:
-            raise NotFound('Cliente no encontrado.')
-        instance, _ = ClientPlatformHelpSettings.objects.get_or_create(user=user)
-    instance = type(instance).objects.select_for_update().get(pk=instance.pk)
-    check_version(instance, values.pop('expected_version'))
-    for key, value in values.items():
-        setattr(instance, key, value)
-    instance.version += 1
-    instance.save()
-    _event(actor, 'update_flags', f'client:{user_id}' if user_id else 'global', values)
-    return _flags(instance)
+    try:
+        result = features.update(actor, {'expected_version': values.pop('expected_version'),
+            'values': {HELP_FLAGS[field]: value for field, value in values.items()}}, user_id)
+    except features.FeatureConflict as error:
+        raise CollaborationConflict() from error
+    return {**{field: next(item['effective'] for item in result['features'] if item['key'] == key)
+               for field, key in HELP_FLAGS.items()}, 'version': result['version']}
 
 
 def _tour(tour_id, lock=False):
@@ -206,6 +203,7 @@ def client_catalog(user, project_id=None):
     if not flags['tour_enabled']:
         return {**flags, 'tours': []}
     capabilities = _capabilities(user)
+    capabilities['features'] = features.values_for(user.pk)
     tours = list(PlatformGuidedTour.objects.filter(is_active=True, published_revision__gt=0).order_by('priority', 'pk'))
     progress = {item.tour_id: item for item in PlatformTourProgress.objects.filter(user=user, tour__in=tours)}
     published = {(item.tour_id, item.number): item.content for item in PlatformGuidedTourRevision.objects.filter(

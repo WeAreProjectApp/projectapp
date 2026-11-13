@@ -8,11 +8,12 @@ generan contenido ni cambian el alcance del proyecto.
 
 ## Disponibilidad y estados
 
-`PlatformHelpSettings` guarda los interruptores globales de recorridos y video.
-`ClientPlatformHelpSettings` conserva las preferencias del cliente por `user`,
-sin agregar campos a la configuración de IA. Los valores iniciales son `true`;
-la disponibilidad combina global AND cliente. Un recurso de video o una función
-de IA puede seguir sin estar disponible aunque su interruptor esté encendido.
+La disponibilidad se administra en **Plataforma → Feature flags**. Las claves
+`platform.help_tours` y `platform.help_videos` parten habilitadas y admiten global,
+herencia y excepción del cliente; la excepción prevalece. Los modelos anteriores
+sólo conservan proyecciones de compatibilidad, sin intervenir en la evaluación.
+Un video o una función de IA puede seguir sin estar disponible por preparación
+técnica. Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md).
 
 `PlatformTourProgress` es único por usuario y recorrido, independiente del
 proyecto que se use como contexto. Completar o saltar es terminal para el inicio

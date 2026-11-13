@@ -9,7 +9,7 @@ item never depends on how thorough a given generation was.
 
 Contract:
 
-* One to THREE catalog requirements per default module item, matched to the
+* One or more catalog requirements per default module item, matched to the
   item's real scope (breakdown dimensions: configuration/setup, provider
   integration, states and errors, permissions, limits/lifecycle). Every
   default item of a cataloged module is referenced by at least one
@@ -2623,11 +2623,20 @@ def seed_module_technical_requirements(
         if _module_covered(epics, keys):
             continue
 
+        # Existing ids are opaque and can outlive a rename. Index the live
+        # items once, keeping the first match when legacy names repeat.
+        ids_by_name = {}
+        for item in module.get('items') or []:
+            if isinstance(item, dict):
+                name_key = build_item_id(module_id, item.get('name'))
+                ids_by_name.setdefault(name_key, str(item.get('id') or '').strip() or name_key)
+
         seeded = []
         for req in entry['requirements']:
             flow_key = _dedupe_flow_key(req['flowKey'], taken_flow_keys)
             taken_flow_keys.add(flow_key)
-            item_id = build_item_id(module_id, req.get('item'))
+            catalog_id = build_item_id(module_id, req.get('item'))
+            item_id = ids_by_name.get(catalog_id, catalog_id)
             seeded.append({
                 'flowKey': flow_key,
                 'title': req['title'],

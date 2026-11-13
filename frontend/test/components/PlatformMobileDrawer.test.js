@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 
 global.useLocalePath = jest.fn(() => (path) => path);
 global.useI18n = jest.fn(() => ({ t: (key) => key }));
@@ -27,6 +28,7 @@ function mountPlatformMobileDrawer(props = {}) {
   return mount(PlatformMobileDrawer, {
     props: { isOpen: true, ...props },
     global: {
+      plugins: [createPinia()],
       stubs: {
         PlatformHelpMenu: { template: '<div data-testid="platform-help-menu-stub" />' },
         Teleport: { template: '<div><slot /></div>' },

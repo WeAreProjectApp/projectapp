@@ -8,6 +8,9 @@ from accounts.models import UserProfile, Project
 from accounts.models_ai import PlatformAISettings, PlatformAICredential, PlatformAIEvent, PlatformAIUsage
 from accounts.serializers_ai import SettingsSerializer, ClientFlagsSerializer, validated
 from accounts.services.platform_ai_cipher import encrypt, decrypt
+from accounts.services import platform_features as features
+
+AI_FLAGS = {'chatbot_enabled': 'platform.ai_chatbot', 'voice_reporting_enabled': 'platform.ai_voice_reports'}
 
 
 class AIUnavailable(APIException):
@@ -76,7 +79,7 @@ def ai_capabilities(actor):
     if not actor or not actor.is_authenticated or not actor.is_active:
         raise PermissionDenied('Se requiere una cuenta activa.')
     # Never reuse actor.profile's relation cache across a billed request.
-    profile = UserProfile.objects.select_related('user').filter(user_id=actor.pk).first()
+    profile = features.profile_queryset().filter(user_id=actor.pk).first()
     if profile and not profile.user.is_active:
         raise PermissionDenied('Se requiere una cuenta activa.')
     if not profile:
@@ -86,17 +89,19 @@ def ai_capabilities(actor):
     config = configuration()
     keys = credential_status()
     client = bool(profile and profile.is_client)
+    flag_values = features.values_from_profile(profile) if profile else features.values_for()
     result = {}
     for name, flag, model in [('chatbot', 'chatbot_enabled', config.chatbot_model),
                               ('voice_reporting', 'voice_reporting_enabled', config.voice_report_model)]:
-        enabled = bool(client and getattr(config, flag) and getattr(profile, flag))
+        enabled = bool(client and flag_values[AI_FLAGS[flag]])
         ready = keys[provider_for_model(model)]['configured']
         if name == 'chatbot':
             ready = ready and keys['jev']['configured']
         else:
             ready = ready and keys['openai']['configured']
         result[name] = {'enabled': enabled, 'available': bool(enabled and ready)}
-    result['chatbot']['voice_available'] = bool(result['chatbot']['available'] and keys['openai']['configured'])
+    result['chatbot']['voice_available'] = bool(result['chatbot']['available'] and keys['openai']['configured']
+        and flag_values['platform.ai_chatbot_audio'])
     from accounts.services.platform_ai_quota import snapshot
     result['quota'] = snapshot(actor, config, profile=profile)
     return result
@@ -106,6 +111,8 @@ def require_ai_feature(actor, feature, project=None, *, audio=False, require_pro
     if feature not in ('chatbot', 'voice_reporting'):
         raise ValidationError('Funcionalidad no admitida.')
     capabilities = ai_capabilities(actor)[feature]
+    if audio and feature == 'chatbot':
+        features.require_feature(actor, 'platform.ai_chatbot_audio')
     if not capabilities['enabled']:
         raise PermissionDenied('Esta funcionalidad está apagada.')
     if not capabilities['available'] or (audio and feature == 'chatbot' and not capabilities['voice_available']):
@@ -125,16 +132,23 @@ def require_ai_feature(actor, feature, project=None, *, audio=False, require_pro
 
 def admin_settings(actor):
     require_admin(actor)
-    return {**SettingsSerializer(configuration()).data, 'credentials': credential_status()}
+    config = configuration()
+    flag_values = features.values_for()
+    return {**SettingsSerializer(config).data, **{field: flag_values[key] for field, key in AI_FLAGS.items()},
+            'version': config.version, 'credentials': credential_status()}
 
 
 @transaction.atomic
 def update_settings(actor, data):
     require_admin(actor)
+    features.lock_global()
     values = validated(SettingsSerializer, data)
     item, _ = PlatformAISettings.objects.get_or_create(pk=1)
     item = PlatformAISettings.objects.select_for_update().get(pk=1)
     check_version(item.version, values.pop('expected_version'))
+    flags = {AI_FLAGS[field]: values[field] for field in AI_FLAGS if field in values}
+    if flags:
+        features.update(actor, {'expected_version': features.configuration().version, 'values': flags})
     for field, value in values.items():
         setattr(item, field, value)
     item.version += 1
@@ -143,9 +157,10 @@ def update_settings(actor, data):
     return admin_settings(actor)
 
 
-def client_data(profile):
+def client_data(profile, feature_values=None):
+    feature_values = features.values_for(profile.user_id) if feature_values is None else feature_values
     return {'user_id': profile.user_id, 'name': profile.user.get_full_name() or profile.user.email,
-            'chatbot_enabled': profile.chatbot_enabled, 'voice_reporting_enabled': profile.voice_reporting_enabled,
+            **{field: feature_values[key] for field, key in AI_FLAGS.items()},
             'ai_request_limit': profile.ai_request_limit, 'ai_window_minutes': profile.ai_window_minutes,
             'version': profile.updated_at.isoformat()}
 
@@ -153,13 +168,18 @@ def client_data(profile):
 @transaction.atomic
 def client_flags(actor, user_id, data=None):
     require_admin(actor)
+    if data is not None:
+        features.lock_global()
     profile = UserProfile.objects.clients().select_related('user').filter(user_id=user_id)
     profile = (profile.select_for_update() if data is not None else profile).first()
     if not profile:
         raise NotFound('Cliente no encontrado.')
     if data is not None:
         values = validated(ClientFlagsSerializer, data)
-        check_version(profile.updated_at.isoformat(), values.pop('expected_version'))
+        check_version(client_data(profile)['version'], values.pop('expected_version'))
+        flags = {AI_FLAGS[field]: values[field] for field in AI_FLAGS if field in values}
+        if flags:
+            features.update(actor, {'expected_version': features.configuration(user_id).version, 'values': flags}, user_id)
         for field, value in values.items():
             setattr(profile, field, value)
         if (profile.ai_request_limit is None) != (profile.ai_window_minutes is None):

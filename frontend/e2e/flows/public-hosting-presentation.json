@@ -1,0 +1,16 @@
+{
+  "id": "public-hosting-presentation",
+  "name": "Presentación pública de hosting",
+  "module": "public",
+  "roles": [
+    "visitor"
+  ],
+  "priority": "P1",
+  "description": "Consumo del adaptador público: banner utilizable, suspensión de vistas, navegación, recarga, retirada en pestaña abierta, desconexión y legibilidad móvil. Integración HTTP simulada en CI; no acredita despliegue real. Incluye documentos Nuxt prerenderizados, recuperación del aviso tras hidratación y redirecciones entre alias inscritos del mismo destino. El banner limita su altura, conserva la lectura completa por desplazamiento y reserva espacio para las cabeceras fijas de cada adaptador.",
+  "expectedSpecs": 6,
+  "outcomes": [
+    "success",
+    "failure",
+    "display"
+  ]
+}

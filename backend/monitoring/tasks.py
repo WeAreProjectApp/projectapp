@@ -47,3 +47,4 @@ def cleanup_monitoring_reports():
     delete_in_batches(Delivery.objects.filter(kind='heartbeat', received_at__lt=heartbeat_cutoff))
     # Recoveries, report receipts and anything received inside the retry horizon stay idempotent.
     delete_in_batches(prunable_detections(detection_cutoff))
+    delete_in_batches(Delivery.objects.filter(kind='metric', observed_at__lt=now - REPORT_RETENTION, received_at__lt=detection_cutoff))

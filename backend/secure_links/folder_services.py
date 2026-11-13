@@ -66,19 +66,24 @@ def active_target(folder):
             error('Restaura la carpeta antes de guardar contenido en ella.', 'folder_archived', 409)
 
 
+def project_root_values(project):
+    """Read-only target shared by synchronization and integrity previews."""
+    profile = getattr(project.client, 'profile', None)
+    return {'name': project.name, 'client_id': profile.pk if profile else None, 'project_id': project.pk}
+
+
 @transaction.atomic
 def ensure_project_root(project):
     lock_tree()
-    profile = getattr(project.client, 'profile', None)
+    updates = project_root_values(project)
     root, _ = SecureLinkFolder.objects.get_or_create(
         managed_project=project,
-        defaults={'project': project, 'client': profile, 'name': project.name},
+        defaults=updates,
     )
-    updates = {'name': project.name, 'client': profile, 'project': project}
     if any(getattr(root, key) != value for key, value in updates.items()):
         for key, value in updates.items():
             setattr(root, key, value)
-        root.save(update_fields=[*updates, 'updated_at'])
+        root.save(update_fields=[key.removesuffix('_id') for key in updates] + ['updated_at'])
     return root
 
 

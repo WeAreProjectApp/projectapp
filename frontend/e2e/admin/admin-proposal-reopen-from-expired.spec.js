@@ -82,7 +82,7 @@ test.describe('Admin Proposal Reopen From Expired', () => {
 
     // The sticky-header status select shows the current status: Expirada.
     const statusSelect = page.getByLabel('Cambiar estado de la propuesta');
-    await expect(statusSelect).toHaveValue('expired', { timeout: 10000 });
+    await expect(statusSelect).toHaveText('Expirada', { timeout: 10000 });
 
     await selectProposalDestination(page, 'proposal', 'json');
 
@@ -107,7 +107,7 @@ test.describe('Admin Proposal Reopen From Expired', () => {
 
     // The defining outcome of the flow: the status badge reverts
     // expired → viewed once the future expires_at is applied.
-    await expect(statusSelect).toHaveValue('viewed', { timeout: 10000 });
+    await expect(statusSelect).toHaveText('Vista', { timeout: 10000 });
   });
 
   test('a rejected JSON update fails without reopening the status client-side', {
@@ -135,7 +135,7 @@ test.describe('Admin Proposal Reopen From Expired', () => {
     await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     const statusSelect = page.getByLabel('Cambiar estado de la propuesta');
-    await expect(statusSelect).toHaveValue('expired', { timeout: 10000 });
+    await expect(statusSelect).toHaveText('Expirada', { timeout: 10000 });
 
     await selectProposalDestination(page, 'proposal', 'json');
 
@@ -159,7 +159,7 @@ test.describe('Admin Proposal Reopen From Expired', () => {
     await expect(toast).toBeVisible({ timeout: 5000 });
 
     // The defining outcome: the status select stays 'expired' — no client-side reopen.
-    await expect(statusSelect).toHaveValue('expired');
+    await expect(statusSelect).toHaveText('Expirada');
   });
 
   test('General tab date change PATCHes /update/ and reopens the status', {
@@ -196,7 +196,6 @@ test.describe('Admin Proposal Reopen From Expired', () => {
 
     expect(patchBody.expires_at).toContain(futureDate.slice(0, 10));
     // The response status rides back into the header select: no longer expired.
-    await expect(page.getByRole('combobox').first()).toHaveValue('viewed');
+    await expect(page.getByRole('combobox').first()).toHaveText('Vista');
   });
 });
-

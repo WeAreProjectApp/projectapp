@@ -26,6 +26,10 @@ def assert_delivery_client_transfer_safe(project, new_client, *, actor=None):
             raise DeliveryConflict('El cliente del proyecto cambió. Revisa el propietario actual antes de continuar.')
         if current.client_id == new_client.pk:
             return current
+        from accounts.models_requirement_packages import PackageOrder, PackageRequest
+        if PackageOrder.objects.filter(project=current).exists() or PackageRequest.objects.filter(project=current).exists():
+            raise ValidationError({'detail': 'El proyecto conserva compras o solicitudes por tallas del cliente original. No se trasladan automáticamente.',
+                                   'code': 'package_client_transfer_blocked'})
         evaluation = client_transfer_blockers(current, new_client, lock=True)
         if any(row['code'] == DELIVERY_CODE for row in evaluation['blockers']):
             error = ValidationError({'detail': DELIVERY_MESSAGE, 'code': DELIVERY_CODE})

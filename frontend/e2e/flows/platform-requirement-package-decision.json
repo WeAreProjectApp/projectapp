@@ -1,0 +1,16 @@
+{
+  "id": "platform-requirement-package-decision",
+  "name": "Objetar o aceptar una propuesta de talla",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Objetar con motivo o aceptar con consentimiento y consumo único de un cupo vigente; garantías no consumen.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

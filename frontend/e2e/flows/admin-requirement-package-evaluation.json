@@ -1,0 +1,16 @@
+{
+  "id": "admin-requirement-package-evaluation",
+  "name": "Evaluar y responder una solicitud por talla",
+  "module": "projects",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Publicar una propuesta manual de talla y agenda sin consumir; responder objeciones conservando revisiones.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

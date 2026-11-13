@@ -11,6 +11,7 @@
         data-testid="secure-link-title-edit"
         @click="start"
       />
+      <slot name="actions" />
     </div>
     <form v-else class="space-y-2" novalidate data-testid="secure-link-title-form" @submit.prevent="submit">
       <BaseInput

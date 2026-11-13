@@ -36,6 +36,10 @@ def _digest(value):
 
 def report_context(project, actor, values):
     from accounts.services.delivery_workflow import visible_requirements, _target, _level_visible
+    from accounts.services.platform_features import require_feature
+    flag = {'bug': 'platform.bugs', 'change': 'platform.change_requests', 'stage_observation': 'platform.delivery'}.get(values.get('scenario'))
+    if flag:
+        require_feature(actor, flag)
     context = {'project_id': project.pk}
     if values.get('source_requirement_id'):
         requirement = visible_requirements(project.pk, actor).select_related('stage').filter(pk=values['source_requirement_id']).first()

@@ -8,7 +8,8 @@
       <template v-for="item in items" :key="item.disabled ? item.label : item.href">
         <span
           v-if="item.disabled"
-          class="flex shrink-0 cursor-not-allowed items-center justify-between gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium text-text-muted"
+          aria-disabled="true"
+          class="flex shrink-0 cursor-not-allowed items-center justify-between gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium text-text-default"
         >
           {{ item.label }}
           <span class="rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-text-default">Pronto</span>
@@ -42,6 +43,7 @@
 </template>
 
 <script setup>
+import { usePlatformFeaturesStore } from '~/stores/platform-features'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
@@ -56,6 +58,8 @@ const authStore = usePlatformAuthStore()
 const projectStore = usePlatformProjectsStore()
 const { t } = useI18n()
 
+const featureStore = usePlatformFeaturesStore()
+
 const items = computed(() => {
   const base = `/platform/projects/${props.projectId}`
   const navigationItems = [
@@ -63,6 +67,7 @@ const items = computed(() => {
     { label: t('platformDelivery.navigation'), href: localePath(`${base}/delivery`), tourTarget: 'project-delivery' },
     { label: t('projectIdeas.navigation'), href: localePath(`${base}/ideas`), tourTarget: 'project-ideas' },
     { label: 'Solicitudes',       href: localePath(`${base}/changes`), tourTarget: 'project-changes' },
+    { label: t('requirementPackages.title'), href: localePath(`${base}/packages`) },
     { label: 'Bugs',              href: localePath(`${base}/bugs`), tourTarget: 'project-bugs' },
     { label: 'Recursos',          href: localePath(`${base}/deliverables`), tourTarget: 'project-resources' },
     { label: 'Hosting',           href: localePath(`${base}/payments`) },
@@ -81,7 +86,7 @@ const items = computed(() => {
       href: localePath(`${base}/access`), tourTarget: 'project-access',
     })
   }
-  return navigationItems
+  return navigationItems.filter(item => !item.href || featureStore.routeAllowed(item.href))
 })
 
 function isActive(href) {

@@ -71,7 +71,10 @@ def get_ticket(project_id, actor, kind, ticket_id, *, include_archived=False, lo
 
 
 def _load_ticket(project_id, actor, kind, ticket_id, *, include_archived=False, lock=False):
-    qs = MODELS[kind].objects.select_related('issue_context')
+    related = ['issue_context']
+    if kind == 'change':
+        related.append('package_request')
+    qs = MODELS[kind].objects.select_related(*related)
     if lock:
         qs = qs.select_for_update()
     ticket = qs.filter(pk=ticket_id, project_id=project_id).first()
@@ -160,6 +163,8 @@ def create_ticket(project_id, actor, kind, data):
 
 def evaluate_ticket(project_id, actor, kind, ticket_id, data):
     def change(project, ticket, values):
+        if kind == 'change' and hasattr(ticket, 'package_request'):
+            fail('Evalúa y propone la talla desde Paquetes de requerimientos. La aceptación corresponde al cliente.', 'package_consent_required')
         from accounts.services.issue_contract_reply import validate_reply
         fields = ('status', 'linked_bug_id') if kind == 'bug' else ('status', 'estimated_cost', 'estimated_time')
         if not any(key in values for key in (*fields, 'admin_response')):

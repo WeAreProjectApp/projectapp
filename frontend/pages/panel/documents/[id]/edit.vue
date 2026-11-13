@@ -106,7 +106,7 @@
         <div
           class="grid grid-cols-2 gap-2 border-t border-border-muted pt-2 panel-portrait:flex panel-portrait:items-center panel-portrait:border-l panel-portrait:border-t-0 panel-portrait:pl-3 panel-portrait:pt-0"
           role="group"
-          :aria-label="contractMirror ? 'Consulta del documento' : 'Acciones de edición'"
+          :aria-label="contractMirror && !editableModuleContract ? 'Consulta del documento' : 'Acciones de edición'"
           data-testid="doc-edit-actions"
         >
           <BaseButton
@@ -117,10 +117,10 @@
             class="w-full whitespace-nowrap panel-portrait:w-auto"
             data-testid="doc-cancel"
           >
-            {{ contractMirror ? 'Volver' : 'Cancelar' }}
+            {{ contractMirror && !editableModuleContract ? 'Volver' : 'Cancelar' }}
           </BaseButton>
           <BaseButton
-            v-if="!contractMirror && !documentStore.currentDocument?.proposal_source"
+            v-if="(!contractMirror || editableModuleContract) && !documentStore.currentDocument?.proposal_source"
             variant="primary"
             size="md"
             type="submit"
@@ -285,9 +285,18 @@
         class="panel-landscape:col-span-2"
         data-testid="doc-contract-mirror-alert"
       >
+        <template v-if="editableModuleContract">
+          <p>{{ t(moduleContractKey('editorHint')) }}</p>
+          <BaseButton as="NuxtLink" :to="localePath(moduleContractPath)" variant="link" class="mt-2" data-testid="doc-module-contract-link">
+            <BaseActionIcon action="back" />
+            <span>{{ t(moduleContractKey('backToModule')) }}</span>
+          </BaseButton>
+        </template>
+        <template v-else>
         Contrato vigente, en solo lectura. Este documento muestra en vivo el
         contenido de la plantilla predeterminada de esta variante.
         Se consulta y se descarga en PDF o Markdown; conserva su ubicación en Contratos.
+        </template>
       </BaseAlert>
 
       <BaseAlert
@@ -320,7 +329,7 @@
         class="panel-landscape:col-span-2"
         :title="unsavedTitle"
         :detail="unsavedDetail"
-        :message="readOnlyDocument
+        :message="readOnlyDocument && !editableModuleContract
           ? 'Esta versión es de sólo lectura: estos cambios no se pueden guardar y se pierden al salir.'
           : 'Si sales de esta página, se pierden. Guardar los deja registrados.'"
         :can-save="canSaveNow"
@@ -504,9 +513,9 @@
             />
           </div>
 
-          <hr v-if="!pdfPreviewDocument" class="border-border-muted" />
+          <hr v-if="!pdfPreviewDocument && !contractMirror" class="border-border-muted" />
 
-          <div v-if="!pdfPreviewDocument" class="space-y-4">
+          <div v-if="!pdfPreviewDocument && !contractMirror" class="space-y-4">
             <h2 class="text-xs uppercase tracking-wide font-semibold text-text-muted">Organización</h2>
             <label class="flex items-start justify-between gap-4 rounded-xl border border-border-default bg-surface-raised p-3">
               <span>
@@ -555,7 +564,7 @@
               >
                 <BaseToggle
                   v-model="form[option.key]"
-                  :disabled="readOnlyDocument"
+                  :disabled="readOnlyDocument && !editableModuleContract"
                   :disabled-reason="readOnlyReason"
                 />
                 <span class="text-sm font-medium text-text-default">{{ option.label }}</span>
@@ -692,6 +701,18 @@
                flex flex-col min-w-0"
         data-testid="doc-markdown-editor-panel"
       >
+        <template v-if="editableModuleContract">
+          <dl class="mb-4 flex flex-wrap gap-4 text-sm" data-testid="doc-module-contract-version">
+            <div><dt class="text-text-muted">{{ t(moduleContractKey('currentVersion')) }}</dt><dd>{{ documentStore.currentDocument.contract_version }}</dd></div>
+            <div><dt class="text-text-muted">{{ t(moduleContractKey('mirrorUpdated')) }}</dt><dd>{{ formatDate(documentStore.currentDocument.contract_synced_at) }}</dd></div>
+          </dl>
+          <BaseFormField :label="t(moduleContractKey('changeNote'))" for="doc-contract-change-note" required class="mb-4">
+            <textarea id="doc-contract-change-note" v-model="form.change_note" required maxlength="4000" rows="2" class="w-full rounded-xl border border-border-default bg-surface px-3 py-2 text-sm text-text-default" data-testid="doc-contract-change-note" />
+          </BaseFormField>
+          <BaseAlert v-if="moduleContractConflict" variant="warning" class="mb-4" data-testid="doc-contract-conflict">
+            {{ t(moduleContractKey('conflict')) }}
+          </BaseAlert>
+        </template>
         <DocumentEditorContent
           ref="markdownEditorRef"
           v-model="form.content_markdown"
@@ -748,7 +769,7 @@
       :custom-notes="form.client_custom_notes"
       :textFormats="form.text_formats"
       :notes="normalizedNotes"
-      :immutable-content="pdfPreviewDocument"
+      :immutable-content="pdfPreviewDocument || contractMirror"
       :saving="documentStore.isUpdating"
       @submit="saveClientNote"
       @workflow-changed="refreshWorkflow"
@@ -884,14 +905,22 @@ const lockedCuenta = ref(false);
 const generatedSnapshot = ref(false);
 const pendingPdfReplacement = ref(null);
 const uploadedPdf = computed(() => documentStore.currentDocument?.content_format === 'pdf');
-// The window onto the one contract: rendered live, never edited here.
+// Proposal mirrors stay read-only; program contracts use their versioned writer.
 const contractMirror = ref(false);
+const loadedContractEtag = ref('');
+const moduleContractConflict = ref(false);
+const editableModuleContract = computed(() => contractMirror.value
+  && ['building_with_us', 'building_on_demand'].includes(documentStore.currentDocument?.contract_variant)
+  && documentStore.currentDocument?.content_editable === true);
+const moduleContractPath = computed(() => documentStore.currentDocument?.contract_variant === 'building_with_us'
+  ? '/panel/building-with-us?tab=contract' : '/panel/cells?tab=contract');
+const moduleContractKey = (key) => `${documentStore.currentDocument?.contract_variant === 'building_with_us' ? 'buildingWithUsAdmin' : 'buildingOnDemandAdmin'}.contract.${key}`;
 const calculatorDocument = computed(() => Boolean(documentStore.currentDocument?.calculator));
 const readOnlyDocument = computed(
   () => calculatorDocument.value || Boolean(documentStore.currentDocument?.proposal_source) || lockedCuenta.value || generatedSnapshot.value || contractMirror.value,
 );
 const pdfPreviewDocument = computed(
-  () => generatedSnapshot.value || lockedCuenta.value || contractMirror.value,
+  () => generatedSnapshot.value || lockedCuenta.value || (contractMirror.value && !editableModuleContract.value),
 );
 const readOnlyReason = computed(() => {
   if (calculatorDocument.value) return t('requirementCalculator.parametersOnly');
@@ -899,6 +928,7 @@ const readOnlyReason = computed(() => {
     return 'Este documento comparte su fuente con la propuesta. Edita la fuente o prepara un adjunto en borrador para confirmar otra versión.';
   }
   if (contractMirror.value) {
+    if (editableModuleContract.value) return t(moduleContractKey('protectedMetadata'));
     return 'Este es el contrato vigente: se consulta y se descarga aquí; su contenido se mantiene sincronizado con la plantilla de esta variante.';
   }
   if (generatedSnapshot.value) {
@@ -955,6 +985,7 @@ const form = reactive({
   client_custom_notes: [],
   folder_id: null,
   template_style: 'professional',
+  change_note: '',
 });
 
 function formatDate(value) {
@@ -964,6 +995,7 @@ function formatDate(value) {
 // Nombres sin artículo: se encadenan como los encadenaría una persona
 // ("cliente y proyecto sin guardar").
 const FIELD_LABELS = {
+  change_note: 'motivo del cambio contractual',
   pdf_replacement: 'reemplazo de PDF',
   title: 'título',
   client: 'cliente',
@@ -1012,7 +1044,8 @@ const {
   save: handleSave,
   // Una cuenta de cobro emitida no se guarda: el backend contesta 400
   // collection_account_locked. Ofrecer "Guardar y salir" ahí sería mentir.
-  canSave: () => !readOnlyDocument.value && !pendingPdfReplacement.value,
+  canSave: () => (!readOnlyDocument.value || editableModuleContract.value) && !pendingPdfReplacement.value
+    && (!editableModuleContract.value || Boolean(form.change_note.trim())),
   blockedReason: 'Resuelve los cambios pendientes de PDF o las restricciones del documento antes de guardar.',
   reload: reloadDocument,
 });
@@ -1025,9 +1058,10 @@ const saveBlockReasons = computed(() => [
   generatedSnapshot.value
     ? 'Esta versión conserva el PDF exacto enviado y no se puede modificar.'
     : '',
-  contractMirror.value
+  contractMirror.value && !editableModuleContract.value
     ? 'Este es el contrato vigente y no se edita desde el Gestor.'
     : '',
+  editableModuleContract.value && !form.change_note.trim() ? t(moduleContractKey('changeNoteRequired')) : '',
   !hasChanges.value ? 'No hay cambios por guardar.' : '',
 ].filter(Boolean));
 
@@ -1124,6 +1158,9 @@ function notePayload(note) {
 }
 
 function notifySaveError(result, title = 'No se pudo guardar el documento') {
+  if (editableModuleContract.value && result.code === 'STALE_VERSION') {
+    moduleContractConflict.value = true;
+  }
   if (result.code === 'collection_account_locked') {
     lockedCuenta.value = true;
     notify.error({ title: 'Documento emitido', detail: result.message });
@@ -1324,6 +1361,9 @@ async function reloadDocument() {
     );
     generatedSnapshot.value = Boolean(result.data.is_generated_snapshot);
     contractMirror.value = Boolean(result.data.is_contract_mirror);
+    loadedContractEtag.value = result.data.etag || '';
+    moduleContractConflict.value = false;
+    form.change_note = '';
     commitBaseline();
   } else {
     loadError.value = true;
@@ -1341,7 +1381,7 @@ async function handleSave() {
     notify.error({ title: t('documentPdf.savePdfFirst') });
     return false;
   }
-  const payload = {
+  let payload = {
     title: form.title.trim(),
     // Siempre presentes, null incluido: es lo que permite desvincular.
     client: form.client ?? null,
@@ -1364,12 +1404,29 @@ async function handleSave() {
   if (uploadedPdf.value) {
     ['content_markdown', 'include_portada', 'include_subportada', 'include_contraportada', 'template_style'].forEach((key) => delete payload[key]);
   }
+  if (editableModuleContract.value) {
+    payload = {
+      content_markdown: form.content_markdown,
+      if_match: loadedContractEtag.value,
+      change_note: form.change_note.trim(),
+      include_portada: form.include_portada,
+      include_subportada: form.include_subportada,
+      include_contraportada: form.include_contraportada,
+      template_style: form.template_style,
+      text_formats: { '/content_markdown': form.text_formats['/content_markdown'] || 'markdown_html_v1' },
+    };
+  }
 
   // Se capturan ANTES de guardar: guardar limpia la lista.
   const savedLabels = [...dirtyLabels.value];
 
   const result = await documentStore.updateDocument(route.params.id, payload, { refreshDetail: true });
   if (result.success) {
+    if (editableModuleContract.value) {
+      loadedContractEtag.value = result.data?.etag || loadedContractEtag.value;
+      form.change_note = '';
+      moduleContractConflict.value = false;
+    }
     commitBaseline();
     if (result.data && !result.refreshFailed) {
       applyAssociationSnapshot(result.data);

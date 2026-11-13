@@ -110,9 +110,12 @@ def _guide(actor, project_id, scenario, language, result, projects):
     key = scenario.removeprefix('guide_')
     target_key, _, es, _ = GUIDES[key]
     target = TARGETS[target_key]
+    from accounts.feature_catalog import TARGET_FEATURES
+    from accounts.services.platform_features import enabled
+    flag = TARGET_FEATURES.get(target_key)
     capabilities = ai_capabilities(actor)
     requires_project = '{scope_label}' in es
-    available = not requires_project or project_id is not None
+    available = (not requires_project or project_id is not None) and (not flag or enabled(actor, flag))
     if key == 'voice_report':
         available = available and capabilities['voice_reporting']['available']
     if key == 'access' and project_id:
@@ -131,10 +134,12 @@ def _guide(actor, project_id, scenario, language, result, projects):
 
 
 def _project_summary(result, projects, actor, language, *, health=False):
+    from accounts.services.platform_features import enabled
+    bugs_enabled = enabled(actor, 'platform.bugs')
     counts = {row['project_id']: row['total'] for row in BugReport.objects.filter(
         project__client_id=actor.pk, project_id__in=result['project_ids'], is_archived=False,
         status__in=('reported', 'confirmed', 'fixing', 'qa'),
-    ).values('project_id').annotate(total=Count('id'))}
+    ).values('project_id').annotate(total=Count('id'))} if bugs_enabled else {}
     values = []
     today = timezone.localdate()
     for project in projects:
@@ -144,9 +149,11 @@ def _project_summary(result, projects, actor, language, *, health=False):
         values.append(row)
         if len(result['facts']) >= 20:
             continue
+        bug_es = f' Bugs abiertos: {row["open_bugs"]}.' if bugs_enabled else ''
+        bug_en = f' Open bugs: {row["open_bugs"]}.' if bugs_enabled else ''
         _fact(result, text(language,
-            f'{project.name}: {row["status"]}. Avance registrado: {project.progress} %. Bugs abiertos: {row["open_bugs"]}.',
-            f'{project.name}: {row["status"]}. Recorded progress: {project.progress}%. Open bugs: {row["open_bugs"]}.'))
+            f'{project.name}: {row["status"]}. Avance registrado: {project.progress} %.{bug_es}',
+            f'{project.name}: {row["status"]}. Recorded progress: {project.progress}%.{bug_en}'))
         if project.estimated_end_date:
             _fact(result, text(language, f'Fecha estimada de {project.name}: {project.estimated_end_date.isoformat()}.',
                                f'Estimated date for {project.name}: {project.estimated_end_date.isoformat()}.'))
@@ -252,8 +259,14 @@ def _contracts(result, actor, project_id, query, language, *, freshness_only=Fal
 
 
 def snapshot(actor, project_id, query, language, *, freshness_only=False):
-    projects, result = _base(actor, project_id, language)
+    from accounts.services.platform_features import require_feature
     scenario = query['scenario']
+    scenario_flags = {'bugs': ['platform.bugs'], 'phase_status': ['platform.delivery'],
+                      'deliverables': ['platform.resources'], 'contract_clause': ['platform.delivery'],
+                      'project_health': ['platform.bugs', 'platform.delivery']}
+    for key in scenario_flags.get(scenario, []):
+        require_feature(actor, key)
+    projects, result = _base(actor, project_id, language)
     if scenario.startswith('guide_'):
         return _guide(actor, project_id, scenario, language, result, projects)
     if scenario in ('out_of_scope', 'clarification'):

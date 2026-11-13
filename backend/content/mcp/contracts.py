@@ -134,7 +134,7 @@ MCP_MODEL_CONTRACTS = {
             'content.BuildingOnDemandContractMirror',
             read_only='id document revision synced_at',
             excluded=_excluded(
-                'Estado transaccional interno del contrato de célula y su PDF; sólo se edita mediante el MCP Building on Demand.',
+                'Estado transaccional interno del contrato de célula y su PDF; el Gestor y los MCP delegan en el escritor contractual.',
                 'contract pdf_content',
             ),
         ),
@@ -142,7 +142,7 @@ MCP_MODEL_CONTRACTS = {
             'content.BuildingWithUsContractMirror',
             read_only='id document revision synced_at',
             excluded=_excluded(
-                'Estado transaccional interno del contrato de alianza y su PDF; sólo se edita mediante el MCP Building with Us.',
+                'Estado transaccional interno del contrato de alianza y su PDF; el Gestor y los MCP delegan en el escritor contractual.',
                 'contract pdf_content',
             ),
         ),
@@ -1615,6 +1615,19 @@ MCP_MODEL_CONTRACTS['proposals'] += SHARED_PROPOSAL_DOCUMENT_CONTRACTS
 MCP_MODEL_CONTRACTS['documents'] += SHARED_PROPOSAL_DOCUMENT_CONTRACTS
 
 
+MCP_MODEL_CONTRACTS['projects'] += (
+    _contract('monitoring.Resource', read_only='id key name kind server environment enabled', read_write='project'),
+    _contract('monitoring.Source', read_only='id resource key name expected_interval enabled last_seen_at last_received_at last_error'),
+    _contract('monitoring.Case', read_only='id source fingerprint fingerprint_hash title summary severity condition resource_snapshot evidence first_seen_at last_seen_at closed_at detections version', read_write='state'),
+    _contract('monitoring.Report', read_only='id source title observed_at text resource_snapshot'),
+    _contract('monitoring.Delivery', read_only='id source external_id digest kind observed_at received_at case report evidence heartbeat_hour milestone'),
+    _contract('monitoring.CaseActivity', read_only='id case actor actor_name kind from_state to_state created_at', read_write='text'),
+    _contract('monitoring.TelemetrySample', read_only='id delivery resource observed_at cpu_percent cpu_count load_1m ram_total_bytes ram_used_bytes disk_total_bytes disk_used_bytes'),
+    _contract('monitoring.CapacityAllocation', read_only='id resource version updated_at', read_write='cpu_mode cpu_vcpu ram_mode ram_bytes storage_mode storage_bytes'),
+    _contract('monitoring.CapacityChange', read_only='id allocation actor actor_name before after created_at'),
+)
+
+
 # Canonical catalogs combine every field contract of their source connectors.
 # Shared model references are merged; a writable field takes precedence over
 # a source connector's narrower read-only/excluded projection.
@@ -1703,8 +1716,38 @@ MCP_MODEL_CONTRACTS['projects'] += (VIDEO_RESOURCE_CONTRACT,)
 
 # Authentication secrets are never part of the administrative MCP surface.
 MCP_MODEL_CONTRACTS['projects'] += (
+    _contract('hosting_control.Control', read_only='id resource version updated_at',
+              read_write='mode suspension_title suspension_text banner_title banner_text'),
+    _contract('hosting_control.Target', read_only='id control key origins lifecycle adapter acknowledged_version acknowledged_digest acknowledged_payload acknowledged_at last_seen_at last_error'),
+    _contract('hosting_control.Event', read_only='id control actor actor_name source before after version created_at'),
+    _contract('hosting_control.RuntimeCredential', excluded=_excluded('Credencial de transporte administrada exclusivamente mediante archivo protegido; nunca por MCP.', 'id label token_hash targets revoked_at')),
+    _contract('accounts.PackageExampleRevision', read_only='id project language examples author note created_at'),
+    _contract('accounts.PackageProjectSettings', read_only='id project nationality tax_rate version'),
+    _contract('accounts.PackageOrder', read_only='id project client created_at package snapshot currency subtotal tax_rate total method status payment_reference checkout_url paid_at expires_at recorded_by',
+              excluded=_excluded('Identidad del proveedor asignada únicamente por verificación del pago; no se expone ni edita por MCP.', 'payment_link_id transaction_id')),
+    _contract('accounts.PackageRequest', read_only='id project client created_at ticket status version current_proposal updated_at'),
+    _contract('accounts.PackageSizingProposal', read_only='id request estimate public_snapshot warranty author created_at'),
+    _contract('accounts.PackageDecision', read_only='id proposal actor decision message created_at'),
+    _contract('accounts.PackageMovement', read_only='id order size quantity kind decision reverses reason actor created_at'),
+    _contract('accounts.PackageOperation', excluded=_excluded('Recibo interno de idempotencia y auditoría; no permite CRUD ni alteración de los efectos registrados.', 'id project actor request_id fingerprint receipt created_at')),
+)
+MCP_MODEL_CONTRACTS['commercial'] += (
+    _contract('accounts.PackageExampleRevision', read_only='id project language examples author note created_at'),
+)
+
+MCP_MODEL_CONTRACTS['projects'] += (
     _contract('accounts.LoginChallenge', excluded=_excluded('Estado efímero de autenticación; nunca se expone por MCP.', 'id user surface browser_digest identity_digest code_digest access_version expires_at attempts closed device created_at')),
     _contract('accounts.AccessRateBucket', excluded=_excluded('Contadores internos contra abuso; nunca se exponen por MCP.', 'key requests updated_at')),
     _contract('accounts.GoogleIdentity', read_only='user created_at', excluded=_excluded('Identidad del proveedor privada; sólo se expone si está vinculado.', 'id subject')),
     _contract('accounts.AccessEvent', read_only='id user actor action method surface ip device created_at'),
 )
+
+
+# PA-263: stable catalogue keys; values are written only through the shared service.
+PLATFORM_FEATURE_CONTRACTS = (
+    _contract('accounts.PlatformFeatureSettings', read_only='id version updated_at', read_write='values'),
+    _contract('accounts.ClientPlatformFeatureSettings', read_only='id user version updated_at', read_write='values'),
+    _contract('accounts.PlatformFeatureEvent', read_only='id actor client scope changes version created_at'),
+)
+
+MCP_MODEL_CONTRACTS['projects'] += PLATFORM_FEATURE_CONTRACTS

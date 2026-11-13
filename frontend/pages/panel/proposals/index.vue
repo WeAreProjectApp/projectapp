@@ -15,6 +15,7 @@
       :visible="Boolean(approvalProposal)"
       :proposal="approvalProposal || {}"
       :accept-proposal="approvalAccept"
+      :return-focus="approvalReturnFocus"
       @close="approvalProposal = null"
       @completed="approvalCompleted"
     />
@@ -33,7 +34,7 @@
       @resent="handleResendComplete"
     />
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
-      <h1 class="text-2xl font-light text-text-default">Propuestas</h1>
+      <h1 ref="approvalHeading" tabindex="-1" class="focus:outline focus:outline-2 focus:outline-focus-ring focus:outline-offset-4 text-2xl font-light text-text-default">Propuestas</h1>
       <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
         <BaseButton
           as="NuxtLink"
@@ -357,7 +358,7 @@
           <BaseRowLink
             :to="proposalHref(proposal.id)"
             :data-testid="`proposal-open-${proposal.id}`"
-            class="block min-w-0 max-w-full [overflow-wrap:anywhere] transition-colors hover:text-text-brand"
+            class="block min-w-0 max-w-full [overflow-wrap:anywhere] transition-colors hover:text-text-brand focus:outline focus:outline-2 focus:outline-focus-ring focus:outline-offset-2"
           >
             <span class="block text-sm font-medium text-text-default">{{ proposal.client_name }}</span>
             <span v-if="proposal.title" class="mt-0.5 block text-xs leading-snug text-text-muted">{{ proposal.title }}</span>
@@ -371,7 +372,7 @@
             :updating="updatingStatusId === proposal.id"
             @change="(status) => onStatusSelect(proposal, status)"
           />
-          <BaseButton v-if="proposal.project_review_required" variant="link" size="sm" :data-testid="`approval-review-${proposal.id}`" @click.stop="openApproval(proposal, false)">
+          <BaseButton v-if="proposal.project_review_required" variant="link" size="sm" :data-testid="`approval-review-${proposal.id}`" class="focus:ring-2 focus:ring-focus-ring focus:ring-offset-2" @click.stop="openApproval(proposal, false)">
             {{ approvalText.pending }}
           </BaseButton>
         </template>
@@ -1092,7 +1093,10 @@ const contractModalProposal = ref(null);
 
 // Shared confirm + PATCH + notify flow for the status selects (inline cell
 // and actions modal). Natural negotiating opens the contract modal instead.
-const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
+const approvalHeading = ref(null);
+const { approvalText, approvalProposal, approvalAccept, approvalReturnFocus, openApproval, approvalCompleted } = useProposalApproval({
+  returnFocus: (proposal) => document.querySelector(`[data-testid="proposal-open-${proposal.id}"]`) || approvalHeading.value,
+});
 
 const { updatingId: updatingStatusId, changeStatus } = useProposalStatusChange({
   requestConfirm,

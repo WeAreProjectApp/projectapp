@@ -17,6 +17,14 @@ from content.models import (
 )
 
 pytestmark = pytest.mark.django_db
+CANONICAL_MODULE_SLUGS = (
+    'operations', 'commercial', 'offerings', 'programs', 'projects', 'data-integrity',
+    'documents', 'communications', 'content', 'accounting', 'tasks', 'procurement',
+)
+MCP_CONTROL_TOOLS = {
+    'describe_capabilities', 'confirm_action', 'cancel_action', 'begin_upload',
+    'upload_asset_chunk', 'complete_upload', 'abort_upload',
+}
 
 
 def _rpc(method, params=None):
@@ -97,6 +105,155 @@ def test_canonical_catalog_enforces_unique_module_ownership():
         'get_building_on_demand_program': 'programs',
     }
     assert catalog_problems(CONNECTORS, TOOLS_BY_SLUG) == []
+
+
+@pytest.mark.parametrize(
+    ('slug', 'expected_name'),
+    [
+        ('operations', 'Gestor de operaciones'),
+        ('commercial', 'Gestor de clientes y ventas'),
+        ('offerings', 'Gestor de nuestra oferta'),
+        ('programs', 'Gestor de programas'),
+        ('projects', 'Gestor de proyectos'),
+        ('data-integrity', 'Gestor de integridad de datos'),
+        ('documents', 'Gestor de documentos'),
+        ('communications', 'Gestor de comunicaciones'),
+        ('content', 'Gestor de contenido'),
+        ('accounting', 'Gestor de contabilidad'),
+        ('tasks', 'Gestor de tareas'),
+        ('procurement', 'Gestor de contratación pública'),
+    ],
+)
+def test_canonical_connector_catalog_uses_its_real_name(
+    super_client, slug, expected_name,
+):
+    """Fails if an expanded canonical connector uses an obsolete or inconsistent manager name."""
+    McpConnector.objects.update_or_create(
+        slug=slug,
+        defaults={'name': 'Obsolete visible name', 'is_active': True, 'retired_at': None},
+    )
+
+    response = super_client.get('/api/mcp-connectors/')
+    payload = {item['slug']: item for item in response.data}[slug]
+
+    assert payload['name'] == expected_name
+
+
+def test_operations_capability_groups_publish_their_confirmation_contract(super_client):
+    """Fails if Operations groups the monitored work incorrectly or hides which actions need confirmation."""
+    McpConnector.objects.update_or_create(
+        slug='operations', defaults={'name': 'Obsolete visible name', 'is_active': True, 'retired_at': None},
+    )
+
+    response = super_client.get('/api/mcp-connectors/')
+    payload = {item['slug']: item for item in response.data}['operations']
+    groups = {
+        group['label']: {
+            'actions': group['actions'],
+            'requires_confirmation': group['requires_confirmation'],
+            'tools': group['tools'],
+        }
+        for group in payload['capabilities']
+    }
+
+    assert groups == {
+        'Casos, reportes y recursos observados': {
+            'actions': ['Consultar', 'Actualizar', 'Crear', 'Vincular'],
+            'requires_confirmation': True,
+            'tools': [
+                'create_monitoring_case_note', 'get_monitoring_case', 'get_monitoring_catalog',
+                'get_monitoring_report', 'link_monitoring_resource_project',
+                'list_monitoring_cases', 'list_monitoring_reports', 'update_monitoring_case_state',
+            ],
+        },
+        'Indicadores y Radar de atención': {
+            'actions': ['Consultar'],
+            'requires_confirmation': False,
+            'tools': ['get_operations_dashboard'],
+        },
+    }
+
+
+@pytest.mark.parametrize('slug', CANONICAL_MODULE_SLUGS)
+def test_canonical_business_tools_list_appear_once_in_catalog_capabilities(
+    api_client, super_client, slug,
+):
+    """Fails if a public business tool served by MCP is omitted, duplicated, hidden, or treated as a control."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug=slug,
+        defaults={'name': slug, 'is_active': True, 'retired_at': None, 'aliases_retired_at': None},
+    )
+    connector.credentials.all().delete()
+    token = f'{slug}-catalog-capabilities'
+    _credential(
+        connector,
+        'Catalog capabilities',
+        token,
+        allowed_tools=[tool['name'] for tool in TOOLS_BY_SLUG[slug]],
+    )
+
+    listed = _endpoint(api_client, token, 'tools/list', slug=slug)
+    catalog = super_client.get('/api/mcp-connectors/')
+    payload = {item['slug']: item for item in catalog.data}[slug]
+    listed_business = {
+        tool['name'] for tool in _result(listed)['tools'] if tool['name'] not in MCP_CONTROL_TOOLS
+    }
+    capability_names = [
+        tool_name for group in payload['capabilities'] for tool_name in group['tools']
+    ]
+
+    assert listed.status_code == 200
+    assert len(capability_names) == len(set(capability_names))
+    assert set(capability_names) == listed_business
+    assert all(
+        'Otras acciones del módulo' not in group['actions'] for group in payload['capabilities']
+    )
+
+
+@pytest.mark.parametrize(
+    ('slug', 'tool_name', 'expected_group'),
+    [
+        ('commercial', 'create_share_link', 'Propuestas y documentos comerciales'),
+        ('commercial', 'send_initial', 'Diagnósticos'),
+        ('commercial', 'send_final', 'Diagnósticos'),
+        ('commercial', 'mark_in_analysis', 'Diagnósticos'),
+        ('commercial', 'record_requirement_estimate', 'Calculadora de requerimientos'),
+        ('commercial', 'record_requirement_actual', 'Calculadora de requerimientos'),
+        ('commercial', 'get_requirement_calibration', 'Calculadora de requerimientos'),
+        ('content', 'get_connection_status', 'LinkedIn'),
+    ],
+)
+def test_catalog_assigns_misgrouped_tools_to_their_literal_capability_group(
+    super_client, slug, tool_name, expected_group,
+):
+    """Fails if an MCP tool is listed under a neighboring module group instead of its real task."""
+    McpConnector.objects.update_or_create(
+        slug=slug,
+        defaults={'name': slug, 'is_active': True, 'retired_at': None, 'aliases_retired_at': None},
+    )
+
+    response = super_client.get('/api/mcp-connectors/')
+    payload = {item['slug']: item for item in response.data}[slug]
+    actual_group = next(group['label'] for group in payload['capabilities'] if tool_name in group['tools'])
+
+    assert actual_group == expected_group
+
+
+def test_catalog_hides_retired_connectors_but_keeps_pending_retirement_visible(super_client):
+    """Fails if the panel exposes a retired connector or hides one still awaiting retirement evidence."""
+    retired_at = datetime(2026, 11, 12, tzinfo=UTC)
+    McpConnector.objects.update_or_create(
+        slug='blog', defaults={'name': 'Old blog', 'is_active': False, 'retired_at': retired_at},
+    )
+    McpConnector.objects.update_or_create(
+        slug='clients', defaults={'name': 'Pending clients', 'is_active': False, 'retired_at': None},
+    )
+
+    response = super_client.get('/api/mcp-connectors/')
+    connectors = {item['slug']: item for item in response.data}
+
+    assert 'blog' not in connectors
+    assert (connectors['clients']['lifecycle'], connectors['clients']['is_legacy']) == ('deprecated', True)
 
 
 def _panel_segmentation_connectors():

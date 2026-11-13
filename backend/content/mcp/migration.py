@@ -111,8 +111,16 @@ def retirement_status(connector, *, credential=None, catalog='legacy'):
         pending = pending.filter(credential__catalog=catalog)
     if pending.exists():
         blockers.append('confirmations_pending')
+    from content.mcp.coverage import CoverageError, coverage_current
+    try:
+        coverage_verified = coverage_current(connector, catalog)
+    except (CoverageError, OSError, ValueError, KeyError):
+        coverage_verified = False
+    if not coverage_verified:
+        blockers.append('replacement_coverage_unverified')
     return {
         'eligible': not blockers, 'blockers': blockers,
+        'coverage_verified': coverage_verified,
         'replacement': CANONICAL_FOR[connector.slug],
         'replacements': ['commercial', 'offerings', 'programs'] if connector.slug == 'commercial' else ['projects', 'data-integrity'] if connector.slug == 'projects' else [CANONICAL_FOR[connector.slug]],
         'catalog': catalog,

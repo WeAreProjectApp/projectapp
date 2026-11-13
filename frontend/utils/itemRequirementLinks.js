@@ -92,6 +92,9 @@ export function buildItemRequirementsMap(technicalContentJson) {
           priority: req.priority || '',
           epicKey: epic.epicKey || '',
           flowKey: req.flowKey || '',
+          ...(req.configuration ? { configuration: req.configuration } : {}),
+          ...(req.usageFlow ? { usageFlow: req.usageFlow } : {}),
+          ...(req.text_formats ? { text_formats: JSON.parse(JSON.stringify(req.text_formats)) } : {}),
         });
       }
     }

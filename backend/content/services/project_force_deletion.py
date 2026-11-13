@@ -123,6 +123,7 @@ class ProjectDeletionPlan:
         self.requires = defaultdict(set)
         self.delete_keys = sorted(set(delete_keys))
         self._expand()
+        self._include_requirement_package_history()
         self._include_money_movements()
         self._include_document_threads()
         self._check_owners()
@@ -144,7 +145,10 @@ class ProjectDeletionPlan:
                 self._conflict(project, f"«{category['label']}» se conserva siempre y no se puede eliminar.")
         for (model, _), row in self.inventory.items():
             if model is not Project and model._meta.label_lower not in CATEGORIES:
-                self._conflict(row, 'Hay información relacionada aún no clasificada. No se puede eliminar de forma segura.')
+                message = ('El historial de paquetes por tallas, compras y consentimiento se conserva y bloquea la eliminación automática.'
+                           if model._meta.label_lower.startswith('accounts.package') else
+                           'Hay información relacionada aún no clasificada. No se puede eliminar de forma segura.')
+                self._conflict(row, message)
         self.rows = {key: row for key, row in self.inventory.items()
                      if key[0] is Project or (
                          CATEGORIES.get(key[0]._meta.label_lower, {}).get('selectable', True)
@@ -156,6 +160,17 @@ class ProjectDeletionPlan:
     def _read(self, queryset):
         queryset = queryset.order_by('pk')
         return list(queryset.select_for_update() if self.lock else queryset)
+
+    def _include_requirement_package_history(self):
+        from accounts.models_requirement_packages import (
+            PackageOperation,
+            PackageOrder,
+            PackageRequest,
+        )
+
+        for model in (PackageOrder, PackageRequest, PackageOperation):
+            for row in self._read(model._base_manager.filter(project_id=self.project.pk)):
+                self.rows[_key(row)] = row
 
     def _expand(self):
         """Query each model/relation frontier once, including folder descendants."""

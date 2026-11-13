@@ -1,4 +1,16 @@
 export default {
+  accessError: {
+    project: 'Project',
+    loading: 'Loading project…',
+    deniedTitle: 'You do not have access to this project',
+    deniedMessage: 'Your account does not have permission to open this space. Contact the team that manages your access.',
+    unavailableTitle: 'Project unavailable',
+    unavailableMessage: 'The project is unavailable. Return to the list to view your projects.',
+    failedTitle: 'We could not open the project',
+    failedMessage: 'We could not load this space. Check your session and try again.',
+    back: 'Back to projects',
+    retry: 'Try again',
+  },
   commercialRecord: {
     label: 'Commercial record',
     title: 'Open the commercial record in the panel (new tab)',
@@ -77,6 +89,7 @@ export default {
   }
 },
   "projectActions": {
+    "hosting": 'Hosting control',
     "label": "Actions for {name}",
     "detail": "View details",
     "space": "Open platform space",

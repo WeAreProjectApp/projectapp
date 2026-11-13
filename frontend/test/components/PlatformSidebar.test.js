@@ -1,3 +1,4 @@
+jest.mock('~/stores/platform-features', () => ({ usePlatformFeaturesStore: () => ({ routeAllowed: () => true, enabled: () => true }) }))
 import { mount } from '@vue/test-utils';
 
 global.useLocalePath = jest.fn(() => (path) => path);

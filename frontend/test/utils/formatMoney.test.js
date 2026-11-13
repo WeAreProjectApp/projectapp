@@ -18,6 +18,18 @@ describe('formatMoney', () => {
     expect(formatMoney(0.915, 'USD', { decimals: 2 })).toBe('$0,92 USD');
     expect(formatMoney(20, 'USD', { decimals: 2 })).toBe('$20,00 USD');
   });
+
+  it.each([
+    ['119.03', '$119,03 COP'],
+    [1.03, '$1,03 COP'],
+    [8.25, '$8,25 COP'],
+    [60.5, '$60,50 COP'],
+    ['119.00', '$119 COP'],
+    [0, '$0 COP'],
+    [-1.03, '$-1,03 COP'],
+  ])('preserves the displayed cents of %s in automatic precision', (amount, expected) => {
+    expect(formatMoney(amount, 'COP', { decimals: 'auto' })).toBe(expected);
+  });
 });
 
 describe('formatCompactMoney', () => {

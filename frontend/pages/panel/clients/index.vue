@@ -4,13 +4,14 @@
       :visible="Boolean(approvalProposal)"
       :proposal="approvalProposal || {}"
       :accept-proposal="approvalAccept"
+      :return-focus="approvalReturnFocus"
       @close="approvalProposal = null"
       @completed="handleClientApprovalCompleted"
     />
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
-        <h1 class="text-2xl font-light text-text-default">Clientes</h1>
+        <h1 ref="approvalHeading" tabindex="-1" class="focus:outline focus:outline-2 focus:outline-focus-ring focus:outline-offset-4 text-2xl font-light text-text-default">Clientes</h1>
         <p class="text-sm text-text-subtle mt-1">
           Perfiles de clientes para propuestas y plataforma. Los huérfanos pueden eliminarse.
         </p>
@@ -179,7 +180,8 @@
         <!-- Client row header (drop target for proposal/diagnostic reassignment) -->
         <div
           :data-testid="`client-header-${client.id}`"
-          class="px-5 py-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 cursor-pointer hover:bg-surface-raised transition-colors"
+          tabindex="-1"
+          class="focus:outline focus:outline-2 focus:outline-focus-ring focus:-outline-offset-2 px-5 py-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 cursor-pointer hover:bg-surface-raised transition-colors"
           :class="{ 'ring-2 ring-inset ring-focus-ring bg-primary-soft': dragOverClientId === client.id }"
           @click="toggleClient(client)"
           @dragover="onClientDragOver($event, client)"
@@ -490,7 +492,7 @@
                           v-if="p.project_review_required"
                           variant="link"
                           size="sm"
-                          :data-testid="`client-approval-review-${p.id}`"
+                          :data-testid="`client-approval-review-${p.id}`" class="focus:ring-2 focus:ring-focus-ring focus:ring-offset-2"
                           @click.stop="openClientApproval(client, p, false)"
                         >
                           {{ approvalText.pending }}
@@ -1155,7 +1157,10 @@ const notify = usePanelNotify();
 // Inline status change for the nested proposal rows. No onNegotiate here:
 // natural negotiating PATCHes directly; the contract flow lives in the
 // proposal edit view.
-const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
+const approvalHeading = ref(null);
+const { approvalText, approvalProposal, approvalAccept, approvalReturnFocus, openApproval, approvalCompleted } = useProposalApproval({
+  returnFocus: () => document.querySelector(`[data-testid="client-header-${approvalClientId.value}"]`) || approvalHeading.value,
+});
 const approvalClientId = ref(null);
 const { updatingId: updatingProposalStatusId, changeStatus: changeProposalStatus } =
   useProposalStatusChange({ requestConfirm, onAccept: (proposal) => openApproval(proposal, true) });

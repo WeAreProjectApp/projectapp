@@ -45,6 +45,10 @@ const outcomes = {
   'frontend/pages/partnership-program/index.vue': 'success',
 };
 const resolvedRoutes = {
+  'frontend/pages/index.vue': '/en-us/',
+  'frontend/pages/landing-apps.vue': '/en-us/landing-apps',
+  'frontend/pages/landing-software.vue': '/en-us/landing-software',
+  'frontend/pages/landing-web-design.vue': '/en-us/landing-web-design',
   'frontend/pages/building-with-us/index.vue': '/es-co/building-with-us',
   'frontend/pages/building-on-demand/index.vue': '/es-co/building-on-demand',
   'frontend/pages/consulting/index.vue': '/es-co/consulting',
@@ -98,7 +102,10 @@ async function setupPublic(page) {
 }
 
 async function switchToSpanish(page) {
-  await page.getByRole('button', { name: 'Switch to Spanish' }).click();
+  const switcher = page.getByRole('button', { name: 'Switch to Spanish', exact: true }).filter({ visible: true });
+  await expect(switcher).toHaveCount(1);
+  await expect(switcher).toBeEnabled();
+  await switcher.click();
   await expect(page).toHaveURL(/\/es-co\//);
 }
 
@@ -133,7 +140,15 @@ async function exercise(page, scenario) {
   await setupPublic(page);
   // quality: allow-deep-link (public catalog routes include emailed, QR and static legal entry points with fixture-resolved dynamic values)
   const route = resolvedRoutes[scenario.catalogKey] ?? scenario.resolvedUrl;
-  await page.goto(route, { waitUntil: 'domcontentloaded' });
+  if (scenario.catalogKey === 'frontend/pages/landing-apps.vue' && page.viewportSize().width >= 1024) {
+    await page.goto('/en-us/', { waitUntil: 'domcontentloaded' });
+    const navigation = page.getByRole('navigation', { name: 'Main navigation', exact: true });
+    await expect(navigation.getByRole('button', { name: 'Switch to Spanish', exact: true })).toBeEnabled();
+    await navigation.getByRole('link', { name: 'App Development', exact: true }).click();
+    await expect(page).toHaveURL(/\/en-us\/landing-apps$/);
+  } else {
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+  }
   const buildingOnDemandFaq = buildingOnDemandProgramFixture().faq.items[0];
   const entries = {
     'frontend/pages/building-with-us/index.vue': { action: async () => { await page.getByTestId('building-with-us-faq-trigger-0').click(); return page.getByTestId('building-with-us-faq-panel-0'); }, assert: async (locator) => { await expect(locator).toBeVisible(); await expect(locator).toHaveText(buildingWithUsProgramFixture().faq.items[0].answer); } },

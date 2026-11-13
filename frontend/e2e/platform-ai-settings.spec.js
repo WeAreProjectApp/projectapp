@@ -92,36 +92,34 @@ test.describe('Platform AI settings', () => {
   test.setTimeout(60_000)
 
   // Catches the regression where an apparently successful global switch did not change the server configuration.
-  test('persists the global voice-report switch', {
+  test('persists the global request limit', {
     tag: ['@flow:panel-platform-ai-settings', '@outcome:success'],
   }, async ({ page }) => {
     const scenario = await setup(page)
     await openSettingsFromPanel(page)
 
-    const voiceSwitch = page.getByTestId('ai-global-voice_reporting_enabled')
-    await expect(voiceSwitch).toHaveAttribute('aria-checked', 'true')
-    await voiceSwitch.click()
-    await expect(voiceSwitch).toHaveAttribute('aria-checked', 'false')
-    await page.getByTestId('ai-save-settings').click()
+    await page.getByRole('tab', { name: 'Consumo y caché', exact: true }).click()
+    await page.locator('#ai-setting-ai_request_limit').fill('19')
+    await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click()
 
     await expect(page.getByRole('status')).toHaveText('Datos actualizados.')
-    expect(scenario.savedPayload.voice_reporting_enabled).toBe(false)
+    expect(scenario.savedPayload.ai_request_limit).toBe(19)
   })
 
   // Catches the regression where a rejected save silently discarded an administrator's selected switch state.
-  test('keeps the global voice-report switch after a failed save', {
+  test('keeps the global request limit after a failed save', {
     tag: ['@flow:panel-platform-ai-settings', '@outcome:failure'],
   }, async ({ page }) => {
     const scenario = await setup(page, { saveFails: true })
     await openSettingsFromPanel(page)
 
-    const voiceSwitch = page.getByTestId('ai-global-voice_reporting_enabled')
-    await voiceSwitch.click()
-    await page.getByTestId('ai-save-settings').click()
+    await page.getByRole('tab', { name: 'Consumo y caché', exact: true }).click()
+    await page.locator('#ai-setting-ai_request_limit').fill('19')
+    await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click()
 
     await expect(page.getByRole('alert')).toHaveText('No se pudo completar la operación. Actualiza los datos y revisa los valores antes de reintentar.')
-    await expect(voiceSwitch).toHaveAttribute('aria-checked', 'false')
-    expect(scenario.savedPayload.voice_reporting_enabled).toBe(false)
+    await expect(page.locator('#ai-setting-ai_request_limit')).toHaveValue('19')
+    expect(scenario.savedPayload.ai_request_limit).toBe(19)
   })
 
   // Catches the regression where a rejected template preview left no visible recovery state for the administrator.

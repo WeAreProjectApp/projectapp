@@ -1,0 +1,130 @@
+name: PA-263 — Feature flags
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'contracts/platform-features.json'
+      - 'scripts/check_platform_features.py'
+      - '.github/workflows/platform-feature-flags.yml'
+
+concurrency:
+  group: pa263-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq pkg-config default-libmysqlclient-dev ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Precedence and persistence
+        run: pytest accounts/tests/test_platform_feature_flags.py -v --no-cov --junitxml=feature-precedence.xml
+      - name: HTTP permissions and effects
+        run: pytest accounts/tests/test_platform_feature_api.py -v --no-cov --junitxml=feature-api.xml
+      - name: Mapping gaps and real MCP contract
+        run: pytest accounts/tests/test_platform_feature_inventory.py content/tests/test_mcp_platform_features.py -v --no-cov --junitxml=feature-mcp.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa263-backend-evidence
+          path: backend/feature-*.xml
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Identity isolation and failed evaluation
+        run: npm test -- test/stores/platform-features.test.js test/components/PlatformMobileDrawer.test.js --runInBand --coverage=false
+  backend-regressions:
+    name: backend-regressions (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: query-budgets
+            tests: >-
+              accounts/tests/test_bulk_evaluation.py::test_bulk_evaluation_materializes_requested_rows_with_constant_query_count
+              accounts/tests/test_bug_report_archive_query_budget.py::test_admin_archive_keeps_comment_reads_constant_as_comments_grow
+              accounts/tests/test_bug_report_detail_query_budget.py::test_admin_detail_keeps_comment_queries_constant_as_comments_grow
+              accounts/tests/test_change_request_detail_query_budget.py::test_admin_detail_keeps_comment_queries_constant_as_comments_grow
+              accounts/tests/test_detail_query_budgets.py::test_deliverable_detail_query_budget_stays_constant_with_fifty_rows_per_collection
+              accounts/tests/test_project_list_aggregates.py::test_project_list_client_query_budget_stays_constant
+              secure_links/tests/test_platform_query_budget.py::test_metadata_list_query_budget_is_bounded
+              accounts/tests/test_platform_ai_services.py::test_capabilities_query_budget_is_independent_of_consumption
+          - group: delivery-authority
+            tests: >-
+              accounts/tests/test_delivery_api_contract.py::test_admin_can_create_authoring_nodes_through_jwt
+              accounts/tests/test_delivery_api_contract.py::test_authoring_route_rejects_a_json_array
+              accounts/tests/test_delivery_api_contract.py::test_authoring_route_rejects_publication_state_injection
+              accounts/tests/test_delivery_api_contract.py::test_unknown_node_is_reported_as_not_found
+              accounts/tests/test_delivery_api_contract.py::test_stale_authoring_version_cannot_create_a_node
+              accounts/tests/test_delivery_api_contract.py::test_external_signature_route_preserves_the_uploaded_pdf
+              accounts/tests/test_delivery_api_contract.py::test_client_jwt_can_download_the_signed_amendment_pdf
+              accounts/tests/test_delivery_platform_role_boundary.py::test_admin_profile_without_staff_can_edit_a_delivery_guide
+          - group: shared-contracts
+            tests: >-
+              accounts/tests/test_platform_help.py::test_old_admin_version_is_rejected
+              accounts/tests/test_platform_help_publication.py::test_client_catalog_uses_published_revision_after_draft_edit
+              content/tests/management/test_fake_data_contract.py::test_model_contract_classifies_every_concrete_business_model
+              content/tests/views/test_mcp_projects_bridge_schemas.py::test_projects_bridge_family_has_complete_closed_schemas
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq pkg-config default-libmysqlclient-dev ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Verify affected regressions
+        run: pytest ${{ matrix.tests }} -v --no-cov --junitxml=feature-${{ matrix.group }}.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa263-${{ matrix.group }}
+          path: backend/feature-*.xml
+  browser:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Panel configuration and direct client access
+        run: npx playwright test e2e/admin/admin-platform-feature-flags.spec.js e2e/platform-feature-availability.spec.js --project=chromium --workers=1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: pa263-browser-evidence
+          path: frontend/test-results/

@@ -223,7 +223,7 @@
                 <div :class="col.contentClass">
                   <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]">
                     <template v-if="col.format === 'money'">
-                      {{ formatMoney(row[col.key], 'COP') }}
+                      {{ formatMoney(row[col.key], 'COP', { decimals: col.moneyDecimals ?? 0 }) }}
                     </template>
                     <HighlightText
                       v-else-if="highlightQuery"
@@ -388,6 +388,7 @@ const props = defineProps({
   /** Selected row ids (v-model:selected). */
   selected: { type: Array, default: () => [] },
   ariaLabel: { type: String, default: 'Ingresos por cliente' },
+  moneyDecimals: { type: [Number, String], default: 0 },
   rowNoun: { type: String, default: 'ingresos' },
   allSelectionArticle: { type: String, default: 'todos los' },
   selectionArticle: { type: String, default: 'los' },
@@ -576,7 +577,7 @@ function statusesFor(source, isFooter = false) {
 }
 
 function money(value) {
-  return formatMoney(Number(value) || 0, 'COP');
+  return formatMoney(Number(value) || 0, 'COP', { decimals: props.moneyDecimals });
 }
 
 function isCollapsed(id) {
@@ -638,7 +639,7 @@ function cellClass(col) {
 }
 
 function formatGroupedValue(col, value) {
-  if (col.format === 'money') return formatMoney(value, 'COP');
+  if (col.format === 'money') return formatMoney(value, 'COP', { decimals: col.moneyDecimals ?? 0 });
   if (col.format === 'percent') return formatPercent(value);
   return value ?? '—';
 }

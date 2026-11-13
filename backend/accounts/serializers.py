@@ -330,6 +330,27 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        profile = getattr(request.user, 'profile', None) if request else None
+        if profile and profile.is_client:
+            from accounts.services.platform_features import request_values
+            if '_feature_values' not in self.context:
+                self.context['_feature_values'] = request_values(request)
+            values = self.context['_feature_values']
+            for field, key in {'bugs_open_count': 'platform.bugs',
+                               'changes_pending_count': 'platform.change_requests',
+                               'next_deliverable': 'platform.resources',
+                               'next_hosting_payment': 'platform.hosting',
+                               'phases_total_amount': 'platform.delivery',
+                               'hosting_tiers': 'platform.hosting',
+                               'has_subscription': 'platform.hosting',
+                               'can_view_client_access': 'platform.project_access'}.items():
+                if field in data and not values[key]:
+                    data[field] = False if field in ('has_subscription', 'can_view_client_access') else None
+        return data
+
     def _business_proposal(self, obj):
         if hasattr(obj, '_list_business_proposal'):
             return obj._list_business_proposal

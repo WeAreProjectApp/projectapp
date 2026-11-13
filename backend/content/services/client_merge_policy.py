@@ -21,6 +21,9 @@ def _keys(text):
 
 
 AUTHORSHIP_RELATIONS = _keys('''
+accounts.PackageExampleRevision.author accounts.PackageOrder.recorded_by
+accounts.PackageSizingProposal.author accounts.PackageDecision.actor
+accounts.PackageMovement.actor accounts.PackageOperation.actor
 content.CalculatorRevision.author content.ProjectCalculatorVersion.author content.ProjectCalculatorVersion.approved_by
 content.CalculatorEstimate.author content.CalculatorActual.author content.ProjectCalculatorChange.author
 accounts.CollectionAccountContext.pending_by
@@ -74,17 +77,20 @@ accounts.DeliveryEvidenceEmail.prepared_by accounts.DeliveryEvidenceEmailAttempt
 accounts.DeliveryNotificationEvent.actor accounts.DeliveryNotificationAttempt.requested_by
 accounts.PlatformAIEvent.actor accounts.PlatformAIJob.actor accounts.PlatformAIQuotaReservation.actor
 accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
-monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
+monitoring.CaseActivity.actor monitoring.CapacityChange.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
+hosting_control.Event.actor
 secure_links.SecureLinkFolder.created_by
 secure_links.SecureLinkEvent.actor
 procurement.Activity.actor procurement.Alert.created_by procurement.SyncRun.requested_by
 ''')
 
 RELATION_POLICIES = {key: NEVER for key in AUTHORSHIP_RELATIONS}
+RELATION_POLICIES.update(dict.fromkeys(_keys('accounts.PackageOrder.client accounts.PackageRequest.client'), BLOCK))
 # Help state belongs to the person, not the commercial client being merged.
 # Keep both account preferences and historical authorship on their original user.
 RELATION_POLICIES.update(dict.fromkeys(_keys('''
 accounts.ClientPlatformHelpSettings.user accounts.PlatformTourProgress.user
+accounts.ClientPlatformFeatureSettings.user accounts.PlatformFeatureEvent.actor accounts.PlatformFeatureEvent.client
 accounts.PlatformGuidedTourRevision.created_by accounts.PlatformHelpEvent.actor
 '''), NEVER))
 # Procurement decisions and saved searches belong to the original person, not

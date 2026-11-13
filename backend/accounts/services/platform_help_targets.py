@@ -23,6 +23,10 @@ TARGETS = {
 
 
 def target_available(key, context, capabilities):
+    from accounts.feature_catalog import TARGET_FEATURES
     target = TARGETS.get(key)
+    flag = TARGET_FEATURES.get(key)
+    if flag and capabilities.get('features', {}).get(flag) is False:
+        return False
     return bool(target and target['context'] == context and (
         not target.get('capability') or capabilities.get(target['capability'], {}).get('available') is True))

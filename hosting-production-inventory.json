@@ -1,0 +1,110 @@
+{
+  "targets": [
+    {
+      "key": "candle_project",
+      "name": "Candle Project",
+      "server": "vps-projectapp-staging",
+      "server_key": "srv571894",
+      "lifecycle": "removed",
+      "origins": [
+        "https://sensescandlesbykate.com"
+      ],
+      "adapter": "django-document-v1"
+    },
+    {
+      "key": "crushme_project",
+      "name": "CrushMe",
+      "server": "vps-projectapp-staging",
+      "server_key": "srv571894",
+      "lifecycle": "suspended",
+      "origins": [
+        "https://crushme.com.co",
+        "https://www.crushme.com.co"
+      ],
+      "adapter": "django-document-v1"
+    },
+    {
+      "key": "fernando_aragon_project",
+      "name": "Fernando Aragón",
+      "server": "vps-projectapp-staging",
+      "server_key": "srv571894",
+      "lifecycle": "active",
+      "origins": [
+        "https://fernandodearagon.edu.co",
+        "https://www.fernandodearagon.edu.co"
+      ],
+      "adapter": "django-document-v1"
+    },
+    {
+      "key": "kore_project",
+      "name": "Kore Project",
+      "server": "vps-projectapp-prod",
+      "server_key": "srv1681495",
+      "lifecycle": "suspended",
+      "origins": [
+        "https://korehealths.com",
+        "https://www.korehealths.com"
+      ],
+      "adapter": "django-document-v1"
+    },
+    {
+      "key": "projectapp",
+      "name": "ProjectApp",
+      "server": "vps-projectapp-prod",
+      "server_key": "srv1681495",
+      "lifecycle": "active",
+      "origins": [
+        "https://projectapp.co",
+        "https://www.projectapp.co"
+      ],
+      "adapter": "django-document-v1"
+    },
+    {
+      "key": "mimittos_project",
+      "name": "Mimittos",
+      "server": "vps-projectapp-prod",
+      "server_key": "srv1681495",
+      "lifecycle": "active",
+      "origins": [
+        "https://mimittos.com",
+        "https://www.mimittos.com"
+      ],
+      "adapter": "next-node-v1"
+    },
+    {
+      "key": "xpandia_project",
+      "name": "Xpandia",
+      "server": "vps-projectapp-prod",
+      "server_key": "srv1681495",
+      "lifecycle": "removed",
+      "origins": [
+        "https://xpandia.global"
+      ],
+      "adapter": "next-node-v1"
+    },
+    {
+      "key": "gym_project",
+      "name": "G&M Consultores Jurídicos",
+      "server": "vps-gym",
+      "server_key": "srv614758",
+      "lifecycle": "active",
+      "origins": [
+        "https://www.gmconsultoresjuridicos.com",
+        "https://gmconsultoresjuridicos.com"
+      ],
+      "adapter": "django-document-v1"
+    },
+    {
+      "key": "tenndalux_project",
+      "name": "Tenndalux",
+      "server": "vps-projectapp-prod",
+      "server_key": "srv1681495",
+      "lifecycle": "active",
+      "origins": [
+        "https://tenndalux.com",
+        "https://www.tenndalux.com"
+      ],
+      "adapter": "django-document-v1"
+    }
+  ]
+}

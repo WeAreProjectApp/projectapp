@@ -17,6 +17,8 @@ pytestmark = pytest.mark.django_db
 
 
 def configure_voice(client_user):
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_voice_reports': True, 'platform.ai_chatbot': True, 'platform.ai_chatbot_audio': True})
     UserProfile.objects.filter(user=client_user).update(voice_reporting_enabled=True)
     PlatformAISettings.objects.update_or_create(
         pk=1,
@@ -150,7 +152,8 @@ def test_worker_marks_a_queued_job_failed_when_voice_is_disabled_before_processi
         status='pending',
         expires_at=timezone.now() + timedelta(hours=1),
     )
-    PlatformAISettings.objects.filter(pk=1).update(voice_reporting_enabled=False)
+    from accounts.tests.feature_flag_helpers import set_global_flags
+    set_global_flags({'platform.ai_voice_reports': False})
 
     platform_ai_jobs.process_job(job.pk)
     job.refresh_from_db()

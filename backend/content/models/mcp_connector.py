@@ -34,6 +34,7 @@ class McpConnector(models.Model):
     pre_split_started_at = models.DateTimeField(null=True, blank=True)
     pre_split_consumers_verified_at = models.DateTimeField(null=True, blank=True)
     pre_split_retired_at = models.DateTimeField(null=True, blank=True)
+    retirement_evidence = models.JSONField(default=dict, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
