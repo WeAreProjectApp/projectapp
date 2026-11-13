@@ -64,9 +64,12 @@ async function openClientSearch(page) {
 }
 
 async function expectClient(page, name) {
-  await page.getByTestId('feature-client-picker').click()
+  await expect(page.getByTestId('feature-client-results')).toHaveAttribute('aria-busy', 'false')
+  const picker = page.getByTestId('feature-client-picker')
+  await picker.click()
   await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible()
-  await page.keyboard.press('Escape')
+  await picker.click()
+  await expect(page.getByRole('menu')).toBeHidden()
 }
 
 test.describe('PA-263 availability administration', () => {

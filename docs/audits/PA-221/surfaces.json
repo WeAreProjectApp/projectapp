@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "sources": {
-    "frontend/config/viewCatalog.js": "c019dfe91f1d27ef8fcf14aaa5a5cb1fa0823326e9e614ca224e9f612307f275",
-    "frontend/config/viewCapabilityCatalog.js": "f345d607d07f430a423ec17df26df0cee56fa23c11b860b4e9ac22c5f08db473"
+    "frontend/config/viewCatalog.js": "7fa69910ee3f8873178a92a19b755b39ec94bd985f181afcade56098f18cd6d8",
+    "frontend/config/viewCapabilityCatalog.js": "3cd7642bd90c89e84eeb3ca063e01ef33b3bc834b982fcbeb268e44497256b50"
   },
   "surfaces": [
     {
@@ -1828,12 +1828,12 @@
       "file": "frontend/pages/platform/projects/[id]/packages.vue",
       "audience": "client",
       "view_type": "edit",
-      "description": "Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.",
+      "description": "Disponibilidad independiente en Feature flags, habilitada inicialmente. Ejemplos propios por talla con retorno a genéricos. Compra online COP o pago externo, saldo, vigencia y movimientos. Solicitud general, evaluación manual, objeciones y nueva respuesta. Aceptar descuenta un cupo de su talla de forma atómica; garantías no consumen y L/XL/Proyecto se cotizan aparte.",
       "features": [
         {
           "id": "platform-requirement-packages",
           "label": "Comprar y utilizar paquetes por talla",
-          "summary": "Explica las tallas con ejemplos propios o genéricos. Permite comprar, solicitar cambios, objetar propuestas o aceptarlas con cargo a un cupo vigente y consultar su historial."
+          "summary": "Explica las tallas con ejemplos propios o genéricos. Permite comprar, solicitar cambios, objetar propuestas o aceptarlas con cargo a un cupo vigente y consultar su historial. Su disponibilidad se controla de forma independiente desde Feature flags."
         }
       ]
     },
