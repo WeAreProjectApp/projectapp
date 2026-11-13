@@ -45,6 +45,7 @@ const outcomes = {
   'frontend/pages/partnership-program/index.vue': 'success',
 };
 const resolvedRoutes = {
+  'frontend/pages/index.vue': '/en-us/',
   'frontend/pages/landing-apps.vue': '/en-us/landing-apps',
   'frontend/pages/landing-software.vue': '/en-us/landing-software',
   'frontend/pages/landing-web-design.vue': '/en-us/landing-web-design',
