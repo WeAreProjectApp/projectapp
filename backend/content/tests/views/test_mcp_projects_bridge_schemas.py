@@ -38,6 +38,8 @@ _SERVICE_SERIALIZERS = {
     'set_project_client_access_policy': 'accounts.serializers_project_client_access.ClientAccessPolicySerializer',
     'update_platform_ai_settings': 'accounts.serializers_ai.SettingsSerializer',
     'update_platform_ai_client': 'accounts.serializers_ai.ClientFlagsSerializer',
+    'set_hosting_control_mode': 'hosting_control.serializers.ModeInput',
+    'update_hosting_control_message': 'hosting_control.serializers.MessageInput',
 }
 _VIEW_PAYLOAD_FIELDS = {'create_project_state': {'confirm_similar'}}
 _CREATE_DEFAULT_FIELDS = {'create_project_state': {'group'}}
@@ -198,14 +200,16 @@ def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tool
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 96
+    assert len(original_bridge_tools) == 101
     assert (
         set(PROJECTS_BRIDGE_SCHEMAS) | _PLATFORM_HELP_BRIDGE_NAMES
         | _PLATFORM_AI_BRIDGE_NAMES
         | _MONITORING_BRIDGE_NAMES
         | {'get_project_calculator_version', 'get_project_requirement_calculator',
            'create_project_calculator_draft', 'update_project_calculator_parameters',
-           'approve_project_requirement_calculator'}
+           'approve_project_requirement_calculator',
+           'list_hosting_controls', 'get_hosting_control', 'set_hosting_control_mode',
+           'update_hosting_control_message', 'list_hosting_control_events'}
     ) == set(original_bridge_tools)
     assert failures == {name: [] for name in original_bridge_tools}, failures
 

@@ -89,6 +89,7 @@ export default {
   }
 },
   "projectActions": {
+    "hosting": 'Hosting control',
     "label": "Actions for {name}",
     "detail": "View details",
     "space": "Open platform space",

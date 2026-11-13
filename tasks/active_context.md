@@ -25,6 +25,8 @@ Implementación en rama de sesión; la validación automatizada se ejecuta en CI
 
 Rama propia: filtros dinámicos, consultas paginadas estables de 15 minutos, prioridades, telemetría por minuto con retención de 90 días y capacidad informativa versionada. Panel y MCP Proyectos comparten servicios y permisos. Migración aditiva monitoring.0006 preparada, sin aplicar desde esta sesión. Colector en entrega coordinada del toolkit con activación explícita posterior al backend. Automatizadas exclusivamente en CI, con resultados por SHA en el PR de sesión. DEV LISTO y QA manual requieren dupla y entorno; esta nota no acredita despliegue.
 
+> **PA-264 — en implementación:** control visual de hosting por producción, con configuración central, mensajes independientes y recibos del destino. QA manual y servicios siguen pausados; no hay activaciones ni despliegues.
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.

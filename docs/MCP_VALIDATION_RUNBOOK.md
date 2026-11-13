@@ -3103,3 +3103,13 @@ El catálogo canónico incorpora 13 operaciones de consulta y gestión de Monito
 Al paginar `list_monitoring_capacity_history`, reenviar `history_bounds.changes` como `changes_before` (incluido 0). Un cambio concurrente no debe desplazar filas ni alterar el total de ese corte. Omitir el límite abre una consulta nueva e incluye los cambios recientes.
 
 En DEV aislado y sobre el SHA servido: comprobar tools/list y describe_capabilities para una credencial permitida y otra explícitamente restringida; ejecutar consulta, nota, transición, lectura de serie y edición de capacidad; cotejar el mismo registro desde Panel. Repetir con ID de otro tipo o inexistente, actor sin staff, versión antigua y herramienta no permitida. Una denegación no modifica datos. No consultar ni imprimir tokens, credenciales de ingestión o configuración operativa. La existencia de las rutas REST y el test del adaptador no sustituyen esta comprobación del conector real.
+
+## PA-264 · Hosting visual por producción
+
+Consultar `list_hosting_controls`/`get_hosting_control` con rol administrativo;
+verificar destino y versión. Cambiar cada modo con `set_hosting_control_mode`
+y confirmar. Editar ambos mensajes por separado con
+`update_hosting_control_message`; comprobar por Panel que el otro texto y el
+modo no cambian. Revisar historial, actor/vía y recibos. Repetir con versión
+anterior y credencial sin permiso: rechazo sin escritura. Sólo la confirmación
+del sitio acredita aplicación; la validación manual permanece pausada.

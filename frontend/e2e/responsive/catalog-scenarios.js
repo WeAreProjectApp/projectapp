@@ -93,6 +93,7 @@ const REDIRECT_OUTCOME_BY_URL = Object.freeze({
 });
 
 const PROJECT_COLLABORATION_FLOW_BY_URL = Object.freeze({
+  '/panel/projects/hosting': 'admin-hosting-controls',
   '/platform/projects/:id/ideas': 'platform-project-ideas',
   '/panel/projects/:id/ideas': 'admin-project-idea-collection',
 });
