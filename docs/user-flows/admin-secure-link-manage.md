@@ -9,3 +9,7 @@
 - **API:** `GET /api/secure-links/` (filtro `lifecycle_status` y conteos), `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`, `POST .../mark-sent/`.
 - **Copiar página para clientes:** copia exactamente la URL pública informada por el servidor y conserva el texto «Enlace para clientes». Sólo tras éxito muestra check y «Copiado» flotante durante 2 segundos, con anuncio accesible; el encabezado, descripción, botones, pestañas y listado permanecen en su sitio en los cinco perfiles responsive. Un fallo mantiene el icono de copiar, muestra el error durante 3 segundos y permite reintentar; el teclado conserva el foco y el movimiento reducido conserva la confirmación.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js` y `e2e/admin/admin-secure-links-copy-public.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
+
+
+**PA-251/253/257/261 · delta de interfaz:** El detalle ofrece Copiar título junto al lápiz: copia el título completo vigente, preserva acentos y signos y permite reintentar ante rechazo de portapapeles sin revelar ni mutar el enlace.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.

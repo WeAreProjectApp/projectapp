@@ -1,0 +1,16 @@
+{
+  "id": "admin-monitoring-project-capacity",
+  "name": "Admin Monitoring Project Capacity",
+  "module": "monitoring",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Staff selects a project, records informational CPU, RAM and storage allocation and reviews its change history separately from unavailable consumption.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

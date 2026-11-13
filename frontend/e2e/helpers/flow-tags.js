@@ -216,6 +216,7 @@ export const ADMIN_PORTFOLIO_CREATE = ['@flow:admin-portfolio-create', '@module:
 export const ADMIN_PORTFOLIO_DELETE = ['@flow:admin-portfolio-delete', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_EDIT = ['@flow:admin-portfolio-edit', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_LIST = ['@flow:admin-portfolio-list', '@module:admin', '@priority:P2'];
+export const ADMIN_PROGRAM_CONTRACT_EDIT = ['@flow:admin-program-contract-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_DETAIL = ['@flow:admin-project-access-detail', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_FIELD_EDIT = ['@flow:admin-project-access-field-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_NOTES = ['@flow:admin-project-access-notes', '@module:admin', '@priority:P2'];
@@ -370,7 +371,9 @@ export const LAYOUT_NAVBAR_NAVIGATION = ['@flow:layout-navbar-navigation', '@mod
 export const ADMIN_MONITORING_CASE_FOLLOW_UP = ['@flow:admin-monitoring-case-follow-up', '@module:monitoring', '@priority:P1'];
 export const ADMIN_MONITORING_CASE_LIST = ['@flow:admin-monitoring-case-list', '@module:monitoring', '@priority:P1'];
 export const ADMIN_MONITORING_CASE_NOTE = ['@flow:admin-monitoring-case-note', '@module:monitoring', '@priority:P2'];
+export const ADMIN_MONITORING_PROJECT_CAPACITY = ['@flow:admin-monitoring-project-capacity', '@module:monitoring', '@priority:P1'];
 export const ADMIN_MONITORING_REPORTS = ['@flow:admin-monitoring-reports', '@module:monitoring', '@priority:P2'];
+export const ADMIN_MONITORING_SERVER_TRENDS = ['@flow:admin-monitoring-server-trends', '@module:monitoring', '@priority:P1'];
 
 // ── platform ──
 export const PLATFORM_ACCESS_VIEW = ['@flow:platform-access-view', '@module:platform', '@priority:P2'];

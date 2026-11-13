@@ -1,3 +1,19 @@
+## Validación PA-221
+
+El exportador `frontend/scripts/export-mcp-surfaces.mjs` deriva superficies y funciones del Mapa de vistas. `mcp_surface_matrix --check` detecta falta de asignación y drift del manifiesto; no demuestra cobertura funcional. CI conserva JSON/CSV con revisión y resultados pendientes. QA completa evidencias por herramienta, permiso, confirmación, vista y función antes del retiro. La migración aditiva 0308 se aplica sólo por deploy. Pruebas automatizadas en CI y validación DEV/Chrome por separado conforme al acuerdo ProjectApp.
+
+> **Contratos de programas — 2026-11-12:** Building with Us y Células comparten
+> la edición del Gestor y sus servicios versionados con MCP. El guardado verifica
+> la revisión, actualiza PDF e historial de forma atómica y conserva el documento
+> vinculado. Los módulos consultan, previsualizan, descargan y enlazan al editor.
+> Esta actualización sustituye la restricción histórica de edición exclusiva
+> mediante MCP para estos dos contratos; los demás espejos conservan sus bloqueos.
+> [Contrato técnico y validación](../PROGRAM_CONTRACT_DOCUMENTS.md).
+
+## PA-249 — prioridades y capacidad de Monitoreo
+
+La ampliación en rama de sesión conserva estados y agrupación de eventos; incorpora consultas estables de 15 minutos, KPIs del conjunto filtrado, fuente de mediciones reales de servidor (1 min, 90 días), capacidad informativa versionada y gestión compartida con MCP Proyectos. Migración monitoring.0006 aditiva, aplicada sólo mediante deploy. Contrato, límites y orden de activación en `docs/monitoring-dashboard.md`. CI y QA del SHA servido se registran en la entrega; esta nota no acredita despliegue ni aprobación manual.
+
 > **PA-264 — preparado en rama de sesión:** control visual de hosting por producción, independiente del ciclo comercial y los flags por cliente. Panel/MCP comparten modo, mensajes independientes, versión y auditoría; receptores externos confirman documento y huella. Integraciones, límites y validación pendiente en `docs/HOSTING_CONTROL.md`. QA manual y servicios continúan pausados.
 
 > **Contratación estatal — 2026-11-05:** app independiente `procurement`, panel interno, SECOP II, filtros únicos, alertas por destinatario, outbox, seguimiento y MCP propio. Análisis y correo entrante pertenecen al asistente externo, sin IA interna. Operación: [Contratación estatal](../PROCUREMENT.md). Migraciones por deploy; correo y sincronización automática apagados inicialmente. Validación local aprobada por capas; entrega y CI en el [PR #552](https://github.com/WeAreProjectApp/projectapp/pull/552).
@@ -1808,3 +1824,13 @@ un escenario. Los secretos usan el almacén compartido; instrucciones inmutables
 schema y comprobación de respaldo restringen al redactor. Caché exacta y por
 consulta tipada incluyen `cache_version('chatbot')`; revalidar historial nunca
 consume cupo ni vuelve a llamar al modelo. Ver [APPI.md](../APPI.md).
+> **Selección y precisión visual — PA-251/253/257/258/261:** `BaseChoiceSelect`
+> reutiliza `BaseFloatingListbox` para selección única tipada; búsqueda local
+> desde diez opciones, con opt-in/opt-out por consumidor. `BaseSelect` conserva
+> compatibilidad nativa. Las columnas monetarias pueden optar por
+> `moneyDecimals: 'auto'`; el formato predeterminado de otros consumidores no
+> cambia. Las búsquedas paginadas de Ayuda invalidan generaciones desde cada
+> cambio de texto y consultan con debounce de 200 ms. El detalle vinculado de
+> requisitos conserva configuración, flujo y formatos sin un esquema nuevo.
+> Contratos, corpus y límites de validación:
+> [traspaso](../audits/PA-251-253-257-258-261/README.md).

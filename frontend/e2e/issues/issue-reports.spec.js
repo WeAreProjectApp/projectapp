@@ -22,6 +22,11 @@ async function prepareReviewedGeneralReply(page) {
   return reply
 }
 
+async function chooseIssueSource(page, title) {
+  await page.getByTestId('issue-source').click()
+  await page.getByRole('option', { name: new RegExp(`^${title} ·`) }).click()
+}
+
 test.describe('Tickets reales de proyecto', () => {
   test.setTimeout(60_000)
 
@@ -29,7 +34,7 @@ test.describe('Tickets reales de proyecto', () => {
     const data = await fixture(request, testInfo)
     await open(page, request, data, data.general_project.id)
     await page.getByRole('button', { name: 'Reportar bug', exact: true }).click()
-    await expect(page.getByLabel('Entrega de origen (opcional)')).toHaveValue('')
+    await expect(page.getByTestId('issue-source-selection')).toHaveCount(0)
     await page.getByPlaceholder('¿Qué está fallando?').fill('La pantalla general no responde')
     const submitted = page.waitForResponse((response) => response.url().endsWith('/bug-reports/') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Reportar bug', exact: true }).last().click()
@@ -42,7 +47,7 @@ test.describe('Tickets reales de proyecto', () => {
   test('entrega autocompleta la guía original', { tag: ['@flow:platform-bug-reports', '@outcome:success'] }, async ({ page, request }, testInfo) => {
     const data = await fixture(request, testInfo)
     await openFromDelivery(page, request, data, data.project.id, `?from_req=${data.requirement_ids[0]}&from_pub=${data.publication_id}`)
-    await expect(page.getByLabel('Entrega de origen (opcional)')).toHaveValue(String(data.requirement_ids[0]))
+    await expect(page.getByTestId('issue-source')).toContainText('Traslado entre sucursales')
     await expect(page.getByTestId('issue-source-title')).toHaveText('Traslado entre sucursales')
     await expect(page.getByPlaceholder('Paso 1')).toHaveValue('Abrir el registro preparado.')
     await page.getByPlaceholder('¿Qué está fallando?').fill('Falla el traslado')
@@ -125,7 +130,7 @@ test.describe('Tickets reales de proyecto', () => {
     const data = await fixture(request, testInfo)
     await open(page, request, data, data.project.id, 'changes')
     await page.getByRole('button', { name: 'Nueva solicitud', exact: true }).click()
-    await page.getByLabel('Entrega de origen', { exact: true }).selectOption(String(data.requirement_ids[0]))
+    await chooseIssueSource(page, 'Traslado entre sucursales')
     await page.getByPlaceholder('¿Qué cambio necesitas?').fill('Ampliar el traslado')
     const submitted = page.waitForResponse((response) => response.url().endsWith('/change-requests/') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Crear solicitud', exact: true }).click()

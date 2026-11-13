@@ -186,8 +186,7 @@ permite inferir recuperación sólo porque no volvió a aparecer en la muestra.
 ## Límites de este MVP
 
 No es una plataforma de series temporales, APM completo ni remediación automática.
-El módulo nuevo no forma parte del registro MCP; no se exponen casos, notas,
-credenciales ni reportes por conectores MCP en este alcance.
+PA-249 amplía este primer alcance con prioridades, telemetría y capacidad informativa, además de gestión mediante MCP Proyectos. Contrato y activación: [tablero de Monitoreo](monitoring-dashboard.md). Las credenciales de ingestión siguen fuera del MCP.
 No cambia umbrales, horarios, reinicios ni destinatarios de monitores existentes.
 La caída de ProjectApp impide ver el panel; la cola local y los correos actuales
 mantienen la continuidad. La salud del colector y la cola también se inspeccionan

@@ -302,6 +302,51 @@ test.describe('Admin secure links', () => {
     await expect(page.getByTestId('secure-link-field-password')).toHaveAttribute('autocomplete', 'new-password');
   });
 
+  test('copies the full link title into the title scratch field', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page, context }) => {
+    // Bug caught: the detail action could copy a stale or truncated title instead of the current full title.
+    const title = 'Plan de lanzamiento — prueba E2E';
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await setupPanel(page, { rows: [secureLinkRow({ title })] });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await rowAction(page, 7, 'open');
+
+    const detail = page.getByTestId('secure-link-detail');
+    const copyTitle = detail.getByTestId('secure-link-copy-title');
+    await copyTitle.click();
+    await expect(copyTitle).toHaveAccessibleName('Título copiado');
+    await expect(copyTitle).toHaveAttribute('data-displayed-action', 'complete');
+    await detail.getByTestId('secure-link-title-edit').click();
+    const scratch = detail.getByTestId('secure-link-title-input');
+    await scratch.fill('');
+    await scratch.press('Control+V');
+
+    await expect(scratch).toHaveValue(title);
+    await detail.getByTestId('secure-link-title-cancel').click();
+  });
+
+  test('reports a clipboard error when copying the link title fails', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Bug caught: a denied clipboard write could look successful while losing the title the administrator meant to copy.
+    await setupPanel(page);
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await rowAction(page, 7, 'open');
+    await page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', {
+        configurable: true,
+        value: () => Promise.reject(new Error('Clipboard denied')),
+      });
+    });
+
+    const copyTitle = page.getByTestId('secure-link-detail').getByTestId('secure-link-copy-title');
+    await copyTitle.click();
+
+    await expect(copyTitle).toHaveAccessibleName('No se pudo copiar el título. Intenta de nuevo.');
+    await expect(copyTitle).toHaveAttribute('data-action-status', 'danger');
+  });
+
   // Bug caught: renaming used to go through a second "Editar" form that sent the associations along.
   test('renames a link in place from its detail without revealing its content', {
     tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],

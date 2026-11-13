@@ -2,8 +2,15 @@
   "id": "admin-monitoring-case-list",
   "name": "Admin Monitoring Case List",
   "module": "monitoring",
-  "roles": ["admin"],
+  "roles": [
+    "admin"
+  ],
   "priority": "P1",
-  "description": "Staff navigates to Monitoring and filters paginated project/server cases, source freshness and dates; load failures remain explicit.",
-  "outcomes": ["display", "success", "failure"]
+  "description": "Staff reads filtered priority indicators and attention items, dynamically filters or clears the consultation and pages a stable result set.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
 }

@@ -56,7 +56,7 @@ Referencias de esta skill:
 
 1. Buscar con ToolSearch, **por nombre base** (el prefijo del conector cambia entre
    sesiones; nunca usar nombres con prefijo guardados), las herramientas del Gestor de
-   Proyectos: `describe_integrity_rules`, `list_integrity_findings`,
+   integridad de datos: `describe_integrity_rules`, `list_integrity_findings`,
    `preview_integrity_fixes`, `apply_integrity_fixes`, `list_integrity_operations`,
    `preview_integrity_operation_undo`, `undo_integrity_operation`, `start_integrity_scan`,
    `get_integrity_scan`, `review_integrity_finding`, `confirm_action` y
@@ -65,7 +65,7 @@ Referencias de esta skill:
 2. Si no aparecen: cerrar con `⏸️ data-integrity — el conector Integridad de datos no expone el
    motor de integridad` y explicar las dos causas posibles: el conector no está
    conectado en esta sesión (o falló al conectar), o el cambio todavía no se desplegó.
-   Codex no tiene ese conector configurado: misma salida.
+   Si el conector no está disponible en el runtime actual, usa la misma salida; no infieras su configuración por el nombre del runtime.
 3. Nunca reemplazar el motor leyendo listados de otros Gestores para "detectar a mano":
    las reglas son las del servidor.
 

@@ -49,7 +49,7 @@
       </NuxtLink>
       <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full">
         <img v-if="authStore.user?.avatar_display_url" :src="authStore.user.avatar_display_url" alt="Avatar" class="h-full w-full object-cover" />
-        <div v-else class="flex h-full w-full items-center justify-center bg-primary text-xs font-bold text-on-primary dark:bg-accent dark:text-on-accent">
+        <div v-else class="flex h-full w-full items-center justify-center bg-profile-avatar text-xs font-bold text-on-profile-avatar">
           {{ authStore.userInitials }}
         </div>
       </div>

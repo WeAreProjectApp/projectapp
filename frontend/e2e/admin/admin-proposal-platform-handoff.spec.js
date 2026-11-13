@@ -150,8 +150,10 @@ test.describe('Admin Proposal — Platform Handoff Review', () => {
     await expect(page.getByTestId('proposal-next-action-launch')).toHaveCount(0);
     await expect(page.getByTestId('proposal-next-action-finish')).toHaveText('Marcar como finalizada');
     const statusSelect = page.getByRole('combobox', { name: 'Cambiar estado de la propuesta', exact: true });
-    await expect(statusSelect.locator('optgroup[label="Flujo normal"] option')).toHaveAttribute('value', 'finished');
-    await expect(statusSelect.locator('optgroup[label="Flujo normal"] option')).toHaveText('Finalizada');
+    await statusSelect.click();
+    const statusChoices = page.getByRole('listbox', { name: 'Cambiar estado de la propuesta' });
+    await expect(statusChoices).toContainText('Flujo normal');
+    await expect(statusChoices.getByRole('option', { name: 'Finalizada', exact: true })).toHaveCount(1);
     expect(state.detailReads).toBe(1);
     expect(state.submissions).toHaveLength(1);
     expect(state.legacyLaunches).toEqual([]);

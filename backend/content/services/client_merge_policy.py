@@ -74,7 +74,7 @@ accounts.DeliveryEvidenceEmail.prepared_by accounts.DeliveryEvidenceEmailAttempt
 accounts.DeliveryNotificationEvent.actor accounts.DeliveryNotificationAttempt.requested_by
 accounts.PlatformAIEvent.actor accounts.PlatformAIJob.actor accounts.PlatformAIQuotaReservation.actor
 accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
-monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
+monitoring.CaseActivity.actor monitoring.CapacityChange.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
 hosting_control.Event.actor
 secure_links.SecureLinkFolder.created_by
 secure_links.SecureLinkEvent.actor

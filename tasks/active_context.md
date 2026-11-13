@@ -1,3 +1,30 @@
+## PA-250 / PA-259 / PA-260-D1 / PA-252 — 2026-11-12
+
+Implementación en worktree propio desde main 295b65ef: contraste de Saltar recorrido,
+estado real de la cuenta en el detalle de ingreso, retorno de foco tras aprobación
+y regresión de la denegación de proyectos ya integrada. PA-260 sólo incorpora D1;
+D2 reutiliza PA-259 y los demás seguimientos conservan sus entregas. Datos nuevos,
+sin reiniciar terminales históricos; automatizadas exclusivamente en CI. La entrega
+requiere PR abierto, CI verde y traspaso con SHA propio; la aceptación manual se
+registra por separado. Sin migraciones, emisión, cambios financieros ni deploy.
+
+> **PA-221 — implementación en el PR #584:** NM1 muestra los efectos de las tres raíces gestionadas antes de confirmar; catálogo con nombres y capacidades reales, Operations con seguimiento de Monitoring y matriz Panel/Plataforma. El retiro exige reporte QA vigente además de consumidores y ventanas; evidencia anexada por catálogo. Ticket TO DO sin cambio de acceso ni nuevo dictamen. Expediente: `docs/audits/PA-221/README.md`. El código del corte `a6a68ef` pasó 103 controles CI; evidencia en el expediente. El cierre acordado de la sesión es toda la implementación dentro del mismo PR; DEV y despliegue son posteriores y se acreditan por separado.
+
+## Contratos de programas editables desde el Gestor — 2026-11-12
+
+PA-255/PA-256: el Gestor permite editar contenido y presentación de los contratos
+Building with Us y Células con motivo y versión obligatorios. El escritor de cada
+programa conserva revisión, historial y PDF en una transacción; los módulos
+consultan, descargan y enlazan al documento exacto. Se mantienen los MCP y la
+protección de ubicación, identidad y privacidad. No cambia el contenido jurídico
+ni acredita aprobación contractual. Sin migraciones ni cambios productivos.
+Contrato técnico y validación: [Contratos de programas](../docs/PROGRAM_CONTRACT_DOCUMENTS.md).
+Implementación en rama de sesión; la validación automatizada se ejecuta en CI.
+
+## PA-249 — tablero de Monitoreo (implementación de sesión)
+
+Rama propia: filtros dinámicos, consultas paginadas estables de 15 minutos, prioridades, telemetría por minuto con retención de 90 días y capacidad informativa versionada. Panel y MCP Proyectos comparten servicios y permisos. Migración aditiva monitoring.0006 preparada, sin aplicar desde esta sesión. Colector en entrega coordinada del toolkit con activación explícita posterior al backend. Automatizadas exclusivamente en CI, con resultados por SHA en el PR de sesión. DEV LISTO y QA manual requieren dupla y entorno; esta nota no acredita despliegue.
+
 > **PA-264 — en implementación:** control visual de hosting por producción, con configuración central, mensajes independientes y recibos del destino. QA manual y servicios siguen pausados; no hay activaciones ni despliegues.
 
 ## 2026-11-11 — Tren de integración de 25 PRs
@@ -3278,3 +3305,18 @@ de PA-219 y conserva su autoría. Los casos de video usan el contrato real
 El modal invalida el catálogo anterior al cambiar de cliente. Pruebas sólo en CI;
 DevQA administra el turno manual de clientes 19/20 y la revisión editorial.
 Evidencia y pendientes: `docs/audits/2026-11-06-pa220-help-video.md`.
+## PA-251 / PA-253 / PA-257 / PA-258 / PA-261 — entrega de interfaz
+
+Trabajo en un worktree propio desde `origin/main`: precisión visual de ingresos,
+dropdowns y búsqueda de Ayuda, granularidad de requerimientos sin cuotas,
+navegación/avatar y copia del título de un enlace seguro. PA-257 conserva el modal
+de detalle y usa corpus ficticio ES/EN. Pruebas y builds sólo en CI. No se concede
+turno DEV/QA, no se despliega y no se repiten pagos ni aprobaciones históricos.
+
+Cambios implementados en commits separados por ticket. El contrato de listas ya
+admitía N requerimientos: se conservaron esquema/IDs y se retiraron las cuotas
+del prompt. Nuevo dropdown compartido, búsqueda de Ayuda con invalidación desde
+la escritura y copia del título sin peticiones de contenido. Mapas actualizados
+sin añadir rutas. Corpus y traspaso:
+`docs/audits/PA-251-253-257-258-261/README.md`. La entrega requiere CI verde;
+la validación visual y MCP del entorno aislado sigue pendiente de turno.
