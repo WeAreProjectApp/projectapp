@@ -14,7 +14,8 @@ Ver versión completa permite leer el destino y regresar al mismo par sin volver
 a consultar la API. Carga, error recuperable, revisión inicial, evento incompleto
 y ausencia de diferencias tienen mensajes propios.
 
-El diff alinea bloques renderizados con un bloque vecino de contexto. Las bajas
+El diff alinea párrafos, elementos de lista y filas de tabla renderizados con un
+bloque vecino de contexto; una celda editada no repite la tabla completa. Las bajas
 llevan − Eliminado y rojo; las altas + Agregado y verde. Los cambios sólo de
 formato se identifican. La comparación descarta delimitadores equivalentes y
 envolturas de tablas, conservando estilos, enlaces y estructuras significativas.

@@ -34,6 +34,31 @@ function legacyBlock(block) {
 
 const KNOWN_BLOCKS = new Set(['rich_html', 'heading', 'section_header', 'sub_section', 'paragraph', 'list', 'table', 'blockquote', 'callout', 'code', 'separator', 'toc']);
 
+// Align list items and table rows independently. A one-cell change must not
+// duplicate an entire long table; the header remains context in each row view.
+function comparisonBlocks(node) {
+  if (node.localName === 'table') {
+    return [...node.rows].map((row) => {
+      const table = node.cloneNode(false);
+      const header = row.parentElement.localName === 'thead';
+      if (!header && node.tHead) table.append(node.tHead.cloneNode(true));
+      const group = document.createElement(header ? 'thead' : 'tbody');
+      group.append(row.cloneNode(true));
+      table.append(group);
+      return { node: table, key: canonicalSignature(row) };
+    });
+  }
+  if (['ul', 'ol'].includes(node.localName)) {
+    return [...node.children].map((item, index) => {
+      const list = node.cloneNode(false);
+      if (node.localName === 'ol') list.setAttribute('start', String((Number(node.getAttribute('start')) || 1) + index));
+      list.append(item.cloneNode(true));
+      return { node: list, key: JSON.stringify([node.localName, list.getAttribute('start'), canonicalSignature(item)]) };
+    });
+  }
+  return [{ node, key: canonicalSignature(node) }];
+}
+
 // Compare semantic nodes, not serialized source. Retain meaningful styles,
 // link destinations, table spans, list numbering and whitespace inside code.
 function signature(node, inCode = false) {
@@ -63,9 +88,9 @@ export function historicalContent(snapshot = {}) {
   // The final pass also covers generated legacy wrappers and historical input.
   host.innerHTML = sourceToHtml(html, 'document', { strict: false, inputHtml: true });
   let section = '';
-  const blocks = [...host.childNodes].filter((node) => node.nodeType === 1 || node.textContent.trim()).map((node) => {
+  const blocks = [...host.childNodes].filter((node) => node.nodeType === 1 || node.textContent.trim()).flatMap((node) => {
     if (node.nodeType === 1 && /^h[1-6]$/.test(node.localName)) section = node.textContent.trim();
-    return { html: node.outerHTML || `<p>${escapeHtml(node.textContent)}</p>`, text: node.localName === 'pre' ? node.textContent : node.textContent.replace(/\s+/g, ' ').trim(), section, key: canonicalSignature(node) };
+    return comparisonBlocks(node).map(({ node: block, key }) => ({ html: block.outerHTML || `<p>${escapeHtml(block.textContent)}</p>`, text: block.localName === 'pre' ? block.textContent : block.textContent.replace(/\s+/g, ' ').trim(), section, key }));
   });
   return {
     html: host.innerHTML, blocks,

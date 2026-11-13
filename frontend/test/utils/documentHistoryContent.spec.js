@@ -46,7 +46,7 @@ describe('document history content', () => {
   it('renders added table cells', () => {
     const diff = documentContentDiff(snapshot('Anterior'), snapshot('| Fase | Estado |\n| --- | --- |\n| Diseño | Listo |'));
 
-    expect(changed(diff, 'added')[0].item.html).toContain('<td>Listo</td>');
+    expect(changed(diff, 'added').map((block) => block.item.html).join('')).toContain('<td>Listo</td>');
   });
 
   it('retains one neighbouring block of context', () => {
@@ -98,5 +98,23 @@ describe('document history content', () => {
     documentContentDiff(old, next);
 
     expect(JSON.stringify([old, next])).toBe(original);
+  });
+
+  it('isolates a modified table row from distant unchanged rows', () => {
+    const old = snapshot('| Fase | Estado |\n| --- | --- |\n| A | Lista |\n| B | Lista |\n| C | Pendiente |\n| D | Lista |\n| E | Lista |');
+    const next = snapshot(old.content_markdown.replace('C | Pendiente', 'C | Terminada'));
+
+    const diff = documentContentDiff(old, next);
+
+    expect(changed(diff, 'added')).toHaveLength(1);
+    expect(changed(diff, 'added')[0].item.html).toContain('<td>Terminada</td>');
+    expect(diff.hunks[0].blocks.map((block) => block.item.html).join('')).not.toContain('<td>E</td>');
+  });
+
+  it('keeps unchanged list items out of the changed blocks', () => {
+    const diff = documentContentDiff(snapshot('- Uno\n- Antes\n- Tres'), snapshot('- Uno\n- Nuevo\n- Tres'));
+
+    expect(changed(diff, 'added')).toHaveLength(1);
+    expect(changed(diff, 'added')[0].item.html).not.toContain('<li>Uno</li>');
   });
 });

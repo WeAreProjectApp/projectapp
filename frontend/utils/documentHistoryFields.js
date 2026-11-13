@@ -30,10 +30,11 @@ function fields(snapshot, labels, t, te) {
     if (value && typeof value === 'object' && !('id' in value && 'label' in value) && !value.protected) {
       const isArray = Array.isArray(value);
       const entries = Object.entries(value).filter(([key]) => key !== 'text_formats');
+      const parentContext = /^\d+$/.test(name) ? context : [...context, label];
       // A historical FK's label is already a snapshot; do not resolve live IDs.
       for (const [key, item] of entries) {
-        const childName = /^\d+$/.test(key) ? item?.title || item?.name || t('documentHistory.item', { number: isArray ? Number(key) + 1 : key }) : label;
-        visit(item, [...parts, key], [...context, childName], value, [key]);
+        const childContext = /^\d+$/.test(key) ? [...parentContext, item?.title || item?.name || t('documentHistory.item', { number: isArray ? Number(key) + 1 : key })] : parentContext;
+        visit(item, [...parts, key], childContext, value, [key]);
       }
       return;
     }
@@ -42,7 +43,7 @@ function fields(snapshot, labels, t, te) {
     result.set(parts.join('.'), { key: parts.join('.'), label: [...context, label].join(' · '), value: file && value ? t('documentHistory.storedFile') : value, identity: file ? value : undefined, format, group: groupFor(root) });
   }
   for (const [name, value] of Object.entries(snapshot || {})) {
-    if (!SKIP.has(name)) visit(value, [name]);
+    if (!SKIP.has(name)) visit(name === 'tags' && Array.isArray(value) ? value.map((tag) => tag.name || tag.label || '').sort().join(', ') : value, [name]);
   }
   for (const [name, value] of Object.entries(snapshot.content_json?.meta || {})) {
     if (!(name in snapshot)) visit(value, [name]);

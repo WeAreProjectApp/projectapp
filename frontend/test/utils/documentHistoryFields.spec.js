@@ -46,4 +46,19 @@ describe('document history fields', () => {
 
     expect(groups[0].values.map((field) => field.value)).toEqual(['Contrato', 'Detalle histórico']);
   });
+
+  it('uses the historical note title instead of its internal identifier', () => {
+    const groups = documentFieldGroups({}, { document_notes: { 8457: { title: 'Entrega', content: 'Nota nueva' } } }, options);
+
+    const content = groups[0].values.find((field) => field.key.endsWith('.content'));
+    expect(content.label).toContain('Entrega');
+    expect(content.label).not.toContain('8457');
+  });
+
+  it('presents tags as names without duplicate internal fields', () => {
+    const groups = documentFieldGroups({}, { tags: [{ id: 1234, name: 'Contrato' }] }, options);
+
+    expect(groups[0].values).toHaveLength(1);
+    expect(groups[0].values[0].next.value).toBe('Contrato');
+  });
 });
