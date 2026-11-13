@@ -1,4 +1,5 @@
 export default {
+  clientsLoadError: 'No se pudieron cargar los clientes.', retry: 'Reintentar', clientCount: '{count} clientes', contextLocked: 'El contexto se conserva al editar un recorrido existente.',
   help: 'Ayuda', next: 'Siguiente', previous: 'Anterior', done: 'Finalizar', skip: 'Saltar recorrido',
   progress: '{current} de {total}', video: 'Ver video', dismiss: 'Cerrar',
   videoInvitation: 'También puedes ver un video para conocer la plataforma.',

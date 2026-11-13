@@ -267,7 +267,7 @@ test.describe('Admin Mini CRM Clients', () => {
     await expect(
       page.getByTestId('client-proposal-row-1')
         .getByRole('combobox', { name: 'Cambiar estado de la propuesta' }),
-    ).toHaveValue('accepted');
+    ).toHaveText('Aceptada');
   });
 
   test('the refresh button re-fetches an already-expanded client (cache invalidation)', {

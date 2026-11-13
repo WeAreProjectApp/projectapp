@@ -167,13 +167,18 @@ async function openList(page) {
   await expect(page.getByTestId('proposal-actions-71')).toBeVisible({ timeout: 25_000 });
 }
 
+async function chooseProposalStatus(page, control, label) {
+  await control.click();
+  await page.getByRole('option', { name: label, exact: true }).click();
+}
+
 test.beforeEach(async ({ page }) => {
   await setAuthLocalStorage(page, { token: 'approval-e2e-token', userAuth: { id: 8000, role: 'admin', is_staff: true, is_superuser: true } });
 });
 
 async function openInlineApproval(page) {
   const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });
-  await row.getByRole('combobox').selectOption('accepted');
+  await chooseProposalStatus(page, row.getByRole('combobox'), 'Aceptada');
   await expect(page.getByTestId('approval-confirm')).toBeEnabled();
 }
 
@@ -206,7 +211,7 @@ async function stageCustomDocuments(page) {
 
 async function expectAccepted(page) {
   const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });
-  await expect(row.getByRole('combobox')).toHaveValue('accepted');
+  await expect(row.getByRole('combobox')).toHaveText('Aceptada');
 }
 
 async function openApprovalFromEditor(page) {
@@ -257,7 +262,7 @@ async function openEditorApproval(page) {
   await expect(page.getByTestId('proposal-record-header')).toContainText('Propuesta Portal Atlas');
   await selectProposalDestination(page, 'general', 'general');
   await page.getByTestId('general-finance-general-discount').fill('17');
-  await page.getByRole('combobox', { name: 'Cambiar estado de la propuesta' }).selectOption('accepted');
+  await chooseProposalStatus(page, page.getByRole('combobox', { name: 'Cambiar estado de la propuesta' }), 'Aceptada');
   return page.getByTestId('proposal-approval-modal');
 }
 
@@ -326,11 +331,11 @@ test('cancelled approval preserves the proposal status', {
 
   await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
   const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });
-  await expect(row.getByRole('combobox')).toHaveValue('negotiating');
+  await expect(row.getByRole('combobox')).toHaveText('En negociación');
   expect(state.submissions).toEqual([]);
   expect(state.otherMutations).toEqual([]);
   expect(state.proposal.linked_project).toBeNull();
-  await row.getByRole('combobox').selectOption('accepted');
+  await chooseProposalStatus(page, row.getByRole('combobox'), 'Aceptada');
   await expect(page.getByTestId('approval-confirm')).toBeEnabled();
 });
 
@@ -609,3 +614,47 @@ for (const alias of ['compact', 'portrait']) {
     });
   });
 }
+
+
+test('completed pending review returns mouse focus to the same proposal (PA-260)', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  // Review is removed after confirmation; BODY is not a coherent return destination.
+  const state = buildFixture({ status: 'accepted' });
+  const scenario = newClientScenario();
+  await mockApproval(page, state);
+  await openList(page);
+  await page.getByTestId('approval-review-71').click();
+  const modal = page.getByTestId('proposal-approval-modal');
+  await modal.getByTestId('approval-toggle-client').click();
+  await modal.getByTestId('approval-new-client-name').fill(scenario.name);
+  await modal.getByTestId('approval-new-client-email').fill(scenario.email);
+  await modal.getByTestId('approval-project-name').fill(scenario.projectName);
+
+  await page.getByTestId('approval-confirm').click();
+
+  await expect(modal).toHaveCount(0);
+  await expect(page.getByTestId('approval-review-71')).toHaveCount(0);
+  await expect(page.getByTestId('proposal-open-71')).toBeFocused();
+  expect(await page.getByTestId('proposal-open-71').evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0].payload.new_client.name).toBe(scenario.name);
+  expect(state.submissions[0].payload.new_project.name).toBe(scenario.projectName);
+  expect(state.otherMutations).toEqual([]);
+});
+
+test('cancelled review returns mouse focus to Review (PA-260)', {
+  tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  const state = buildFixture({ status: 'accepted' });
+  await mockApproval(page, state);
+  await openList(page);
+  const opener = page.getByTestId('approval-review-71');
+  await opener.click();
+
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+
+  await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
+  await expect(opener).toBeFocused();
+  expect(state.submissions).toEqual([]);
+});

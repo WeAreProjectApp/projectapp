@@ -5037,6 +5037,12 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-requirements-modal.spec.js` (includes nested-modal, executive-mode, and legacy-fallback tests)
 
+
+**PA-251/253/257/261 · delta de interfaz:** El modal conserva uno o varios requerimientos por elemento y muestra configuration y usageFlow con su formato cuando existen, manteniendo propuestas antiguas sin esos campos.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace del elemento y leer configuración/flujo. Error y failure propios del modal: no aplican, porque este modal de lectura usa datos ya cargados y no envía peticiones ni formularios; los fallos al cargar la propuesta pertenecen al flujo de entrada.
+
 ### FLOW: `proposal-negotiate`
 
 - **Module:** proposal
@@ -6465,7 +6471,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `proposal-engagement-tracking` | proposal | P2 | success | 1 |
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
-| `proposal-functional-requirements-modal` | proposal | P2 | display | 1 |
+| `proposal-functional-requirements-modal` | proposal | P2 | success,display | 1 |
 | `proposal-gateway-guide` | proposal | P2 | display,success | 1 |
 | `proposal-hosting-plan-terms` | proposal | P2 | display | 2 |
 | `proposal-kickoff-disclosure` | proposal | P2 | display | 1 |
@@ -6711,6 +6717,11 @@ Uno o varios ingresos se liquidan sin cuenta emitida desde el mismo modal.
 Ya no existe la transición Liquidación con ajustes ni un formulario que
 reinicie los datos. Al completarse, la fila conserva Cuenta pendiente de emitir
 y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
+
+Actualización 2026-11-12: Detalle e historial distingue la cuenta en borrador, emitida o pagada por commercial_status, presenta la fecha del documento para borrador y fecha de emisión para emitida/pagada, sin emitir ni numerar durante la consulta (PA-259). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
+**PA-251/253/257/261 · delta de interfaz:** Los importes fraccionarios conservan centavos en filas clásicas/agrupadas, menús y detalle de Participaciones, sin alterar reparto ni payload de liquidación.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-accounting-income-bulk-settle`
 
@@ -8149,6 +8160,8 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
+Actualización 2026-11-12: Saltar recorrido conserva contraste mínimo 4.5:1 desde la apertura automática con foco inicial, en normal, hover y pulsación, y en la repetición manual, en ambos temas y cinco tamaños (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `platform-guided-tour-project`
 
 - **Módulo:** platform
@@ -8164,6 +8177,8 @@ Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirl
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+Actualización 2026-11-12: Saltar recorrido es legible desde el primer paso automático y al repetir desde Ayuda, en ambos temas y cinco tamaños, conservando skipped/completed (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 ### FLOW: `platform-guided-tour-voice`
 
@@ -8196,6 +8211,10 @@ Configuración global y por cliente de recorridos y videos, con control de versi
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+
+**PA-251/253/257/261 · delta de interfaz:** La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-platform-guided-tour-authoring`
 
@@ -9134,6 +9153,8 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresi�
 
 PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
 
+Actualización 2026-11-12: Tras confirmar con mouse, el foco vuelve al disparador si sigue disponible o a un destino visible del mismo registro cuando Revisar desaparece; cancelar conserva el disparador (PA-260/D1). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `admin-proposal-change-history`
 
 - **Module:** admin
@@ -9403,6 +9424,10 @@ acreditan persistencia real por sí solos; su resultado se registra en CI.
 - **API:** `GET /api/secure-links/` (filtro `lifecycle_status` y conteos), `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`, `POST .../mark-sent/`.
 - **Copiar página para clientes:** copia exactamente la URL pública informada por el servidor y conserva el texto «Enlace para clientes». Sólo tras éxito muestra check y «Copiado» flotante durante 2 segundos, con anuncio accesible; el encabezado, descripción, botones, pestañas y listado permanecen en su sitio en los cinco perfiles responsive. Un fallo mantiene el icono de copiar, muestra el error durante 3 segundos y permite reintentar; el teclado conserva el foco y el movimiento reducido conserva la confirmación.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js` y `e2e/admin/admin-secure-links-copy-public.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
+
+
+**PA-251/253/257/261 · delta de interfaz:** El detalle ofrece Copiar título junto al lápiz: copia el título completo vigente, preserva acentos y signos y permite reintentar ante rechazo de portapapeles sin revelar ni mutar el enlace.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-service-contract-settings`
 
@@ -9693,6 +9718,8 @@ consulta de la conversación pública que originó el prompt.
 - **Error:** 403 o 404 muestra una explicación sin datos ni navegación interna del proyecto; un error recuperable ofrece reintentar. Una sesión sin autenticación se dirige al inicio de sesión.
 - **Validación:** automatizada exclusivamente en CI; acceso real por roles en Chrome coordinado con dev-qa.
 
+Actualización 2026-11-12: El acceso directo ajeno termina la carga con 403, permite regresar al listado propio y abrir un proyecto autorizado, en ambos sentidos entre clientes. Mensajes 403/404 y recuperación conservan idioma es-co/en-us (PA-252). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `platform-project-hosting-context`
 
 - **Módulo:** platform
@@ -9767,6 +9794,33 @@ conservan para la reprueba; CI añade esas longitudes a las dos variantes de
 - **Error:** Contenido faltante, sustitución duplicada/cruzada/no revocada o conflicto del UUID no cambia el contenido anterior.
 - **Failure:** Si falla revocar no se abre el formulario. Si falla crear, el anterior permanece revocado y su historial conservado.
 - **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links-replace.spec.js` cubre display/success/error/failure. API SQLite verifica unicidad del sucesor, conservación del cifrado anterior y rechazo de asociaciones entre proyectos.
+
+### FLOW: `platform-sidebar-navigation`
+
+- **Módulo:** platform
+- **Roles:** platform-admin, platform-client
+- **Prioridad:** P2
+- **E2E:** `frontend/e2e/platform/platform-sidebar.spec.js`
+
+La navegación conserva los destinos y opciones permitidos por rol, el estado
+activo, el cierre del cajón móvil y las acciones de cuenta. Personaliza abre
+el selector de apariencia; Configuración navega al perfil.
+
+**PA-258:** las iniciales de escritorio, cajón y encabezado móvil usan blanco
+sobre verde de marca con tokens independientes de la paleta personal, en claro
+y oscuro. La separación icono/texto de Cuenta y Personaliza es coherente.
+Modelo de datos conserva PRONTO y su condición pendiente.
+
+| Resultado | Interacción |
+|---|---|
+| success | Navegar desde un enlace del menú y conservar el destino permitido. |
+| display | Llegar al perfil desde Configuración y comprobar nombre, iniciales y el par de colores con una paleta personal clara. |
+| error | No aplica al ajuste de presentación: la denegación por rol sigue en el flujo de destino. |
+| failure | No aplica al ajuste: no se añade una petición de guardado o carga. |
+
+La extensión del contrato se valida en CI sobre el SHA del PR. Las fotografías,
+los tamaños CSS y las variantes móviles se cotejan también en el turno visual
+acordado; la autoría de estos casos no acredita su ejecución manual.
 
 ### FLOW: `proposal-closing-contact`
 

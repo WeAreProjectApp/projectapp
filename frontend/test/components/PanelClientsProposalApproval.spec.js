@@ -41,8 +41,16 @@ async function openPage() {
   return wrapper;
 }
 async function requestAcceptance() {
-  await wrapper.get('[data-testid="client-proposal-row-91"] select').setValue('accepted');
+  await wrapper.get('[data-testid="client-proposal-row-91"] [role="combobox"]').trigger('click');
   await flushPromises();
+  const accepted = [...document.querySelectorAll('[role="option"]')]
+    .find((option) => option.textContent.trim() === 'Aceptada');
+  accepted.click();
+  await flushPromises();
+}
+
+function proposalStatusLabel() {
+  return wrapper.get('[data-testid="client-proposal-row-91"] [role="combobox"]').text();
 }
 
 beforeEach(() => {
@@ -78,14 +86,14 @@ describe('Client proposal approval entry', () => {
     await openPage();await requestAcceptance();
     expect(wrapper.get('[data-testid="proposal-approval-modal"]').text()).toContain('Revisar aprobación');
     expect(get_request).toHaveBeenCalledWith('proposals/91/approval/');
-    expect(wrapper.get('[data-testid="client-proposal-row-91"] select').element.value).toBe('negotiating');
+    expect(proposalStatusLabel()).toBe('En negociación');
     expect(patch_request).not.toHaveBeenCalled();expect(create_request).not.toHaveBeenCalled();
   });
   it('refreshes the originating client after confirmation',async()=>{
     await openPage();await requestAcceptance();
     await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
     expect(create_request).toHaveBeenCalledWith('proposals/91/approval/',expect.objectContaining({action:'confirm',accept_proposal:true,client_profile_id:7,new_project:expect.objectContaining({name:'Propuesta del cliente'})}));
-    expect(wrapper.get('[data-testid="client-proposal-row-91"] select').element.value).toBe('accepted');
+    expect(proposalStatusLabel()).toBe('Aceptada');
     expect(get_request.mock.calls.filter(([url])=>url === 'proposals/client-profiles/7/')).toHaveLength(2);
     expect(get_request.mock.calls.filter(([url])=>url === 'proposals/client-profiles/8/')).toHaveLength(1);
     expect(patch_request).not.toHaveBeenCalled();
@@ -95,7 +103,7 @@ describe('Client proposal approval entry', () => {
     const approval = wrapper.findComponent(ProposalApprovalModal);
     await approval.findAll('button').find(button=>button.text() === 'Cancelar').trigger('click');
     expect(wrapper.find('[data-testid="proposal-approval-modal"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="client-proposal-row-91"] select').element.value).toBe('negotiating');
+    expect(proposalStatusLabel()).toBe('En negociación');
     expect(create_request).not.toHaveBeenCalled();expect(patch_request).not.toHaveBeenCalled();
   });
   // Falla si cancelar la revisión de un cierre histórico envía otra aprobación.
@@ -110,6 +118,6 @@ describe('Client proposal approval entry', () => {
     expect(create_request).not.toHaveBeenCalled();
     expect(patch_request).not.toHaveBeenCalled();
     expect(wrapper.findAll('[data-testid="proposal-approval-modal"]')).toHaveLength(0);
-    expect(wrapper.get('[data-testid="client-proposal-row-91"] select').element.value).toBe('accepted');
+    expect(proposalStatusLabel()).toBe('Aceptada');
   });
 });

@@ -109,7 +109,17 @@ async function openSource(page, profile, tab, button) {
   await entry(page, profile, project.id).click()
   await page.getByRole('link', { name: tab, exact: true }).click()
   await page.getByRole('button', { name: button, exact: true }).first().click()
-  await expect(page.getByTestId('issue-source').getByRole('option')).toHaveCount(requirements.length + 1)
+  await expect(page.getByTestId('issue-source')).toHaveText(tab === 'Bugs' ? 'Bug general del proyecto' : 'Selecciona una guía publicada')
+}
+
+async function chooseIssueSource(page, picker, requirement) {
+  await picker.click()
+  await page.getByRole('option', { name: new RegExp(`^${requirement.title} ·`) }).click()
+}
+
+async function chooseGeneralIssueSource(page, picker) {
+  await picker.click()
+  await page.getByRole('option', { name: 'Bug general del proyecto', exact: true }).click()
 }
 
 for (const profile of RESPONSIVE_PROFILES) {
@@ -154,16 +164,14 @@ for (const profile of RESPONSIVE_PROFILES) {
       await setup(page)
       await openSource(page, profile, 'Bugs', 'Reportar bug')
       const picker = page.getByTestId('issue-source')
-      await picker.selectOption(String(requirements[0].id))
-      await picker.blur()
+      await chooseIssueSource(page, picker, requirements[0])
       await assertCompleteText(page.getByTestId('issue-source-title'), requirements[0].title)
       await expect(page.getByTestId('issue-source-selection')).toContainText(requirements[0].stage_title)
-      await picker.selectOption(String(requirements[1].id))
-      await picker.blur()
+      await chooseIssueSource(page, picker, requirements[1])
       await assertCompleteText(page.getByTestId('issue-source-title'), requirements[1].title)
-      await expect(picker).toHaveValue(String(requirements[1].id))
+      await expect(picker).toContainText(requirements[1].title)
       await assertResponsiveScenario(page, testInfo, null, { profile })
-      await picker.selectOption('')
+      await chooseGeneralIssueSource(page, picker)
       await expect(page.getByTestId('issue-source-selection')).toHaveCount(0)
     })
   })
@@ -180,10 +188,9 @@ for (const profile of ['compact', 'desktop']) {
       await setup(page)
       await openSource(page, profile, 'Solicitudes', 'Nueva solicitud')
       const picker = page.getByTestId('issue-source')
-      await picker.selectOption(String(requirements[0].id))
-      await picker.blur()
+      await chooseIssueSource(page, picker, requirements[0])
       await assertCompleteText(page.getByTestId('issue-source-title'), requirements[0].title)
-      await expect(picker).toHaveValue(String(requirements[0].id))
+      await expect(picker).toContainText(requirements[0].title)
       await assertResponsiveScenario(page, testInfo, null, { profile })
     })
 

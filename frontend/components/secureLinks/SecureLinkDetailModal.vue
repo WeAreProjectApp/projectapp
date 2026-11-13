@@ -5,7 +5,22 @@
       <template v-else-if="detail">
         <div class="flex min-w-0 flex-col gap-2 panel-portrait:flex-row panel-portrait:items-start panel-portrait:justify-between">
           <div class="min-w-0 flex-1">
-            <SecureLinkTitleEditor :title="detail.title" :disabled="Boolean(busy)" :save="saveTitle" />
+            <SecureLinkTitleEditor :title="detail.title" :disabled="Boolean(busy)" :save="saveTitle">
+              <template #actions>
+                <BaseActionButton
+                  action="copy"
+                  class="-my-1.5 shrink-0"
+                  :label="t('secureLinks.panel.copyTitle')"
+                  :tooltip="t('secureLinks.panel.copyTitle')"
+                  :status-label="titleFeedback.label"
+                  :status-tone="titleFeedback.tone"
+                  :disabled="Boolean(busy)"
+                  :disabled-reason="t('secureLinks.panel.saving')"
+                  data-testid="secure-link-copy-title"
+                  @click="copyTitle"
+                />
+              </template>
+            </SecureLinkTitleEditor>
             <p class="text-sm text-text-muted">{{ detail.type_label }} · {{ detail.origin_label }}</p>
           </div>
           <SecureLinkStatusBadge :status="detail.lifecycle_status || detail.status" :team-only="detail.team_only" />
@@ -116,6 +131,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import BaseActionIcon from '~/components/base/BaseActionIcon.vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseCheckbox from '~/components/base/BaseCheckbox.vue';
@@ -147,6 +163,7 @@ const error = ref('');
 const reactivation = reactive({ validityDays: 7, rotate: false });
 const validityOptions = [1, 3, 7, 30].map((days) => ({ value: days, label: days === 1 ? '1 día' : `${days} días` }));
 const urlFeedback = computed(() => clipboard.feedbackFor('secure-link-url'));
+const titleFeedback = computed(() => clipboard.feedbackFor('secure-link-title'));
 const association = computed(() => [detail.value?.client_name, detail.value?.project_name].filter(Boolean).join(' · '));
 
 const REASONS = { consumed: 'ya estaba usado', expired: 'estaba vencido', revoked: 'estaba revocado', staff_only: 'sin sesión del equipo' };
@@ -174,6 +191,7 @@ async function load() {
 
 watch(() => [props.modelValue, props.linkId], ([open]) => {
   generation += 1;
+  clipboard.clearAllFeedback();
   content.value = null;
   detail.value = null;
   error.value = '';
@@ -223,6 +241,16 @@ async function copyText(text) {
 
 function copyUrl() {
   return runAction('url', () => store.fetchLinkUrl(props.linkId), (result) => copyText(result.url));
+}
+
+function copyTitle() {
+  if (busy.value || !detail.value) return;
+  return clipboard.copyText({
+    key: 'secure-link-title',
+    text: detail.value.title,
+    successLabel: t('secureLinks.panel.titleCopied'),
+    errorLabel: t('secureLinks.panel.titleCopyFailed'),
+  });
 }
 
 /**

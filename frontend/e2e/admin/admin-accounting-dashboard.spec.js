@@ -432,9 +432,11 @@ test.describe('Admin Accounting Dashboard', () => {
 
     await page.getByTestId('accounting-card-receivables').click();
     await page.getByRole('tab', { name: /Gestionar candidatos/ }).click();
-    await page.getByRole('combobox', {
+    const confidence = page.getByRole('combobox', {
       name: 'Probabilidad de cobro de Hosting anual Acme',
-    }).selectOption('high');
+    });
+    await confidence.click();
+    await page.getByRole('option', { name: 'Cobro muy probable', exact: true }).click();
 
     await expect.poll(() => calls.find((call) => (
       call.apiPath === 'accounting/incomes/72/update/'

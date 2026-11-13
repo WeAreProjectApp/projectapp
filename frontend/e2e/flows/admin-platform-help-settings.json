@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Configuración global y por cliente de recorridos y videos, con control de versión e historial de vistos por usuario.",
+  "description": "Configuración global y por cliente de recorridos y videos, con control de versión e historial de vistos por usuario. La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

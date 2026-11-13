@@ -1,89 +1,98 @@
-import { mount } from '@vue/test-utils'
-import IssueSourcePicker from '../../components/platform/issues/IssueSourcePicker.vue'
+import { defineComponent } from 'vue';
+import { mount } from '@vue/test-utils';
+import IssueSourcePicker from '../../components/platform/issues/IssueSourcePicker.vue';
 
 const requirements = [
   { id: 41, title: 'RequerimientoExtremoSinEspacios'.padEnd(300, 'X'), contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente' },
   { id: 42, title: 'Segundo requerimiento de la misma etapa', contract_title: 'Alcance vigente', stage_title: 'Etapa 1: revisión del cliente' },
-]
-const wrappers = []
-let originalUseI18n
+];
+
+const ChoiceSelectStub = defineComponent({
+  name: 'BaseChoiceSelect',
+  props: ['modelValue', 'options', 'required'],
+  emits: ['update:modelValue'],
+  template: `
+    <div role="combobox">
+      <button v-for="option in options" :key="String(option.value)" type="button" role="option"
+        @click="$emit('update:modelValue', option.value)">{{ option.label }}</button>
+    </div>
+  `,
+});
 
 function renderPicker(props = {}) {
-  const wrapper = mount(IssueSourcePicker, {
+  return mount(IssueSourcePicker, {
     props: { id: 'bug-source', options: requirements, ...props },
-  })
-  wrappers.push(wrapper)
-  return wrapper
+    global: { stubs: { BaseChoiceSelect: ChoiceSelectStub } },
+  });
 }
 
 describe('IssueSourcePicker', () => {
+  let originalUseI18n;
+
   beforeEach(() => {
-    originalUseI18n = global.useI18n
-    global.useI18n = () => ({ t: (key) => key })
-  })
+    originalUseI18n = global.useI18n;
+    global.useI18n = () => ({ t: (key) => key });
+  });
+  afterEach(() => { global.useI18n = originalUseI18n; });
 
-  afterEach(() => {
-    wrappers.splice(0).forEach((wrapper) => wrapper.unmount())
-    global.useI18n = originalUseI18n
-  })
-
+  // Falla si el requerimiento ya elegido deja de identificarse debajo del selector cerrado.
   it('shows the complete preselected requirement below the closed control', () => {
-    const wrapper = renderPicker({ modelValue: 41 })
+    const wrapper = renderPicker({ modelValue: 41 });
 
-    expect(wrapper.get('[data-testid="issue-source-title"]').text()).toBe(requirements[0].title)
-    expect(wrapper.get('[data-testid="issue-source-selection"]').text()).toContain(requirements[0].stage_title)
-    expect(wrapper.get('[data-testid="issue-source"]').attributes('aria-describedby')).toBe('bug-source-selection')
-  })
+    expect(wrapper.get('[data-testid="issue-source-title"]').text()).toBe(requirements[0].title);
+    expect(wrapper.get('[data-testid="issue-source-selection"]').text())
+      .toBe(`${requirements[0].title}${requirements[0].contract_title} · ${requirements[0].stage_title}`);
+    expect(wrapper.getComponent(ChoiceSelectStub).attributes('aria-describedby')).toBe('bug-source-selection');
+  });
 
-  it('starts each choice with the requirement name', () => {
-    const wrapper = renderPicker()
+  // Falla si el selector deja de conservar los ids numéricos al elegir otra fuente.
+  it('emits the numeric identifier selected with the listbox', async () => {
+    const wrapper = renderPicker({ modelValue: 41 });
+    const nextRequirement = wrapper.findAll('[role="option"]').find((option) => option.text().startsWith(requirements[1].title));
 
-    expect(wrapper.get('option[value="41"]').text()).toBe(
-      `${requirements[0].title} · ${requirements[0].contract_title} · ${requirements[0].stage_title}`,
-    )
-  })
+    await nextRequirement.trigger('click');
 
-  it('reports the numeric identifier when a different requirement is chosen', async () => {
-    const wrapper = renderPicker({ modelValue: 41 })
+    expect(wrapper.emitted('update:modelValue')).toEqual([[42]]);
+  });
 
-    await wrapper.get('[data-testid="issue-source"]').setValue('42')
+  // Falla si las opciones dejan de mostrar el requisito antes de su contrato y etapa.
+  it('passes each requirement label to the choice control', () => {
+    const wrapper = renderPicker();
 
-    expect(wrapper.emitted('update:modelValue')).toEqual([[42]])
-  })
+    expect(wrapper.getComponent(ChoiceSelectStub).props('options')[1].label)
+      .toBe(`${requirements[0].title} · ${requirements[0].contract_title} · ${requirements[0].stage_title}`);
+  });
 
-  it('replaces the summary after the selected requirement changes', async () => {
-    const wrapper = renderPicker({ modelValue: 41 })
+  // Falla si la opción general deja de emitir null y queda un id de requerimiento obsoleto.
+  it('emits null when the optional source is cleared', async () => {
+    const wrapper = renderPicker({ modelValue: 41 });
+    const general = wrapper.findAll('[role="option"]').find((option) => option.text() === 'platformIssues.general');
 
-    await wrapper.setProps({ modelValue: 42 })
+    await general.trigger('click');
+    await wrapper.setProps({ modelValue: null });
 
-    expect(wrapper.get('[data-testid="issue-source-title"]').text()).toBe(requirements[1].title)
-  })
+    expect(wrapper.emitted('update:modelValue')).toEqual([[null]]);
+    expect(wrapper.find('[data-testid="issue-source-selection"]').exists()).toBe(false);
+  });
 
-  it('clears the summary when the optional source is reset', async () => {
-    const wrapper = renderPicker({ modelValue: 41 })
+  // Falla si el resumen no reacciona cuando llegan opciones nuevas o desaparece la fuente elegida.
+  it('updates the source summary when the available requirements change', async () => {
+    const wrapper = renderPicker({ modelValue: 41, options: [] });
 
-    await wrapper.get('[data-testid="issue-source"]').setValue('')
-    await wrapper.setProps({ modelValue: null })
+    await wrapper.setProps({ options: requirements });
+    expect(wrapper.get('[data-testid="issue-source-title"]').text()).toBe(requirements[0].title);
 
-    expect(wrapper.emitted('update:modelValue')).toEqual([[null]])
-    expect(wrapper.find('[data-testid="issue-source-selection"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="issue-source"]').attributes('aria-describedby')).toBeUndefined()
-  })
+    await wrapper.setProps({ modelValue: 42 });
+    expect(wrapper.get('[data-testid="issue-source-title"]').text()).toBe(requirements[1].title);
 
-  it('resolves a preselection after the requirements arrive', async () => {
-    const wrapper = renderPicker({ modelValue: 41, options: [] })
+    await wrapper.setProps({ options: [requirements[0]] });
+    expect(wrapper.find('[data-testid="issue-source-selection"]').exists()).toBe(false);
+  });
 
-    await wrapper.setProps({ options: requirements })
+  // Falla si una fuente obligatoria pierde el requisito nativo que evita guardar el issue sin origen.
+  it('passes the required contract to the choice control', () => {
+    const wrapper = renderPicker({ required: true });
 
-    expect(wrapper.get('[data-testid="issue-source-title"]').text()).toBe(requirements[0].title)
-  })
-
-  it('removes an obsolete summary when its requirement is no longer available', async () => {
-    const wrapper = renderPicker({ modelValue: 41, required: true })
-
-    await wrapper.setProps({ options: [requirements[1]] })
-
-    expect(wrapper.find('[data-testid="issue-source-selection"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="issue-source"]').attributes('required')).toBeDefined()
-  })
-})
+    expect(wrapper.getComponent(ChoiceSelectStub).props('required')).toBe(true);
+  });
+});

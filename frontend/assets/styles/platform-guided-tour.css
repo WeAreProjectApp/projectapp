@@ -15,10 +15,23 @@
   text-shadow: none;
 }
 .platform-guided-tour .driver-popover-progress-text { color: var(--color-text-muted); }
-.platform-guided-tour .driver-popover-close-btn {
+/* Driver loads lazily. Specificity must win even when its CSS arrives last. */
+.platform-guided-tour.driver-popover .driver-popover-close-btn,
+.platform-guided-tour.driver-popover .driver-popover-close-btn:hover,
+.platform-guided-tour.driver-popover .driver-popover-close-btn:focus,
+.platform-guided-tour.driver-popover .driver-popover-close-btn:active {
+  color: var(--color-text);
+  background: var(--color-surface);
+  text-shadow: none;
+}
+.platform-guided-tour.driver-popover .driver-popover-close-btn {
   position: static;
   width: auto;
   padding: 0.5rem;
   font-size: 0.75rem;
 }
 .platform-guided-tour button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.platform-guided-tour.driver-popover .driver-popover-close-btn:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}

@@ -86,7 +86,7 @@ const emit = defineEmits([
 ]);
 
 function money(value) {
-  return formatMoney(Number(value ?? 0), 'COP');
+  return formatMoney(Number(value ?? 0), 'COP', { decimals: 'auto' });
 }
 
 const actions = computed(() => {
