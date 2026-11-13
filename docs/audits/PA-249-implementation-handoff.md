@@ -30,7 +30,7 @@ Backlog debe identificar una dupla y un entorno aislado para el PR completo. La 
 
 Recorrer claro y oscuro en 412×915, 835×1194 (tableta vertical), 1195×835, 1440×900 y 2560×1440 CSS. Revisar dropdowns buscables, etiquetas largas, gráficas, modales, paginación, foco con mouse y retorno al flujo. Registrar tiempos observables, consola y red con la operación y el volumen identificados. No hay casos dedicados de teclado.
 
-CI ejecuta las automatizadas; no se ejecutaron tests ni builds locales. Los specs nuevos conservan la marca de no validados hasta su ejecución efectiva en CI. La revisión estática del catálogo, contrato responsive y registro de flujos no acredita una revisión visual manual.
+CI ejecuta las automatizadas; no se ejecutaron tests ni builds locales. En el SHA `26536a2eb8d816b3a13ae84b9bfaea8cdbb7cb89`, el artefacto `coverage-frontend-e2e` de la [corrida de CI](https://github.com/WeAreProjectApp/projectapp/actions/runs/43250678549) acredita los flujos nuevos de capacidad (5/5) y tendencias (4/4), sin fallos ni omisiones. Se retiraron sus marcas de borrador tras esa ejecución. El resultado completo del corte final se consulta en el PR. La revisión estática del catálogo, contrato responsive y registro de flujos no acredita una revisión visual manual.
 
 El recolector compatible está publicado en el toolkit, SHA `4a7f5da620b036dc2e75672d8e43f29a98a2e4db`, con sus controles de [CI aprobados](https://github.com/ProjectAppSunset/vps-ops-toolkit/actions/runs/43232950513). La captura permanece desactivada hasta que DevQA o el despliegue la habiliten después del backend.
 

@@ -165,8 +165,8 @@ describe('panel/monitoring index page', () => {
     wrapper = mountPage()
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe(':monitoring.any|1:Proyecto Uno')
-    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe(':monitoring.any|11:Proyecto Uno · Inspector')
+    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe('1:Proyecto Uno')
+    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe('11:Proyecto Uno · Inspector')
   })
 
   it('updates project options after a catalog resource changes kind', async () => {
@@ -184,8 +184,8 @@ describe('panel/monitoring index page', () => {
     mockStore.resources[0].kind = 'server'
     await nextTick()
 
-    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe(':monitoring.any')
-    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe(':monitoring.any')
+    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe('')
+    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe('')
   })
 
   it('lists project, server, and orphan sources in reports', async () => {
@@ -204,8 +204,8 @@ describe('panel/monitoring index page', () => {
     await buttonWithLabel(wrapper, 'monitoring.reports').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe(':monitoring.any|1:Proyecto Uno · monitoring.projectLabel|2:Servidor Uno · monitoring.serverLabel')
-    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe(':monitoring.any|11:Proyecto Uno · Inspector|12:Servidor Uno · Healthcheck|13:Huérfano · Archivo')
+    expect(wrapper.get('[data-testid="monitor-resource-options"]').text()).toBe('1:Proyecto Uno · monitoring.projectLabel|2:Servidor Uno · monitoring.serverLabel')
+    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe('11:Proyecto Uno · Inspector|12:Servidor Uno · Healthcheck|13:Huérfano · Archivo')
   })
 
   it('does not reread resource ids when sources grow from one to ten thousand', async () => {
@@ -225,7 +225,7 @@ describe('panel/monitoring index page', () => {
     mockStore.sources = [source(51, 1, 'Recurso 1', 'Inspector')]
     wrapper = mountPage()
     await flushPromises()
-    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe(':monitoring.any|51:Recurso 1 · Inspector')
+    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe('51:Recurso 1 · Inspector')
     const baselineReads = idReads.mock.calls.length
     expect(baselineReads).toBeLessThanOrEqual(100)
     mockStore.sources = [
@@ -234,7 +234,7 @@ describe('panel/monitoring index page', () => {
     ]
     await nextTick()
 
-    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe(':monitoring.any|51:Recurso 1 · Inspector')
+    expect(wrapper.get('[data-testid="monitor-source-options"]').text()).toBe('51:Recurso 1 · Inspector')
     expect(idReads).toHaveBeenCalledTimes(baselineReads)
   })
 

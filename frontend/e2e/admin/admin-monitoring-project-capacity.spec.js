@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-12 — app not running)
 /** Bugs caught: capacity edits silently changing a server quota, invalid allocation reaching the API, or failed saves discarding the operator's values. */
 import { test, expect } from '../helpers/test.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';

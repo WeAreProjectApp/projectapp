@@ -1,5 +1,6 @@
 """Behavioral contracts for filtered aggregates and a stable multi-page consultation."""
 import pytest
+from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework.test import APIClient
@@ -50,6 +51,11 @@ def test_snapshot_is_bound_to_the_actor(dashboard_fixture):
     """Fails if one operator can reuse another operator's frozen consultation."""
     first = dashboard_fixture['client'].get(URL, {'snapshot': 'new'}).json()
     actor = get_user_model().objects.create_user(username='another-operator', is_staff=True)
+    UserProfile.objects.create(
+        user=actor,
+        role=UserProfile.ROLE_ADMIN,
+        is_onboarded=True,
+    )
     client = APIClient()
     client.force_login(actor)
     assert client.get(URL, {'snapshot': first['snapshot']}).status_code == 409

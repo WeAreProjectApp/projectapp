@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-12 — app not running)
 /** Bugs caught: measured server trends disappearing, period changes retaining stale data, or a failed series being unrecoverable. */
 import { test, expect } from '../helpers/test.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';

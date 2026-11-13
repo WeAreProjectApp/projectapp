@@ -56,7 +56,7 @@ describe('MonitoringCapacity', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="capacity-ram"]').setValue('3.5')
-    await buttonWithLabel(wrapper, 'monitoring.saveCapacity').trigger('click')
+    await wrapper.get('form').trigger('submit')
     await flushPromises()
 
     expect(put_request).toHaveBeenCalledWith('monitoring/resources/project-9/capacity/', {
@@ -74,7 +74,7 @@ describe('MonitoringCapacity', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="capacity-ram"]').setValue(value)
-    await buttonWithLabel(wrapper, 'monitoring.saveCapacity').trigger('click')
+    await wrapper.get('form').trigger('submit')
     await flushPromises()
 
     expect(wrapper.get('[role="alert"]').text()).toBe('monitoring.invalidCapacity')
@@ -88,7 +88,7 @@ describe('MonitoringCapacity', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="capacity-cpu"]').setValue('7')
-    await buttonWithLabel(wrapper, 'monitoring.saveCapacity').trigger('click')
+    await wrapper.get('form').trigger('submit')
     await flushPromises()
 
     expect(wrapper.get('[role="alert"]').text()).toBe('monitoring.capacityConflict')

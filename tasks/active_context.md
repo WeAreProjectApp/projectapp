@@ -1,6 +1,6 @@
 ## PA-249 — tablero de Monitoreo (implementación de sesión)
 
-Rama propia: filtros dinámicos, consultas paginadas estables de 15 minutos, prioridades, telemetría por minuto con retención de 90 días y capacidad informativa versionada. Panel y MCP Proyectos comparten servicios y permisos. Migración aditiva monitoring.0006 preparada, sin aplicar desde esta sesión. Colector en entrega coordinada del toolkit con activación explícita posterior al backend. CI, DEV LISTO y QA manual pendientes; esta nota no acredita despliegue.
+Rama propia: filtros dinámicos, consultas paginadas estables de 15 minutos, prioridades, telemetría por minuto con retención de 90 días y capacidad informativa versionada. Panel y MCP Proyectos comparten servicios y permisos. Migración aditiva monitoring.0006 preparada, sin aplicar desde esta sesión. Colector en entrega coordinada del toolkit con activación explícita posterior al backend. Automatizadas exclusivamente en CI, con resultados por SHA en el PR de sesión. DEV LISTO y QA manual requieren dupla y entorno; esta nota no acredita despliegue.
 
 ## 2026-11-11 — Tren de integración de 25 PRs
 
