@@ -15,6 +15,8 @@ from content.mcp.entity_history_tools import history_tools
 from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
 from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.operation_builder import _op
+from content.mcp.monitoring_tools import MONITORING_TOOLS
+from content.mcp.operations_monitoring_tools import OPERATIONS_MONITORING_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
 from content.mcp.platform_help_video_tools import PLATFORM_HELP_VIDEO_TOOLS
@@ -25,7 +27,6 @@ from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
 from content.mcp.project_force_delete_tools import PROJECT_FORCE_DELETE_TOOLS
 from content.mcp.data_integrity_tools import LEGACY_DATA_INTEGRITY_TOOLS
-from content.mcp.monitoring_tools import MONITORING_TOOLS
 from content.mcp.proposal_schemas import writable_schema
 from content.serializers.additional_modules import AdditionalModuleAdminSerializer
 from content.serializers.hour_packages import HourPackageCreateUpdateSerializer
@@ -120,6 +121,7 @@ def _editorial_catalog_op(name, description, route, serializer_class, *, partial
 
 
 OPERATIONS_TOOLS = [
+    *OPERATIONS_MONITORING_TOOLS,
     _op(
         'get_operations_dashboard',
         'Obtiene el dashboard transversal del Panel con indicadores y alertas.',

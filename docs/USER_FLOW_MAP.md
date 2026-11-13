@@ -5037,6 +5037,12 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-requirements-modal.spec.js` (includes nested-modal, executive-mode, and legacy-fallback tests)
 
+
+**PA-251/253/257/261 · delta de interfaz:** El modal conserva uno o varios requerimientos por elemento y muestra configuration y usageFlow con su formato cuando existen, manteniendo propuestas antiguas sin esos campos.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace del elemento y leer configuración/flujo. Error y failure propios del modal: no aplican, porque este modal de lectura usa datos ya cargados y no envía peticiones ni formularios; los fallos al cargar la propuesta pertenecen al flujo de entrada.
+
 ### FLOW: `proposal-negotiate`
 
 - **Module:** proposal
@@ -6234,7 +6240,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
 | `admin-managed-calculator-document` | documents | P2 | display | — |
-| `admin-mcps` | admin | P2 | display,success,error,failure | 14 |
+| `admin-mcps` | admin | P2 | display,success,error,failure | 16 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
 | `admin-monitoring-case-list` | monitoring | P1 | display,success,error,failure | — |
@@ -6266,6 +6272,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `admin-procurement-opportunity-list` | procurement | P1 | display,success,failure | — |
 | `admin-procurement-saved-searches` | procurement | P2 | display,success,error,failure | — |
 | `admin-procurement-settings-sync` | procurement | P2 | display,success,error,failure | — |
+| `admin-program-contract-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-detail` | admin | P1 | display,failure | — |
 | `admin-project-access-field-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-notes` | admin | P2 | display,success,error,failure | — |
@@ -6467,7 +6474,7 @@ PA-243: buscar sin coincidencias publica contadores cero, ninguna tarjeta y ning
 | `proposal-engagement-tracking` | proposal | P2 | success | 1 |
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
-| `proposal-functional-requirements-modal` | proposal | P2 | display | 1 |
+| `proposal-functional-requirements-modal` | proposal | P2 | success,display | 1 |
 | `proposal-gateway-guide` | proposal | P2 | display,success | 1 |
 | `proposal-hosting-plan-terms` | proposal | P2 | display | 2 |
 | `proposal-kickoff-disclosure` | proposal | P2 | display | 1 |
@@ -6713,6 +6720,11 @@ Uno o varios ingresos se liquidan sin cuenta emitida desde el mismo modal.
 Ya no existe la transición Liquidación con ajustes ni un formulario que
 reinicie los datos. Al completarse, la fila conserva Cuenta pendiente de emitir
 y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
+
+Actualización 2026-11-12: Detalle e historial distingue la cuenta en borrador, emitida o pagada por commercial_status, presenta la fecha del documento para borrador y fecha de emisión para emitida/pagada, sin emitir ni numerar durante la consulta (PA-259). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
+**PA-251/253/257/261 · delta de interfaz:** Los importes fraccionarios conservan centavos en filas clásicas/agrupadas, menús y detalle de Participaciones, sin alterar reparto ni payload de liquidación.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-accounting-income-bulk-settle`
 
@@ -7219,6 +7231,7 @@ Management UI for remote MCP connectors that expose panel modules to Claude (cla
   - [Failure] Un 4xx/5xx conserva el formulario o estado anterior y muestra el detalle accionable.
   - [Security] El plaintext no puede recuperarse al recargar; sólo quedan prefijo y hash. Las escrituras —incluidos `created_by` y `linked_by` de hilos documentales, ingresos y extractos— se atribuyen a un principal técnico no interactivo del conector, nunca al superusuario humano del Panel.
   - [Contract] El servidor rechaza envelopes MCP incoherentes, alcances o vencimientos inválidos, confirmaciones vencidas/alteradas y assets temporales con tamaño, hash, MIME o firma incompatibles; un fallo de auditoría no interrumpe la respuesta del transporte.
+- **PA-221:** el nombre visible es «Gestor de …» y el acordeón muestra «Qué puedes gestionar» desde capacidades recibidas del servidor. Los conectores pendientes conservan su migración; los retirados no aparecen ni ejecutan herramientas. La lista larga conserva el ancho disponible; un fallo de carga permite reintentar. El resultado funcional de este refinamiento se acredita sólo con el CI del nuevo corte y la ronda DEV correspondiente.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-mcps.spec.js`
 
@@ -7956,9 +7969,11 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Role:** admin
 - **Priority:** P1
 - **Route:** `/:locale/panel/building-with-us`
-- **Interaction:** Abrir Contrato, consultar Markdown y el espejo sincronizado en ProjectApp/Contratos; leer la advertencia desactualizada o sin inicializar, descargar PDF y reintentar un fallo del contrato.
+- **Interaction:** Abrir Contrato, consultar la versión y el documento sincronizado; previsualizar y descargar PDF, abrir el documento exacto en el Gestor, editar con motivo y volver para consultar la nueva versión. Conservar el borrador ante conflicto o fallo de guardado; consultar estados desactualizado o sin inicializar y reintentar fallos de lectura.
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidence:** frontend/components/BuildingWithUs/admin/ContractPanel.vue; frontend/pages/panel/building-with-us/index.vue; GET /api/building-with-us/admin/contract/; GET /api/building-with-us/admin/contract/pdf/; `frontend/e2e/admin/admin-building-with-us.spec.js`.
+
+La edición compartida y sus errores se registran en `admin-program-contract-edit`.
 
 
 ## Section 35 — Building on Demand (Oct 10, 2026)
@@ -8125,11 +8140,13 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Role:** admin
 - **Priority:** P1
 - **Route:** `/:locale/panel/cells?tab=contract`
-- **Interaction:** Abrir Contrato desde Células para consultar la revisión, el contenido y su copia en ProjectApp › Contratos; leer los estados Sincronizado, Desactualizado, Sin inicializar o todavía no disponible, descargar PDF y reintentar un fallo de carga.
+- **Interaction:** Abrir Contrato, consultar la versión y el documento sincronizado; previsualizar y descargar PDF, abrir el documento exacto en el Gestor, editar con motivo y volver para consultar la nueva versión. Conservar el borrador ante conflicto o fallo de guardado; consultar estados no disponible, desactualizado o sin inicializar y reintentar fallos de lectura.
 - **Outcomes:** `display`, `success`, `failure`
 - **Result:** La copia muestra el estado y los metadatos de sincronización y permite abrir el documento del Gestor Documental cuando existe. El contrato y su copia se administran desde MCP; el panel no edita ni sincroniza. `contract: null` con respuesta 404 muestra que el contrato todavía no está disponible, mientras un fallo del servidor presenta Reintentar.
 - **Evidence:** `frontend/pages/panel/cells/index.vue:124`; `frontend/components/BuildingOnDemand/admin/ContractPanel.vue:42`; `frontend/stores/building_on_demand.js:48`; GET `/api/building-on-demand/admin/contract/`; GET `/api/building-on-demand/admin/contract/pdf/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
 - **Scope:** Los estados del espejo son resultados de consulta, no errores de entrada. Su historial y el fallo de descarga de PDF requieren evidencia adicional a la lectura del contrato.
+
+La edición compartida y sus errores se registran en `admin-program-contract-edit`.
 
 
 ## Platform Help and Guided Tours
@@ -8150,6 +8167,8 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
+Actualización 2026-11-12: Saltar recorrido conserva contraste mínimo 4.5:1 desde la apertura automática con foco inicial, en normal, hover y pulsación, y en la repetición manual, en ambos temas y cinco tamaños (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `platform-guided-tour-project`
 
 - **Módulo:** platform
@@ -8165,6 +8184,8 @@ Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirl
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+Actualización 2026-11-12: Saltar recorrido es legible desde el primer paso automático y al repetir desde Ayuda, en ambos temas y cinco tamaños, conservando skipped/completed (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 ### FLOW: `platform-guided-tour-voice`
 
@@ -8197,6 +8218,10 @@ Configuración global y por cliente de recorridos y videos, con control de versi
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+
+**PA-251/253/257/261 · delta de interfaz:** La lista de clientes consulta al escribir con debounce, descarta respuestas anteriores y conserva carga, errores, total y página de la consulta vigente. Limpiar vuelve a página 1 sin guardar configuración.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-platform-guided-tour-authoring`
 
@@ -9039,6 +9064,18 @@ Los siete filtros muestran sus etiquetas, se distribuyen según el ancho real y 
 - **Evidence:** frontend/pages/panel/platform/help.vue; frontend/components/platform/PlatformVideoResourcesManager.vue; frontend/components/resources/VideoResourceManager.vue.
 - **Scope:** Se llega desde la navegación del panel y se comprueba el contenido de las tres piezas. La sustitución, la validación local de MP4 y el rechazo del servidor se ejercitan en la interfaz; los permisos, la concurrencia y el ciclo completo de carga, retirada y restauración por MCP se prueban en backend. Los interruptores compartidos pertenecen al flujo de administración de Ayuda.
 
+### FLOW: `admin-program-contract-edit`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/documents/:id/edit`
+- **Interaction:** Abrir el documento vinculado desde Contrato en Building with Us o Células, editar la fuente y guardar con motivo. Volver al módulo y consultar la misma versión guardada.
+- **Outcomes:** `success`, `error`, `failure`
+- **Evidence:** frontend/pages/panel/documents/[id]/edit.vue; frontend/composables/useProgramContractRefresh.js; PATCH /api/documents/:id/update/; frontend/e2e/admin/admin-module-contract-document-editor.spec.js.
+
+El guardado exige la versión leída. Motivo ausente impide guardar. Ante conflicto o fallo del servicio se conserva la fuente local; los metadatos contractuales permanecen protegidos. Los contratos de propuestas siguen en sólo lectura. Los casos parametrizados cubren ambos módulos sin atribuir aprobación o firma al documento.
+
 # Marca y recursos del proyecto
 
 - **Ruta/rol:** `/panel/projects`, admin, Acciones → Marca y recursos.
@@ -9159,6 +9196,8 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresi�
 - **PA-216:** Aprobar y revisar después acepta sin crear cliente, proyecto ni paquete; la revisión pendiente se retoma desde listado o editor. Revisar un paquete restaura únicamente su selección confirmada y conserva versiones históricas.
 
 PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
+
+Actualización 2026-11-12: Tras confirmar con mouse, el foco vuelve al disparador si sigue disponible o a un destino visible del mismo registro cuando Revisar desaparece; cancelar conserva el disparador (PA-260/D1). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 ### FLOW: `admin-proposal-change-history`
 
@@ -9429,6 +9468,10 @@ acreditan persistencia real por sí solos; su resultado se registra en CI.
 - **API:** `GET /api/secure-links/` (filtro `lifecycle_status` y conteos), `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`, `POST .../mark-sent/`.
 - **Copiar página para clientes:** copia exactamente la URL pública informada por el servidor y conserva el texto «Enlace para clientes». Sólo tras éxito muestra check y «Copiado» flotante durante 2 segundos, con anuncio accesible; el encabezado, descripción, botones, pestañas y listado permanecen en su sitio en los cinco perfiles responsive. Un fallo mantiene el icono de copiar, muestra el error durante 3 segundos y permite reintentar; el teclado conserva el foco y el movimiento reducido conserva la confirmación.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js` y `e2e/admin/admin-secure-links-copy-public.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
+
+
+**PA-251/253/257/261 · delta de interfaz:** El detalle ofrece Copiar título junto al lápiz: copia el título completo vigente, preserva acentos y signos y permite reintentar ante rechazo de portapapeles sin revelar ni mutar el enlace.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
 
 ### FLOW: `admin-service-contract-settings`
 
@@ -9719,6 +9762,8 @@ consulta de la conversación pública que originó el prompt.
 - **Error:** 403 o 404 muestra una explicación sin datos ni navegación interna del proyecto; un error recuperable ofrece reintentar. Una sesión sin autenticación se dirige al inicio de sesión.
 - **Validación:** automatizada exclusivamente en CI; acceso real por roles en Chrome coordinado con dev-qa.
 
+Actualización 2026-11-12: El acceso directo ajeno termina la carga con 403, permite regresar al listado propio y abrir un proyecto autorizado, en ambos sentidos entre clientes. Mensajes 403/404 y recuperación conservan idioma es-co/en-us (PA-252). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `platform-project-hosting-context`
 
 - **Módulo:** platform
@@ -9793,6 +9838,33 @@ conservan para la reprueba; CI añade esas longitudes a las dos variantes de
 - **Error:** Contenido faltante, sustitución duplicada/cruzada/no revocada o conflicto del UUID no cambia el contenido anterior.
 - **Failure:** Si falla revocar no se abre el formulario. Si falla crear, el anterior permanece revocado y su historial conservado.
 - **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links-replace.spec.js` cubre display/success/error/failure. API SQLite verifica unicidad del sucesor, conservación del cifrado anterior y rechazo de asociaciones entre proyectos.
+
+### FLOW: `platform-sidebar-navigation`
+
+- **Módulo:** platform
+- **Roles:** platform-admin, platform-client
+- **Prioridad:** P2
+- **E2E:** `frontend/e2e/platform/platform-sidebar.spec.js`
+
+La navegación conserva los destinos y opciones permitidos por rol, el estado
+activo, el cierre del cajón móvil y las acciones de cuenta. Personaliza abre
+el selector de apariencia; Configuración navega al perfil.
+
+**PA-258:** las iniciales de escritorio, cajón y encabezado móvil usan blanco
+sobre verde de marca con tokens independientes de la paleta personal, en claro
+y oscuro. La separación icono/texto de Cuenta y Personaliza es coherente.
+Modelo de datos conserva PRONTO y su condición pendiente.
+
+| Resultado | Interacción |
+|---|---|
+| success | Navegar desde un enlace del menú y conservar el destino permitido. |
+| display | Llegar al perfil desde Configuración y comprobar nombre, iniciales y el par de colores con una paleta personal clara. |
+| error | No aplica al ajuste de presentación: la denegación por rol sigue en el flujo de destino. |
+| failure | No aplica al ajuste: no se añade una petición de guardado o carga. |
+
+La extensión del contrato se valida en CI sobre el SHA del PR. Las fotografías,
+los tamaños CSS y las variantes móviles se cotejan también en el turno visual
+acordado; la autoría de estos casos no acredita su ejecución manual.
 
 ### FLOW: `proposal-closing-contact`
 

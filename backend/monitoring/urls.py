@@ -16,4 +16,9 @@ urlpatterns = [
     path('cases/<int:case_id>/notes/', views.case_note, name='monitoring-case-note'),
     path('reports/', views.reports, name='monitoring-reports'),
     path('reports/<int:report_id>/', views.report_detail, name='monitoring-report-detail'),
+    path('resources/<int:pk>/', views.resource_link, name='monitoring-resource-link'),
+    path('cases/<int:pk>/', views.case_detail, name='monitoring-case'),
+    path('cases/<int:pk>/state/', views.case_state, name='monitoring-case-state'),
+    path('cases/<int:pk>/notes/', views.case_note, name='monitoring-case-note'),
+    path('reports/<int:pk>/', views.report_detail, name='monitoring-report'),
 ]

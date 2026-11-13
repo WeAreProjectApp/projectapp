@@ -1,5 +1,6 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, toRef, watch } from 'vue';
+import { useApprovalReturnFocus } from '~/composables/useApprovalReturnFocus';
 import { useLocalePath } from '#imports';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
@@ -11,7 +12,8 @@ import { get_request } from '~/stores/services/request_http';
 import es from '~/locales/proposalApproval/es';
 import en from '~/locales/proposalApproval/en';
 
-const props = defineProps({ visible: Boolean, revision: Boolean, proposal: { type: Object, default: () => ({}) }, acceptProposal: { type: Boolean, default: true } });
+const props = defineProps({ visible: Boolean, revision: Boolean, proposal: { type: Object, default: () => ({}) }, acceptProposal: { type: Boolean, default: true }, returnFocus: { type: Function, default: null } });
+useApprovalReturnFocus(toRef(props, 'visible'), toRef(props, 'returnFocus'));
 const localePath = useLocalePath();
 const emit = defineEmits(['close', 'completed']);
 const { locale } = useI18n();

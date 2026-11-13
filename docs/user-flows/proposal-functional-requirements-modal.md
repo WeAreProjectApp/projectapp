@@ -13,3 +13,9 @@
   5. Client closes the modal by clicking outside or the close button.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-requirements-modal.spec.js` (includes nested-modal, executive-mode, and legacy-fallback tests)
+
+
+**PA-251/253/257/261 · delta de interfaz:** El modal conserva uno o varios requerimientos por elemento y muestra configuration y usageFlow con su formato cuando existen, manteniendo propuestas antiguas sin esos campos.
+La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acredita recorrido manual.
+
+El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace del elemento y leer configuración/flujo. Error y failure propios del modal: no aplican, porque este modal de lectura usa datos ya cargados y no envía peticiones ni formularios; los fallos al cargar la propuesta pertenecen al flujo de entrada.

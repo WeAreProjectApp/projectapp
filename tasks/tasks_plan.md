@@ -1,3 +1,14 @@
+## Contratos de programas editables desde el Gestor — 2026-11-12
+
+PA-255/PA-256: el Gestor permite editar contenido y presentación de los contratos
+Building with Us y Células con motivo y versión obligatorios. El escritor de cada
+programa conserva revisión, historial y PDF en una transacción; los módulos
+consultan, descargan y enlazan al documento exacto. Se mantienen los MCP y la
+protección de ubicación, identidad y privacidad. No cambia el contenido jurídico
+ni acredita aprobación contractual. Sin migraciones ni cambios productivos.
+Contrato técnico y validación: [Contratos de programas](../docs/PROGRAM_CONTRACT_DOCUMENTS.md).
+Implementación en rama de sesión; la validación automatizada se ejecuta en CI.
+
 ## PA-249 — prioridades y capacidad de Monitoreo
 
 La ampliación en rama de sesión conserva estados y agrupación de eventos; incorpora consultas estables de 15 minutos, KPIs del conjunto filtrado, fuente de mediciones reales de servidor (1 min, 90 días), capacidad informativa versionada y gestión compartida con MCP Proyectos. Migración monitoring.0006 aditiva, aplicada sólo mediante deploy. Contrato, límites y orden de activación en `docs/monitoring-dashboard.md`. CI y QA del SHA servido se registran en la entrega; esta nota no acredita despliegue ni aprobación manual.

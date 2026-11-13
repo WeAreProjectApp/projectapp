@@ -7,6 +7,7 @@ import BuildingWithUsAdminVersionHistory from '~/components/BuildingWithUs/admin
 import BuildingWithUsAdminVersionSummary from '~/components/BuildingWithUs/admin/VersionSummary.vue';
 import { useBuildingWithUsStore } from '~/stores/building_with_us';
 import { buildingWithUsPdfUrl } from '~/utils/buildingWithUs';
+import { useProgramContractRefresh } from '~/composables/useProgramContractRefresh';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
@@ -16,6 +17,7 @@ const router = useRouter();
 const store = useBuildingWithUsStore();
 const tabFromQuery = (value) => value === 'contract' ? 'contract' : 'program';
 const activeSection = ref(tabFromQuery(route.query.tab));
+const refreshContract = useProgramContractRefresh(store, activeSection);
 const loadedTabs = { program: false, contract: false };
 let isMounted = false;
 
@@ -25,10 +27,11 @@ const sectionOptions = computed(() => [
 ]);
 
 async function loadTab(kind) {
+  if (kind === 'contract') return refreshContract();
   if (loadedTabs[kind]) return;
   loadedTabs[kind] = true;
   await Promise.all([
-    kind === 'contract' ? store.fetchContract() : store.fetchPreview('es'),
+    store.fetchPreview('es'),
     store.fetchVersions(kind),
   ]);
 }

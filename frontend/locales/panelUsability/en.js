@@ -1,4 +1,13 @@
 export default {
+  incomeCollection: {
+    draft: 'Draft',
+    issued: 'Issued',
+    paid: 'Paid',
+    unavailable: 'Status unavailable',
+    unnumbered: 'Number not assigned',
+    documentDate: 'Document date',
+    issueDate: 'Issue date',
+  },
   emailStatus: 'Email status',
   retry: 'Retry sending',
   retryQuestion: 'Try sending “{subject}” to {recipient}.',

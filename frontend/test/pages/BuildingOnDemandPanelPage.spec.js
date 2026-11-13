@@ -189,21 +189,34 @@ describe('BuildingOnDemandPanelPage', () => {
     expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['economics', 'building-on-demand-admin-economics-row-business-monthly', '74,2'],
-    ['contract', 'building-on-demand-admin-contract-body', '# Contrato de la célula'],
-  ])('loads %s only on its first visit', async (kind, resultId, text) => {
+  it('loads economics only on its first visit', async () => {
     const wrapper = await mountPage();
-    expect(get_request).not.toHaveBeenCalledWith(`building-on-demand/admin/${kind}/`);
+    expect(get_request).not.toHaveBeenCalledWith('building-on-demand/admin/economics/');
 
-    await wrapper.get(`[data-testid="building-on-demand-panel-tab-${kind}"]`).trigger('click');
+    await wrapper.get('[data-testid="building-on-demand-panel-tab-economics"]').trigger('click');
     await flushPromises();
     await wrapper.get('[data-testid="building-on-demand-panel-tab-program"]').trigger('click');
-    await wrapper.get(`[data-testid="building-on-demand-panel-tab-${kind}"]`).trigger('click');
+    await wrapper.get('[data-testid="building-on-demand-panel-tab-economics"]').trigger('click');
     await flushPromises();
 
-    expect(get_request.mock.calls.filter(([path]) => path === `building-on-demand/admin/${kind}/`)).toHaveLength(1);
-    expect(wrapper.get(`[data-testid="${resultId}"]`).text()).toContain(text);
+    expect(get_request.mock.calls.filter(([path]) => path === 'building-on-demand/admin/economics/')).toHaveLength(1);
+    expect(wrapper.get('[data-testid="building-on-demand-admin-economics-row-business-monthly"]').text()).toContain('74,2');
+  });
+
+  it('refreshes the saved contract when returning to its tab', async () => {
+    const wrapper = await mountPage();
+    expect(get_request).not.toHaveBeenCalledWith('building-on-demand/admin/contract/');
+
+    await wrapper.get('[data-testid="building-on-demand-panel-tab-contract"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('[data-testid="building-on-demand-panel-tab-program"]').trigger('click');
+    await wrapper.get('[data-testid="building-on-demand-panel-tab-contract"]').trigger('click');
+    await flushPromises();
+
+    // Fails if returning from a contract editor does not obtain its newly saved version.
+    expect(get_request.mock.calls.filter(([path]) => path === 'building-on-demand/admin/contract/')).toHaveLength(2);
+    expect(get_request.mock.calls.filter(([path]) => path === 'building-on-demand/admin/contract/versions/?limit=20&offset=0')).toHaveLength(2);
+    expect(wrapper.get('[data-testid="building-on-demand-admin-contract-body"]').text()).toContain('# Contrato de la célula');
   });
 
   it('shows a neutral state for the contract planned for a later wave', async () => {

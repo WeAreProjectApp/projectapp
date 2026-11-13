@@ -18,12 +18,12 @@ CONTRACT_MIRROR_MESSAGE = (
     'Su contenido se actualiza mediante el MCP de propuestas o la consola del servidor.'
 )
 BUILDING_WITH_US_MIRROR_MESSAGE = (
-    'Este contrato es de sólo lectura y permanece en Contratos. '
-    'Su contenido se actualiza mediante el MCP de Building with Us.'
+    'Este contrato permanece en Contratos; su identidad y ubicación están protegidas. '
+    'Edita el contenido desde el Gestor de documentos o mediante el MCP de Programas.'
 )
 BUILDING_ON_DEMAND_MIRROR_MESSAGE = (
-    'Este contrato es de sólo lectura y permanece en Contratos. '
-    'Su contenido se actualiza mediante el MCP de Building on Demand.'
+    'Este contrato permanece en Contratos; su identidad y ubicación están protegidas. '
+    'Edita el contenido desde el Gestor de documentos o mediante el MCP de Programas.'
 )
 MODULE_MIRROR_RELATIONS = (
     ('building_with_us_mirror', 'building_with_us', BUILDING_WITH_US_MIRROR_MESSAGE),

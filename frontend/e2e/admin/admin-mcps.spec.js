@@ -15,15 +15,23 @@ test.setTimeout(60_000);
 
 const CONNECTOR = {
   slug: 'content',
-  name: 'Contenido',
+  name: 'Gestor de contenido',
   description: 'Permite a Claude gestionar el contenido del blog y LinkedIn.',
   is_active: false,
   has_token: false,
   token_prefix: '',
   last_used_at: null,
   tool_count: 2,
-  risk_counts: { read: 1, write: 1, sensitive: 0 },
+  risk_counts: { read: 1, write: 0, sensitive: 1 },
   is_legacy: false,
+  capabilities: [
+    {
+      label: 'Blog y calendario editorial',
+      actions: ['Consultar', 'Crear'],
+      tools: ['get_blog_template', 'create_blog_post'],
+      requires_confirmation: true,
+    },
+  ],
   credentials: [
     {
       id: 7,
@@ -58,7 +66,7 @@ const CONNECTOR = {
   ],
   tools: [
     { name: 'get_blog_template', description: 'Template JSON de contenido.', risk: 'read' },
-    { name: 'create_blog_post', description: 'Crea un post.', risk: 'write' },
+    { name: 'create_blog_post', description: 'Crea un post.', risk: 'sensitive', requires_confirmation: true },
   ],
 };
 
@@ -92,22 +100,39 @@ const RETIRING_CONNECTOR = {
   tools: [{ name: 'get_blog_template', description: 'Consulta el template del blog.', risk: 'read' }],
 };
 
+const RETIRED_CONNECTOR = {
+  slug: 'legacy-documents',
+  name: 'Gestor de documentos antiguo',
+  description: 'Conector retirado que no debe exponerse al Panel.',
+  is_active: false,
+  has_token: false,
+  token_prefix: '',
+  tool_count: 0,
+  risk_counts: { read: 0, write: 0, sensitive: 0 },
+  is_legacy: true,
+  lifecycle: 'retired',
+  replacement: 'documents',
+  credentials: [],
+  recent_events: [],
+  tools: [],
+};
+
 const SECTION_CONNECTORS = [
   {
     slug: 'commercial',
-    name: 'Comercial',
+    name: 'Gestor de clientes y ventas',
     description: 'Gestiona la relación con clientes y el proceso de venta: fichas, propuestas, diagnósticos, documentos contractuales, seguimiento, correos y valores predeterminados. Organiza sus funciones en Clientes, Propuestas y Diagnósticos, y Configuración. Para paquetes de requerimientos y módulos adicionales usa Nuestra oferta; para alianzas y células usa Programas.',
     section_note: 'Comercial reúne Clientes; Propuestas y Diagnósticos; y Configuración (Defaults y entregabilidad email). Paquetes de requerimientos y módulos adicionales se administran en Nuestra oferta (offerings). Los programas y sus contratos se administran en Programas (programs).',
   },
   {
     slug: 'offerings',
-    name: 'Nuestra oferta',
+    name: 'Gestor de nuestra oferta',
     description: 'Administra lo que ofrecemos al cliente: paquetes de requerimientos, precios y configuración; y módulos adicionales, categorías, orden, enlaces compartidos, PDFs y videos. Las propuestas y los diagnósticos se gestionan en Comercial. Las condiciones, contratos y versiones de las alianzas y células se gestionan en Programas.',
     section_note: 'Nuestra oferta reúne Paquetes de requerimientos y Módulos adicionales. Clientes, propuestas, diagnósticos y Defaults están en Comercial (commercial). Programa de Alianza, Building with Us y Células están en Programas (programs).',
   },
   {
     slug: 'programs',
-    name: 'Programas',
+    name: 'Gestor de programas',
     description: 'Administra nuestros programas y sus condiciones. Reúne las alianzas —Programa de Alianza y Building with Us— y las Células de Building on Demand, con sus acuerdos, contratos, economía interna, documentos y versiones. Para preparar una propuesta usa Comercial; para paquetes de requerimientos y módulos adicionales usa Nuestra oferta.',
     section_note: 'Programas reúne las alianzas (Programa de Alianza y Building with Us) y las Células de Building on Demand, incluidos contratos, economía y versiones. Paquetes de requerimientos y módulos adicionales están en Nuestra oferta (offerings); clientes, propuestas y diagnósticos en Comercial (commercial).',
   },
@@ -139,10 +164,12 @@ const SCOPED_TOKEN_RESPONSE = {
   allowed_tools: ['get_blog_template'],
 };
 
-function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}) {
+function buildHandler({ isSuperuser = true, credentialCreateError = false, connectorListFailures = 0 } = {}) {
   const connector = JSON.parse(JSON.stringify(CONNECTOR));
   const retiringConnector = JSON.parse(JSON.stringify(RETIRING_CONNECTOR));
+  const retiredConnector = JSON.parse(JSON.stringify(RETIRED_CONNECTOR));
   const sectionConnectors = JSON.parse(JSON.stringify(SECTION_CONNECTORS));
+  let remainingConnectorListFailures = connectorListFailures;
   return ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') {
       return {
@@ -154,10 +181,18 @@ function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}
       };
     }
     if (apiPath === 'mcp-connectors/' && method === 'GET') {
+      if (remainingConnectorListFailures > 0) {
+        remainingConnectorListFailures -= 1;
+        return {
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'El catálogo MCP no está disponible.' }),
+        };
+      }
       return {
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([connector, ...sectionConnectors, retiringConnector]),
+        body: JSON.stringify([connector, ...sectionConnectors, retiringConnector, retiredConnector]),
       };
     }
     if (apiPath === 'mcp-connectors/content/generate-token/' && method === 'POST') {
@@ -274,6 +309,8 @@ test.describe('Panel MCPs', () => {
   test('renders the canonical content connector card with its tools', {
     tag: [...ADMIN_MCPS, '@role:admin', '@outcome:display', '@responsive:mcp'],
   }, async ({ page }) => {
+    // Bug this catches: the catalog can show a stale connector name or omit
+    // the permissions-aware capability list returned by the server.
     await mockApi(page, buildHandler());
     // quality: allow-deep-link (authenticated panel landing; MCPs is reached through the sidebar below)
     await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
@@ -284,7 +321,7 @@ test.describe('Panel MCPs', () => {
 
     await expect(page).toHaveURL(/\/panel\/mcps/);
     await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
-    await expect(page.getByTestId('mcp-card-header-content')).toContainText('Contenido');
+    await expect(page.getByTestId('mcp-card-header-content')).toContainText('Gestor de contenido');
 
     // Collapsed accordion row: token, status and tools live in the body and
     // are hidden until the row is expanded.
@@ -300,11 +337,21 @@ test.describe('Panel MCPs', () => {
     await page.getByTestId('mcp-card-header-content').click();
     await expect(page.getByTestId('mcp-detail-content')).toBeVisible();
     await expect(page.getByText('sin generar')).toBeVisible();
+    await expect(page.getByTestId('mcp-capabilities-content')).toContainText('Qué puedes gestionar');
+    await expect(page.getByTestId('mcp-capabilities-content')).toContainText(
+      'Blog y calendario editorial: Consultar · Crear.',
+    );
+    await expect(page.getByTestId('mcp-capabilities-content')).toContainText(
+      'Las acciones sensibles requieren confirmación.',
+    );
+    await expect(page.getByTestId('mcp-capabilities-content')).toContainText(
+      'Cada credencial limita las acciones disponibles y conserva los permisos de su actor.',
+    );
 
     await expect(page.getByTestId('mcp-connection-content')).toContainText('Error de conexión');
     await expect(page.getByTestId('mcp-connection-content')).toContainText('https://evil.example');
     await expect(page.getByTestId('mcp-risk-summary-content')).toContainText('Lectura 1');
-    await expect(page.getByTestId('mcp-risk-summary-content')).toContainText('Edición 1');
+    await expect(page.getByTestId('mcp-risk-summary-content')).toContainText('Sensibles 1');
 
     // Recent activity sub-accordion expands with the event trail.
     await page.getByTestId('mcp-activity-toggle-content').click();
@@ -353,12 +400,30 @@ test.describe('Panel MCPs', () => {
       .getByRole('link', { name: 'MCPs', exact: true })
       .click();
 
-    await expect(page.getByTestId('mcps-canonical')).toContainText('Contenido');
+    await expect(page.getByTestId('mcps-canonical')).toContainText('Gestor de contenido');
     await expect(page.getByTestId('mcps-retiring')).toContainText('Gestor de Blogs');
     await page.getByTestId('mcp-card-header-blog').click();
     await expect(page.getByTestId('mcp-migration-blog')).toContainText('Migra a content');
     await expect(page.getByTestId('mcp-migration-blog')).toContainText('Último uso antiguo: Dom, 18 oct 2026, 09:30.');
     await expect(page.getByTestId('mcp-create-credential-blog')).toHaveCount(0);
+  });
+
+  test('omits a retired connector from the panel catalog', {
+    tag: [...ADMIN_MCPS, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // Bug this catches: a retired connector returned by a stale response can
+    // reappear in the catalog and invite an operator to use an obsolete route.
+    await mockApi(page, buildHandler());
+    // quality: allow-deep-link (authenticated panel landing; MCPs is reached through the sidebar below)
+    await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
+    await page
+      .getByRole('navigation', { name: 'Navegación del panel' })
+      .getByRole('link', { name: 'MCPs', exact: true })
+      .click();
+
+    await expect(page.getByTestId('mcp-card-content')).toContainText('Gestor de contenido');
+    await expect(page.getByTestId('mcp-card-legacy-documents')).toHaveCount(0);
+    await expect(page.getByText('Gestor de documentos antiguo', { exact: true })).toHaveCount(0);
   });
 
   test('edits and revokes an existing credential on a retiring connector', {
@@ -513,6 +578,26 @@ test.describe('Panel MCPs', () => {
     await expect(page.getByTestId('mcp-credential-modal')).toContainText(
       'Ya existe una credencial con esa etiqueta.',
     );
+  });
+
+  test('retries the connector catalog after its initial load fails', {
+    tag: [...ADMIN_MCPS, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Bug this catches: a transient catalog failure can strand an operator on
+    // an error card even after the connector endpoint has recovered.
+    await mockApi(page, buildHandler({ connectorListFailures: 1 }));
+    // quality: allow-deep-link (authenticated panel landing; MCPs is reached through the sidebar below)
+    await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
+    await page
+      .getByRole('navigation', { name: 'Navegación del panel' })
+      .getByRole('link', { name: 'MCPs', exact: true })
+      .click();
+
+    const errorState = page.getByTestId('mcps-error');
+    await expect(errorState).toContainText('El catálogo MCP no está disponible.');
+    await errorState.getByRole('button', { name: 'Reintentar', exact: true }).click();
+    await expect(page.getByTestId('mcp-card-content')).toContainText('Gestor de contenido');
+    await expect(errorState).toHaveCount(0);
   });
 
   test('staff non-superuser is redirected away from /panel/mcps', {

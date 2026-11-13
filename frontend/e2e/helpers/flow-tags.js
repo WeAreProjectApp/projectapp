@@ -215,6 +215,7 @@ export const ADMIN_PORTFOLIO_CREATE = ['@flow:admin-portfolio-create', '@module:
 export const ADMIN_PORTFOLIO_DELETE = ['@flow:admin-portfolio-delete', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_EDIT = ['@flow:admin-portfolio-edit', '@module:admin', '@priority:P2'];
 export const ADMIN_PORTFOLIO_LIST = ['@flow:admin-portfolio-list', '@module:admin', '@priority:P2'];
+export const ADMIN_PROGRAM_CONTRACT_EDIT = ['@flow:admin-program-contract-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_DETAIL = ['@flow:admin-project-access-detail', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_FIELD_EDIT = ['@flow:admin-project-access-field-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_ACCESS_NOTES = ['@flow:admin-project-access-notes', '@module:admin', '@priority:P2'];

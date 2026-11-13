@@ -450,6 +450,9 @@ class DocumentDetailSerializer(
             data['content_markdown'] = mirror_markdown(instance) or ''
             from content.services.contract_template_service import mirror_metadata
             data.update(mirror_metadata(instance))
+            from content.services.contract_mirror_service import module_contract_mirror
+            if module_contract_mirror(instance):
+                data['text_formats'] = {**(data.get('text_formats') or {}), '/content_markdown': 'markdown_html_v1'}
         return data
 
 

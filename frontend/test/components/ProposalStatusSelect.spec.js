@@ -1,12 +1,23 @@
-/**
- * Tests for ProposalStatusSelect (badge-styled admin status select).
- *
- * Covers: current status option, natural vs forced optgroups, change
- * emission with snap-back, and the updating spinner/disabled state.
- */
-
+import { computed, defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import ProposalStatusSelect from '../../components/panel/proposal/ProposalStatusSelect.vue';
+
+const ChoiceSelectStub = defineComponent({
+  name: 'BaseChoiceSelect',
+  props: ['modelValue', 'options', 'disabled'],
+  emits: ['update:modelValue'],
+  setup(props, { emit }) {
+    const selectedLabel = computed(() => props.options.find((option) => option.value === props.modelValue)?.label);
+    return { emit, selectedLabel };
+  },
+  template: `
+    <div data-testid="proposal-status-choice">
+      <button type="button" role="combobox" :disabled="disabled">{{ selectedLabel }}</button>
+      <button v-for="option in options" :key="option.value" type="button" role="option"
+        :disabled="option.disabled" @click="emit('update:modelValue', option.value)">{{ option.label }}</button>
+    </div>
+  `,
+});
 
 function factory(proposal = {}, props = {}) {
   return mount(ProposalStatusSelect, {
@@ -19,52 +30,59 @@ function factory(proposal = {}, props = {}) {
       },
       ...props,
     },
+    global: { stubs: { BaseChoiceSelect: ChoiceSelectStub } },
   });
 }
 
 describe('ProposalStatusSelect', () => {
-  it('renders the current status as a disabled selected option', () => {
+  // Falla si el selector deja de conservar el estado confirmado como opción bloqueada.
+  it('passes the confirmed status as the disabled choice', () => {
     const wrapper = factory();
-    const current = wrapper.find('option[disabled]');
-    expect(current.text()).toBe('Enviada');
-    expect(wrapper.find('select').element.value).toBe('sent');
+    const choice = wrapper.getComponent(ChoiceSelectStub);
+
+    expect(choice.props('modelValue')).toBe('sent');
+    expect(choice.props('options')[0]).toEqual({ value: 'sent', label: 'Enviada', disabled: true });
   });
 
-  it('groups natural transitions under "Flujo normal"', () => {
+  // Falla si las transiciones permitidas pierden su grupo y pasan a confundirse con cambios forzados.
+  it('separates natural transitions from forced statuses', () => {
     const wrapper = factory();
-    const natural = wrapper.find('optgroup[label="Flujo normal"]');
-    expect(natural.exists()).toBe(true);
-    expect(natural.findAll('option').map((o) => o.element.value)).toEqual([
-      'negotiating', 'rejected',
-    ]);
+    const options = wrapper.getComponent(ChoiceSelectStub).props('options');
+
+    expect(options.filter((option) => option.group === 'Flujo normal').map((option) => option.value))
+      .toEqual(['negotiating', 'rejected']);
+    expect(options.filter((option) => option.group === 'Forzar estado').map((option) => option.value))
+      .toEqual(['draft', 'viewed', 'accepted', 'finished', 'expired']);
   });
 
-  it('groups the remaining statuses under "Forzar estado" excluding the current one', () => {
-    const wrapper = factory();
-    const forced = wrapper.find('optgroup[label="Forzar estado"]');
-    const values = forced.findAll('option').map((o) => o.element.value);
-    expect(values).toEqual(['draft', 'viewed', 'accepted', 'finished', 'expired']);
-    expect(values).not.toContain('sent');
-  });
-
-  it('omits the "Flujo normal" group for terminal statuses', () => {
+  // Falla si un estado terminal vuelve a publicar un grupo vacío de transiciones naturales.
+  it('omits natural transitions for a terminal status', () => {
     const wrapper = factory({ status: 'finished', available_transitions: [] });
-    expect(wrapper.find('optgroup[label="Flujo normal"]').exists()).toBe(false);
-    expect(wrapper.find('optgroup[label="Forzar estado"]').exists()).toBe(true);
+    const options = wrapper.getComponent(ChoiceSelectStub).props('options');
+
+    expect(options.some((option) => option.group === 'Flujo normal')).toBe(false);
+    expect(options.filter((option) => option.group === 'Forzar estado').map((option) => option.value))
+      .toEqual(['draft', 'sent', 'viewed', 'negotiating', 'accepted', 'rejected', 'expired']);
+    expect(options.filter((option) => option.group === 'Forzar estado').map((option) => option.value))
+      .not.toContain('finished');
   });
 
-  it('emits change with the picked status and snaps the select back', async () => {
+  // Falla si escoger un destino modifica el estado visual antes de que el PATCH del padre lo confirme.
+  it('emits a change intent while keeping the confirmed status visible', async () => {
     const wrapper = factory();
-    const select = wrapper.find('select');
-    await select.setValue('accepted');
+    const accepted = wrapper.findAll('[role="option"]').find((option) => option.text() === 'Aceptada');
+
+    await accepted.trigger('click');
 
     expect(wrapper.emitted('change')).toEqual([['accepted']]);
-    expect(select.element.value).toBe('sent');
+    expect(wrapper.get('[role="combobox"]').text()).toBe('Enviada');
   });
 
-  it('disables the select and shows the spinner while updating', () => {
+  // Falla si una actualización pendiente permite enviar un segundo cambio de estado.
+  it('disables the choice control while an update is pending', () => {
     const wrapper = factory({}, { updating: true });
-    expect(wrapper.find('select').element.disabled).toBe(true);
-    expect(wrapper.find('svg.animate-spin').exists()).toBe(true);
+
+    expect(wrapper.get('[role="combobox"]').attributes('disabled')).toBe('');
+    expect(wrapper.find('svg').attributes('class')).toBe('animate-spin h-3 w-3 text-text-muted');
   });
 });

@@ -27,6 +27,9 @@ describe('useTechnicalPrompt', () => {
     expect(DEFAULT_PROMPT).toContain('REGLA DE GRANULARIDAD')
     expect(DEFAULT_PROMPT).toContain('Anti-uniformidad')
     expect(DEFAULT_PROMPT).toContain('Anti-plantilla')
+    expect(DEFAULT_PROMPT).toContain('un solo requerimiento')
+    expect(DEFAULT_PROMPT).not.toContain('≥80%')
+    expect(DEFAULT_PROMPT).not.toContain('**4 a 6**')
     expect(DEFAULT_PROMPT).not.toContain('2 a 5 requerimientos')
   })
 

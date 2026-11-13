@@ -1,22 +1,16 @@
 <template>
   <div class="relative inline-flex items-center">
-    <select
-      :value="proposal.status"
+    <BaseChoiceSelect
+      :model-value="proposal.status"
+      :options="statusOptions"
       :disabled="updating"
-      class="bg-input-bg text-xs px-2.5 py-1 rounded-full font-medium border border-input-border cursor-pointer outline-none focus:ring-2 focus:ring-focus-ring/30 pr-6 disabled:opacity-60 disabled:cursor-not-allowed"
-      :class="statusClass(proposal.status)"
+      disabled-reason="Guardando el estado de la propuesta."
+      size="sm"
+      :trigger-class="statusClass(proposal.status)"
       aria-label="Cambiar estado de la propuesta"
-      @change="onChange"
+      @update:model-value="onChange"
       @click.stop
-    >
-      <option :value="proposal.status" disabled>{{ proposalTransitionStatusLabel(proposal.status) }}</option>
-      <optgroup v-if="naturalTargets.length" label="Flujo normal">
-        <option v-for="s in naturalTargets" :key="s" :value="s">{{ proposalTransitionStatusLabel(s) }}</option>
-      </optgroup>
-      <optgroup v-if="forcedTargets.length" label="Forzar estado">
-        <option v-for="s in forcedTargets" :key="s" :value="s">{{ proposalTransitionStatusLabel(s) }}</option>
-      </optgroup>
-    </select>
+    />
     <span v-if="updating" class="absolute right-1.5 flex items-center pointer-events-none">
       <svg class="animate-spin h-3 w-3 text-text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -28,6 +22,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue';
 import {
   PROPOSAL_STATUSES,
   proposalTransitionStatusLabel,
@@ -52,10 +47,14 @@ const forcedTargets = computed(() => PROPOSAL_STATUSES
   .map((s) => s.value)
   .filter((value) => value !== props.proposal.status && !naturalTargets.value.includes(value)));
 
-function onChange(event) {
-  const value = event.target.value;
-  // Snap back: the select reflects state, not intent.
-  event.target.value = props.proposal.status;
+const statusOptions = computed(() => [
+  { value: props.proposal.status, label: proposalTransitionStatusLabel(props.proposal.status), disabled: true },
+  ...naturalTargets.value.map(value => ({ value, label: proposalTransitionStatusLabel(value), group: 'Flujo normal' })),
+  ...forcedTargets.value.map(value => ({ value, label: proposalTransitionStatusLabel(value), group: 'Forzar estado' })),
+]);
+
+function onChange(value) {
+  // Only the confirmed server response changes the displayed value.
   if (value && value !== props.proposal.status) emit('change', value);
 }
 </script>

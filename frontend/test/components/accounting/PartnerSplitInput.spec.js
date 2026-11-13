@@ -30,6 +30,14 @@ const autoToggle = (wrapper) => wrapper.find('[data-testid="partner-split-auto"]
 const remainderLine = (wrapper) => wrapper.find('[data-testid="partner-split-remainder"]');
 
 describe('PartnerSplitInput', () => {
+  it.each([
+    [119.03, 59, 59, '$1,03 COP'],
+    [119, 50.25, 60.5, '$8,25 COP'],
+  ])('shows the exact remainder for a total of %s', (total, gustavoAmount, carlosAmount, expected) => {
+    const wrapper = mountInput({ total, gustavoAmount, carlosAmount });
+    expect(remainderLine(wrapper).text()).toBe(`Bolsillo ProjectApp: ${expected}`);
+    expect(wrapper.emitted('update:total')).toBeUndefined();
+  });
   it('auto mode splits an even total 50/50', async () => {
     const wrapper = mountInput();
 

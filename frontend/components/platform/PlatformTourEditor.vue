@@ -2,14 +2,14 @@
   <form class="space-y-4" @submit.prevent="$emit('save', form)">
     <div class="grid gap-4 lg:grid-cols-2">
       <BaseFormField :label="tr('slug')" for="help-tour-slug"><input id="help-tour-slug" v-model="form.slug" :disabled="Boolean(form.id)" required pattern="[a-zA-Z0-9_-]+" class="w-full rounded-xl border border-border-default bg-surface p-3" /></BaseFormField>
-      <BaseFormField :label="tr('context')" for="help-tour-context"><select id="help-tour-context" v-model="form.context" :disabled="Boolean(form.id)" class="w-full rounded-xl border border-border-default bg-surface p-3"><option v-for="context in contexts" :key="context" :value="context">{{ tr(`context${context[0].toUpperCase()}${context.slice(1)}`) }}</option></select></BaseFormField>
+      <BaseFormField :label="tr('context')" for="help-tour-context"><BaseChoiceSelect id="help-tour-context" v-model="form.context" :disabled="Boolean(form.id)" :disabled-reason="tr('contextLocked')" :options="contexts.map(context => ({ value: context, label: tr(`context${context[0].toUpperCase()}${context.slice(1)}`) }))" /></BaseFormField>
       <BaseFormField v-for="language in ['es', 'en']" :key="language" :label="tr(language === 'es' ? 'titleEs' : 'titleEn')" :for="`help-title-${language}`"><input :id="`help-title-${language}`" v-model="form.content[`title_${language}`]" required maxlength="160" class="w-full rounded-xl border border-border-default bg-surface p-3" /></BaseFormField>
       <BaseFormField :label="tr('priority')" for="help-tour-priority"><input id="help-tour-priority" v-model.number="form.priority" type="number" min="0" max="32767" class="w-full rounded-xl border border-border-default bg-surface p-3" /></BaseFormField>
       <label class="flex items-center gap-2"><BaseToggle v-model="form.is_active" :aria-label="tr('active')" /><span>{{ tr('active') }}</span></label>
     </div>
     <fieldset v-for="(step, index) in form.content.steps" :key="index" class="space-y-3 rounded-xl border border-border-default p-4">
       <legend class="px-2 font-medium">{{ index + 1 }}</legend>
-      <BaseFormField :label="tr('target')" :for="`tour-target-${index}`"><select :id="`tour-target-${index}`" v-model="step.target" required class="w-full rounded-xl border border-border-default bg-surface p-3"><option v-for="target in targetOptions" :key="target" :value="target">{{ tr(`targets.${target}`) }}</option></select></BaseFormField>
+      <BaseFormField :label="tr('target')" :for="`tour-target-${index}`"><BaseChoiceSelect :id="`tour-target-${index}`" v-model="step.target" required :options="targetOptions.map(target => ({ value: target, label: tr(`targets.${target}`) }))" /></BaseFormField>
       <div class="grid gap-3 lg:grid-cols-2">
         <template v-for="language in ['es', 'en']" :key="language">
           <BaseFormField :label="tr(language === 'es' ? 'titleEs' : 'titleEn')" :for="`tour-step-title-${index}-${language}`"><input :id="`tour-step-title-${index}-${language}`" v-model="step[`title_${language}`]" required maxlength="160" class="w-full rounded-xl border border-border-default bg-surface p-3" /></BaseFormField>
@@ -33,6 +33,7 @@
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue'
 const props = defineProps({ tour: { type: Object, required: true }, targets: { type: Object, required: true }, busy: { type: Boolean, default: false } })
 defineEmits(['save', 'publish', 'preview', 'revisions'])
 const { t } = useI18n()
