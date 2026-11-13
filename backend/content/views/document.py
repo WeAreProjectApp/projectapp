@@ -454,6 +454,7 @@ def retrieve_document(request, document_id):
             'document_type', 'folder', 'project', 'client_user__profile', 'proposal_binding',
             'thread_item__thread', 'collection_account', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision',
             *(f'{relation}__revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
+            *(f'{relation}__contract__current_revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
         ).prefetch_related(
             Prefetch(
                 'document_notes',
@@ -535,6 +536,19 @@ def _contract_mirror_read_only_error(document):
 def update_document(request, document_id):
     """Update a document."""
     document = get_object_or_404(Document, pk=document_id)
+    from content.services.contract_mirror_service import module_contract_mirror
+    if module_contract_mirror(document):
+        from content.services.module_contract_document_service import ModuleContractDocumentError, update_contract_document
+        from content.services.contract_template_service import mirror_metadata
+        payload = {key: value for key, value in request.data.items() if key != 'include_content'}
+        try:
+            document = update_contract_document(document, payload, actor=request.user)
+        except ModuleContractDocumentError as exc:
+            return error_response(str(exc), code=exc.code, errors={'details': exc.details}, status={
+                'PRECONDITION_REQUIRED': 428, 'STALE_VERSION': 409, 'MIRROR_SYNC_FAILED': 503,
+                'NOT_FOUND': 404,
+            }.get(exc.code, 400))
+        return Response(write_response_data(document, request, **mirror_metadata(document)))
     from content.services.calculator_documents import managed as calculator_managed
     mirror = None if calculator_managed(document) else _contract_mirror_read_only_error(document)
     if mirror:

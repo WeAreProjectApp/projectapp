@@ -132,7 +132,7 @@ describe('BuildingWithUsPanelPage', () => {
     expect(wrapper.get('[data-testid="building-with-us-panel-download-pdf"]').attributes('href')).toBe('/api/building-with-us/public/pdf/?lang=en');
   });
 
-  it('loads the contract only on its first visit', async () => {
+  it('refreshes the saved contract when returning to its tab', async () => {
     const wrapper = await mountPage();
     expect(get_request).not.toHaveBeenCalledWith('building-with-us/admin/contract/');
 
@@ -142,7 +142,9 @@ describe('BuildingWithUsPanelPage', () => {
     await wrapper.get('[data-testid="building-with-us-tab-contract"]').trigger('click');
     await flushPromises();
 
-    expect(get_request.mock.calls.filter(([path]) => path === 'building-with-us/admin/contract/')).toHaveLength(1);
+    // Fails if a saved document stays stale after the user returns from its editor.
+    expect(get_request.mock.calls.filter(([path]) => path === 'building-with-us/admin/contract/')).toHaveLength(2);
+    expect(get_request.mock.calls.filter(([path]) => path === 'building-with-us/admin/contract/versions/?limit=20&offset=0')).toHaveLength(2);
     expect(wrapper.get('[data-testid="building-with-us-contract-version"]').text()).toContain('Versión 3');
   });
 

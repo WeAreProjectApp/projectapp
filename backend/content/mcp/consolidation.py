@@ -22,10 +22,10 @@ CATALOG_VERSIONS = {
     'operations': '3.1.1',
     'commercial': '6.6.0', 'accounting': '2.2.0', 'accounting-ledger': '3.1.0',
     'accounting-billing': '3.1.0',
-    'blog': '2.1.1', 'documents': '8.2.0', 'communications': '3.2.0',
+    'blog': '2.1.1', 'documents': '8.3.0', 'communications': '3.2.0',
     'diagnostics': '2.1.1', 'proposals': '6.3.0', 'content': '3.1.1',
-    'building-with-us': '3.1.1', 'building-on-demand': '4.1.1',
-    'additional-modules': '4.1.2', 'offerings': '2.1.1', 'programs': '3.1.0',
+    'building-with-us': '3.1.2', 'building-on-demand': '4.1.2',
+    'additional-modules': '4.1.2', 'offerings': '2.1.1', 'programs': '3.1.1',
     'projects': '5.1.0', 'data-integrity': '1.0.1',
     'accounting-billing': '3.1.0',
 

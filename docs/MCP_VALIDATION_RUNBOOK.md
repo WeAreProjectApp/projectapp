@@ -43,6 +43,18 @@ descubrimiento/catálogo y recorridos MCP del Panel. La ejecución DEV/Chrome,
 la skill y la matriz funcional completa se acreditan por separado. La migración
 aditiva 0308 corresponde al deploy; no se aplica desde el worktree.
 
+## PA-255/PA-256 — contratos de programas en el Gestor (2026-11-12)
+
+Documentos 8.3.0 permite editar los contratos de Building with Us y Células mediante
+`update_document` con `if_match` y `change_note`. El mismo servicio se usa desde
+el editor del Gestor y los MCP contractuales existentes. Validar en CI y en el
+DEV aislado acordado: lectura de fuente/versión, edición de contenido y presentación,
+PDF sincronizado, motivo obligatorio, rechazo de campos protegidos, permisos y
+conflicto tras una escritura desde otra vía. Un fallo de PDF no deja una revisión
+parcial y el editor conserva el borrador. Otros espejos siguen en sólo lectura.
+Las lecturas no crean documentos ausentes. No acredita firma ni revisión jurídica.
+Contrato y recorrido: [Contratos de programas](PROGRAM_CONTRACT_DOCUMENTS.md).
+
 ## Integridad de datos — validación 2026-11-05
 
 Verificar `mcp_inventory --check`, paridad de esquemas, 13 herramientas en Integridad (10 de negocio + 3 de control), permisos administrativos, confirmación de aplicar/deshacer/revisar y ausencia de integridad en nuevas credenciales de Proyectos. Los accesos legacy/pre_split deben seguir operando con aviso; migrar conserva actor, permisos y vencimiento. Tras deploy: activar destino, configurar consumidores sin exponer sus credenciales, comprobar una revisión real de lectura y el barrido de Bogotá. Nada de esto se acredita por tests locales. Contrato completo en `DATA_INTEGRITY.md`.
