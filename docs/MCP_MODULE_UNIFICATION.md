@@ -10,7 +10,7 @@ El registro actual añade Integridad de datos y Contratación pública a los die
 módulos descritos en la entrega anterior. Los nombres visibles siguen «Gestor de …»
 y el catálogo del Panel publica `capabilities` (etiqueta, acciones, herramientas y
 confirmación) derivadas del registro servido. Los slugs y el alcance de cada
-credencial se conservan. Operations 3.1.0 suma seguimiento de Monitoring; no expone
+credencial se conservan. Operations 3.1.1 suma seguimiento de Monitoring; no expone
 ingestión ni credenciales de fuentes.
 
 `mcp_surface_matrix --check --output <archivo.json>` genera el inventario desde el

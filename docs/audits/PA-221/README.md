@@ -131,6 +131,38 @@ Las pruebas automatizadas se ejecutan exclusivamente en CI. El recorrido DEV/Chr
 y el acceso desde la skill se acreditan por separado; un CI verde no los reemplaza.
 No se diseñan casos nuevos dedicados a teclado. No se cambia el estado del ticket.
 
+## Cierre de implementación en el PR
+
+El cierre de esta sesión es la implementación completa dentro del
+[PR #584](https://github.com/WeAreProjectApp/projectapp/pull/584), con sus pruebas,
+migración, inventario, matriz y documentación. La validación manual y la ejecución
+del despliegue/retiro son etapas posteriores; no requieren implementar fuera del PR
+las condiciones de retiro ya incluidas. PA-221 conserva **TO DO**, su acceso y las
+evidencias anteriores.
+
+El código del corte `a6a68ef123c7f746860b7da456f926425d723587` obtuvo **103 controles
+CI aprobados**, sin fallos ni pendientes:
+
+| Control | Corrida | Resultado |
+|---|---|---|
+| Backend, frontend y navegador | [43259752554](https://github.com/WeAreProjectApp/projectapp/actions/runs/43259752554) | Aprobado |
+| Calidad de pruebas | [43259752975](https://github.com/WeAreProjectApp/projectapp/actions/runs/43259752975) | Aprobado |
+| Migraciones MySQL | [43259752569](https://github.com/WeAreProjectApp/projectapp/actions/runs/43259752569) | Aprobado |
+| Datos ficticios | [43259752562](https://github.com/WeAreProjectApp/projectapp/actions/runs/43259752562) | Aprobado |
+| Responsive | [43259752532](https://github.com/WeAreProjectApp/projectapp/actions/runs/43259752532) | Aprobado |
+
+Los informes de ese corte registran 20 casos de NM1, 14 de la matriz, 17 de retiro
+con evidencia, 14 de Monitoring, 70 de unificación del catálogo, 136 de documentos
+y 21 de adopción de raíces, todos aprobados. El navegador MCP registra 16 casos
+aprobados sin reintentos; responsive MCP registra seis casos funcionales y los
+cinco anchos, sin casos inestables. La revisión independiente aprobó únicamente
+la implementación y las pruebas automatizadas de ese corte.
+
+Las corridas y el SHA de cualquier ajuste posterior se consultan en los checks
+del mismo PR; los resultados anteriores no se atribuyen a otro corte. Ninguna de
+estas evidencias convierte las asignaciones estáticas de la matriz en validación
+funcional ni acredita que los consumidores reales hayan sido retirados.
+
 ## Pendientes operativos
 
 - Ronda DEV/Chrome y cotejo de datos, fusiones, reasignaciones y skill.
