@@ -1,3 +1,13 @@
+## PA-265 — Lectura del historial documental (2026-11-13)
+
+`EntityHistoryTabs` despacha documentos a `DocumentHistoryPanel`; el resto
+conserva `EntityHistoryPanel`. `useDocumentHistory` posee la paginación, selección
+y generaciones de solicitudes de una instancia. Las revisiones completas y el
+endpoint compare existente alimentan una proyección saneada de bloques con
+alineación acotada y grupos de metadatos. Ninguna consulta persiste esa
+proyección ni usa relaciones actuales para reconstruir el contenido histórico.
+Contrato: [PA-265](../PA-265-DOCUMENT-HISTORY.md).
+
 ## PA-221 · cobertura MCP y retiro
 
 `content.mcp.presentation` centraliza nombres y grupos de capacidades desde herramientas publicadas. Operations adapta las ocho operaciones administrativas de Monitoring; ingestión conserva su credencial de fuente. `mcp_surface_matrix` cruza el Mapa de vistas con el registro real y conserva excepciones de identidad. La asignación es candidata hasta el cotejo funcional. `mcp_retirement` exige un reporte QA vigente y conserva su referencia/hash por catálogo en `McpConnector.retirement_evidence`; las ventanas y consumidores siguen siendo guardas independientes. Las rutas retiradas autentican y rechazan sin despacho. Los targets puros de raíces se comparten entre sincronización de proyecto y vista previa NM1 para evitar efectos de negocio ocultos.
