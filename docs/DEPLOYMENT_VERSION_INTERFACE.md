@@ -148,7 +148,9 @@ Inventario de workflows revisados:
 |---|---|
 | `ci.yml` | `pull_request`, `push` |
 | `fake-data-contract.yml` | `pull_request`, `workflow_dispatch` |
+| `hosting-control.yml` | `pull_request` |
 | `mysql-migration-compat.yml` | `pull_request`, `push` |
+| `platform-feature-flags.yml` | `pull_request` |
 | `project-collaboration.yml` | `workflow_call`, invocado por el CI del repositorio |
 | `responsive-acceptance.yml` | `pull_request`, `push`, `schedule`, `workflow_dispatch` |
 | `test-quality-gate.yml` | `pull_request`, `push` |
