@@ -75,6 +75,7 @@ accounts.DeliveryNotificationEvent.actor accounts.DeliveryNotificationAttempt.re
 accounts.PlatformAIEvent.actor accounts.PlatformAIJob.actor accounts.PlatformAIQuotaReservation.actor
 accounts.PlatformAITemplateRevision.actor accounts.PlatformAIUsage.actor
 monitoring.CaseActivity.actor secure_links.SecureLink.created_by secure_links.SecureLink.sent_by
+hosting_control.Event.actor
 secure_links.SecureLinkFolder.created_by
 secure_links.SecureLinkEvent.actor
 procurement.Activity.actor procurement.Alert.created_by procurement.SyncRun.requested_by

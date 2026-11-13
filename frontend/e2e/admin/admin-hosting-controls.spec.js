@@ -1,3 +1,4 @@
+import { ADMIN_HOSTING_CONTROLS } from '../helpers/flow-tags.js'
 import { test, expect, assertResponsiveScenario } from '../helpers/test.js'
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from '../responsive/catalog-scenarios.js'
 import { viewportUse } from '../helpers/viewports.js'
@@ -5,10 +6,9 @@ import { mockApi } from '../helpers/api.js'
 import { setAuthLocalStorage } from '../helpers/auth.js'
 
 test.setTimeout(60_000)
-const tags = ['@flow:admin-hosting-controls', '@module:admin', '@priority:P1']
 const initial = () => ({ id: 1, name: 'Sitio de prueba', client: 'Cliente ficticio', server: 'VPS de prueba', environment: 'production', version: 0, mode: 'normal', suspension_title: 'Servicio suspendido', suspension_text: 'Gestiona la reactivación con tu proveedor.', banner_title: 'Pago pendiente del servicio', banner_text: 'Contacta a tu proveedor.', targets: [{ key: 'fixture', origins: ['https://fixture.example'], state: 'unintegrated', lifecycle: 'active' }] })
 
-async function setup(page, { failure = false, conflict = false } = {}) {
+async function setup(page, { failure = false, conflict = false, throughProjects = false } = {}) {
   const state = initial()
   await setAuthLocalStorage(page, { token: 'fixture', userAuth: { id: 1, is_staff: true, is_superuser: true, role: 'admin' } })
   await mockApi(page, ({ apiPath, method, route }) => {
@@ -32,12 +32,13 @@ async function setup(page, { failure = false, conflict = false } = {}) {
     }
     return null
   })
-  await page.goto('/panel/projects/hosting', { waitUntil: 'domcontentloaded' })
+  await page.goto(throughProjects ? '/panel/projects' : '/panel/projects/hosting', { waitUntil: 'domcontentloaded' })
+  if (throughProjects) await page.getByTestId('projects-hosting-control').click()
   await expect(page.getByTestId('hosting-switch-banner')).toBeVisible()
   return state
 }
 
-test('switching mode replaces the previous selection', { tag: [...tags, '@outcome:success'] }, async ({ page }) => {
+test('switching mode replaces the previous selection', { tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:success'] }, async ({ page }) => {
   await setup(page)
   await page.getByTestId('hosting-switch-suspended').click()
   await expect(page.getByTestId('hosting-switch-suspended')).toHaveAttribute('aria-checked', 'true')
@@ -48,7 +49,7 @@ test('switching mode replaces the previous selection', { tag: [...tags, '@outcom
   await expect(page.getByTestId('hosting-configured-mode')).toContainText('Funcionamiento normal')
 })
 
-test('editing the banner leaves suspension text intact', { tag: [...tags, '@outcome:success'] }, async ({ page }) => {
+test('editing the banner leaves suspension text intact', { tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:success'] }, async ({ page }) => {
   const state = await setup(page)
   await page.getByTestId('hosting-switch-banner').click()
   await expect(page.getByTestId('hosting-configured-mode')).toContainText('Banner de aviso')
@@ -59,7 +60,7 @@ test('editing the banner leaves suspension text intact', { tag: [...tags, '@outc
   expect(state.mode).toBe('banner')
 })
 
-test('a stale message keeps the operator draft', { tag: [...tags, '@outcome:error'] }, async ({ page }) => {
+test('a stale message keeps the operator draft', { tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:error'] }, async ({ page }) => {
   await setup(page, { conflict: true })
   await page.getByTestId('hosting-title-banner').fill('Borrador que conservar')
   await page.getByTestId('hosting-save-banner').click()
@@ -67,21 +68,21 @@ test('a stale message keeps the operator draft', { tag: [...tags, '@outcome:erro
   await expect(page.getByTestId('hosting-title-banner')).toHaveValue('Borrador que conservar')
 })
 
-test('a failed mode change retains its configured state', { tag: [...tags, '@outcome:failure'] }, async ({ page }) => {
+test('a failed mode change retains its configured state', { tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:failure'] }, async ({ page }) => {
   await setup(page, { failure: true })
   await page.getByTestId('hosting-switch-banner').click()
   await expect(page.getByTestId('hosting-error')).toContainText('Fallo de prueba')
   await expect(page.getByTestId('hosting-switch-banner')).toHaveAttribute('aria-checked', 'false')
 })
 
-test('production receipt is shown separately from configured mode', { tag: [...tags, '@outcome:display'] }, async ({ page }) => {
-  await setup(page)
+test('production receipt is shown separately from configured mode', { tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:display'] }, async ({ page }) => {
+  await setup(page, { throughProjects: true })
   await page.getByTestId('hosting-switch-banner').click()
   await expect(page.getByTestId('hosting-status-fixture')).toContainText('Pendiente de aplicación')
   await expect(page.getByText('https://fixture.example', { exact: true })).toBeVisible()
 })
 
-test('phone layout retains both message editors', { tag: [...tags, '@outcome:success'] }, async ({ page }) => {
+test('phone layout retains both message editors', { tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:success'] }, async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 915 })
   await setup(page)
   await page.getByTestId('hosting-text-banner').fill('Mensaje móvil de prueba.')
@@ -95,7 +96,7 @@ for (const profile of RESPONSIVE_PROFILES) {
   test.describe(`hosting control ${profile}`, () => {
     test.use(viewportUse(profile))
     test('message editing remains usable at this width', {
-      tag: [...tags, '@outcome:success', '@responsive:projects', `@responsive-scenario:${scenario.catalogKey}`, `@responsive-batch:${batchForScenario(scenario.catalogKey)}`, `@viewport:${profile}`],
+      tag: [...ADMIN_HOSTING_CONTROLS, '@outcome:success', '@responsive:projects', `@responsive-scenario:${scenario.catalogKey}`, `@responsive-batch:${batchForScenario(scenario.catalogKey)}`, `@viewport:${profile}`],
     }, async ({ page }, testInfo) => {
       await setup(page)
       await page.getByTestId('hosting-title-banner').fill('Aviso de prueba responsivo')

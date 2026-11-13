@@ -17,7 +17,7 @@ def response(data):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def controls(request):
-    serializer = ListInput(data=request.query_params.dict())
+    serializer = ListInput(data=request.query_params)
     serializer.is_valid(raise_exception=True)
     return response(services.listing(request.user, serializer.validated_data))
 

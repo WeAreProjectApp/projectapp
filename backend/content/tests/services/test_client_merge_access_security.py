@@ -12,6 +12,8 @@ from rest_framework.exceptions import ValidationError
 from content.models import DocumentState, DocumentStateGroup
 from content.services import client_merge
 from content.tests.data_integrity_merge_factories import client_pair, run_client_merge
+from hosting_control.models import Control, Event
+from monitoring.models import Resource
 
 pytestmark = pytest.mark.django_db
 
@@ -46,6 +48,20 @@ def test_merge_preserves_access_event_principals(superuser):
 
     event.refresh_from_db()
     assert (event.user_id, event.actor_id) == (duplicate.user_id, duplicate.user_id)
+
+
+def test_merge_preserves_hosting_event_author(superuser):
+    survivor, duplicate = client_pair()
+    resource = Resource.objects.create(key='hosting-audit', name='Sitio de prueba', kind='project')
+    control = Control.objects.create(resource=resource)
+    event = Event.objects.create(control=control, actor=duplicate.user, actor_name=duplicate.user.username,
+                                 source='panel', before={'mode': 'normal'}, after={'mode': 'banner'}, version=1)
+
+    run_client_merge(superuser, survivor, duplicate)
+
+    event.refresh_from_db()
+    assert event.actor_id == duplicate.user_id
+    assert event.actor_name == duplicate.user.username
 
 
 def test_merge_preview_has_no_policy_drift():

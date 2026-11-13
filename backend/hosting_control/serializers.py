@@ -4,7 +4,7 @@ from rest_framework import serializers
 class ClosedSerializer(serializers.Serializer):
     def to_internal_value(self, data):
         if not isinstance(data, dict) or set(data) - set(self.fields):
-            raise serializers.ValidationError('Campos de entrada desconocidos.')
+            raise serializers.ValidationError({'non_field_errors': ['Campos de entrada desconocidos.']})
         return super().to_internal_value(data)
 
 

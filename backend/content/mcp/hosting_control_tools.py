@@ -14,7 +14,7 @@ HOSTING_CONTROL_TOOLS = [
     _op('list_hosting_controls', 'Lista producciones y sus controles de hosting, incluidos destinos sin vínculo comercial. Distingue configuración de aplicación confirmada.',
         'hosting-controls', query_schema=LIST_QUERY, envelope_aliases=False),
     _op('get_hosting_control', 'Consulta ambos mensajes, modo configurado, destinos y recibos efectivos de producción. No expone credenciales.',
-        'hosting-control-detail', path=('control_id',), envelope_aliases=False),
+        'hosting-control-detail', path=('control_id',), query_schema=closed_object({}), envelope_aliases=False),
     _op('set_hosting_control_mode', 'Cambia manualmente el modo visual de una producción. Sustituye el modo anterior en una operación; normal retira el aviso. No detiene servicios ni altera datos.',
         'hosting-control-mode', 'PATCH', ('control_id',), 'sensitive', True, envelope_aliases=False,
         payload_schema=closed_object({'expected_version': VERSION, 'mode': MODE}, ['expected_version', 'mode'])),
