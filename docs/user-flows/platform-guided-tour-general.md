@@ -13,3 +13,5 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+Actualización 2026-11-12: Saltar recorrido conserva contraste mínimo 4.5:1 desde la apertura automática con foco inicial, en normal, hover y pulsación, y en la repetición manual, en ambos temas y cinco tamaños (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.

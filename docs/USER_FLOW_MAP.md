@@ -6712,6 +6712,8 @@ Ya no existe la transición Liquidación con ajustes ni un formulario que
 reinicie los datos. Al completarse, la fila conserva Cuenta pendiente de emitir
 y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 
+Actualización 2026-11-12: Detalle e historial distingue la cuenta en borrador, emitida o pagada por commercial_status, presenta la fecha del documento para borrador y fecha de emisión para emitida/pagada, sin emitir ni numerar durante la consulta (PA-259). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `admin-accounting-income-bulk-settle`
 
 - **Module:** admin
@@ -8148,6 +8150,8 @@ Orientación general por usuario, descarte persistente, finalización y repetici
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
 
+Actualización 2026-11-12: Saltar recorrido conserva contraste mínimo 4.5:1 desde la apertura automática con foco inicial, en normal, hover y pulsación, y en la repetición manual, en ambos temas y cinco tamaños (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `platform-guided-tour-project`
 
 - **Módulo:** platform
@@ -8163,6 +8167,8 @@ Guía del primer proyecto accesible, una vez por usuario; Ayuda permite repetirl
 | success | Avanzar, saltar, repetir o guardar desde sus controles; comprobar el resultado visible y persistido. |
 | error | Usar permisos o valores no admitidos; no se publica contenido ni se sobrescribe el estado vigente. |
 | failure | Fallar una petición de carga o guardado; mostrar el error o conservar el acuse pendiente para reintento. |
+
+Actualización 2026-11-12: Saltar recorrido es legible desde el primer paso automático y al repetir desde Ayuda, en ambos temas y cinco tamaños, conservando skipped/completed (PA-250). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 ### FLOW: `platform-guided-tour-voice`
 
@@ -9133,6 +9139,8 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresi�
 
 PA-244: después del cierre y al recargar, Proyecto > Datos muestra el propietario canónico del proyecto vinculado y sus contactos, aunque un snapshot histórico conserve otra identidad. No se reescriben esos datos para refrescar la vista.
 
+Actualización 2026-11-12: Tras confirmar con mouse, el foco vuelve al disparador si sigue disponible o a un destino visible del mismo registro cuando Revisar desaparece; cancelar conserva el disparador (PA-260/D1). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
+
 ### FLOW: `admin-proposal-change-history`
 
 - **Module:** admin
@@ -9691,6 +9699,8 @@ consulta de la conversación pública que originó el prompt.
 - **Interacción:** abrir un espacio por ID. Un administrador puede volver a su ficha comercial del Panel en otra pestaña.
 - **Error:** 403 o 404 muestra una explicación sin datos ni navegación interna del proyecto; un error recuperable ofrece reintentar. Una sesión sin autenticación se dirige al inicio de sesión.
 - **Validación:** automatizada exclusivamente en CI; acceso real por roles en Chrome coordinado con dev-qa.
+
+Actualización 2026-11-12: El acceso directo ajeno termina la carga con 403, permite regresar al listado propio y abrir un proyecto autorizado, en ambos sentidos entre clientes. Mensajes 403/404 y recuperación conservan idioma es-co/en-us (PA-252). La cobertura nueva se ejecuta en CI; la aceptación manual requiere un corte propio.
 
 ### FLOW: `platform-project-hosting-context`
 

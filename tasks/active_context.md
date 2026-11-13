@@ -1,3 +1,13 @@
+## PA-250 / PA-259 / PA-260-D1 / PA-252 — 2026-11-12
+
+Implementación en worktree propio desde main 295b65ef: contraste de Saltar recorrido,
+estado real de la cuenta en el detalle de ingreso, retorno de foco tras aprobación
+y regresión de la denegación de proyectos ya integrada. PA-260 sólo incorpora D1;
+D2 reutiliza PA-259 y los demás seguimientos conservan sus entregas. Datos nuevos,
+sin reiniciar terminales históricos; automatizadas exclusivamente en CI. La entrega
+requiere PR abierto, CI verde y traspaso con SHA propio; la aceptación manual se
+registra por separado. Sin migraciones, emisión, cambios financieros ni deploy.
+
 ## 2026-11-11 — Tren de integración de 25 PRs
 
 Combinación de las sesiones #552–#577 (sin #556), con los PRs abiertos del censo.

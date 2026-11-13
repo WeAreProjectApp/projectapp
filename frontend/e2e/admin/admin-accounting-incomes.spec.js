@@ -165,6 +165,7 @@ function buildHandler({
   // the resolvable case (the client's hosting says annual, so the draft can
   // already propose a date); tests that need the everyday one — no recorded
   // window and an ambiguous hosting — pass the `original_date` anchor instead.
+  linkedCollectionAccount = null,
   duplicateDraftPeriod = {
     period_date: '2027-02-01',
     period_date_source: 'hosting_cycle',
@@ -419,7 +420,7 @@ function buildHandler({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          income: source, liquid: [], expenses: [], collection_account: null,
+          income: source, liquid: [], expenses: [], collection_account: linkedCollectionAccount,
         }),
       };
     }
@@ -3351,5 +3352,61 @@ test.describe('Admin Accounting Incomes — vista agrupada por cliente', () => {
 
     await expect(page.getByTestId('income-group-selected-5'))
       .toHaveText('2 seleccionados');
+  });
+});
+
+
+test.describe('Income detail collection status (PA-259)', () => {
+  test.use({ viewport: { width: 1528, height: 732 } });
+  test.beforeEach(async ({ page }) => {
+    await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true, is_superuser: true } });
+  });
+
+  for (const [status, label, dateLabel] of [
+    ['draft', 'Draft', 'Document date'],
+    ['issued', 'Issued', 'Issue date'],
+    ['paid', 'Paid', 'Issue date'],
+  ]) {
+    test(`the history detail presents a ${status} account without issuing it`, {
+      tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      const calls = [];
+      const linkedCollectionAccount = {
+        id: 25901, public_number: status === 'draft' ? '' : 'PA-FICT-259',
+        commercial_status: status, issue_date: '2026-11-08', total: '119000.00',
+      };
+      await mockApi(page, buildHandler({ rows: [incomeRow()], calls, linkedCollectionAccount }));
+      await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+      await waitForNuxtApp(page);
+      await page.locator('aside').getByRole('link', { name: 'Resumen', exact: true }).click();
+      await page.getByTestId('accounting-subnav-incomes').click();
+
+      await page.getByTestId('income-actions-1').click();
+      await page.getByTestId('income-action-detail-1').click();
+
+      const collection = page.getByTestId('income-detail-collection');
+      await expect(collection).toContainText(label);
+      await expect(collection).toContainText(`${dateLabel}: Sun, Nov 8, 2026`);
+      await expect(collection).toContainText('119.000');
+      expect(calls).toEqual([]);
+    });
+  }
+
+  test('the history detail omits a nonexistent collection account', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [incomeRow()], calls }));
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await waitForNuxtApp(page);
+    await page.locator('aside').getByRole('link', { name: 'Resumen', exact: true }).click();
+    await page.getByTestId('accounting-subnav-incomes').click();
+
+    await page.getByTestId('income-actions-1').click();
+    await page.getByTestId('income-action-detail-1').click();
+
+    await expect(page.getByTestId('income-detail-total')).toContainText('1.160.000');
+    await expect(page.getByTestId('income-detail-collection')).toHaveCount(0);
+    expect(calls).toEqual([]);
   });
 });
