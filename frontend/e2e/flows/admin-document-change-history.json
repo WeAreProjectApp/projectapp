@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Abre Historial desde el editor; lista compacta de veinte revisiones por página, un dropdown de orden y una paginación. Consultar muestra cambios renderizados frente a la anterior con origen/destino, fechas, bajas − y altas +; permite seleccionar dos revisiones entre páginas, reconocer cambios de formato, leer la versión completa y volver conservando contexto. Funciona en los cinco tamaños del panel y ambos temas. Explica versiones iniciales, eventos incompletos, ausencia de diferencias, documentos extensos y errores recuperables sin resultados obsoletos.",
+  "description": "Abre Historial desde el editor; lista compacta de veinte revisiones por página, un dropdown de orden y una paginación. Consultar muestra cambios renderizados frente a la anterior con origen/destino, fechas, bajas − y altas +; permite seleccionar dos revisiones entre páginas, reconocer cambios de formato, leer la versión completa y volver conservando contexto. Funciona en los cinco tamaños del panel y ambos temas; los controles de regreso permanecen visibles durante una lectura extensa. Explica versiones iniciales, eventos incompletos, ausencia de diferencias, documentos extensos y errores recuperables sin resultados obsoletos.",
   "outcomes": [
     "display",
     "success",

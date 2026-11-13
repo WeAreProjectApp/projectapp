@@ -48,6 +48,6 @@ export async function openDocumentHistory(page) {
   const tabs = page.getByTestId('entity-history-tabs');
   const mobile = tabs.getByLabel('Secciones');
   if (await mobile.isVisible()) await mobile.selectOption('history');
-  else await tabs.getByRole('button', { name: 'Historial', exact: true }).click();
+  else await tabs.getByRole('tab', { name: 'Historial', exact: true }).click();
   await expect(page.getByTestId('history-entry-25')).toContainText('Ana Revisora');
 }

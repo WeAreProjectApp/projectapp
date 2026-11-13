@@ -106,4 +106,38 @@ test('retains the final paragraph in a large historical document', { tag: tags('
   await page.getByTestId('history-full-version').click();
 
   await expect(page.getByTestId('history-full-content')).toContainText('Párrafo histórico 599');
+  await page.getByTestId('history-full-content').getByText('Párrafo histórico 599', { exact: true }).scrollIntoViewIfNeeded();
+  await expect(page.getByTestId('history-full-version')).toBeInViewport();
+});
+
+test('returns to the same mobile history page with its selection', { tag: [...tags('success'), '@viewport:compact'] }, async ({ page }) => {
+  await page.setViewportSize(VIEWPORTS.compact);
+  await installDocumentHistory(page);
+  await openDocumentHistory(page);
+  await page.getByRole('navigation', { name: 'Paginación del historial' }).getByRole('button', { name: 'Página siguiente' }).click();
+  await page.getByRole('checkbox', { name: 'Seleccionar versión 1', exact: true }).check();
+  await page.getByTestId('history-entry-5').getByRole('button', { name: 'Consultar' }).click();
+  await expect(page.getByTestId('history-comparison-heading')).toContainText('v4 → v5');
+  await page.getByRole('button', { name: 'Volver al historial', exact: true }).click();
+
+  await expect(page.getByRole('checkbox', { name: 'Seleccionar versión 1', exact: true })).toBeChecked();
+  await expect(page.getByRole('navigation', { name: 'Paginación del historial' })).toContainText('21–25');
+});
+
+test('explains an incomplete historical event', { tag: tags('display') }, async ({ page }) => {
+  await installDocumentHistory(page, { overrides: { 25: historicalRevision(25, '', { number: null, complete: false, snapshot: null }) } });
+  await openDocumentHistory(page);
+  await consultLatest(page);
+
+  await expect(page.getByTestId('history-version-detail')).toContainText('Este evento antiguo no contiene una versión completa');
+  await expect(page.getByTestId('history-full-version')).toHaveCount(0);
+});
+
+test('links to the file saved with a historical PDF revision', { tag: tags('success') }, async ({ page }) => {
+  await installDocumentHistory(page, { overrides: { 25: historicalRevision(25, '', { snapshot: { title: 'Acuerdo PA-265', content_format: 'uploaded_pdf', uploaded_pdf: 'historical/agreement-v25.pdf', pdf_filename: 'Acuerdo.pdf' } }) } });
+  await openDocumentHistory(page);
+  await consultLatest(page);
+
+  await expect(page.getByTestId('history-version-detail')).toContainText('no se compara visualmente');
+  await expect(page.getByRole('link', { name: 'Ver PDF de esta versión' })).toHaveAttribute('href', '/api/entity-history/document/265/versions/25/file/');
 });

@@ -101,21 +101,16 @@ async function switchMode() {
             <BaseButton variant="ghost" size="sm" :aria-pressed="focusVersion?.id === entry.id" @click="show(() => consult(entry))">{{ t('documentHistory.consult') }}</BaseButton>
           </li>
         </ol>
-        <BasePagination v-if="result && !loading" v-bind="pagination" :aria-label="t('documentHistory.pagination')" @prev="goToPage(page - 1)" @next="goToPage(page + 1)" @go="goToPage" />
+        <BasePagination v-if="result && !loading" v-bind="pagination" class="history-pagination" :aria-label="t('documentHistory.pagination')" @prev="goToPage(page - 1)" @next="goToPage(page + 1)" @go="goToPage" />
       </div>
-      <aside ref="detailPanel" tabindex="-1" class="history-consultation min-w-0 space-y-4 rounded-xl border border-border-muted bg-surface p-4 focus:outline-none panel-landscape:sticky panel-landscape:top-4 panel-landscape:overflow-y-auto" :class="{ 'hidden panel-landscape:block': !detailOpen }" :aria-label="t('documentHistory.consultation')" :aria-busy="busy" data-testid="history-version-detail">
+      <aside ref="detailPanel" tabindex="-1" class="history-consultation min-w-0 scroll-mt-16 space-y-4 rounded-xl border border-border-muted bg-surface p-4 focus:outline-none panel-landscape:sticky panel-landscape:top-4 panel-landscape:scroll-mt-4 panel-landscape:overflow-y-auto" :class="{ 'hidden panel-landscape:block': !detailOpen }" :aria-label="t('documentHistory.consultation')" :aria-busy="busy" data-testid="history-version-detail">
         <template v-if="detailOpen">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-base font-semibold">{{ versionLabel(active?.to || focusVersion) }}</h3>
-            <BaseButton variant="ghost" size="sm" @click="back">{{ t('documentHistory.back') }}</BaseButton>
-          </div>
-          <p v-if="busy" role="status" class="text-sm text-text-muted">{{ t('documentHistory.consulting') }}</p>
-          <div v-else-if="detailError" role="alert" class="space-y-3 rounded-lg bg-danger-soft p-3 text-sm text-danger-strong">
-            <p>{{ t('documentHistory.consultError') }}</p>
-            <BaseButton variant="secondary" size="sm" @click="retry">{{ t('documentHistory.retry') }}</BaseButton>
-          </div>
-          <template v-else-if="active">
-            <div class="space-y-2 border-b border-border-muted pb-3 text-sm" data-testid="history-comparison-heading">
+          <header class="sticky top-14 z-10 space-y-3 border-b border-border-muted bg-surface pb-3 panel-landscape:top-0">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-base font-semibold">{{ versionLabel(active?.to || focusVersion) }}</h3>
+              <BaseButton variant="ghost" size="sm" @click="back">{{ t('documentHistory.back') }}</BaseButton>
+            </div>
+            <div v-if="active" class="space-y-2 text-sm" data-testid="history-comparison-heading">
               <template v-if="active.from">
                 <p class="font-semibold">{{ t('documentHistory.direction', { from: active.from.number, to: active.to.number }) }}</p>
                 <p class="text-xs text-text-muted">{{ t('documentHistory.origin') }}: v{{ active.from.number }} · {{ date(active.from.occurred_at) }} · {{ active.from.actor }}</p>
@@ -123,8 +118,13 @@ async function switchMode() {
               <p class="text-xs text-text-muted">{{ active.from ? t('documentHistory.destination') : t('documentHistory.revision') }}: {{ versionLabel(active.to) }} · {{ date(active.to.occurred_at) }} · {{ active.to.actor }}</p>
               <BaseButton v-if="active.to.complete && active.from" variant="secondary" size="sm" data-testid="history-full-version" @click="switchMode">{{ t(mode === 'changes' ? 'documentHistory.fullVersion' : 'documentHistory.backToComparison') }}</BaseButton>
             </div>
-            <DocumentHistoryResult :active="active" :full="mode === 'full'" :object-id="objectId" />
-          </template>
+          </header>
+          <p v-if="busy" role="status" class="text-sm text-text-muted">{{ t('documentHistory.consulting') }}</p>
+          <div v-else-if="detailError" role="alert" class="space-y-3 rounded-lg bg-danger-soft p-3 text-sm text-danger-strong">
+            <p>{{ t('documentHistory.consultError') }}</p>
+            <BaseButton variant="secondary" size="sm" @click="retry">{{ t('documentHistory.retry') }}</BaseButton>
+          </div>
+          <DocumentHistoryResult v-else-if="active" :active="active" :full="mode === 'full'" :object-id="objectId" />
         </template>
         <p v-else class="text-sm text-text-muted">{{ t('documentHistory.prompt') }}</p>
       </aside>
@@ -134,6 +134,7 @@ async function switchMode() {
 
 <style scoped>
 .history-consultation { overflow-wrap: anywhere; }
+nav.history-pagination { display: flex; flex-direction: column; gap: .5rem; }
 @media (min-width: 1024px) {
   .history-consultation { max-height: calc(100dvh - 3rem); }
 }
