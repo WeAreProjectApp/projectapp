@@ -134,7 +134,7 @@ test('explains an incomplete historical event', { tag: tags('display') }, async 
 });
 
 test('links to the file saved with a historical PDF revision', { tag: tags('success') }, async ({ page }) => {
-  await installDocumentHistory(page, { overrides: { 25: historicalRevision(25, '', { snapshot: { title: 'Acuerdo PA-265', content_format: 'uploaded_pdf', uploaded_pdf: 'historical/agreement-v25.pdf', pdf_filename: 'Acuerdo.pdf' } }) } });
+  await installDocumentHistory(page, { overrides: { 25: historicalRevision(25, '', { snapshot: { title: 'Acuerdo PA-265', content_format: 'pdf', uploaded_pdf: 'historical/agreement-v25.pdf', pdf_filename: 'Acuerdo.pdf' } }) } });
   await openDocumentHistory(page);
   await consultLatest(page);
 

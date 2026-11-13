@@ -172,7 +172,7 @@ async function installFixtures(page, { fail = null, onCall = () => {} } = {}) {
 }
 
 async function openDocumentHistory(page) {
-  await navigateFromPanel(page, 'Gestor Documental');
+  await navigateFromPanel(page, 'Gestor Documental', '/es-co/panel');
   const documentLink = page.getByRole('link', { name: 'Contrato de Servicios', exact: true });
   await expect(documentLink).toHaveText('Contrato de Servicios');
   await documentLink.click();
@@ -218,8 +218,8 @@ async function openCardHistory(page) {
   await expect(page.getByTestId('entity-history')).toBeVisible();
 }
 
-async function navigateFromPanel(page, item) {
-  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+async function navigateFromPanel(page, item, start = '/panel') {
+  await page.goto(start, { waitUntil: 'domcontentloaded' });
   if (page.viewportSize().width < 1024) {
     const menu = page.getByRole('button', { name: 'Abrir menú' });
     await expect(menu).toBeVisible();

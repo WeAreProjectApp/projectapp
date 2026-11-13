@@ -64,8 +64,8 @@ async function setup(page, { createFailure = false, replaceFailure = false, prev
       return { status: 200, contentType: 'application/pdf', body: document.pdf.version === 2 ? next : original,
         headers: { 'Content-Disposition': new URL(route.request().url()).searchParams.has('inline') ? 'inline' : 'attachment; filename="original.pdf"' } };
     }
-    if (apiPath === 'entity-history/document/71/') return json({ results: [{ id: 91, number: 1, action: 'created', occurred_at: '2026-10-29T12:00:00Z', actor: 'Operador', source: 'http', fields: [{ label: 'Archivo PDF' }], complete: true }], count: 1, page: 1, page_size: 20, total_pages: 1 });
-    if (apiPath === 'entity-history/document/71/versions/91/') return json({ id: 91, number: 1, changes: [], snapshot: { title: 'Anexo PDF', uploaded_pdf: 'private-reference', pdf_filename: 'original.pdf' } });
+    if (apiPath === 'entity-history/document/71/') return json({ results: [{ id: 91, number: 1, action: 'created', occurred_at: '2026-10-29T12:00:00Z', actor: 'Operador', source: 'http', fields: [{ label: 'Archivo PDF' }], complete: true }], count: 1, page: 1, num_pages: 1 });
+    if (apiPath === 'entity-history/document/71/versions/91/') return json({ id: 91, number: 1, complete: true, occurred_at: '2026-10-29T12:00:00Z', actor: 'Operador', previous_id: null, labels: {}, protected_fields: [], changes: [], snapshot: { title: 'Anexo PDF', content_format: 'pdf', uploaded_pdf: 'private-reference', pdf_filename: 'original.pdf' } });
     if (apiPath.endsWith('/versions/91/file/')) return { status: 200, contentType: 'application/pdf', body: original };
     if (['document-folders/', 'document-tags/', 'document-states/', 'document-state-groups/', 'accounting/projects/', 'proposals/client-profiles/'].includes(apiPath)) return json([]);
     if (apiPath.includes('email-usage') || apiPath.includes('communications')) return json({ count: 0, results: [] });

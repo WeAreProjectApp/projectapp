@@ -117,4 +117,8 @@ describe('document history content', () => {
     expect(changed(diff, 'added')).toHaveLength(1);
     expect(changed(diff, 'added')[0].item.html).not.toContain('<li>Uno</li>');
   });
+
+  it('identifies the persisted PDF format without an available file', () => {
+    expect(historicalContent({ content_format: 'pdf' }).pdf).toBe(true);
+  });
 });

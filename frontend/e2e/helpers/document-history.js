@@ -40,7 +40,7 @@ export async function installDocumentHistory(page, { overrides = {}, fail = '', 
 }
 
 export async function openDocumentHistory(page) {
-  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
   if (page.viewportSize().width < 1024) await page.getByRole('button', { name: 'Abrir menú' }).click();
   await page.getByRole('link', { name: 'Gestor Documental', exact: true }).click();
   await page.getByRole('link', { name: historyDocument.title, exact: true }).click();

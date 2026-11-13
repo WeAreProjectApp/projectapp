@@ -95,7 +95,7 @@ export function historicalContent(snapshot = {}) {
   return {
     html: host.innerHTML, blocks,
     unsupported: legacy && snapshot.content_json.blocks.some((block) => !KNOWN_BLOCKS.has(block?.type)),
-    pdf: snapshot.content_format === 'uploaded_pdf' || Boolean(snapshot.uploaded_pdf),
+    pdf: ['pdf', 'uploaded_pdf'].includes(snapshot.content_format) || Boolean(snapshot.uploaded_pdf),
   };
 }
 
