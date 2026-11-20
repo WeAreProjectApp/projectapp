@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Admin uploads project resources with version history. The library preserves designs, documents, credentials, APKs and other resources and displays contracts, amendments and legal annexes in their own groups. Client downloads the exact current or previous file through the authenticated Platform API. A denied or interrupted download shows its explanation without closing the detail or creating a browser artifact; pending downloads disable duplicate requests. Per-project view at /platform/projects/:id/deliverables and unified cross-project view at /platform/deliverables.",
+  "description": "Clients open My projects, choose one of their projects, and open Resources at /platform/projects/:id/deliverables. The compatibility route /platform/deliverables redirects to /platform/projects. Admin uploads project resources with version history. The library displays designs, documents, credentials, APKs, contracts, amendments and legal annexes. Clients download the exact current or previous file through the authenticated Platform API. A denied or interrupted download shows its explanation in the detail; pending downloads disable duplicate requests.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

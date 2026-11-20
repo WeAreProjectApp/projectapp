@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin sends the initial-phase diagnostic from the edit page via 'Enviar envío inicial' — POST /api/diagnostics/:id/send-initial/, stamps `initial_sent_at`, status moves DRAFT → SENT. Public view then exposes only sections with visibility ∈ {initial, both}. The follow-up SENT → NEGOTIATING transition is its own flow (`admin-diagnostic-mark-in-analysis`). Since the Jul 2026 UX redesign the send opens a pre-send scorecard modal (GET /api/diagnostics/:id/scorecard/): blockers disable the send button and the backend refuses to transition while blockers remain (400 scorecard_blockers).",
+  "description": "Admin sends the initial-phase diagnostic from the edit page via 'Enviar envío inicial' — POST /api/diagnostics/:id/send-initial/, stamps `initial_sent_at`, status moves DRAFT → SENT. Public view then exposes only sections with visibility ∈ {initial, both}. The follow-up SENT → NEGOTIATING transition is its own flow (`admin-diagnostic-mark-in-analysis`). Since the Jul 2026 UX redesign the send opens a pre-send scorecard modal (GET /api/diagnostics/:id/scorecard/): blockers disable the send button and the backend refuses to transition while blockers remain (400 scorecard_blockers). General and the header adopt the saved expiration from the send response and show it again after reload.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",
