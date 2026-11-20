@@ -534,11 +534,12 @@ test.describe('Admin document project/client navigation', () => {
     expect(scopedDocumentRequests(api.documentRequests.slice(beforeReload))).toEqual([['369', '2']]);
   });
 
-  test('opening a client document deep link loads only its folder', {
+  test('opening a shared client document URL loads only its folder', {
     tag: [...ADMIN_DOCUMENT_NAVIGATION, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const api = await setupOctoberNavigation(page);
     // quality: allow-deep-link (the address is the input to this regression)
+    // quality: allow-no-interaction (direct address entry must recover the folder and focus without extra clicks)
     await page.goto(`/es-co/panel/documents?${new URLSearchParams(octoberContext)}`, { waitUntil: 'domcontentloaded' });
 
     await expectOctoberContext(page);

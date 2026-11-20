@@ -67,7 +67,7 @@ describe('useDocumentFilterQuery', () => {
     expect(mockRoute.query.by).toBe('client')
   })
 
-  it('preserves the client deep link while the saved preference loads', async () => {
+  it('preserves the shared client URL while the saved preference loads', async () => {
     const navigationMode = ref('project')
     const focusedDocumentId = ref(null)
     mockRoute.query = { by: 'client', folder: '369', client: '2', focus: '61' }
