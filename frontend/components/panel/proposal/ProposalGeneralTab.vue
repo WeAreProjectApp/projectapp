@@ -373,8 +373,8 @@
   <form class="bg-surface rounded-xl shadow-sm border border-border-muted" @submit.prevent="emit('update')">
     <div class="p-4 sm:p-8 space-y-6">
     <div>
-      <label class="block text-sm font-medium text-text-default mb-1">Título</label>
-      <BaseInput v-model="form.title" type="text" required />
+      <label for="proposal-general-title" class="block text-sm font-medium text-text-default mb-1">Título</label>
+      <BaseInput id="proposal-general-title" v-model="form.title" type="text" required />
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
@@ -440,12 +440,12 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm font-medium text-text-default mb-1">Recordatorio (días después de enviar)</label>
-        <BaseInput v-model.number="form.reminder_days" type="number" min="1" max="30" />
+        <BaseInput v-model.number="form.reminder_days" type="number" min="0" max="365" />
         <p class="text-xs text-text-subtle mt-1">Se enviará un email recordatorio al cliente X días después de enviar la propuesta.</p>
       </div>
       <div>
         <label class="block text-sm font-medium text-text-default mb-1">Urgencia (días después de enviar)</label>
-        <BaseInput v-model.number="form.urgency_reminder_days" type="number" min="1" max="30" />
+        <BaseInput v-model.number="form.urgency_reminder_days" type="number" min="0" max="365" />
         <p class="text-xs text-text-subtle mt-1">Se enviará un email de urgencia X días después de enviar (incluye descuento si % > 0).</p>
       </div>
     </div>

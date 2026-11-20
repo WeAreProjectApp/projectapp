@@ -50,6 +50,12 @@ const groups = computed(() => props.stateStore.groups.map((group) => ({
   ...group,
   states: props.stateStore.states.filter((state) => state.group === group.id),
 })));
+const activeGroups = computed(() => props.stateStore.groups.filter((group) => group.is_active));
+const groupOptions = computed(() => activeGroups.value.map((group) => ({ value: group.id, label: group.name })));
+const modeOptions = [
+  { value: 'exclusive', label: 'Uno activo' },
+  { value: 'additive', label: 'Varios activos' },
+];
 
 const hasOperationalEffects = computed(() => props.operationalEffects.length > 0);
 
@@ -164,10 +170,10 @@ function clearCreateGroupError() {
 
 onMounted(async () => {
   await props.stateStore.fetchCatalog({ includeRetired: true });
-  if (!newState.group && props.stateStore.groups.length) {
-    newState.group = props.stateStore.groups.find(
+  if (!newState.group && activeGroups.value.length) {
+    newState.group = activeGroups.value.find(
       (group) => group.selection_mode === 'additive',
-    )?.id || props.stateStore.groups[0].id;
+    )?.id || activeGroups.value[0].id;
   }
 });
 
@@ -392,19 +398,19 @@ function activeCount(state) {
             />
           </BaseFormField>
           <BaseFormField
-            v-slot="{ errorId }"
+            v-slot="{ errorId, invalid }"
             label="Grupo"
             :error="createFieldError('group')"
           >
-            <select
+            <BaseChoiceSelect
               v-model="newState.group"
               aria-label="Grupo del nuevo estado"
               :aria-describedby="errorId"
-              class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
-              @change="clearCreateFieldError('group')"
-            >
-              <option v-for="group in stateStore.groups.filter((item) => item.is_active)" :key="group.id" :value="group.id">{{ group.name }}</option>
-            </select>
+              :options="groupOptions"
+              :error="invalid"
+              size="sm"
+              @update:model-value="clearCreateFieldError('group')"
+            />
           </BaseFormField>
           <BaseFormField
             v-if="hasOperationalEffects"
@@ -424,9 +430,7 @@ function activeCount(state) {
             </select>
           </BaseFormField>
           <BaseFormField label="Color">
-            <select v-model="newState.color" aria-label="Color del nuevo estado" class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm">
-              <option v-for="color in DOCUMENT_STATE_COLORS" :key="color.value" :value="color.value">{{ color.label }}</option>
-            </select>
+            <BaseChoiceSelect v-model="newState.color" aria-label="Color del nuevo estado" :options="DOCUMENT_STATE_COLORS" size="sm" />
           </BaseFormField>
         </div>
         <BaseFormField
@@ -480,10 +484,7 @@ function activeCount(state) {
             />
           </BaseFormField>
           <BaseFormField label="Modo">
-            <select v-model="newGroup.selection_mode" aria-label="Modo del nuevo grupo" class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm">
-              <option value="exclusive">Uno activo</option>
-              <option value="additive">Varios activos</option>
-            </select>
+            <BaseChoiceSelect v-model="newGroup.selection_mode" aria-label="Modo del nuevo grupo" :options="modeOptions" size="sm" />
           </BaseFormField>
         </div>
         <BaseButton

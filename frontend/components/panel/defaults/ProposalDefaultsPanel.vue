@@ -24,20 +24,21 @@
       </p>
       <form class="bg-surface rounded-xl shadow-sm border border-border-muted p-4 sm:p-8 space-y-6" @submit.prevent="handleSaveGeneral">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-text-default mb-1">Idioma por defecto</label>
-            <BaseSelect
+          <BaseFormField label="Idioma por defecto" for="proposal-defaults-language">
+            <BaseChoiceSelect
+              id="proposal-defaults-language"
+              :disabled="isSaving"
               v-model="generalForm.language"
-              :options="[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }]"
+              :options="languageOptions"
             />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-text-default mb-1">Moneda</label>
-            <BaseSelect
+          </BaseFormField>
+          <BaseFormField label="Moneda" for="proposal-defaults-currency">
+            <BaseChoiceSelect
+              id="proposal-defaults-currency"
               v-model="generalForm.currency"
               :options="[{ value: 'COP', label: 'COP' }, { value: 'USD', label: 'USD' }]"
             />
-          </div>
+          </BaseFormField>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -69,11 +70,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Recordatorio (días después de enviar)</label>
-            <BaseInput v-model.number="generalForm.reminder_days" type="number" min="1" max="30" />
+            <BaseInput v-model.number="generalForm.reminder_days" type="number" min="0" max="365" />
           </div>
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Urgencia (días después de enviar)</label>
-            <BaseInput v-model.number="generalForm.urgency_reminder_days" type="number" min="1" max="30" />
+            <BaseInput v-model.number="generalForm.urgency_reminder_days" type="number" min="0" max="365" />
           </div>
         </div>
         <div>
@@ -126,7 +127,7 @@
           </p>
         </div>
         <div class="flex items-center gap-3 pt-2">
-          <BaseButton variant="primary" size="md" type="submit" :disabled="isSaving">
+          <BaseButton variant="primary" size="md" type="submit" :disabled="isSaving || isLoading">
             {{ isSaving ? 'Guardando...' : 'Guardar Vista General' }}
           </BaseButton>
         </div>
@@ -143,7 +144,7 @@
         con editor estructurado y JSON, igual que al editar una propuesta.
       </p>
       <!-- Language selector -->
-      <div class="mb-6 flex items-center gap-3">
+      <div class="mb-6 flex flex-wrap items-center gap-3">
         <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Idioma:</span>
         <div class="flex gap-2">
           <button
@@ -162,6 +163,7 @@
         <span v-if="configUpdatedAt" class="text-[11px] text-text-subtle ml-4">
           Última actualización: {{ formatDate(configUpdatedAt) }}
         </span>
+        <BaseBadge v-if="systemSections && !isLoading">Plantilla del sistema</BaseBadge>
       </div>
 
       <!-- Loading -->
@@ -239,6 +241,7 @@
         Valores por defecto del bloque técnico (nuevas propuestas). Idioma actual:
         <strong>{{ selectedLang === 'es' ? 'Español' : 'English' }}</strong> — cambia el idioma en la pestaña Secciones si necesitas la otra plantilla.
       </p>
+      <BaseBadge v-if="systemSections && !isLoading" class="mb-4">Plantilla del sistema</BaseBadge>
       <div class="flex gap-1 mb-4 bg-surface-raised rounded-xl p-1 max-w-sm">
         <button
           type="button"
@@ -830,6 +833,7 @@ const slugPatternPreview = computed(() => {
 });
 
 async function handleSaveGeneral() {
+  if (isLoading.value || isSaving.value) return;
   isSaving.value = true;
   try {
     const result = await proposalStore.saveProposalDefaults(
@@ -838,7 +842,13 @@ async function handleSaveGeneral() {
       generalForm.value,
     );
     if (result.success) {
-      if (generalForm.value.language !== selectedLang.value) {
+      if (generalForm.value.language === selectedLang.value && result.data?.updated_at) {
+        if (savedSections.value.size === 0) {
+          applySectionDefaults(result.data);
+        } else if (sectionSource(result.data) === savedSectionSource) {
+          configUpdatedAt.value = result.data.updated_at;
+        }
+      } else if (generalForm.value.language !== selectedLang.value && savedSections.value.size === 0) {
         selectedLang.value = generalForm.value.language;
         await loadDefaults(selectedLang.value);
       }
@@ -854,6 +864,9 @@ async function handleSaveGeneral() {
 // ── Secciones ──
 const selectedLang = ref('es');
 const sections = ref([]);
+const systemSections = ref(false);
+let savedSectionSource = '';
+let defaultsRequest = 0;
 const configUpdatedAt = ref(null);
 const configFormats = ref(null);
 const isLoading = ref(false);
@@ -1002,15 +1015,27 @@ function handleSaveSection({ sectionId, payload }) {
   }
 }
 
-/**
- * Adopt the version just written as the base for the next save. Without a
- * fresh updated_at the following save would look stale and be rejected, so
- * fall back to re-reading the config rather than inventing a timestamp.
- */
+function sectionSource(data) {
+  return JSON.stringify([data.id === null ? [] : data.sections_json, data.text_formats || null]);
+}
+
+function applySectionDefaults(data) {
+  const fallback = Array.isArray(data.effective_sections_json);
+  systemSections.value = data.id === null || fallback;
+  configFormats.value = data.text_formats || null;
+  configUpdatedAt.value = data.updated_at;
+  const effective = fallback ? data.effective_sections_json : data.sections_json || [];
+  sections.value = resolveEditorialContent(effective, fallback ? null : configFormats.value, '/sections_json');
+  savedSectionSource = sectionSource(data);
+}
+
 async function syncConfigVersion(result) {
-  const updatedAt = result.data?.updated_at;
-  if (updatedAt) {
-    configUpdatedAt.value = updatedAt;
+  if (result.data?.updated_at && Array.isArray(result.data.sections_json)) {
+    applySectionDefaults(result.data);
+    return;
+  }
+  if (result.data?.updated_at) {
+    configUpdatedAt.value = result.data.updated_at;
     configFormats.value = result.data.text_formats || null;
     return;
   }
@@ -1018,15 +1043,15 @@ async function syncConfigVersion(result) {
 }
 
 async function loadDefaults(lang) {
+  const request = ++defaultsRequest;
   isLoading.value = true;
   expandedSections.value = new Set();
   savedSections.value = new Set();
   try {
     const result = await proposalStore.fetchProposalDefaults(lang);
+    if (request !== defaultsRequest) return;
     if (result.success && result.data) {
-      sections.value = resolveEditorialContent(result.data.sections_json || [], result.data.text_formats, '/sections_json');
-      configFormats.value = result.data.text_formats || null;
-      configUpdatedAt.value = result.data.updated_at;
+      applySectionDefaults(result.data);
       const d = result.data;
       const num = (v, fallback) => {
         const n = Number(v);
@@ -1051,7 +1076,7 @@ async function loadDefaults(lang) {
       };
     }
   } finally {
-    isLoading.value = false;
+    if (request === defaultsRequest) isLoading.value = false;
   }
 }
 

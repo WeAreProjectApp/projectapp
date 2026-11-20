@@ -13,6 +13,7 @@ from content.models import (
     McpConnector,
     McpActionIntent,
     ProposalDefaultConfig,
+    ProposalSection,
     Document,
     DocumentType,
 )
@@ -257,6 +258,28 @@ class TestProposalMcpSettings:
         assert result['isError'] is False
         assert proposal.service_contract_approved is True
         assert proposal.client_email == original_email
+
+    def test_settings_update_saves_payment_edit_with_existing_if_match(
+        self, api_client, proposals_token, proposal,
+    ):
+        section = ProposalSection.objects.create(
+            proposal=proposal, section_type='investment', title='Inversión',
+            content_json={
+                'hostingPlan': {'hostingPercent': 80},
+                'paymentOptions': [{'label': '40% al firmar', 'description': 'Pago inicial'}],
+            },
+        )
+
+        source = _call(api_client, proposals_token, 'get_proposal', {'proposal_id': proposal.pk})
+        result = _call(api_client, proposals_token, 'update_proposal_settings', {
+            'proposal_id': proposal.pk, 'if_match': _payload(source)['proposal_source_hash'],
+            'hosting_percent': 70, 'investment_payment_percentages': [45.5],
+        })
+
+        section.refresh_from_db()
+        assert result['isError'] is False
+        assert section.content_json['hostingPlan']['hostingPercent'] == 70
+        assert section.content_json['paymentOptions'][0]['label'] == '45.5% al firmar'
 
     def test_settings_update_records_the_mcp_actor_in_entity_history(
         self, api_client, proposals_token, proposal,

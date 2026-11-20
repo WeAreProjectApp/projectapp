@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin navigates to /panel/defaults — a unified shell page with a Propuesta/Diagnóstico mode switch. Default mode is proposal. Clicking Diagnóstico updates the URL to ?mode=diagnostic and renders DiagnosticDefaultsPanel. Direct navigation to ?mode=diagnostic lands in diagnostic mode. The back link label changes by mode (Volver a Propuestas / Volver a Diagnósticos). Old routes /panel/proposals/defaults, /panel/proposals/email-templates and /panel/diagnostics/defaults redirect here preserving their mode/tab intent.",
+  "description": "Admin navigates to /panel/defaults — a unified shell page with a Propuesta/Diagnóstico mode switch. Default mode is proposal. Clicking Diagnóstico updates the URL to ?mode=diagnostic and renders DiagnosticDefaultsPanel. Direct navigation to ?mode=diagnostic lands in diagnostic mode. The back link label changes by mode (Volver a Propuestas / Volver a Diagnósticos). Old routes /panel/proposals/defaults, /panel/proposals/email-templates and /panel/diagnostics/defaults redirect here preserving their mode/tab intent. Both modes label effective system sections and preserve custom templates when saving General.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

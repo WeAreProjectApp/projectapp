@@ -627,9 +627,21 @@ def _scope_section(order):
     }
 
 
-def default_sections() -> list[dict]:
+_ENGLISH_SECTION_TITLES = {
+    'purpose': 'Purpose',
+    'radiography': 'Application Overview',
+    'categories': 'Evaluation Categories',
+    'delivery_structure': 'Deliverable Structure',
+    'executive_summary': 'Executive Summary',
+    'cost': 'Cost and Payment Terms',
+    'timeline': 'Timeline',
+    'scope': 'Scope and Considerations',
+}
+
+
+def default_sections(language: str = 'es') -> list[dict]:
     """Return the ordered seed payload for a newly created diagnostic."""
-    return [
+    sections = [
         _purpose_section(1),
         _radiography_section(2),
         _categories_section(3),
@@ -639,3 +651,9 @@ def default_sections() -> list[dict]:
         _timeline_section(7),
         _scope_section(8),
     ]
+    if language == 'en':
+        for section in sections:
+            title = _ENGLISH_SECTION_TITLES[section['section_type']]
+            section['title'] = title
+            section['content_json']['title'] = title
+    return sections

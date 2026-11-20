@@ -12,7 +12,20 @@ describe('Client requirement review', () => {
   beforeEach(() => { global.useI18n = () => ({ t: translate }) })
   afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers.length = 0; delete global.useI18n })
   const renderForm = (props = {}) => {
-    const wrapper = mount(DeliveryReviewForm, { props: { projectId: 1, stage: createStage(), ...props }, global: { stubs: { VoiceReportInput: true, NuxtLink: { template: '<a><slot /></a>' } } } })
+    const wrapper = mount(DeliveryReviewForm, {
+      props: { projectId: 1, stage: createStage(), ...props },
+      global: {
+        stubs: {
+          VoiceReportInput: true,
+          NuxtLink: { template: '<a><slot /></a>' },
+          BaseChoiceSelect: {
+            props: ['modelValue', 'options'],
+            emits: ['update:modelValue'],
+            template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
+          },
+        },
+      },
+    })
     wrappers.push(wrapper)
     return wrapper
   }

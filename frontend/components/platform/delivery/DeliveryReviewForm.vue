@@ -2,6 +2,7 @@
 import { computed, reactive, ref, toRef } from 'vue'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue'
 import BaseFormField from '~/components/base/BaseFormField.vue'
 import BaseInput from '~/components/base/BaseInput.vue'
 import BaseSelect from '~/components/base/BaseSelect.vue'
@@ -89,7 +90,7 @@ function submit() {
       <p v-if="['objected', 'rejected'].includes(requirement.review_status)" class="text-sm text-text-muted">{{ t('platformDelivery.awaitingRound') }}</p>
       <template v-if="requirement.review_status === 'in_review'">
         <BaseFormField :label="t('platformDelivery.decision')" :for="`review-decision-${requirement.id}`">
-          <BaseSelect :id="`review-decision-${requirement.id}`" v-model="decisions[requirement.id].decision" :options="decisionOptions()" :data-testid="`delivery-review-decision-${requirement.id}`" />
+          <BaseChoiceSelect :id="`review-decision-${requirement.id}`" v-model="decisions[requirement.id].decision" :options="decisionOptions()" :data-testid="`delivery-review-decision-${requirement.id}`" />
         </BaseFormField>
         <VoiceReportInput v-if="!historical" :project-id="projectId" :stage-id="stage.id" :requirement-id="requirement.id" scenario="stage_observation" @apply="decisions[requirement.id].message = $event.message" />
         <template v-if="decisions[requirement.id].decision">

@@ -30,6 +30,19 @@ SAMPLE_SECTIONS = [
 # ── GET ────────────────────────────────────────────────────────────────────
 
 class TestGetDiagnosticDefaults:
+    @pytest.mark.parametrize(('language', 'first_title'), [('es', 'Propósito'), ('en', 'Purpose')])
+    def test_empty_config_exposes_the_system_sections(self, admin_client, language, first_title):
+        config = DiagnosticDefaultConfig.objects.create(language=language, sections_json=[])
+
+        result = admin_client.get(reverse('diagnostic-defaults'), {'lang': language})
+
+        assert result.status_code == 200
+        assert result.data['sections_json'] == []
+        assert len(result.data['effective_sections_json']) == 8
+        assert result.data['effective_sections_json'][0]['title'] == first_title
+        config.refresh_from_db()
+        assert config.sections_json == []
+
     def test_fallback_returns_correct_identity_fields(self, admin_client):
         url = reverse('diagnostic-defaults')
         response = admin_client.get(url, {'lang': 'es'})
@@ -104,6 +117,26 @@ class TestGetDiagnosticDefaults:
 # ── PUT ────────────────────────────────────────────────────────────────────
 
 class TestPutDiagnosticDefaults:
+    def test_general_save_preserves_the_empty_system_configuration(self, admin_client):
+        DiagnosticDefaultConfig.objects.create(language='en', sections_json=[])
+
+        response = admin_client.put(reverse('diagnostic-defaults'), {
+            'language': 'en', 'default_currency': 'USD',
+        }, format='json')
+
+        assert response.status_code == 200
+        assert response.data['effective_sections_json'][1]['title'] == 'Application Overview'
+        assert DiagnosticDefaultConfig.objects.get(language='en').sections_json == []
+
+    def test_initial_defaults_write_stores_system_template_for_language(self, admin_client):
+        url = reverse('diagnostic-defaults')
+        initial = admin_client.get(url, {'lang': 'en'})
+
+        response = admin_client.put(url, {'language': 'en', 'default_currency': 'USD'}, format='json')
+
+        assert response.status_code == 200
+        assert DiagnosticDefaultConfig.objects.get(language='en').sections_json == initial.data['sections_json']
+
     def test_creates_new_config(self, admin_client):
         url = reverse('diagnostic-defaults')
         payload = {

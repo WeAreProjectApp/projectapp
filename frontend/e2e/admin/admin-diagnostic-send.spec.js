@@ -90,65 +90,65 @@ test.describe('Admin Diagnostic — Send Flows', () => {
     await expect(page.getByRole('tab', { name: 'Documentos' })).toBeVisible();
   });
 
-  test('"Enviar envío inicial" button POSTs to send-initial/ in DRAFT state', {
-    tag: [...ADMIN_DIAGNOSTIC_SEND_INITIAL, '@role:admin', '@outcome:success'],
-  }, async ({ page }) => {
-    const diagnostic = buildMockDiagnostic({ status: 'draft' });
-    let sendCalled = false;
+  for (const initialExpiry of [null, '2026-12-15T15:20:01Z']) {
+    test(`shows ${initialExpiry ? 'the preset' : 'the new'} expiration after the initial send`, {
+      tag: [...ADMIN_DIAGNOSTIC_SEND_INITIAL, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      const diagnostic = buildMockDiagnostic({ expires_at: initialExpiry, days_remaining: initialExpiry ? 20 : null });
+      const savedExpiry = initialExpiry || '2026-12-10T13:37:19.477Z';
+      let sends = 0;
 
-    await mockApi(page, buildHandler(diagnostic, {
-      'diagnostics/7/send-initial/': {
-        method: 'POST',
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(buildMockDiagnostic({ status: 'sent' })),
-        _handler: () => { sendCalled = true; },
-      },
-    }));
+      await mockApi(page, async ({ apiPath, method }) => {
+        if (apiPath === 'auth/check/') return authOk;
+        if (apiPath === 'diagnostics/7/detail/') {
+          return { status: 200, contentType: 'application/json', body: JSON.stringify(diagnostic) };
+        }
+        if (apiPath === 'diagnostics/7/scorecard/') {
+          return {
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              score: 9,
+              checks: [
+                { key: 'client_email', label: 'Email del cliente', passed: true, blocker: true },
+                { key: 'client_phone', label: 'Teléfono del cliente (para WhatsApp)', passed: false, blocker: false },
+              ],
+              blockers: [],
+              can_send: true,
+              total_checks: 2,
+              passed_checks: 1,
+            }),
+          };
+        }
+        if (apiPath === 'diagnostics/7/send-initial/' && method === 'POST') {
+          sends += 1;
+          Object.assign(diagnostic, { status: 'sent', expires_at: savedExpiry, days_remaining: 20 });
+          return {
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(diagnostic),
+          };
+        }
+        return null;
+      });
 
-    await mockApi(page, async ({ apiPath, method }) => {
-      if (apiPath === 'auth/check/') return authOk;
-      if (apiPath === 'diagnostics/7/detail/') {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(diagnostic) };
-      }
-      if (apiPath === 'diagnostics/7/scorecard/') {
-        return {
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            score: 9,
-            checks: [
-              { key: 'client_email', label: 'Email del cliente', passed: true, blocker: true },
-              { key: 'client_phone', label: 'Teléfono del cliente (para WhatsApp)', passed: false, blocker: false },
-            ],
-            blockers: [],
-            can_send: true,
-            total_checks: 2,
-            passed_checks: 1,
-          }),
-        };
-      }
-      if (apiPath === 'diagnostics/7/send-initial/' && method === 'POST') {
-        sendCalled = true;
-        return {
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(buildMockDiagnostic({ status: 'sent' })),
-        };
-      }
-      return null;
+      await page.goto('/panel/diagnostics/7/edit');
+      const expiry = page.getByLabel('Vigencia de la propuesta');
+      await expect(expiry).toHaveValue(initialExpiry?.slice(0, 16) || '');
+      await expect(page.getByRole('button', { name: /enviar envío inicial/i })).toBeVisible({ timeout: 15000 });
+      await page.getByRole('button', { name: /enviar envío inicial/i }).click();
+      await expect(page.getByTestId('diagnostic-scorecard-modal')).toBeVisible();
+      await page.getByTestId('scorecard-send-btn').click();
+
+      await expect(page.getByTestId('diagnostic-scorecard-modal')).not.toBeVisible();
+      await expect(expiry).toHaveValue(savedExpiry.slice(0, 16));
+      await expect(page.getByTestId('diagnostic-expiration-chip')).toHaveText('Vence en 20 d');
+      expect(sends).toBe(1);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(expiry).toHaveValue(savedExpiry.slice(0, 16));
+      await expect(page.getByTestId('diagnostic-expiration-chip')).toHaveText('Vence en 20 d');
     });
-
-    await page.goto('/panel/diagnostics/7/edit');
-    await expect(page.getByRole('button', { name: /enviar envío inicial/i })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: /enviar envío inicial/i }).click();
-    await expect(page.getByTestId('diagnostic-scorecard-modal')).toBeVisible();
-    await page.getByTestId('scorecard-send-btn').click();
-
-    await expect(() => expect(sendCalled).toBe(true)).toPass({ timeout: 5000 });
-    // the scorecard modal dismisses once the send resolves
-    await expect(page.getByTestId('diagnostic-scorecard-modal')).not.toBeVisible();
-  });
+  }
 
   test('a failed initial send keeps the scorecard modal open with a fallback error', {
     // Bug this catches: a send failure that still dismisses the scorecard
@@ -194,6 +194,7 @@ test.describe('Admin Diagnostic — Send Flows', () => {
     await expect(toast).toBeVisible({ timeout: 10000 });
     // The modal STAYS visible — a failed send must not look like a sent one.
     await expect(modal).toBeVisible();
+    await expect(page.getByLabel('Vigencia de la propuesta')).toHaveValue('');
   });
 
   test('"Marcar en análisis" button POSTs to mark-in-analysis/ when initial has been sent', {

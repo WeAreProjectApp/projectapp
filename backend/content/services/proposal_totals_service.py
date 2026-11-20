@@ -1,9 +1,13 @@
 """Manually agreed proposal totals shared by public and admin consumers."""
 
 import re
-from decimal import Decimal, InvalidOperation
+from copy import deepcopy
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from content.models import ProposalSection
+
+
+PAYMENT_PERCENT = re.compile(r'(\d+(?:[.,]\d+)?)\s*%')
 
 
 def safe_decimal(value, default=Decimal('0')):
@@ -43,37 +47,51 @@ def discounted_total_for_proposal(proposal):
             * (Decimal(100) - proposal.discount_percent) / Decimal(100)).quantize(Decimal('0.01'))
 
 
-def sync_manual_investment(proposal):
-    """Mirror the manually agreed investment into section/payment copy."""
-    effective = effective_total_for_proposal(proposal)
+def editable_payment_options(content):
+    """Return percentage-bearing rows in the order used by the General form."""
+    options = content.get('paymentOptions') if isinstance(content, dict) else None
+    for option in options if isinstance(options, list) else ():
+        label = option.get('label') if isinstance(option, dict) else None
+        match = PAYMENT_PERCENT.search(label) if isinstance(label, str) else None
+        if match:
+            yield option, match
+
+
+def sync_manual_investment(
+    proposal, *, recalculate_totals=True, payment_percentages=None, sync_hosting_percent=False,
+):
+    """Update only the investment values affected by the confirmed proposal edits."""
     inv_section = proposal.sections.filter(section_type=ProposalSection.SectionType.INVESTMENT).first()
-    if not inv_section or not inv_section.content_json:
+    if not inv_section or not isinstance(inv_section.content_json, dict) or not inv_section.content_json:
         return
-    base_total = int(safe_decimal(proposal.total_investment))
-    base_formatted = f'${base_total:,}'.replace(',', '.')
-    cj = dict(inv_section.content_json)
-    currency_changed = cj.get('currency') != proposal.currency
-    total_changed = cj.get('totalInvestment') != base_formatted
+    content = deepcopy(inv_section.content_json)
+    effective = effective_total_for_proposal(proposal)
+    if recalculate_totals:
+        content['totalInvestment'] = f'${int(effective):,}'.replace(',', '.')
+        content['currency'] = proposal.currency
 
-    # paymentOptions descriptions depend on the effective total; rebuild
-    # unconditionally when paymentOptions exist so outdated amounts from a
-    # prior selection do not leak through.
-    payment_changed = False
-    if cj.get('paymentOptions'):
-        for opt in cj['paymentOptions']:
-            pct_match = re.search(r'(\d+)%', opt.get('label', ''))
-            if not pct_match:
-                continue
-            pct = Decimal(pct_match.group(1)) / Decimal(100)
-            amount = int(effective * pct)
-            new_desc = f'${amount:,}'.replace(',', '.') + f' {proposal.currency}'
-            if opt.get('description') != new_desc:
-                opt['description'] = new_desc
-                payment_changed = True
+    hosting_plan = content.get('hostingPlan')
+    if sync_hosting_percent and isinstance(hosting_plan, dict):
+        hosting_plan['hostingPercent'] = proposal.hosting_percent
 
-    if not currency_changed and not total_changed and not payment_changed:
+    if recalculate_totals or payment_percentages is not None:
+        for index, (option, match) in enumerate(editable_payment_options(content)):
+            current = Decimal(match[1].replace(',', '.'))
+            percent = payment_percentages[index] if payment_percentages is not None else current
+            # Compare to the value shown by General for old labels with extra precision.
+            editable = min(current, Decimal(100)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            edited = payment_percentages is not None and percent != editable
+            if edited:
+                label = option['label']
+                option['label'] = f'{label[:match.start()]}{percent.normalize():f}%{label[match.end():]}'
+            if edited or recalculate_totals:
+                amount = effective * (percent if edited else current) / 100
+                if edited:
+                    amount = amount.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+                amount = int(amount)
+                option['description'] = f'${amount:,}'.replace(',', '.') + f' {proposal.currency}'
+
+    if content == inv_section.content_json:
         return
-    cj['totalInvestment'] = base_formatted
-    cj['currency'] = proposal.currency
-    inv_section.content_json = cj
+    inv_section.content_json = content
     inv_section.save(update_fields=['content_json'])

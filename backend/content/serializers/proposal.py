@@ -15,6 +15,7 @@ from content.services.proposal_module_links import (
     ensure_functional_requirements_item_ids,
     normalize_technical_document_module_links,
 )
+from content.services.proposal_totals_service import editable_payment_options
 from content.services.section_content_schemas import validate_section_content
 from content.models import (
     BusinessProposal,
@@ -108,9 +109,11 @@ class ProposalSectionDetailSerializer(EditorialModelSerializer):
             from content.services.proposal_service import normalize_hosting_plan
             cj = data['content_json']
             if isinstance(cj.get('hostingPlan'), dict):
-                cj['hostingPlan'] = normalize_hosting_plan(
-                    instance.proposal, cj['hostingPlan']
-                )
+                # The parent serializer fingerprints the stored sections after rendering them.
+                data['content_json'] = {
+                    **cj,
+                    'hostingPlan': normalize_hosting_plan(instance.proposal, cj['hostingPlan']),
+                }
         return data
 
 
@@ -689,6 +692,34 @@ class ProposalCreateUpdateSerializer(EditorialModelSerializer):
         return proposal
 
 
+class ProposalSettingsUpdateSerializer(ProposalCreateUpdateSerializer):
+    investment_payment_percentages = serializers.ListField(
+        child=serializers.DecimalField(
+            max_digits=5, decimal_places=2, min_value=0, max_value=100, coerce_to_string=False,
+        ),
+        required=False,
+        write_only=True,
+        allow_empty=False,
+        help_text='Porcentajes en el orden de las opciones editables de Inversión. Requiere la huella de la edición.',
+    )
+
+    class Meta(ProposalCreateUpdateSerializer.Meta):
+        fields = (*ProposalCreateUpdateSerializer.Meta.fields, 'investment_payment_percentages')
+
+    def validate_investment_payment_percentages(self, values):
+        section = self.instance.sections.filter(section_type=ProposalSection.SectionType.INVESTMENT).first()
+        count = sum(1 for _ in editable_payment_options(section.content_json)) if section else 0
+        if len(values) != count:
+            raise serializers.ValidationError('Envía un porcentaje por cada opción de pago editable.')
+        return values
+
+    def update(self, instance, validated_data):
+        percentages = validated_data.pop('investment_payment_percentages', None)
+        if percentages is not None and not validated_data:
+            return instance
+        return super().update(instance, validated_data)
+
+
 class ProposalSectionUpdateSerializer(EditorialModelSerializer):
     """
     Serializer for updating a proposal section's content and metadata.
@@ -943,6 +974,13 @@ class ProposalDefaultConfigSerializer(EditorialModelSerializer):
             'urgency_reminder_days': {'min_value': 0, 'max_value': 365},
             'default_total_investment': {'min_value': 0},
         }
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data['sections_json'] == []:
+            from content.services.proposal_service import ProposalService
+            data['effective_sections_json'] = ProposalService.get_hardcoded_defaults(instance.language)
+        return data
 
     def validate_language(self, value):
         if value not in ('es', 'en'):

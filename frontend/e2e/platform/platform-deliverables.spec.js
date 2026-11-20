@@ -200,8 +200,7 @@ test.describe('Platform Deliverables — /platform/deliverables redirect', () =>
     // quality: allow-no-interaction (redirect — the removed standalone list route redirects to projects, asserted by URL)
     await setPlatformAuth(page, { user: mockPlatformClient });
     await setupUnifiedDeliverablesMocks(page, { user: mockPlatformClient });
-    await page.goto('/platform/deliverables', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL('**/platform/projects**', { timeout: 30000 });
-    await expect(page).toHaveURL(/\/platform\/projects/);
+    await page.goto('/en-us/platform/deliverables', { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/en-us\/platform\/projects\/?$/);
   });
 });

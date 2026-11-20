@@ -7,6 +7,7 @@ import { openProjectAction } from '../helpers/projects.js';
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
@@ -711,7 +712,8 @@ test.describe('Admin project state catalog', () => {
       'El proyecto opera mientras se estabiliza la entrega.',
     );
     await page.getByLabel('Efecto operativo del nuevo estado').selectOption('operating');
-    await page.getByLabel('Color del nuevo estado').selectOption('purple');
+    const color = page.getByRole('combobox', { name: 'Color del nuevo estado', exact: true });
+    await selectChoiceOption(page, color, 'Morado');
     await page.getByTestId('catalog-create-state').click();
 
     await expect.poll(() => createBody).not.toBeNull();

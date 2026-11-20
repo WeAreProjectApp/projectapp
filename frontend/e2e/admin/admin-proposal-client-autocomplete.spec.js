@@ -103,7 +103,7 @@ function setupMock(page, { onProposalCreate = null } = {}) {
       return {
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ expiration_days: 21, language: 'es', sections_json: [] }),
+        body: JSON.stringify({ expiration_days: 21, reminder_days: 3, urgency_reminder_days: 7, language: 'es', sections_json: [] }),
       };
     }
 
@@ -203,7 +203,7 @@ test.describe('Proposal Create Without Client Email', () => {
         return { status: 201, contentType: 'application/json', body: JSON.stringify(mockCreatedProposal) };
       }
       if (apiPath.startsWith('proposals/defaults/')) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify({ expiration_days: 21, language: 'es', sections_json: [] }) };
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ expiration_days: 21, reminder_days: 3, urgency_reminder_days: 7, language: 'es', sections_json: [] }) };
       }
       if (apiPath.startsWith('proposals/client-profiles/search/')) {
         return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };

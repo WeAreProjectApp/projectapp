@@ -5,7 +5,7 @@ import BaseButton from '~/components/base/BaseButton.vue'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseFormField from '~/components/base/BaseFormField.vue'
 import BaseInput from '~/components/base/BaseInput.vue'
-import BaseSelect from '~/components/base/BaseSelect.vue'
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue'
 import SecureLinkFields from '~/components/secureLinks/SecureLinkFields.vue'
 import SecureLinkTypeField from '~/components/secureLinks/SecureLinkTypeField.vue'
 import { usePlatformSecureLinksStore } from '~/stores/platform-secure-links'
@@ -69,10 +69,10 @@ function newRequest() { requestId.value = globalThis.crypto.randomUUID(); error.
       <SecureLinkTypeField v-model="secretType" v-model:custom-name="fields.custom_name" :types="store.types" :language="language" />
       <SecureLinkFields :key="secretType" v-model="fields" :type="selectedType" :language="language" :exclude-keys="['custom_name']" id-prefix="platform-secure" />
       <BaseFormField :label="t('platformSecureLinks.validity')" for="platform-secure-validity">
-        <BaseSelect id="platform-secure-validity" v-model="validityDays" :options="[1, 3, 7].map(value => ({ value, label: t('platformSecureLinks.days', { count: value }) }))" />
+        <BaseChoiceSelect id="platform-secure-validity" v-model="validityDays" :options="[1, 3, 7].map(value => ({ value, label: t('secureLinks.days', value) }))" />
       </BaseFormField>
       <BaseFormField :label="t('platformSecureLinks.language')" for="platform-secure-language">
-        <BaseSelect id="platform-secure-language" v-model="language" :options="[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }]" />
+        <BaseChoiceSelect id="platform-secure-language" v-model="language" :options="[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }]" />
       </BaseFormField>
       <BaseButton type="submit" :loading="busy" data-testid="platform-secure-submit">{{ t('platformSecureLinks.create') }}</BaseButton>
     </form>

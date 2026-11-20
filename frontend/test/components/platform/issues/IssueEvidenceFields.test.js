@@ -35,6 +35,7 @@ describe('IssueEvidenceFields', () => {
       .mockImplementationOnce(() => currentRequest.promise)
 
     const wrapper = mount(IssueEvidenceFields, {
+      global: { stubs: { BaseChoiceSelect: true } },
       props: {
         admin: true,
         id: 'issue-evidence',

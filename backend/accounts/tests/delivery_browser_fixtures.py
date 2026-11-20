@@ -94,6 +94,7 @@ def private_browser_resources(project, admin, *, suffix):
     base = f'/api/accounts/projects/{project.pk}/deliverables/'
     resources = []
     for category, title in (
+        ('documents', 'Documento privado de prueba'),
         ('contract', 'Contrato privado de prueba'),
         ('amendment', 'Otrosí privado de prueba'),
         ('legal_annex', 'Anexo legal privado de prueba'),
@@ -109,8 +110,8 @@ def private_browser_resources(project, admin, *, suffix):
             raise RuntimeError(f'Private resource fixture failed: {created.data}')
         resource_id = created.data['id']
         current = original
-        if category == 'contract':
-            current = pdf_bytes('Original private contract version 2 with revised terms.')
+        if category in {'documents', 'contract'}:
+            current = pdf_bytes(f'Original private {category} version 2 with revised terms.')
             revised = api.post(base + f'{resource_id}/upload-version/', {
                 'file': SimpleUploadedFile(
                     f'{category}-{suffix}-v2.pdf', current, content_type='application/pdf',

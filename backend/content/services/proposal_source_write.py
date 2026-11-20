@@ -1,11 +1,14 @@
 """Optimistic writes to shared proposal sources, under the aggregate lock."""
-from functools import wraps
+from functools import partial, wraps
 from django.db import transaction
 from rest_framework.response import Response
 from content.models import BusinessProposal, ProposalDocument, ProposalSection
 
 
-def proposal_source_write(view):
+def proposal_source_write(view=None, *, versioned_fields=()):
+    if view is None:
+        return partial(proposal_source_write, versioned_fields=versioned_fields)
+
     @wraps(view)
     def guarded(request, *args, **kwargs):
         from content.services.proposal_approval_service import source_hash, load_proposal
@@ -16,7 +19,10 @@ def proposal_source_write(view):
             proposal_id = ProposalDocument.objects.filter(pk=kwargs['doc_id']).values_list('proposal_id', flat=True).first()
         with transaction.atomic():
             proposal = BusinessProposal.objects.select_for_update().filter(pk=proposal_id).first()
-            if proposal and proposal.approval_packages.exists():
+            if proposal and (
+                any(field in request.data for field in versioned_fields)
+                or proposal.approval_packages.exists()
+            ):
                 expected = request.headers.get('X-Proposal-Version') or request.headers.get('If-Match') or request.data.get('source_hash')
                 actual = source_hash(load_proposal(proposal_id))
                 if expected != actual:

@@ -61,7 +61,9 @@ describe('Delivery workspace failed submissions', () => {
   }
   async function enterObservation() {
     await wrapper.get('[data-testid="delivery-review-open-11"]').trigger('click')
-    await wrapper.get('[data-testid="delivery-review-decision-20"]').setValue('objected')
+    await wrapper.get('[data-testid="delivery-review-decision-20"]').trigger('click')
+    const objection = wrapper.findAll('[role="option"]').find(option => option.text() === spanish.object)
+    await objection.trigger('click')
     await wrapper.get('[data-testid="delivery-review-message-20"]').setValue('El traslado no conserva las cantidades.')
   }
 
@@ -86,7 +88,7 @@ describe('Delivery workspace failed submissions', () => {
 
     expect(wrapper.get('[data-testid="delivery-review-form"]').text()).toContain(message)
     expect(wrapper.get('[data-testid="delivery-review-message-20"]').element.value).toBe('El traslado no conserva las cantidades.')
-    expect(wrapper.get('[data-testid="delivery-review-decision-20"]').element.value).toBe('objected')
+    expect(wrapper.get('[data-testid="delivery-review-decision-20"]').text()).toBe(spanish.object)
   })
 
   // Detecta que una respuesta fallida cierre el editor sin guardar el texto.

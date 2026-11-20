@@ -4,10 +4,8 @@
     <p v-if="error" role="alert" class="text-xs text-danger-strong">{{ error }}</p>
     <div v-if="admin">
       <label :for="`${id}-contract`" class="mb-1 block text-xs text-text-muted">{{ t('platformIssues.contract') }}</label>
-      <select :id="`${id}-contract`" :value="modelValue.contract_id ?? ''" class="w-full rounded-xl border border-border-default bg-surface px-3 py-2 text-sm text-text-default" @change="selectContract">
-        <option value="">{{ t('platformIssues.noContract') }}</option>
-        <option v-for="contract in options.contracts" :key="contract.id" :value="contract.id">{{ contract.title }}</option>
-      </select>
+      <BaseChoiceSelect :id="`${id}-contract`" :model-value="modelValue.contract_id ?? null"
+        :options="contractOptions" :disabled="loading" @update:model-value="selectContract" />
     </div>
     <fieldset class="space-y-1" :disabled="loading">
       <legend class="mb-1 text-xs font-medium text-text-muted">{{ t('platformIssues.documents') }}</legend>
@@ -20,7 +18,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue'
 import { usePlatformIssueReportsStore } from '~/stores/platform-issue-reports'
 const props = defineProps({ modelValue: { type: Object, required: true }, projectId: { type: [String, Number], required: true }, kind: { type: String, required: true }, ticketId: { type: Number, required: true }, admin: Boolean, id: { type: String, default: 'issue-evidence' } })
 const emit = defineEmits(['update:modelValue'])
@@ -29,6 +28,10 @@ const store = usePlatformIssueReportsStore()
 const loading = ref(false)
 const error = ref('')
 const options = ref({ contracts: [], documents: [] })
+const contractOptions = computed(() => [
+  { value: null, label: t('platformIssues.noContract') },
+  ...(options.value.contracts || []).map(contract => ({ value: contract.id, label: contract.title })),
+])
 let generation = 0
 async function load() {
   const current = ++generation
@@ -40,8 +43,8 @@ async function load() {
   if (result.success) options.value = result.data
   else error.value = result.message
 }
-function selectContract(event) {
-  emit('update:modelValue', { ...props.modelValue, contract_id: event.target.value ? Number(event.target.value) : null, document_ids: [] })
+function selectContract(contractId) {
+  emit('update:modelValue', { ...props.modelValue, contract_id: contractId, document_ids: [] })
 }
 function toggleDocument(id, checked) {
   const selected = props.modelValue.document_ids || []

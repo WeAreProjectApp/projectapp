@@ -11,7 +11,7 @@ function mountFields(overrides = {}, testidPrefix = 'clients-new') {
     },
     global: {
       stubs: {
-        BaseSelect: {
+        BaseChoiceSelect: {
           props: ['modelValue', 'options'],
           emits: ['update:modelValue'],
           template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',

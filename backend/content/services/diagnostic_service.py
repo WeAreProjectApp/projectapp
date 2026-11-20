@@ -32,9 +32,9 @@ DEFAULT_REMINDER_DAYS = 7
 DEFAULT_URGENCY_REMINDER_DAYS = 14
 
 
-def get_hardcoded_section_specs() -> list[dict]:
+def get_hardcoded_section_specs(language: str = 'es') -> list[dict]:
     """Return the hardcoded section specs used when no DB defaults exist."""
-    return list(default_sections())
+    return default_sections(language)
 
 
 def get_default_config(language: str = 'es'):
@@ -61,7 +61,7 @@ def get_default_section_specs(language: str = 'es') -> list[dict]:
     config = get_default_config(language)
     if config and isinstance(config.sections_json, list) and config.sections_json:
         return list(config.sections_json)
-    return get_hardcoded_section_specs()
+    return get_hardcoded_section_specs(language)
 
 
 def _classify_size(value: int, thresholds: tuple[int, int]) -> str:
@@ -219,7 +219,8 @@ def create_diagnostic(
 ) -> WebAppDiagnostic:
     """Create a diagnostic and seed its 8 JSON sections."""
     if not title:
-        title = f'Diagnóstico — {build_client_display_name(client)}'
+        prefix = 'Diagnostic' if language == 'en' else 'Diagnóstico'
+        title = f'{prefix} — {build_client_display_name(client)}'
 
     config = get_default_config(language)
     if config:

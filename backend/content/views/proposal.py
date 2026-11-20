@@ -79,6 +79,7 @@ from content.serializers.proposal import (
     ProposalProjectStageSerializer,
     ProposalResendSerializer,
     ProposalSectionUpdateSerializer,
+    ProposalSettingsUpdateSerializer,
     ProposalShareLinkSerializer,
     SECTION_KEY_MAP,
     SECTION_TYPE_TO_KEY,
@@ -1011,7 +1012,7 @@ def update_proposal_from_json(request, proposal_id):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
-@proposal_source_write
+@proposal_source_write(versioned_fields=('investment_payment_percentages',))
 def update_proposal(request, proposal_id):
     """
     Update proposal metadata (title, client_name, etc.).
@@ -1027,8 +1028,9 @@ def update_proposal(request, proposal_id):
         'show_contract_terms', 'email_intro', 'service_contract_approved',
     ]
     old_values = {f: str(getattr(proposal, f, '')) for f in tracked_fields}
+    old_hosting_percent = proposal.hosting_percent
 
-    serializer = ProposalCreateUpdateSerializer(
+    serializer = ProposalSettingsUpdateSerializer(
         proposal, data=request.data, partial=True
     )
     if not serializer.is_valid():
@@ -1065,13 +1067,19 @@ def update_proposal(request, proposal_id):
                         description=description,
                     )
 
-            # Sync total_investment / currency into the investment section's content_json
             investment_changed = (
                 old_values.get('total_investment') != str(proposal.total_investment)
                 or old_values.get('currency') != str(proposal.currency)
             )
-            if investment_changed:
-                sync_manual_investment(proposal)
+            hosting_changed = old_hosting_percent != proposal.hosting_percent
+            payment_percentages = serializer.validated_data.get('investment_payment_percentages')
+            if investment_changed or hosting_changed or payment_percentages is not None:
+                sync_manual_investment(
+                    proposal,
+                    recalculate_totals=investment_changed,
+                    payment_percentages=payment_percentages,
+                    sync_hosting_percent=hosting_changed,
+                )
     except ValueError as exc:
         return Response(
             {'client_email': [str(exc)]},
@@ -3017,32 +3025,21 @@ def proposal_defaults(request):
             'updated_at': None,
         })
 
-    # PUT
-    config = ProposalDefaultConfig.objects.filter(language=lang).first()
-    payload = dict(request.data)
-    base_updated_at = payload.pop('base_updated_at', None)
-    if config and base_updated_at and 'sections_json' in payload:
-        stale = _stale_defaults_response(config, base_updated_at)
-        if stale is not None:
-            return stale
-    payload['language'] = lang
-    if 'sections_json' not in payload:
-        if config:
-            payload['sections_json'] = config.sections_json
-        else:
+    with transaction.atomic():
+        config = ProposalDefaultConfig.objects.select_for_update().filter(language=lang).first()
+        payload = dict(request.data)
+        base_updated_at = payload.pop('base_updated_at', None)
+        if config and base_updated_at and 'sections_json' in payload:
+            stale = _stale_defaults_response(config, base_updated_at)
+            if stale is not None:
+                return stale
+        payload['language'] = lang
+        if config is None and 'sections_json' not in payload:
             payload['sections_json'] = ProposalService.get_hardcoded_defaults(lang)
-    if 'default_slug_pattern' not in payload and config:
-        # Preserve the previously saved pattern when caller only updates
-        # other fields (e.g. general form submits without touching the pattern).
-        payload['default_slug_pattern'] = config.default_slug_pattern
-
-    if config:
         serializer = ProposalDefaultConfigSerializer(config, data=payload)
-    else:
-        serializer = ProposalDefaultConfigSerializer(data=payload)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    serializer.save()
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

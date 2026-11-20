@@ -126,6 +126,38 @@ test.describe('Admin Unified Defaults Shell', () => {
     await expect(page.locator('[data-testid="defaults-mode-proposal"]:visible')).not.toHaveClass(/text-text-brand/);
   });
 
+  for (const { mode, endpoint, defaults, section } of [
+    {
+      mode: 'proposal', endpoint: 'proposals/defaults/', defaults: PROPOSAL_DEFAULTS,
+      section: PROPOSAL_DEFAULTS.sections_json[0],
+    },
+    {
+      mode: 'diagnostic', endpoint: 'diagnostics/defaults/', defaults: DIAGNOSTIC_DEFAULTS,
+      section: { section_type: 'radiography', title: 'Radiografía', visibility: 'public', order: 1, is_enabled: true },
+    },
+  ]) {
+    test(`${mode} shows the effective system sections for an empty configuration`, {
+      tag: [...ADMIN_DEFAULTS_UNIFIED, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      await mockApi(page, async (request) => {
+        if (request.apiPath !== endpoint) return buildHandler(request);
+        return {
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify({ ...defaults, id: 269, sections_json: [], effective_sections_json: [section] }),
+        };
+      });
+      await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('navigation', { name: 'Navegación del panel' }).getByRole('link', { name: 'Defaults', exact: true }).click();
+      await page.locator(`[data-testid="defaults-mode-${mode}"]:visible`).click();
+      const sections = page.getByRole('tab', { name: 'Secciones', exact: true });
+
+      await sections.click();
+
+      await expect(page.getByText(section.title, { exact: true })).toBeVisible();
+      await expect(page.getByText('Plantilla del sistema', { exact: true }).filter({ visible: true })).toBeVisible();
+    });
+  }
+
   test('back link shows "Volver a Propuestas" in proposal mode', {
     tag: [...ADMIN_DEFAULTS_UNIFIED, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {

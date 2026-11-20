@@ -306,8 +306,9 @@
               </BaseCheckbox>
             </div>
 
-            <BaseFormField label="Idioma" hint="Solo afecta los títulos por defecto al crear. Cambiar aquí no regenera las secciones existentes.">
-              <BaseSelect
+            <BaseFormField label="Idioma" for="diagnostic-edit-language" hint="Solo afecta los títulos por defecto al crear. Cambiar aquí no regenera las secciones existentes.">
+              <BaseChoiceSelect
+                id="diagnostic-edit-language"
                 v-model="form.language"
                 :options="[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }]"
               />
@@ -327,8 +328,9 @@
                   data-testid="diagnostic-edit-investment"
                 />
               </BaseFormField>
-              <BaseFormField label="Moneda">
-                <BaseSelect
+              <BaseFormField label="Moneda" for="diagnostic-edit-currency">
+                <BaseChoiceSelect
+                  id="diagnostic-edit-currency"
                   v-model="form.currency"
                   :options="[{ value: 'COP', label: 'COP' }, { value: 'USD', label: 'USD' }]"
                 />
@@ -362,8 +364,9 @@
               <BaseInput v-model="form.duration_label" type="text" placeholder="Ej: 1 semana" />
             </BaseFormField>
 
-            <BaseFormField label="Vigencia de la propuesta" hint="Se fija automáticamente al primer envío; puedes ajustarla.">
+            <BaseFormField label="Vigencia de la propuesta" for="diagnostic-edit-expiry" hint="Se fija automáticamente al primer envío; puedes ajustarla.">
               <input
+                id="diagnostic-edit-expiry"
                 v-model="form.expires_at"
                 type="datetime-local"
                 class="w-full px-3 py-2 rounded-lg border border-input-border bg-input-bg text-text-default text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring/40"
@@ -844,6 +847,10 @@ function pctOrNull(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+function expiryInputValue(iso) {
+  return iso ? iso.slice(0, 16) : '';
+}
+
 watch(() => form.payment_initial_pct, (v) => {
   const n = pctOrNull(v);
   if (n === null) {
@@ -872,8 +879,7 @@ function syncFormGeneral() {
   form.payment_initial_pct = pt.initial_pct ?? null;
   form.payment_final_pct = pt.final_pct ?? null;
   form.duration_label = c.duration_label || '';
-  // datetime-local wants "YYYY-MM-DDTHH:mm" (no seconds/zone)
-  form.expires_at = c.expires_at ? c.expires_at.slice(0, 16) : '';
+  form.expires_at = expiryInputValue(c.expires_at);
   // El watcher del slug se declara ANTES que éste, así que para cuando corre
   // esto `slugDraft` ya refleja lo guardado y la baseline sale consistente.
   commitBaseline();
@@ -896,6 +902,7 @@ const {
   unsavedTitle,
   unsavedDetail,
   commit: commitBaseline,
+  isFieldDirty,
   guardedReload,
 } = useUnsavedGuard({
   snapshot: () => ({
@@ -940,13 +947,15 @@ async function handleUpdate() {
       final_pct: pctOrNull(form.payment_final_pct),
     },
     duration_label: form.duration_label,
-    expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
     client_name: form.client_name,
     client_email: form.client_email,
     client_phone: form.client_phone,
     client_company: form.client_company,
     propagate_client_updates: form.propagate_client_updates,
   };
+  if (isFieldDirty('expires_at')) {
+    payload.expires_at = form.expires_at ? new Date(form.expires_at).toISOString() : null;
+  }
   if (form.client_id && form.client_id !== store.current?.client?.id) {
     payload.client_id = form.client_id;
   }
@@ -1350,7 +1359,15 @@ async function confirmScorecardSend() {
       kind === 'final' ? 'Diagnóstico final enviado.' : 'Envío inicial entregado.',
       'Error al enviar.',
     );
-    if (r?.success) scorecardKind.value = null;
+    if (r?.success) {
+      if (kind === 'initial') {
+        const pendingExpiry = isFieldDirty('expires_at') ? form.expires_at : null;
+        form.expires_at = expiryInputValue(r.data.expires_at);
+        commitBaseline(['expires_at']);
+        if (pendingExpiry !== null) form.expires_at = pendingExpiry;
+      }
+      scorecardKind.value = null;
+    }
   } finally {
     scorecardSending.value = false;
   }

@@ -117,7 +117,7 @@ test.describe('Admin Diagnostic Defaults Config', () => {
     const finalInput = page.getByTestId('defaults-payment-final');
     await expect(initialInput).toHaveValue('60');
     await expect(finalInput).toHaveValue('40');
-    await expect(page.getByTestId('defaults-currency')).toHaveValue('COP');
+    await expect(page.getByRole('combobox', { name: 'Moneda', exact: true })).toHaveText('COP');
     await expect(page.getByTestId('defaults-expiration-days')).toHaveValue('21');
   });
 
