@@ -1,4 +1,7 @@
 import { mount } from '@vue/test-utils';
+import { createI18n, useI18n } from 'vue-i18n';
+import successEn from '../../locales/contactSuccess/en';
+import successEs from '../../locales/contactSuccess/es';
 
 jest.mock('gsap', () => ({
   __esModule: true,
@@ -17,28 +20,21 @@ jest.mock('gsap', () => ({
   },
 }));
 
-jest.mock('pinia', () => ({
-  storeToRefs: jest.fn((store) => store),
-  defineStore: jest.fn(),
-}));
-
-jest.mock('../../stores/language', () => ({
-  useLanguageStore: jest.fn(() => ({
-    messages: require('vue').ref({
-      contactSuccess: {
-        title: '¡Gracias!',
-        message: 'Nos pondremos en contacto contigo.',
-        button: 'Ver portafolio',
-      },
-    }),
-    currentLocale: require('vue').ref('es-co'),
-  })),
-}));
+global.useI18n = useI18n;
+global.useLocalePath = () => {
+  const { locale } = useI18n();
+  return (path) => `/${locale.value}${path}`;
+};
 
 import ContactSuccess from '../../components/pages/ContactSuccess.vue';
 
-function mountContactSuccess() {
-  return mount(ContactSuccess);
+function mountContactSuccess(locale = 'es-co') {
+  const i18n = createI18n({
+    legacy: false,
+    locale,
+    messages: { 'en-us': { contactSuccess: successEn }, 'es-co': { contactSuccess: successEs } },
+  });
+  return mount(ContactSuccess, { global: { plugins: [i18n] } });
 }
 
 describe('ContactSuccess', () => {
@@ -51,19 +47,26 @@ describe('ContactSuccess', () => {
   it('renders the success title', () => {
     const wrapper = mountContactSuccess();
 
-    expect(wrapper.text()).toContain('¡Gracias!');
+    expect(wrapper.get('h1').text()).toContain('¡Gracias por contactarnos!');
+  });
+
+  it('renders the English confirmation heading', () => {
+    const wrapper = mountContactSuccess('en-us');
+
+    expect(wrapper.get('h1').text()).toContain('Thank you for contacting us!');
   });
 
   it('renders the success message', () => {
     const wrapper = mountContactSuccess();
 
-    expect(wrapper.text()).toContain('Nos pondremos en contacto contigo.');
+    expect(wrapper.text()).toContain('Nos pondremos en contacto contigo muy pronto');
   });
 
   it('renders the portfolio link button', () => {
     const wrapper = mountContactSuccess();
 
-    expect(wrapper.find('a').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Ver portafolio');
+    const link = wrapper.get('a');
+    expect(link.text()).toBe('Ver nuestro portafolio');
+    expect(link.attributes('href')).toBe('/es-co/portfolio-works');
   });
 });
