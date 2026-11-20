@@ -15,7 +15,7 @@ import { computed } from 'vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
 import BaseFormRow from '~/components/base/BaseFormRow.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
-import BaseSelect from '~/components/base/BaseSelect.vue';
+import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue';
 import { BILLING_CODE_MAX_LENGTH } from '~/utils/billingCode';
 
 const props = defineProps({
@@ -134,8 +134,9 @@ function errorFor(field) {
 
     <!-- The type and number are one legal identity, shared with billing. -->
     <BaseFormRow>
-      <BaseFormField label="Tipo de identificación" :size="dense ? 'sm' : 'md'">
-        <BaseSelect
+      <BaseFormField label="Tipo de identificación" :for="`${testidPrefix}-identification-type`" :size="dense ? 'sm' : 'md'">
+        <BaseChoiceSelect
+          :id="`${testidPrefix}-identification-type`"
           :model-value="identificationType"
           :options="identificationOptions"
           :size="dense ? 'sm' : 'md'"

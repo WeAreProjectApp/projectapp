@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Create a new business proposal with sections and requirements.",
+  "description": "Create a new business proposal with sections and requirements. Manual creation loads reminder and urgency days for the selected language and retains explicitly edited values.",
   "expectedSpecs": 1,
   "knownGaps": [
     "Hosting defaults seeding on mount (hosting_percent + hosting_discount_* from GET proposals/defaults, 2026-07) is not asserted.",

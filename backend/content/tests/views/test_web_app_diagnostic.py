@@ -122,6 +122,49 @@ def test_create_diagnostic_endpoint(admin_client, diag_client_profile):
     assert len(body['sections']) == 8
 
 
+def test_new_english_diagnostic_uses_english_system_titles(admin_client, diag_client_profile):
+    response = admin_client.post('/api/diagnostics/create/', {
+        'client_id': diag_client_profile.pk, 'language': 'en',
+    }, format='json')
+
+    assert response.status_code == 201
+    diagnostic = WebAppDiagnostic.objects.get(pk=response.data['id'])
+    assert diagnostic.title.startswith('Diagnostic — ')
+    assert list(diagnostic.sections.order_by('order').values_list('title', flat=True)) == [
+        'Purpose', 'Application Overview', 'Evaluation Categories', 'Deliverable Structure',
+        'Executive Summary', 'Cost and Payment Terms', 'Timeline', 'Scope and Considerations',
+    ]
+
+
+@pytest.mark.parametrize('language', ['es', 'en'])
+def test_general_defaults_save_preserves_custom_diagnostic_template(admin_client, diag_client_profile, language):
+    from content.models import DiagnosticDefaultConfig
+    custom = [{
+        'section_type': 'purpose', 'title': f'Título elegido {language}', 'order': 4,
+        'content_json': {'title': 'Un encabezado propio', 'paragraphs': ['Texto propio']},
+        'visibility': 'both', 'is_enabled': True,
+    }]
+    DiagnosticDefaultConfig.objects.update_or_create(language=language, defaults={'sections_json': custom})
+
+    saved = admin_client.put('/api/diagnostics/defaults/', {
+        'language': language, 'default_currency': 'USD',
+    }, format='json')
+    loaded = admin_client.get('/api/diagnostics/defaults/', {'lang': language})
+    created = admin_client.post('/api/diagnostics/create/', {
+        'client_id': diag_client_profile.pk, 'language': language, 'title': 'Diagnóstico personalizado',
+    }, format='json')
+
+    assert saved.status_code == 200
+    assert loaded.data['sections_json'] == custom
+    assert 'effective_sections_json' not in loaded.data
+    assert created.status_code == 201
+    diagnostic = WebAppDiagnostic.objects.get(pk=created.data['id'])
+    section = diagnostic.sections.get()
+    assert (section.title, section.order, section.content_json) == (
+        custom[0]['title'], custom[0]['order'], custom[0]['content_json'],
+    )
+
+
 def test_create_diagnostic_requires_client_id(admin_client):
     response = admin_client.post('/api/diagnostics/create/', {}, format='json')
     assert response.status_code == 400

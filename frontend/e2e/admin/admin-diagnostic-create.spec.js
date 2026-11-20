@@ -10,6 +10,8 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DIAGNOSTIC_CREATE } from '../helpers/flow-tags.js';
 
+const createPath = '/es-co/panel/diagnostics/create';
+
 const authOk = {
   status: 200,
   contentType: 'application/json',
@@ -51,10 +53,10 @@ test.describe('Admin Diagnostic Create', () => {
       return null;
     });
 
-    await page.goto('/panel/diagnostics/create');
+    await page.goto(createPath, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /nuevo diagnóstico/i })).toBeVisible({ timeout: 15000 });
     await expect(page.getByPlaceholder(/buscar/i)).toBeVisible();
-    await expect(page.locator('select')).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Idioma', exact: true })).toHaveText('Español');
   });
 
   test('the submit button enables after a client is selected', {
@@ -69,7 +71,7 @@ test.describe('Admin Diagnostic Create', () => {
       return null;
     });
 
-    await page.goto('/panel/diagnostics/create');
+    await page.goto(createPath, { waitUntil: 'domcontentloaded' });
     const submitBtn = page.getByRole('button', { name: /crear diagnóstico/i });
     await expect(submitBtn).toBeDisabled();
 
@@ -103,7 +105,7 @@ test.describe('Admin Diagnostic Create', () => {
       return null;
     });
 
-    await page.goto('/panel/diagnostics/create');
+    await page.goto(createPath, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /nuevo diagnóstico/i })).toBeVisible({ timeout: 15000 });
 
     await page.getByPlaceholder(/buscar/i).fill('Acme');
@@ -137,7 +139,7 @@ test.describe('Admin Diagnostic Create', () => {
       return null;
     });
 
-    await page.goto('/panel/diagnostics/create');
+    await page.goto(createPath, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /nuevo diagnóstico/i })).toBeVisible({ timeout: 15000 });
 
     await page.getByPlaceholder(/buscar/i).fill('Acme');

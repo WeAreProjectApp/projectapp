@@ -404,7 +404,7 @@ La revisión sigue contrato → alcance → fases de ejecución → etapas → g
 - **Module:** platform
 - **Role:** platform-admin / platform-client
 - **Priority:** P2
-- **Routes:** `/platform/projects/:id/deliverables` (list), `/platform/deliverables` (cross-project), `/platform/projects/:id/deliverables/:deliverableId` (full-page ficha — see `platform-deliverable-detail`)
+- **Routes:** `/platform/projects/:id/deliverables` (Recursos del proyecto), `/platform/deliverables` (redirige a Mis proyectos), `/platform/projects/:id/deliverables/:deliverableId` (ficha)
 - **API:** `GET/POST /api/accounts/projects/:id/deliverables/`, `POST .../upload-version/`
 - **Description:** Admin uploads deliverables (designs, documents, APKs, credentials) with version history. Client downloads files. List UI is implemented as `pages/.../deliverables/index.vue` so nested dynamic routes resolve correctly.
 - **Steps:**

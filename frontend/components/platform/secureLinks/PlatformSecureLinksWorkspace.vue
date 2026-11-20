@@ -57,7 +57,7 @@ function closeForm() { creating.value = false; replaces.value = null }
           <BaseInput id="platform-secure-search" v-model="search" maxlength="160" data-testid="platform-secure-search" />
         </BaseFormField>
         <BaseFormField :label="t('platformSecureLinks.state')" for="platform-secure-state">
-          <BaseSelect id="platform-secure-state" v-model="status" :options="['', 'active', 'consumed', 'expired', 'revoked'].map(value => ({ value, label: t(`platformSecureLinks.status.${value || 'all'}`) }))" />
+          <BaseChoiceSelect id="platform-secure-state" v-model="status" :options="['', 'active', 'consumed', 'expired', 'revoked'].map(value => ({ value, label: t(`platformSecureLinks.status.${value || 'all'}`) }))" />
         </BaseFormField>
         <BaseButton type="submit" variant="secondary" :loading="store.loading" data-testid="platform-secure-filter">{{ t('platformSecureLinks.filter') }}</BaseButton>
       </form>

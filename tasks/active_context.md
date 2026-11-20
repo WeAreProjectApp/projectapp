@@ -51,6 +51,17 @@ los demás módulos conservan su visor. Pruebas nuevas exclusivamente en CI; QA
 manual y servicios siguen pausados. Contrato y traspaso:
 [PA-265](../docs/PA-265-DOCUMENT-HISTORY.md). Entrega verificada en el PR.
 
+## PA-268 a PA-274 — Correcciones de Panel y Plataforma
+
+General de Propuestas confirma metadatos y pagos en la misma transacción,
+con la versión de la edición para cambios de pagos. Defaults distingue las
+plantillas efectivas del sistema de las personalizadas. Diagnósticos
+actualiza la vigencia al enviar y usa los títulos del idioma del alta.
+Solicitudes valida título y entrega al intentar enviar. Los recorridos de
+Recursos, revisión, estados y enlaces seguros tienen validaciones focales
+con datos ficticios. Base `63f97e41`. Integrar las fuentes de guías de las
+sesiones antes de regenerar el mapa de flujos.
+
 ## PA-250 / PA-259 / PA-260-D1 / PA-252 — 2026-11-12
 
 Implementación en worktree propio desde main 295b65ef: contraste de Saltar recorrido,

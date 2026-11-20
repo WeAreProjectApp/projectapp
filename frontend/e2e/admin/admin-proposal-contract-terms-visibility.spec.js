@@ -95,6 +95,9 @@ test.describe('Admin proposal contract visibility', () => {
       if (apiPath === 'auth/check/') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       }
+      if (apiPath === 'proposals/defaults/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ reminder_days: 3, urgency_reminder_days: 7 }) };
+      }
       if (apiPath === 'proposals/create/') {
         capturedPayload = route.request().postDataJSON();
         return { status: 201, contentType: 'application/json', body: JSON.stringify(proposal) };

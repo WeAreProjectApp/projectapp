@@ -10,10 +10,10 @@ from content.serializers.proposal import (
     ContractParamsSerializer,
     EmailTemplateConfigSerializer,
     ProposalAlertSerializer,
-    ProposalCreateUpdateSerializer,
     ProposalDefaultConfigSerializer,
     ProposalFromJSONSerializer,
     ProposalSectionUpdateSerializer,
+    ProposalSettingsUpdateSerializer,
 )
 from content.serializers.service_contract_settings import (
     CompanyServiceSettingsSerializer,
@@ -96,7 +96,7 @@ for _name in ('service_initial_term', 'service_renewal_notice_days', 'service_te
         'description': 'Entero entre 1 y 999 o texto contractual histórico.',
     }
 CONTRACT_UPDATE = object_schema({'variant': VARIANT, 'contract_params': CONTRACT_PARAMS}, ('contract_params',))
-SETTINGS_UPDATE = writable_schema(ProposalCreateUpdateSerializer, partial=True, exclude=('status',))
+SETTINGS_UPDATE = writable_schema(ProposalSettingsUpdateSerializer, partial=True, exclude=('status',))
 DEFAULTS_UPDATE = writable_schema(ProposalDefaultConfigSerializer, partial=True)
 DEFAULTS_UPDATE['properties']['base_updated_at'] = {
     'type': ['string', 'null'], 'description': 'updated_at obtenido en get_proposal_defaults; rechaza cambios concurrentes.',

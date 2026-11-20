@@ -2,7 +2,7 @@
 import pytest
 from django.urls import reverse
 
-from content.models import ProposalDefaultConfig
+from content.models import BusinessProposal, ProposalDefaultConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -88,6 +88,55 @@ class TestGetProposalDefaults:
 
 
 class TestPutProposalDefaults:
+    @pytest.mark.parametrize('language', ['es', 'en'])
+    def test_general_save_preserves_custom_sections_for_new_proposals(self, admin_client, language):
+        custom = [{
+            'section_type': 'greeting', 'title': f'Saludo propio {language}', 'order': 2,
+            'content_json': {'clientName': '', 'proposalTitle': ''},
+        }, {
+            'section_type': 'executive_summary', 'title': f'Resumen propio {language}', 'order': 3,
+            'content_json': {'index': '03', 'title': f'Resumen guardado {language}'},
+        }]
+        ProposalDefaultConfig.objects.update_or_create(language=language, defaults={'sections_json': custom})
+
+        saved = admin_client.put(reverse('proposal-defaults'), {
+            'language': language, 'reminder_days': 9,
+        }, format='json')
+        loaded = admin_client.get(reverse('proposal-defaults'), {'lang': language})
+        created = admin_client.post(reverse('create-proposal'), {
+            'title': 'Borrador de prueba', 'client_name': f'Cliente de prueba {language}', 'language': language,
+        }, format='json')
+
+        assert saved.status_code == 200
+        assert loaded.data['sections_json'] == custom
+        assert 'effective_sections_json' not in loaded.data
+        assert created.status_code == 201
+        proposal = BusinessProposal.objects.get(pk=created.data['id'])
+        assert list(proposal.sections.values_list('title', 'order')) == [(item['title'], item['order']) for item in custom]
+        assert proposal.sections.get(section_type='executive_summary').content_json == custom[1]['content_json']
+
+    @pytest.mark.parametrize(('language', 'reminder', 'urgency'), [('es', 3, 7), ('en', 5, 11)])
+    def test_general_save_exposes_effective_system_sections(self, admin_client, language, reminder, urgency):
+        url = reverse('proposal-defaults')
+        ProposalDefaultConfig.objects.create(language=language, sections_json=[])
+
+        saved = admin_client.put(url, {
+            'language': language, 'reminder_days': reminder, 'urgency_reminder_days': urgency,
+        }, format='json')
+        loaded = admin_client.get(url, {'lang': language})
+
+        assert saved.status_code == 200
+        assert loaded.data['reminder_days'] == reminder
+        assert loaded.data['urgency_reminder_days'] == urgency
+        assert saved.data['sections_json'] == loaded.data['sections_json'] == []
+        assert saved.data['effective_sections_json'] == loaded.data['effective_sections_json']
+        commercial = [
+            section for section in loaded.data['effective_sections_json']
+            if section['section_type'] != 'technical_document'
+        ]
+        assert len(commercial) == 17
+        assert len(loaded.data['effective_sections_json']) == 18
+
     def test_creates_new_config(self, admin_client):
         url = reverse('proposal-defaults')
         payload = {

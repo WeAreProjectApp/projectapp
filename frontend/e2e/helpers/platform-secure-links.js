@@ -77,19 +77,30 @@ function listPayload(rows) {
  */
 export async function installPlatformSecureLinksMock(page, options = {}) {
   const state = { links: (options.links || [platformSecureLink()]).map((link) => structuredClone(link)) };
-  const calls = { creates: [], events: 0, urls: 0, revokes: 0, reactivations: [] };
+  const calls = { creates: [], filters: [], events: 0, urls: 0, revokes: 0, reactivations: [] };
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return json(mockPlatformClient);
     if (apiPath === 'accounts/projects/' && method === 'GET') return json([platformProject]);
     if (apiPath === 'accounts/projects/1/' && method === 'GET') return json(platformProject);
     if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') return json([]);
     if (apiPath === 'accounts/projects/1/secure-links/types/' && method === 'GET') return json({ types: credentialsCatalog });
-    if (apiPath === 'accounts/projects/1/secure-links/' && method === 'GET') return json(listPayload(state.links));
+    if (apiPath === 'accounts/projects/1/secure-links/' && method === 'GET') {
+      const status = new URL(route.request().url()).searchParams.get('status');
+      calls.filters.push(status);
+      return json(listPayload(status ? state.links.filter(link => link.status === status) : state.links));
+    }
     if (apiPath === 'accounts/projects/1/secure-links/' && method === 'POST') {
       const payload = route.request().postDataJSON();
       calls.creates.push(payload);
       if (options.create) return options.create({ payload, state, calls });
-      const successor = platformSecureLink({ id: 8, title: payload.title, replaces: payload.replaces, updated_at: '2026-10-02T15:00:00Z' });
+      const successor = platformSecureLink({
+        id: 8,
+        title: payload.title,
+        replaces: payload.replaces,
+        language: payload.language,
+        validity_days: payload.validity_days,
+        updated_at: '2026-10-02T15:00:00Z',
+      });
       state.links.unshift(successor);
       if (payload.replaces) {
         const source = state.links.find((link) => link.id === payload.replaces);
@@ -134,9 +145,9 @@ export async function installPlatformSecureLinksMock(page, options = {}) {
   return { state, calls };
 }
 
-export async function openPlatformSecureLinks(page) {
+export async function openPlatformSecureLinks(page, locale = 'es-co') {
   await setPlatformAuth(page, { user: mockPlatformClient });
-  await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' });
+  await page.goto(`/${locale}/platform/projects`, { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
   await page.locator('[data-testid="project-row-1"]:visible, [data-testid="project-card-1"]:visible').click();
   const secureLinks = page.getByRole('link', { name: /^(Enlaces seguros|Secure links)$/ });

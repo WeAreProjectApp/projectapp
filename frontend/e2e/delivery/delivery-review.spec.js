@@ -1,5 +1,5 @@
 import { test, expect } from '../helpers/test.js'
-import { authenticate, backendUrl, fixture, openReview, openWorkspace, publish, submitDecision } from './helpers.js'
+import { authenticate, backendUrl, chooseReviewDecision, fixture, openReview, openWorkspace, publish, submitDecision } from './helpers.js'
 import { PLATFORM_DELIVERY_REVIEW } from '../helpers/flow-tags.js'
 
 test.setTimeout(60_000)
@@ -23,7 +23,16 @@ test('client records a partial conformity', {
   const data = await fixture(request, testInfo)
   await authenticate(page, request, data)
   await openWorkspace(page, data)
-  await submitDecision(page, data, 0, 'approved', 'El traslado quedó conforme.')
+  await openReview(page, data)
+  const requirement = page.getByTestId(`delivery-review-requirement-${data.requirement_ids[0]}`)
+  const decision = requirement.getByRole('combobox', { name: 'Resultado de la prueba' })
+  await expect(decision).toHaveText('Dejar pendiente')
+  await decision.click()
+  await expect(page.getByRole('listbox').getByRole('option')).toHaveText(['Dejar pendiente', 'Aprobar', 'Objetar', 'Rechazar'])
+  await decision.press('Escape')
+  await chooseReviewDecision(page, data.requirement_ids[0], 'approved')
+  await page.getByTestId('delivery-review-submit').click()
+  await expect(page.getByTestId('delivery-review-form')).toHaveCount(0)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId(`delivery-requirement-${data.requirement_ids[0]}`)).toContainText('Aprobado')
   await expect(page.getByTestId(`delivery-requirement-${data.requirement_ids[1]}`)).toContainText('En revisión')
@@ -67,7 +76,7 @@ test(`a client ${label} requires its motive`, {
   await authenticate(page, request, data)
   await openWorkspace(page, data)
   await openReview(page, data)
-  await page.getByTestId(`delivery-review-decision-${data.requirement_ids[1]}`).selectOption(decision)
+  await chooseReviewDecision(page, data.requirement_ids[1], decision)
   await page.getByTestId('delivery-review-submit').click()
   await expect(page.getByTestId('delivery-review-form')).toContainText('Describe el motivo de la objeción o rechazo.')
   await expect(page.getByTestId(`delivery-review-message-${data.requirement_ids[1]}`)).toHaveAttribute('aria-invalid', 'true')
@@ -125,7 +134,7 @@ test('a stale review preserves the unsent client observation', {
   await authenticate(page, request, data)
   await openWorkspace(page, data)
   await openReview(page, data)
-  await page.getByTestId(`delivery-review-decision-${data.requirement_ids[1]}`).selectOption('objected')
+  await chooseReviewDecision(page, data.requirement_ids[1], 'objected')
   await page.getByTestId(`delivery-review-message-${data.requirement_ids[1]}`).fill('El correo sigue pendiente de mi comprobación.')
   const context = await browser.newContext()
   const adminPage = await context.newPage()
@@ -192,8 +201,8 @@ test('a stage closes after every requirement is approved', {
   await authenticate(page, request, data)
   await openWorkspace(page, data)
   await openReview(page, data)
-  await page.getByTestId(`delivery-review-decision-${data.requirement_ids[0]}`).selectOption('approved')
-  await page.getByTestId(`delivery-review-decision-${data.requirement_ids[1]}`).selectOption('approved')
+  await chooseReviewDecision(page, data.requirement_ids[0], 'approved')
+  await chooseReviewDecision(page, data.requirement_ids[1], 'approved')
   await page.getByTestId('delivery-review-submit').click()
   await expect(page.getByTestId('delivery-review-form')).toHaveCount(0)
   await expect(page.getByTestId(`delivery-review-open-${data.stage_id}`)).toHaveCount(0)

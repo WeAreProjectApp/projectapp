@@ -338,6 +338,12 @@ class DiagnosticDefaultConfigSerializer(EditorialModelSerializer):
         )
         read_only_fields = ('id', 'created_at', 'updated_at')
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data['sections_json'] == []:
+            data['effective_sections_json'] = diagnostic_service.get_hardcoded_section_specs(instance.language)
+        return data
+
     def validate_sections_json(self, value):
         if not isinstance(value, list):
             raise serializers.ValidationError(

@@ -8,6 +8,10 @@ mantiene diseños, documentos, credenciales, APK y otros recursos; también
 presenta contratos, otrosíes y anexos legales en sus grupos. Elegir una categoría
 no convierte el archivo en evidencia de firma o conformidad de una entrega.
 
+1. Como cliente, abre **Mis proyectos** y entra al proyecto que contiene el archivo.
+2. En el menú del proyecto, abre **Recursos** y selecciona **Documentos**.
+3. Abre el recurso. Descarga el archivo actual o elige una versión en su historial.
+
 | Interacción | Resultado | Clase |
 |---|---|---|
 | Abrir la biblioteca del proyecto | Muestra los recursos disponibles, incluidos los tres grupos contractuales. | `display` |
@@ -21,8 +25,10 @@ El paquete documental confirmado al aprobar una propuesta sigue separado de los
 adjuntos editables. Sus copias privadas no establecen por sí mismas una firma o
 una aprobación de entrega.
 
-La vista del proyecto se abre en `/platform/projects/:id/deliverables`; la
-biblioteca conjunta conserva su ruta `/platform/deliverables`.
+La vista del proyecto se abre en `/platform/projects/:id/deliverables`. La
+ruta de compatibilidad `/platform/deliverables` abre **Mis proyectos**
+(`/platform/projects`). La API conjunta `GET /api/accounts/deliverables/`
+lista los recursos de los proyectos a los que tiene acceso la identidad autenticada.
 
 Evidencia: `delivery-private-files.spec.js` usa el backend y JWT reales para la
 biblioteca y las descargas. El rechazo conserva una respuesta real de permisos;

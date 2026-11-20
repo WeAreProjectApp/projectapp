@@ -6,6 +6,7 @@
  */
 import { test, expect, assertResponsiveScenario } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { setPlatformAuth, setPlatformVerificationState, mockPlatformAdmin, mockPlatformClient, mockPlatformClientIncompleteProfile } from '../helpers/platform-auth.js';
 import { viewportUse } from '../helpers/viewports.js';
@@ -286,8 +287,8 @@ async function exerciseCatalogView(page, scenario, profile) {
   if (scenario.catalogKey === 'frontend/pages/platform/projects/[id]/delivery.vue') {
     await page.getByTestId('delivery-review-open-21').click();
     const decision = page.getByTestId('delivery-review-decision-11');
-    await decision.selectOption('approved');
-    await expect(decision).toHaveValue('approved');
+    await selectChoiceOption(page, decision, 'Aprobar');
+    await expect(decision).toHaveText('Aprobar');
     await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click();
     const guide = page.getByTestId('delivery-requirement-11');
     await expect(guide).toContainText(deliveryRequirement.guide.expected_result);

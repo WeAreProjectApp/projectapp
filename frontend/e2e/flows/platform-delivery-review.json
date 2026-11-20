@@ -2,9 +2,17 @@
   "id": "platform-delivery-review",
   "name": "Platform Delivery Review",
   "module": "platform",
-  "roles": ["platform-client", "platform-admin"],
+  "roles": [
+    "platform-client",
+    "platform-admin"
+  ],
   "priority": "P1",
-  "description": "Navigate from a project to published nontechnical guides, approve selected requirements, object or reject with a motive, preserve earlier conformity through corrections, and derive stage/phase closure.",
+  "description": "Navigate from a project to published nontechnical guides, approve selected requirements, object or reject with a motive, preserve earlier conformity through corrections, and derive stage/phase closure. The decision dropdown is labelled per requirement and defaults to Leave pending.",
   "expectedSpecs": 1,
-  "outcomes": ["display", "success", "error", "failure"]
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
 }

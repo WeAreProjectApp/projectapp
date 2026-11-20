@@ -28,16 +28,17 @@
       >
         <BaseFormRow :cols="2" :gap="4">
           <BaseFormField label="Idioma" for="defaults-language">
-            <BaseSelect
+            <BaseChoiceSelect
               id="defaults-language"
-              v-model="generalForm.language"
+              :model-value="generalForm.language"
+              :disabled="isSaving"
               data-testid="defaults-language"
               :options="[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }]"
-              @change="onLanguageChange"
+              @update:model-value="onLanguageChange"
             />
           </BaseFormField>
           <BaseFormField label="Moneda" for="defaults-currency">
-            <BaseSelect
+            <BaseChoiceSelect
               id="defaults-currency"
               v-model="generalForm.default_currency"
               data-testid="defaults-currency"
@@ -187,7 +188,7 @@
             variant="primary"
             size="lg"
             :loading="isSaving"
-            :disabled="!isPaymentValid || isSaving"
+            :disabled="!isPaymentValid || isSaving || isLoading"
             data-testid="defaults-save-btn"
           >{{ isSaving ? 'Guardando…' : 'Guardar cambios' }}</BaseButton>
         </div>
@@ -201,7 +202,9 @@
         Para editar el contenido detallado, abre un diagnóstico real y modifícalo allí — el editor por
         defecto se gestiona desde el JSON de cada sección.
       </p>
-      <div class="bg-surface rounded-xl shadow-card border border-border-muted divide-y divide-border-muted">
+      <p v-if="isLoading" role="status" class="text-sm text-text-muted">Cargando configuración…</p>
+      <BaseBadge v-if="systemSections && !isLoading" class="mb-3">Plantilla del sistema</BaseBadge>
+      <div v-if="!isLoading" class="bg-surface rounded-xl shadow-card border border-border-muted divide-y divide-border-muted">
         <div
           v-for="section in sectionsList"
           :key="section.section_type"
@@ -324,8 +327,11 @@ const slugPatternPreview = computed(() => {
 });
 
 const sectionsList = ref([]);
+const systemSections = ref(false);
 const rawConfig = ref(null);
 const isSaving = ref(false);
+const isLoading = ref(false);
+let defaultsRequest = 0;
 
 const paymentSum = computed(
   () => Number(generalForm.value.payment_initial_pct || 0)
@@ -347,8 +353,11 @@ function formatDate(iso) {
 }
 
 function applyConfig(data) {
-  rawConfig.value = data;
-  sectionsList.value = Array.isArray(data.sections_json) ? data.sections_json : [];
+  const { effective_sections_json: effectiveSections, ...config } = data;
+  rawConfig.value = config;
+  const fallback = Array.isArray(effectiveSections);
+  systemSections.value = config.id === null || fallback;
+  sectionsList.value = fallback ? effectiveSections : config.sections_json || [];
   generalForm.value = {
     language: data.language || generalForm.value.language,
     default_currency: data.default_currency || 'COP',
@@ -380,19 +389,26 @@ function syncPaymentInitial() {
 }
 
 async function loadDefaults(lang) {
+  const request = ++defaultsRequest;
+  isLoading.value = true;
   const result = await store.fetchDiagnosticDefaults(lang);
+  if (request !== defaultsRequest) return;
+  isLoading.value = false;
   if (!result.success) {
+    generalForm.value.language = rawConfig.value?.language || 'es';
     notify.error('No se pudieron cargar los valores por defecto.');
     return;
   }
   applyConfig(result.data || {});
 }
 
-async function onLanguageChange() {
-  await loadDefaults(generalForm.value.language);
+async function onLanguageChange(language) {
+  generalForm.value.language = language;
+  await loadDefaults(language);
 }
 
 async function handleSaveGeneral() {
+  if (isLoading.value || isSaving.value) return;
   if (!isPaymentValid.value) {
     notify.error('La distribución de pagos debe sumar 100%.');
     return;
@@ -401,7 +417,7 @@ async function handleSaveGeneral() {
   try {
     const result = await store.saveDiagnosticDefaults(
       generalForm.value.language,
-      sectionsList.value,
+      null,
       generalForm.value,
     );
     if (result.success) {

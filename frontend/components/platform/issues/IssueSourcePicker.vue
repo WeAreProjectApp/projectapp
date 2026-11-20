@@ -1,9 +1,13 @@
 <template>
   <div class="min-w-0 space-y-2">
-    <label :for="id" class="block text-xs font-medium text-text-muted">{{ t(required ? 'platformIssues.requiredSource' : 'platformIssues.source') }}</label>
-    <BaseChoiceSelect :id="id" data-testid="issue-source" :model-value="modelValue"
-      :required="required" :aria-describedby="selectedSource ? `${id}-selection` : undefined"
-      :options="sourceOptions" @update:model-value="$emit('update:modelValue', $event)" />
+    <BaseFormField v-slot="{ errorId, invalid }" :for="id" size="sm"
+      :label="t(required ? 'platformIssues.requiredSource' : 'platformIssues.source')" :required="required" :error="error"
+    >
+      <BaseChoiceSelect :id="id" data-testid="issue-source" :model-value="modelValue"
+        :required="required" :error="invalid"
+        :aria-describedby="[selectedSource && `${id}-selection`, errorId].filter(Boolean).join(' ') || undefined"
+        :options="sourceOptions" @update:model-value="$emit('update:modelValue', $event)" />
+    </BaseFormField>
     <div v-if="selectedSource" :id="`${id}-selection`" data-testid="issue-source-selection" class="min-w-0 space-y-1 text-sm [overflow-wrap:anywhere]">
       <p class="whitespace-normal font-medium text-text-default" data-testid="issue-source-title">{{ selectedSource.title }}</p>
       <p class="text-xs text-text-muted">{{ selectedSource.contract_title || selectedSource.scope_title }} · {{ selectedSource.stage_title }}</p>
@@ -15,8 +19,15 @@
 <script setup>
 import { computed } from 'vue'
 import BaseChoiceSelect from '~/components/base/BaseChoiceSelect.vue'
+import BaseFormField from '~/components/base/BaseFormField.vue'
 
-const props = defineProps({ modelValue: { type: Number, default: null }, options: { type: Array, default: () => [] }, required: Boolean, id: { type: String, default: 'issue-source' } })
+const props = defineProps({
+  modelValue: { type: Number, default: null },
+  options: { type: Array, default: () => [] },
+  required: Boolean,
+  error: { type: String, default: '' },
+  id: { type: String, default: 'issue-source' },
+})
 defineEmits(['update:modelValue'])
 const { t } = useI18n()
 const selectedSource = computed(() => props.options.find((row) => row.id === props.modelValue))
