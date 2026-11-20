@@ -89,7 +89,7 @@ test.describe('Platform Complete Profile', () => {
   });
 
   test('successful profile completion redirects a client to the documents portal', {
-    tag: [...PLATFORM_COMPLETE_PROFILE, '@role:platform-client'],
+    tag: [...PLATFORM_COMPLETE_PROFILE, '@role:platform-client', '@outcome:success'],
   }, async ({ page }) => {
     let profile = {
       ...mockPlatformClientIncompleteProfile,
@@ -138,15 +138,19 @@ test.describe('Platform Complete Profile', () => {
     const gender = page.getByRole('combobox', { name: 'Sexo', exact: true });
     const education = page.getByRole('combobox', { name: 'Nivel de educación', exact: true });
     const submit = page.getByRole('button', { name: /completar perfil/i });
-    await gender.click();
+    await gender.press('Enter');
     const listbox = page.getByRole('listbox');
     await expect(listbox.getByRole('option')).toHaveCount(5);
     await expect(listbox.getByRole('option', { name: 'Selecciona' })).toBeDisabled();
-    await listbox.getByRole('option', { name: 'Femenino', exact: true }).click();
+    await gender.press('ArrowDown');
+    await gender.press('Enter');
     await expect(submit).toBeDisabled();
-    await education.click();
+    await education.press('Enter');
     await expect(listbox.getByRole('option')).toHaveCount(7);
-    await listbox.getByRole('option', { name: 'Universitario', exact: true }).click();
+    await education.press('End');
+    await education.press('ArrowUp');
+    await education.press('ArrowUp');
+    await education.press('Enter');
     await expect(submit).toBeEnabled();
     await submit.click();
 

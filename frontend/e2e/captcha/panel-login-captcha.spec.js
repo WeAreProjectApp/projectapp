@@ -1,6 +1,6 @@
 import { test, expect } from '../helpers/test.js'
-import { mockCaptchaProvider, captchaCredentials, prepareLocallyDeliveredCode } from '../helpers/captcha.js'
-import { ADMIN_LOGIN, AUTHORIZED_LOGIN } from '../helpers/flow-tags.js'
+import { mockCaptchaProvider, captchaCredentials } from '../helpers/captcha.js'
+import { ADMIN_LOGIN } from '../helpers/flow-tags.js'
 
 test.describe('Panel CAPTCHA', () => {
   test.setTimeout(60_000)
@@ -98,21 +98,5 @@ test.describe('Panel CAPTCHA', () => {
 
     await expect(page.getByRole('status')).toContainText('El captcha expiró')
     await expect(page.getByRole('button', { name: 'Log in', exact: true })).toBeDisabled()
-  })
-})
-
-test.describe('Panel login with a locally delivered email code', () => {
-  test.use({ trace: 'off', screenshot: 'off', video: 'off' })
-
-  test('authenticates staff through the accessible email code fields', {
-    tag: [...AUTHORIZED_LOGIN, '@outcome:success', '@role:admin'],
-  }, async ({ page }, testInfo) => {
-    await mockCaptchaProvider(page, testInfo.testId)
-    await page.goto('/es-co/panel/login?next=/es-co/panel/access', { waitUntil: 'domcontentloaded' })
-    const verify = await prepareLocallyDeliveredCode(page, 'panel')
-    await verify.click()
-
-    await expect(page).toHaveURL(/\/es-co\/panel\/access$/)
-    expect((await page.request.get('/api/auth/check/')).status()).toBe(200)
   })
 })

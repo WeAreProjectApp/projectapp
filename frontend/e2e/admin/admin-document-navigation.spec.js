@@ -525,7 +525,6 @@ test.describe('Admin document project/client navigation', () => {
     await page.goto('/es-co/panel/documents?by=client&folder=369&client=2', { waitUntil: 'domcontentloaded' });
     await page.getByTestId('document-open-61').click();
     await page.getByRole('link', { name: 'Volver a «10 - Octubre»', exact: true }).first().click();
-    await page.getByTestId('confirm-modal-secondary').click();
     await expectOctoberContext(page);
 
     const beforeReload = api.documentRequests.length;
