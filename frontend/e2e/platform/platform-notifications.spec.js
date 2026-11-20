@@ -137,7 +137,7 @@ test.describe('Platform Notifications — Admin', () => {
     await page.goto('/platform/notifications', { waitUntil: 'domcontentloaded' });
     await page.getByRole('heading', { name: /notificaciones/i }).waitFor({ state: 'visible', timeout: 30000 });
 
-    await expect(page.getByText(/sin leer/i)).toBeVisible();
+    await expect(page.getByText('3 sin leer', { exact: true })).toBeVisible();
   });
 });
 
