@@ -1007,9 +1007,7 @@ function extractInvestmentPercentages(contentJson) {
 
 function buildPaymentDescription(percent) {
   const total = Number(form.total_investment) || 0;
-  const cents = BigInt(Math.round(total * 100));
-  const hundredthsOfPercent = BigInt(Math.round(normalizePercent(percent) * 100));
-  const amount = cents * hundredthsOfPercent / 1000000n;
+  const amount = Math.round(total * normalizePercent(percent) / 100);
   return `$${amount.toLocaleString('es-CO')} ${form.currency || 'COP'}`;
 }
 

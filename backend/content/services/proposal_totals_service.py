@@ -85,7 +85,10 @@ def sync_manual_investment(
                 label = option['label']
                 option['label'] = f'{label[:match.start()]}{percent.normalize():f}%{label[match.end():]}'
             if edited or recalculate_totals:
-                amount = int(effective * (percent if edited else current) / 100)
+                amount = effective * (percent if edited else current) / 100
+                if edited:
+                    amount = amount.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+                amount = int(amount)
                 option['description'] = f'${amount:,}'.replace(',', '.') + f' {proposal.currency}'
 
     if content == inv_section.content_json:

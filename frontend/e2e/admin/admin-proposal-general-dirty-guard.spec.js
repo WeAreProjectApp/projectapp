@@ -3,6 +3,8 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_EDIT } from '../helpers/flow-tags.js';
 
+test.use({ timezoneId: 'America/Bogota' });
+
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const notice = (page) => page.getByTestId('proposal-unsaved-notice');
 const expiryDate = (page) => page.getByTestId('proposal-expiry-date');
@@ -57,9 +59,10 @@ async function openGeneral(page, proposal, { failSave = false } = {}) {
 test('saving just the title sends no investment write', {
   tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin', '@outcome:success'],
 }, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-20T13:37:19Z'));
   await setAuthLocalStorage(page, { token: 'e2e-admin-token', userAuth: { id: 226, role: 'admin', is_staff: true } });
   const proposal = createProposal({
-    expires_at: '2027-12-10T13:37:19Z',
+    expires_at: '2026-12-10T08:37:19-05:00',
     hosting_percent: 60,
     sections: [{
       id: 1104,
@@ -85,6 +88,8 @@ test('saving just the title sends no investment write', {
   await page.getByRole('button', { name: 'Guardar Cambios', exact: true }).click();
 
   await expect(notice(page)).toBeHidden();
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByLabel('Título', { exact: true })).toHaveValue('Solo cambia el título');
   expect(updates).toEqual([{ title: 'Solo cambia el título', source_hash: proposal.proposal_source_hash }]);
   expect(sectionWrites).toHaveLength(0);
 });
@@ -95,8 +100,6 @@ for (const fixture of [
 ]) {
   test.describe(`General dirty guard — ${fixture.name}`, () => {
     test.setTimeout(60_000);
-    test.use({ timezoneId: 'America/Bogota' });
-
     test.beforeEach(async ({ page }) => {
       await page.clock.setFixedTime(new Date('2026-11-06T15:00:00Z'));
       await setAuthLocalStorage(page, {

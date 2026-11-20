@@ -121,7 +121,7 @@ test.describe('Admin Proposal Create', () => {
     const heldEs = new Promise(resolve => { releaseFirstEs = resolve; });
     const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
     await mockCreationApi(page, async ({ apiPath, route }) => {
-      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
       if (apiPath === 'proposals/create/') {
         capturedPayload = route.request().postDataJSON();
         return json(mockCreatedProposal, 201);

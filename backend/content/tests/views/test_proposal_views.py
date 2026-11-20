@@ -1658,6 +1658,8 @@ class TestInvestmentSyncOnUpdate:
     def test_combined_save_updates_only_confirmed_investment_terms(self, admin_client, proposal_with_investment_section):
         p = proposal_with_investment_section
         section = p.sections.get(section_type='investment')
+        history = EntityHistory.objects.get(entity_type='proposal', object_id=p.pk)
+        original_revision = history.revision
         expected = section.content_json
         expected['hostingPlan']['hostingPercent'] = 70
         expected['paymentOptions'][0].update(label='45.5% al firmar ✍️', description='$682.500 COP')
@@ -1674,6 +1676,28 @@ class TestInvestmentSyncOnUpdate:
         assert result.status_code == 200
         assert p.hosting_percent == 70
         assert section.content_json == expected
+        revision = history.entries.get(number=original_revision + 1)
+        assert history.entries.filter(number__gt=original_revision).count() == 1
+        assert {field['field'] for field in revision.changed_fields} == {
+            'hosting_percent',
+            f'sections.{section.pk}.content_json.hostingPlan.hostingPercent',
+            f'sections.{section.pk}.content_json.paymentOptions',
+        }
+        assert revision.snapshot['sections'][str(section.pk)]['content_json'] == expected
+
+    def test_explicit_percentage_rounds_payment_to_the_nearest_unit(self, admin_client, proposal_with_investment_section):
+        p = proposal_with_investment_section
+        p.total_investment = Decimal('101.00')
+        p.save(update_fields=['total_investment'])
+
+        result = admin_client.patch(reverse('update-proposal', args=[p.pk]), {
+            'investment_payment_percentages': [50, 20, 30],
+            'source_hash': self._current_hash(admin_client, p),
+        }, format='json')
+
+        assert result.status_code == 200
+        section = p.sections.get(section_type='investment')
+        assert section.content_json['paymentOptions'][0]['description'] == '$51 COP'
 
     def test_recalculates_existing_decimal_percent_on_currency_change(self, admin_client, proposal_with_investment_section):
         p = proposal_with_investment_section

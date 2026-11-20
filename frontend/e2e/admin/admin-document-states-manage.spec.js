@@ -258,10 +258,11 @@ test.describe('Admin Document States Manage', () => {
 
     await page.getByTestId('catalog-create-group').click();
 
-    await expect(page.getByTestId('catalog-group-3')).toContainText('Grupo de prueba');
+    const persistedGroup = page.getByTestId('catalog-group-3');
+    await expect(persistedGroup.getByRole('textbox', { name: 'Nombre del grupo' })).toHaveValue('Grupo de prueba');
     expect(created.selection_mode).toBe('exclusive');
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('catalog-group-3')).toContainText('Grupo de prueba');
+    await expect(persistedGroup.getByRole('combobox')).toHaveValue('exclusive');
   });
 
   test('merges a duplicate into an existing state', {
