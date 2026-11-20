@@ -65,6 +65,20 @@ def test_other_client_retains_inheritance(actor, client_user, django_user_model)
     assert features.values_for(other.pk)['platform.bugs'] is True
 
 
+@pytest.mark.parametrize('search', ['María Torres', 'TechStartup', 'maria@example.test'])
+def test_client_search_matches_displayed_identity(actor, client_user, search):
+    client_user.first_name = 'María'
+    client_user.last_name = 'Torres'
+    client_user.email = 'maria@example.test'
+    client_user.save(update_fields=['first_name', 'last_name', 'email'])
+    client_user.profile.company_name = 'TechStartup'
+    client_user.profile.save(update_fields=['company_name'])
+
+    result = features.list_clients(actor, search=search)
+
+    assert result['results'] == [{'user_id': client_user.pk, 'name': 'María Torres'}]
+
+
 def test_stale_write_keeps_persisted_value(actor):
     features.update(actor, {'expected_version': 0, 'values': {'platform.bugs': False}})
 
