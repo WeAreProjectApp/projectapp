@@ -4,6 +4,7 @@ export default {
       main_title_1: "Full-time",
       main_title_2: "Perfection",
       main_title_3: "Seekers",
+      main_title_accessible: "Project App. - Web development professionals",
       sub_title_1: "In our work.",
       sub_title_2: "In how to be good people too.",
     },
@@ -30,4 +31,3 @@ export default {
       title_3: "TO BE",
     },
   };
-  

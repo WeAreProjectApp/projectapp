@@ -15,6 +15,7 @@ export const usePortfolioWorksStore = defineStore('portfolio_works', {
   state: () => ({
     works: [],
     currentWork: null,
+    publicWorkRequestId: 0,
     isLoading: false,
     isUpdating: false,
     error: null,
@@ -60,23 +61,21 @@ export const usePortfolioWorksStore = defineStore('portfolio_works', {
      * @param {string} lang - Language code ('es' or 'en').
      */
     async fetchWork(slug, lang = 'es') {
+      const requestId = ++this.publicWorkRequestId;
       this.isLoading = true;
       this.error = null;
+      this.currentWork = null;
       try {
         const response = await get_request(`portfolio/${slug}/?lang=${lang}`);
-        this.currentWork = response.data;
+        if (requestId === this.publicWorkRequestId) this.currentWork = response.data;
         return { success: true, data: response.data };
       } catch (error) {
         const status = error.response?.status;
-        if (status === 404) {
-          this.error = 'not_found';
-        } else {
-          this.error = 'unknown';
-        }
-        return { success: false, error: this.error, status };
-      /* c8 ignore next 3 */
+        const code = status === 404 ? 'not_found' : 'unknown';
+        if (requestId === this.publicWorkRequestId) this.error = code;
+        return { success: false, error: code, status };
       } finally {
-        this.isLoading = false;
+        if (requestId === this.publicWorkRequestId) this.isLoading = false;
       }
     },
 

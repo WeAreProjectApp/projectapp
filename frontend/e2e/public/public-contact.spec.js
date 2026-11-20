@@ -8,25 +8,69 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PUBLIC_CONTACT_SUBMIT } from '../helpers/flow-tags.js';
 
+const CONTACT_DISPLAY = [...PUBLIC_CONTACT_SUBMIT, '@role:guest', '@outcome:display'];
+
+async function fillContactForm(form, locale = 'en') {
+  const labels = locale === 'en'
+    ? ['Full name', 'Phone number', 'Your email', 'Tell us about your web project']
+    : ['Nombre completo', 'Número de teléfono', 'Tu correo electrónico', 'Cuéntanos sobre tu proyecto web'];
+  await form.getByRole('textbox', { name: labels[0], exact: true }).fill('Test User');
+  await form.getByRole('textbox', { name: labels[1], exact: true }).fill('+573001234567');
+  await form.getByRole('textbox', { name: labels[2], exact: true }).fill('test@example.com');
+  await form.getByRole('textbox', { name: labels[3], exact: true }).fill('E2E contact project description');
+  await form.getByRole('button', { name: '500-5K', exact: true }).click();
+}
+
 test.describe('Contact Form Submit', () => {
-  test('renders contact form with required fields', {
-    tag: [...PUBLIC_CONTACT_SUBMIT, '@role:guest'],
+  test.setTimeout(60_000);
+
+  test('keeps the form in Spanish after switching locale', {
+    tag: CONTACT_DISPLAY,
   }, async ({ page }) => {
-    await page.goto('/contact');
+    await page.goto('/en-us/contact', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1, name: /Need a professional website/ })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Full name' })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    await page.getByRole('button', { name: 'Switch to Spanish', exact: true }).filter({ visible: true }).click();
+    await expect(page).toHaveURL('/es-co/contact');
+    const heading = page.getByRole('heading', { level: 1, name: /¿Necesitas un sitio web profesional\?/ });
+    await expect(heading).toBeVisible();
 
-    // Contact page heading should be visible
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
-
-    // Form inputs should be present
-    await expect(page.locator('form')).toBeAttached();
-    await expect(page.locator('input[type="email"]')).toBeAttached();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(heading).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es-CO');
+    const form = page.getByTestId('contact-form');
+    await expect(form.getByRole('textbox', { name: 'Nombre completo' })).toBeVisible();
+    await expect(form.getByRole('textbox', { name: 'Número de teléfono' })).toBeVisible();
+    await expect(form.getByRole('textbox', { name: 'Tu correo electrónico' })).toBeVisible();
+    await expect(form.getByRole('textbox', { name: 'Cuéntanos sobre tu proyecto web' })).toBeVisible();
+    await expect(form.getByText('Presupuesto estimado (USD)', { exact: true })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Enviar mensaje', exact: true })).toBeEnabled();
   });
 
-  test('submits contact form successfully', {
-    tag: [...PUBLIC_CONTACT_SUBMIT, '@role:guest'],
+  test('localizes the confirmation on direct entry', {
+    tag: CONTACT_DISPLAY,
   }, async ({ page }) => {
-    await mockApi(page, async ({ _route, apiPath, method }) => {
+    // quality: allow-deep-link (contact confirmation is also reachable by direct URL)
+    await page.goto('/en-us/contact-success', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1, name: /Thank you for contacting us!/ })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+
+    await page.getByRole('button', { name: 'Switch to Spanish', exact: true }).filter({ visible: true }).click();
+    await expect(page).toHaveURL('/es-co/contact-success');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1, name: /¡Gracias por contactarnos!/ })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es-CO');
+    await expect(page.getByRole('link', { name: 'Ver nuestro portafolio' })).toHaveAttribute('href', '/es-co/portfolio-works');
+  });
+
+  test('reaches English confirmation after one submission', {
+    tag: [...PUBLIC_CONTACT_SUBMIT, '@role:guest', '@outcome:success'],
+  }, async ({ page }) => {
+    const contactPosts = [];
+    await mockApi(page, async ({ route, apiPath, method }) => {
       if (apiPath === 'new-contact/' && method === 'POST') {
+        contactPosts.push(route.request().postDataJSON());
         return {
           status: 201,
           contentType: 'application/json',
@@ -40,22 +84,55 @@ test.describe('Contact Form Submit', () => {
       return null;
     });
 
-    await page.goto('/contact');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
+    await page.goto('/en-us/contact', { waitUntil: 'domcontentloaded' });
+    const form = page.getByTestId('contact-form');
+    await fillContactForm(form);
+    await form.getByRole('button', { name: 'Send message', exact: true }).click();
 
-    const form = page.locator('form');
-    await form.locator('input[type="text"]').fill('Test User');
-    await form.locator('input[type="tel"]').fill('+573001234567');
-    await form.locator('input[type="email"]').fill('test@example.com');
-    await form.locator('textarea').fill('E2E contact project description');
-
-    await form.getByRole('button', { name: /send message|enviar mensaje|enviar/i }).click();
-
-    await page.waitForURL(/contact-success/, { timeout: 20_000 });
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/gracias|thank/i);
+    await expect(page).toHaveURL('/en-us/contact-success');
+    await expect(page.getByRole('heading', { level: 1, name: /Thank you for contacting us!/ })).toHaveCSS('opacity', '1');
+    await expect(form).toHaveCount(0);
+    expect(contactPosts).toEqual([{
+      email: 'test@example.com',
+      phone_number: '+573001234567',
+      subject: 'Test User',
+      message: 'E2E contact project description',
+      budget: '500-5K',
+    }]);
   });
 
-  test('shows the submission error and stays on the page when the API fails', {
+  test('keeps an accepted contact from being submitted again after a route failure', {
+    tag: [...PUBLIC_CONTACT_SUBMIT, '@role:guest', '@outcome:failure'],
+  }, async ({ page }) => {
+    let contactPosts = 0;
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'new-contact/' && method === 'POST') {
+        contactPosts += 1;
+        return { status: 201, contentType: 'application/json', body: JSON.stringify({ id: 1 }) };
+      }
+      return null;
+    });
+    await page.goto('/en-us/contact', { waitUntil: 'domcontentloaded' });
+    const form = page.getByTestId('contact-form');
+    await fillContactForm(form);
+    await page.evaluate(() => {
+      const router = document.getElementById('__nuxt').__vue_app__.config.globalProperties.$router;
+      router.beforeEach((to) => {
+        if (to.path !== '/en-us/contact-success') return;
+        window.contactConfirmationBlocked = true;
+        return false;
+      });
+    });
+
+    const submit = form.getByRole('button', { name: 'Send message', exact: true });
+    await submit.click();
+    await expect.poll(() => page.evaluate(() => window.contactConfirmationBlocked)).toBe(true);
+    await expect(submit).toBeDisabled();
+    await form.getByRole('textbox', { name: 'Full name', exact: true }).press('Enter');
+    expect(contactPosts).toBe(1);
+  });
+
+  test('shows the Spanish submission error on the form', {
     tag: [...PUBLIC_CONTACT_SUBMIT, '@role:guest', '@outcome:error'],
   }, async ({ page }) => {
     await mockApi(page, async ({ apiPath, method }) => {
@@ -69,20 +146,16 @@ test.describe('Contact Form Submit', () => {
       return null;
     });
 
-    await page.goto('/contact');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
-
-    const form = page.locator('form');
-    await form.locator('input[type="text"]').fill('Test User');
-    await form.locator('input[type="tel"]').fill('+573001234567');
-    await form.locator('input[type="email"]').fill('test@example.com');
-    await form.locator('textarea').fill('E2E contact failure description');
-
-    await form.getByRole('button', { name: /send message|enviar mensaje|enviar/i }).click();
+    await page.goto('/es-co/contact', { waitUntil: 'domcontentloaded' });
+    const form = page.getByTestId('contact-form');
+    await fillContactForm(form, 'es');
+    const submit = form.getByRole('button', { name: 'Enviar mensaje', exact: true });
+    await submit.click();
 
     const alert = page.getByTestId('contact-submit-error');
     await expect(alert).toBeVisible({ timeout: 10000 });
-    await expect(alert).toContainText(/No pudimos enviar tu mensaje|We could not send your message/);
-    await expect(page).not.toHaveURL(/contact-success/);
+    await expect(alert).toHaveText('No pudimos enviar tu mensaje. Por favor inténtalo de nuevo.');
+    await expect(page).toHaveURL('/es-co/contact');
+    await expect(submit).toBeEnabled();
   });
 });

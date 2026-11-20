@@ -4,6 +4,7 @@ export default {
       main_title_1: "Buscamos la",
       main_title_2: "Perfección",
       main_title_3: "Todo el Tiempo",
+      main_title_accessible: "Project App. - Profesionales del desarrollo web",
       sub_title_1: "En nuestro trabajo.",
       sub_title_2: "Y en cómo ser mejores personas.",
     },
@@ -30,4 +31,3 @@ export default {
       title_3: "LLEGAR",
     },
   };
-  

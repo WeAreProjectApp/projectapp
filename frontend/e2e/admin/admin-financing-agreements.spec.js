@@ -159,7 +159,9 @@ async function setupApi(page, scenario = {}) {
     }
     if (apiPath === 'financing/agreements/' && method === 'GET') {
       if (scenario.listUnavailable) return json(503, { detail: 'Servicio no disponible.' })
-      return json(200, agreementEnvelope(scenario.rows ?? [scenario.agreement]))
+      const params = new URL(route.request().url()).searchParams
+      const rows = scenario.filterRows?.(params) ?? scenario.rows ?? [scenario.agreement]
+      return json(200, agreementEnvelope(rows))
     }
     if (apiPath === 'financing/agreements/' && method === 'POST') {
       scenario.createdPayload = route.request().postDataJSON()
@@ -328,6 +330,44 @@ test.describe('Admin financing agreements', () => {
     await expect(page.getByTestId(`financing-agreement-row-${agreement.id}`)).toContainText('OFIN-2026-001')
     await expect(page.getByRole('table').getByText(agreement.client_full_name, { exact: true })).toBeVisible()
     await expect(page.getByTestId('financing-new-agreement')).toBeVisible()
+  })
+
+  test('applies named dropdown filters only when the form is submitted', {
+    tag: [...ADMIN_FINANCING_AGREEMENT_CREATE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the protected setup page leads to the visible Otrosíes tab)
+    const draft = financingAgreementFixture({ id: 7, status: 'draft', project_name: 'Portal comercial 08-01' })
+    const retired = financingAgreementFixture({ id: 6, status: 'cancelled', is_archived: true, project_name: 'Proyecto anterior' })
+    const other = financingAgreementFixture({ id: 9, status: 'active', project_name: 'Portal de ventas' })
+    const records = [draft, retired, other]
+    await setupApi(page, {
+      filterRows: (params) => records.filter((record) => (
+        String(record.is_archived) === params.get('archived')
+        && record.project_name.includes(params.get('q') || '')
+      )),
+    })
+    await openAgreementList(page)
+
+    const scope = page.getByRole('combobox', { name: 'Alcance', exact: true })
+    await expect(page.getByRole('combobox', { name: 'Estado', exact: true })).toContainText('Todos los estados')
+    await expect(page.getByRole('combobox', { name: 'Modalidad', exact: true })).toContainText('Todas las modalidades')
+    await expect(scope).toContainText('Vigentes')
+
+    const query = page.getByTestId('financing-agreement-search')
+    const apply = page.getByRole('button', { name: 'Filtrar', exact: true })
+    await query.fill(draft.project_name)
+    await apply.click()
+    await expect(page.getByTestId('financing-agreement-row-9')).toHaveCount(0)
+    await expect(page.getByRole('row').filter({ hasText: draft.project_name })).toContainText('Borrador')
+
+    await query.clear()
+    await scope.click()
+    await page.getByRole('option', { name: 'Archivados', exact: true }).click()
+    await expect(page.getByTestId('financing-agreement-row-7')).toBeVisible()
+    await apply.click()
+    await expect(page.getByTestId('financing-agreement-row-7')).toHaveCount(0)
+    await expect(page.getByRole('row').filter({ hasText: retired.project_name })).toContainText('Archivado')
+    await expect(page.getByTestId('financing-agreement-row-6')).toBeVisible()
   })
 
   test('limits the conceptual exclusivity benefit to the five-year modality', {

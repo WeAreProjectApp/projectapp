@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRequirementCalculatorStore } from '~/stores/requirement_calculator';
+import { REVISION_PAGE_SIZE, useRequirementCalculatorStore } from '~/stores/requirement_calculator';
 import DefinitionEditor from '~/components/RequirementCalculator/DefinitionEditor.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 
@@ -21,6 +21,7 @@ const confirmation = ref('');
 const preview = ref('');
 const success = ref('');
 const historyOffset = ref(0);
+const historyStatus = ref('idle');
 const estimateOffset = ref(0);
 const calibrationOffset = ref(0);
 const estimateDetails = ref({});
@@ -49,7 +50,6 @@ async function reload() {
       || project.versions.find((row) => row.document_id === project.calculator_document_id)?.id || null;
     await loadSelectedVersion(selectedVersionId.value);
   } else setDefinition(general.definition);
-  await store.loadRevisions(historyOffset.value);
 }
 async function loadSelectedVersion(id) {
   setDefinition(null);
@@ -118,15 +118,18 @@ async function restoreToEditor(id) {
 }
 async function selectTab(value) {
   tab.value = value;
-  if (value === 'versions') await store.loadRevisions(historyOffset.value);
+  if (value === 'versions') await loadHistory(historyOffset.value);
   if (value === 'calibration') {
     await store.loadCalibration(calibrationOffset.value);
     await store.loadEstimates(estimateOffset.value);
   }
 }
-async function historyPage(direction) {
-  historyOffset.value += direction * 20;
-  await store.loadRevisions(historyOffset.value);
+async function loadHistory(offset) {
+  if (historyStatus.value === 'loading') return;
+  historyStatus.value = 'loading';
+  const result = await store.loadRevisions(offset);
+  historyStatus.value = result ? 'loaded' : 'error';
+  if (result) historyOffset.value = offset;
 }
 async function estimatesPage(direction) {
   estimateOffset.value += direction * 20;
@@ -201,11 +204,29 @@ async function saveActual() {
       <pre v-if="preview" class="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-muted p-4 text-sm text-text-default" data-testid="calculator-preview">{{ preview }}</pre>
     </section>
     <section v-if="tab === 'versions' && !projectId" class="space-y-4">
+      <BaseEmptyState
+        v-if="historyStatus === 'loaded' && store.revisionCount === 0"
+        :title="t('requirementCalculator.noPublishedVersions')"
+        role="status"
+      />
       <article v-for="revision in store.revisions" :key="revision.id" class="space-y-2 rounded-xl border border-border-default p-4">
         <p class="font-semibold text-text-default">#{{ revision.id }} · {{ revision.created_at }}</p><p class="text-sm text-text-muted">{{ revision.note }}</p>
         <BaseButton variant="secondary" @click="restoreToEditor(revision.id)">{{ t('requirementCalculator.restore') }}</BaseButton>
       </article>
-      <div class="flex flex-wrap gap-3"><BaseButton variant="secondary" :disabled="historyOffset === 0 || store.busy" :disabled-reason="t('requirementCalculator.firstPage')" @click="historyPage(-1)">{{ t('requirementCalculator.previous') }}</BaseButton><BaseButton variant="secondary" :disabled="historyOffset + 20 >= store.revisionCount || store.busy" :disabled-reason="t('requirementCalculator.lastPage')" @click="historyPage(1)">{{ t('requirementCalculator.next') }}</BaseButton></div>
+      <div v-if="store.revisionCount > REVISION_PAGE_SIZE" class="flex flex-wrap gap-3">
+        <BaseButton
+          variant="secondary"
+          :disabled="historyOffset === 0 || store.busy"
+          :disabled-reason="t('requirementCalculator.firstPage')"
+          @click="loadHistory(historyOffset - REVISION_PAGE_SIZE)"
+        >{{ t('requirementCalculator.previous') }}</BaseButton>
+        <BaseButton
+          variant="secondary"
+          :disabled="historyOffset + REVISION_PAGE_SIZE >= store.revisionCount || store.busy"
+          :disabled-reason="t('requirementCalculator.lastPage')"
+          @click="loadHistory(historyOffset + REVISION_PAGE_SIZE)"
+        >{{ t('requirementCalculator.next') }}</BaseButton>
+      </div>
     </section>
     <section v-if="tab === 'calibration' && !projectId" class="space-y-6">
       <p class="rounded-xl bg-surface-muted p-4 text-sm text-text-muted">{{ t('requirementCalculator.provisional') }}</p>
