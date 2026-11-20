@@ -146,7 +146,9 @@ test.describe('Admin Unified Defaults Shell', () => {
           body: JSON.stringify({ ...defaults, id: 269, sections_json: [], effective_sections_json: [section] }),
         };
       });
-      await page.goto(`/es-co/panel/defaults?mode=${mode}`, { waitUntil: 'domcontentloaded' });
+      await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('navigation', { name: 'Navegación del panel' }).getByRole('link', { name: 'Defaults', exact: true }).click();
+      await page.locator(`[data-testid="defaults-mode-${mode}"]:visible`).click();
       const sections = page.getByRole('tab', { name: 'Secciones', exact: true });
 
       await sections.click();
