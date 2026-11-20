@@ -56,6 +56,7 @@ export default {
   "loading": "Procesando…",
   "tabs": "Secciones de la calculadora",
   "versions": "Versiones",
+  "noPublishedVersions": "Aún no hay versiones publicadas",
   "assigned": "El proyecto tiene una versión aprobada. Las consultas normales utilizan esa versión.",
   "unassigned": "El proyecto todavía no tiene una versión aprobada. Las consultas utilizan la general con aviso.",
   "projectVersion": "Versión particular",

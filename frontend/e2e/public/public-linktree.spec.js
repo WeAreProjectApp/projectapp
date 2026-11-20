@@ -80,11 +80,28 @@ test.describe('Public Linktree', () => {
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page.getByRole('heading', { name: 'Gustavo Pérez' })).toBeVisible();
+    await expect(page).toHaveTitle('Gustavo Pérez · ProjectApp.');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'es-CO');
+    await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', 'noindex');
     await expect(page.getByTestId('linktree-badge')).toHaveText('TECH WEEK CO');
     await expect(page.getByTestId('linktree-buttons').locator('.lt-btn')).toHaveCount(4);
     await expect(page.locator('.lt-pair-row .lt-btn')).toHaveCount(2);
     await expect(page.getByTestId('linktree-pwa-block')).toBeVisible();
     await expect(page.getByText('DISEÑO · CÓDIGO · RESULTADOS')).toBeVisible();
+  });
+
+  test('declares English for a classic card opened in the English route', {
+    tag: [...PUBLIC_LINKTREE_VIEW, '@role:visitor', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the classic card is opened from a shared link)
+    // quality: allow-no-interaction (the readonly document head is the display outcome)
+    await setupPublicMock(page);
+    await page.goto('/en-us/lk/@gustavo', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: 'Gustavo Pérez' })).toBeVisible();
+    await expect(page).toHaveTitle('Gustavo Pérez · ProjectApp.');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+    await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', 'noindex');
   });
 
   test('renders an unresolved destination as a dashed PENDIENTE button', {

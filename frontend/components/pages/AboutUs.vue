@@ -16,7 +16,7 @@
                             <span class="border-4 border-transparent border-b-esmerald">
                                 {{ messages.about.main_title_3 }}
                             </span>
-                            <span class="sr-only">Project App. - Web development professionals</span>
+                            <span class="sr-only">{{ messages.about.main_title_accessible }}</span>
                         </h1>
                         <p class="mt-6 font-regular text-text-brand text-md" itemprop="description">
                             {{ messages.about.sub_title_1 }}<br>

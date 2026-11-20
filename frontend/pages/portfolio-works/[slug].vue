@@ -206,10 +206,11 @@ import { usePageEntrance } from '~/composables/usePageEntrance';
 usePageEntrance();
 
 const route = useRoute();
-const { locale } = useI18n();
+const { locale, localeProperties } = useI18n();
 const localePath = useLocalePath();
 const portfolioStore = usePortfolioWorksStore();
-const work = computed(() => portfolioStore.currentWork);
+const hasRequestedWork = ref(false);
+const work = computed(() => hasRequestedWork.value ? portfolioStore.currentWork : null);
 const isEnglish = computed(() => locale.value.startsWith('en'));
 const portfolioLang = computed(() => isEnglish.value ? 'en' : 'es');
 const cJson = computed(() => work.value?.content_json ? resolveEditorialContent(work.value.content_json, work.value.text_formats, '/content_json_' + (isEnglish.value ? 'en' : 'es')) : null);
@@ -226,6 +227,8 @@ const videoEmbedUrl = computed(() => {
 });
 
 useHead({
+  title: () => work.value?.title || 'Project App.',
+  htmlAttrs: { lang: () => localeProperties.value.language },
   meta: [
     { name: 'description', content: computed(() => work.value?.meta_description || work.value?.excerpt || '') },
     { property: 'og:title', content: computed(() => work.value?.meta_title || work.value?.title || '') },
@@ -300,16 +303,21 @@ function handleShare() {
   }
 }
 
-onMounted(async () => {
-  await portfolioStore.fetchWork(route.params.slug, portfolioLang.value);
-  runAnimations();
+onMounted(() => {
+  portfolioStore.fetchWork(route.params.slug, portfolioLang.value);
+  hasRequestedWork.value = true;
 });
 
-watch(() => route.params.slug, (newSlug) => {
-  if (newSlug) {
-    portfolioStore.fetchWork(newSlug, portfolioLang.value);
+watch([() => route.params.slug, portfolioLang], ([slug, lang], [previousSlug]) => {
+  if (!hasRequestedWork.value || !slug) return;
+  portfolioStore.fetchWork(slug, lang);
+  if (slug !== previousSlug) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+});
+
+watch(work, (currentWork) => {
+  if (currentWork) runAnimations();
 });
 </script>
 

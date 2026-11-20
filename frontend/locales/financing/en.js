@@ -150,6 +150,9 @@ export default {
     },
     searchPlaceholder: 'Search client, number, or project',
     filters: {
+      status: 'Status',
+      modality: 'Modality',
+      scope: 'Scope',
       allStatuses: 'All statuses',
       allModalities: 'All arrangements',
       current: 'Current',

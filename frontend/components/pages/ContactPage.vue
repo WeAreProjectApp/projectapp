@@ -3,19 +3,20 @@
     <main class="w-full py-20 px-6 lg:px-32">
       <div class="max-w-3xl mx-auto">
         <h1 ref="titleRef" class="text-5xl lg:text-7xl font-bold text-text-brand mb-6 opacity-0">
-          <span ref="waveEmoji" class="inline-block">👋</span> {{ messages?.title || 'Need a professional website?' }}
+          <span ref="waveEmoji" class="inline-block">👋</span> {{ t('contact.title') }}
         </h1>
         
         <p ref="subtitleRef" class="text-xl lg:text-2xl font-light text-green-light mb-16 opacity-0">
-          {{ messages?.subtitle || 'We develop custom websites, no templates. Tell us your idea and we\'ll make it real.' }}
+          {{ t('contact.subtitle') }}
         </p>
 
-        <form @submit.prevent="handleSubmit" class="space-y-8">
+        <form data-testid="contact-form" @submit.prevent="handleSubmit" class="space-y-8">
           <div ref="formField1" class="opacity-0">
             <input
               v-model="form.fullName"
               type="text"
-              :placeholder="messages?.form?.fullName || 'Full name'"
+              :placeholder="t('contact.form.fullName')"
+              :aria-label="t('contact.form.fullName')"
               class="w-full text-2xl lg:text-3xl font-light text-text-brand placeholder-green-light bg-transparent border-b-2 border-input-border focus:border-border-default outline-none py-4 transition-colors"
               required
             />
@@ -25,7 +26,8 @@
             <input
               v-model="form.phone"
               type="tel"
-              :placeholder="messages?.form?.phone || 'Phone number'"
+              :placeholder="t('contact.form.phone')"
+              :aria-label="t('contact.form.phone')"
               class="w-full text-2xl lg:text-3xl font-light text-text-brand placeholder-green-light bg-transparent border-b-2 border-input-border focus:border-border-default outline-none py-4 transition-colors"
               required
             />
@@ -35,7 +37,8 @@
             <input
               v-model="form.email"
               type="email"
-              :placeholder="messages?.form?.email || 'Your email'"
+              :placeholder="t('contact.form.email')"
+              :aria-label="t('contact.form.email')"
               class="w-full text-2xl lg:text-3xl font-light text-text-brand placeholder-green-light bg-transparent border-b-2 border-input-border focus:border-border-default outline-none py-4 transition-colors"
               required
             />
@@ -44,14 +47,15 @@
           <div ref="formField4" class="opacity-0">
             <textarea
               v-model="form.project"
-              :placeholder="messages?.form?.project || 'Tell us about your web project'"
+              :placeholder="t('contact.form.project')"
+              :aria-label="t('contact.form.project')"
               rows="4"
               class="w-full text-2xl lg:text-3xl font-light text-text-brand placeholder-green-light bg-transparent border-b-2 border-input-border focus:border-border-default outline-none py-4 transition-colors resize-none"
             ></textarea>
           </div>
 
           <div ref="formField5" class="opacity-0">
-            <label class="block text-xl lg:text-2xl font-light text-green-light mb-6">{{ messages?.form?.budget || 'Estimated budget' }}</label>
+            <label class="block text-xl lg:text-2xl font-light text-green-light mb-6">{{ t('contact.form.budget') }}</label>
             <div class="flex flex-wrap gap-4">
               <!-- design-tokens: allow-raw-button (selectable budget options, not an action) -->
               <button
@@ -72,19 +76,25 @@
           </div>
 
           <div ref="formField6" class="pt-8 opacity-0">
-            <BaseButton variant="primary" size="md" type="submit" class="w-full lg:w-auto lg:text-3xl" :disabled="isSubmitting">
-              <span v-if="!isSubmitting">{{ messages?.form?.submit || 'Send message' }}</span>
-              <span v-else>Enviando...</span>
+            <BaseButton
+              variant="primary"
+              size="md"
+              type="submit"
+              class="w-full lg:w-auto lg:text-3xl"
+              :disabled="submitDisabled"
+              :disabled-reason="t(hasSubmitted ? 'contact.form.received' : 'contact.form.submitting')"
+            >
+              {{ t(isSubmitting ? 'contact.form.submitting' : 'contact.form.submit') }}
             </BaseButton>
           </div>
 
           <p
-            v-if="submitErrorText"
+            v-if="submitError"
             role="alert"
             data-testid="contact-submit-error"
             class="text-xl lg:text-2xl font-light text-danger-strong"
           >
-            {{ submitErrorText }}
+            {{ t('contact.form.error') }}
           </p>
 
         </form>
@@ -106,25 +116,14 @@ import CompanyDetails from '~/components/legal/CompanyDetails.vue'
 import { waveEmoji as waveEmojiAnimation } from '~/animations'
 
 const router = useRouter()
+const { t, tm, rt } = useI18n()
 const languageStore = useLanguageStore()
-const { messages: allMessages, currentLocale } = storeToRefs(languageStore)
-
-const messages = computed(() => allMessages.value.contact || {})
+const { currentLocale } = storeToRefs(languageStore)
 
 const contactsStore = useContactsStore()
-const { isSubmitting, submitSuccess, submitError } = storeToRefs(contactsStore)
-
-// The store may hold a raw DRF payload (object) or its own fallback string —
-// always show a generic localized message instead. Nothing populates
-// messages.contact today (loadMessagesForView has no callers), so the
-// fallback picks the language from the active locale.
-const submitErrorText = computed(() => {
-  if (!submitError.value) return ''
-  if (messages.value?.form?.error) return messages.value.form.error
-  return currentLocale.value?.startsWith('es')
-    ? 'No pudimos enviar tu mensaje. Por favor inténtalo de nuevo.'
-    : 'We could not send your message. Please try again.'
-})
+const { isSubmitting, submitError } = storeToRefs(contactsStore)
+const hasSubmitted = ref(false)
+const submitDisabled = computed(() => isSubmitting.value || hasSubmitted.value)
 const { trackFormSubmission } = useGtagConversions()
 
 const titleRef = ref(null)
@@ -145,25 +144,19 @@ const form = ref({
   budget: ''
 })
 
-const budgetOptions = computed(() => {
-  return messages.value?.budgetOptions || [
-    '500-5K',
-    '5-10K',
-    '10-20K',
-    '20-30K',
-    '>30K'
-  ]
-})
+const budgetOptions = computed(() => tm('contact.budgetOptions').map(option => rt(option)))
 
 const selectBudget = (option) => {
   form.value.budget = option
 }
 
 const handleSubmit = async () => {
+  if (submitDisabled.value) return
+
   const result = await contactsStore.sendContact(form.value)
-  console.log('Contact form result:', result)
   
   if (result.success) {
+    hasSubmitted.value = true
     trackFormSubmission()
     if (typeof window !== 'undefined' && window.fbq) {
       console.log('Facebook Pixel: Contact event tracked')

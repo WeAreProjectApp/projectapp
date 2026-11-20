@@ -24,6 +24,7 @@ import LinktreeCard from '~/components/Linktree/LinktreeCard.vue';
 definePageMeta({ layout: false });
 
 const route = useRoute();
+const { localeProperties } = useI18n();
 const store = useLinktreesStore();
 const notFound = ref(false);
 const installPrompt = ref(null);
@@ -34,6 +35,7 @@ const handle = computed(() =>
 const tree = computed(() => store.publicLinktree);
 
 useHead(() => ({
+  htmlAttrs: { lang: localeProperties.value.language },
   title: tree.value?.display_name
     ? `${tree.value.display_name} · ProjectApp.`
     : 'ProjectApp.',

@@ -1,3 +1,16 @@
+## PA-282, PA-283, PA-284, PA-285 y PA-288 — Correcciones de QA (2026-11-20)
+
+Versiones de la Calculadora distingue vacío, carga y error y conserva la página
+vigente ante fallos. Otrosíes usa desplegables con nombres accesibles. Contratación
+estatal distingue estados, acciones y títulos de alertas. Contacto y Nosotros
+usan textos localizados. Portafolio y Linktree clásico declaran el idioma del
+documento y Portafolio usa el título del trabajo vigente.
+
+PA-286 bloquea nuevos envíos después de aceptar el contacto. La reproducción
+del atasco del router, previa a decidir un cambio de navegación, espera la
+retoma de Chrome QA. Los envíos de prueba requieren una copia desechable con
+correo local. PA-265 ya está en main mediante #591 y espera validación manual.
+
 ## PA-267 — Identidad de versión y retiro del guion antiguo — en validación por CI
 
 Alcance confirmado por Carlos a partir del reporte de sa4 del 13-11-2026:

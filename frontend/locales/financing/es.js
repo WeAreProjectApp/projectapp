@@ -150,6 +150,9 @@ export default {
     },
     searchPlaceholder: 'Buscar cliente, número o proyecto',
     filters: {
+      status: 'Estado',
+      modality: 'Modalidad',
+      scope: 'Alcance',
       allStatuses: 'Todos los estados',
       allModalities: 'Todas las modalidades',
       current: 'Vigentes',
