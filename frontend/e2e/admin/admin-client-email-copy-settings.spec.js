@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { selectChoiceOption } from '../helpers/choice-select.js';
@@ -12,6 +13,11 @@ import {
 } from '../helpers/flow-tags.js';
 
 test.setTimeout(60_000);
+
+const proposalPdf = fileURLToPath(new URL(
+  '../../../backend/static/front_page/Portada_Propuesta_ProjectApp.pdf',
+  import.meta.url,
+));
 
 const json = (body, status = 200) => ({
   status,
@@ -225,7 +231,7 @@ async function setupMocks(page, options = {}) {
         status: 200,
         contentType: 'application/pdf',
         headers: { 'Content-Disposition': 'inline; filename="cuenta-cobro-agosto.pdf"' },
-        body: '%PDF-1.4 exact snapshot',
+        path: proposalPdf,
       };
     }
     if (apiPath === 'emails/history/51/resend/' && method === 'POST') {
@@ -516,8 +522,9 @@ test('applies the attachment dropdowns to the retained history records', {
   await page.getByRole('button', { name: /Propuesta ficticia con PDF/ }).click();
   await page.getByRole('button', { name: 'Previsualizar' }).click();
   await expect(page.getByTestId('email-pdf-preview-frame')).toBeVisible();
-  await expect.poll(() => calls.some(call => call.path === 'emails/history/61/attachments/71/')).toBe(true);
-  await page.keyboard.press('Escape');
+  await expect.poll(() => calls.some(call => call.path === 'emails/history/61/attachments/71/'
+    && new URL(call.url).searchParams.get('inline') === '1')).toBe(true);
+  await page.getByRole('button', { name: 'Cerrar vista previa del PDF', exact: true }).click();
 
   await selectChoiceOption(page, family, 'Diagnósticos');
   await selectChoiceOption(page, attachments, 'Sin adjuntos confirmados');
