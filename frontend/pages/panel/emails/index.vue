@@ -224,18 +224,32 @@
         <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.recipient') }}
           <BaseInput v-model="historyFilters.recipient" type="search" placeholder="Buscar destinatario" aria-label="Buscar destinatario" />
         </label>
-        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.family') }}
-          <BaseSelect v-model="historyFilters.family" :options="familyFilterOptions" aria-label="Filtrar por familia" />
-        </label>
-        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.status') }}
-          <BaseSelect v-model="historyFilters.status" :options="statusFilterOptions" aria-label="Filtrar por estado" />
-        </label>
-        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.attachments') }}
-          <BaseSelect v-model="historyFilters.has_attachments" :options="attachmentPresenceOptions" aria-label="Filtrar por presencia de adjuntos" />
-        </label>
-        <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.attachmentType') }}
-          <BaseSelect v-model="historyFilters.attachment_type" :options="attachmentTypeFilterOptions" aria-label="Filtrar por tipo de adjunto" />
-        </label>
+        <div class="min-w-0 space-y-1 text-xs text-text-muted">
+          <label class="block" for="email-history-family">{{ t('panelUsability.family') }}</label>
+          <BaseChoiceSelect id="email-history-family" v-model="historyFilters.family" :options="familyFilterOptions" aria-label="Filtrar por familia" />
+        </div>
+        <div class="min-w-0 space-y-1 text-xs text-text-muted">
+          <label class="block" for="email-history-status">{{ t('panelUsability.status') }}</label>
+          <BaseChoiceSelect id="email-history-status" v-model="historyFilters.status" :options="statusFilterOptions" aria-label="Filtrar por estado" />
+        </div>
+        <div class="min-w-0 space-y-1 text-xs text-text-muted">
+          <label class="block" for="email-history-attachments">{{ t('panelUsability.attachments') }}</label>
+          <BaseChoiceSelect
+            id="email-history-attachments"
+            v-model="historyFilters.has_attachments"
+            :options="attachmentPresenceOptions"
+            aria-label="Filtrar por presencia de adjuntos"
+          />
+        </div>
+        <div class="min-w-0 space-y-1 text-xs text-text-muted">
+          <label class="block" for="email-history-attachment-type">{{ t('panelUsability.attachmentType') }}</label>
+          <BaseChoiceSelect
+            id="email-history-attachment-type"
+            v-model="historyFilters.attachment_type"
+            :options="attachmentTypeFilterOptions"
+            aria-label="Filtrar por tipo de adjunto"
+          />
+        </div>
         <label class="min-w-0 space-y-1 text-xs text-text-muted">{{ t('panelUsability.dateFrom') }}
           <BaseInput v-model="historyFilters.date_from" type="date" aria-label="Fecha inicial" />
         </label>

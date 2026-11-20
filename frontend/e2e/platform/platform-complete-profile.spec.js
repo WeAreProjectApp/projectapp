@@ -9,6 +9,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { PLATFORM_COMPLETE_PROFILE } from '../helpers/flow-tags.js';
 import { PANEL_VIEWPORTS } from '../helpers/viewports.js';
 import {
@@ -88,36 +89,32 @@ test.describe('Platform Complete Profile', () => {
   });
 
   test('successful profile completion redirects a client to the documents portal', {
-    tag: [...PLATFORM_COMPLETE_PROFILE, '@role:platform-client'],
+    tag: [...PLATFORM_COMPLETE_PROFILE, '@role:platform-client', '@outcome:success'],
   }, async ({ page }) => {
-    await setPlatformAuth(page, { user: mockPlatformClientIncompleteProfile });
-
-    const completedUser = {
+    let profile = {
       ...mockPlatformClientIncompleteProfile,
-      first_name: 'Client',
-      last_name: 'Test',
-      company_name: 'Test Corp',
-      phone: '+57 300 111 2222',
-      cedula: '1234567890',
-      date_of_birth: '1992-03-15',
-      gender: 'female',
-      education_level: 'universitario',
-      profile_completed: true,
+      id: 34,
+      user_id: 34,
     };
+    await setPlatformAuth(page, { user: profile });
 
-    await mockApi(page, async ({ apiPath, method }) => {
+    await mockApi(page, async ({ apiPath, method, route }) => {
       if (apiPath === 'accounts/me/' && method === 'GET') {
-        return meResponse(mockPlatformClientIncompleteProfile);
+        return meResponse(profile);
       }
       if (apiPath === 'accounts/me/complete-profile/' && method === 'POST') {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(completedUser) };
+        const body = new Response(route.request().postDataBuffer(), {
+          headers: { 'content-type': route.request().headers()['content-type'] },
+        });
+        profile = { ...profile, ...Object.fromEntries(await body.formData()), profile_completed: true };
+        return meResponse(profile);
       }
       // Landing target: the client document portal loads its own documents.
       if (apiPath === 'accounts/documents/' && method === 'GET') {
         return {
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ documents: [], email: completedUser.email, email_verified: true }),
+          body: JSON.stringify({ documents: [], email: profile.email, email_verified: true }),
         };
       }
       if (apiPath === 'accounts/notifications/unread-count/') {
@@ -129,8 +126,8 @@ test.describe('Platform Complete Profile', () => {
       return null;
     });
 
-    await page.goto('/platform/complete-profile', { waitUntil: 'domcontentloaded' });
-    await page.getByText('Completa tu perfil').waitFor({ state: 'visible', timeout: 15000 });
+    await page.goto('/en-us/platform/complete-profile', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Completa tu perfil')).toBeVisible({ timeout: 30_000 });
 
     await page.getByPlaceholder('Tu nombre').fill('Client');
     await page.getByPlaceholder('Tu apellido').fill('Test');
@@ -138,13 +135,32 @@ test.describe('Platform Complete Profile', () => {
     await page.getByPlaceholder(/300 000 0000/).fill('+57 300 111 2222');
     await page.getByPlaceholder('1020304050').fill('1234567890');
     await page.getByTestId('date-of-birth').fill('1992-03-15');
-    await page.getByTestId('gender-select').selectOption('female');
-    await page.getByTestId('education-select').selectOption('universitario');
-
-    await page.getByRole('button', { name: /completar perfil/i }).click();
+    const gender = page.getByRole('combobox', { name: 'Sexo', exact: true });
+    const education = page.getByRole('combobox', { name: 'Nivel de educación', exact: true });
+    const submit = page.getByRole('button', { name: /completar perfil/i });
+    await gender.press('Enter');
+    const listbox = page.getByRole('listbox');
+    await expect(listbox.getByRole('option')).toHaveCount(5);
+    await expect(listbox.getByRole('option', { name: 'Selecciona' })).toBeDisabled();
+    await gender.press('ArrowDown');
+    await gender.press('Enter');
+    await expect(submit).toBeDisabled();
+    await education.press('Enter');
+    await expect(listbox.getByRole('option')).toHaveCount(7);
+    await education.press('End');
+    await education.press('ArrowUp');
+    await education.press('ArrowUp');
+    await education.press('Enter');
+    await expect(submit).toBeEnabled();
+    await submit.click();
 
     await page.waitForURL('**/platform/documents', { timeout: 15000 });
     await expect(page).toHaveURL(/\/platform\/documents/);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/platform\/documents$/);
+    await page.goto('/en-us/platform/profile', { waitUntil: 'domcontentloaded' });
+    await expect(gender).toHaveText('Femenino');
+    await expect(education).toHaveText('Universitario');
   });
 
   test('shows error on API failure', {
@@ -166,15 +182,15 @@ test.describe('Platform Complete Profile', () => {
       return null;
     });
 
-    await page.goto('/platform/complete-profile', { waitUntil: 'domcontentloaded' });
-    await page.getByText('Completa tu perfil').waitFor({ state: 'visible', timeout: 15000 });
+    await page.goto('/en-us/platform/complete-profile', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Completa tu perfil')).toBeVisible({ timeout: 30_000 });
 
     await page.getByPlaceholder('Nombre de tu empresa').fill('Corp');
     await page.getByPlaceholder(/300 000 0000/).fill('+57 300 111 2222');
     await page.getByPlaceholder('1020304050').fill('1234567890');
     await page.getByTestId('date-of-birth').fill('1992-03-15');
-    await page.getByTestId('gender-select').selectOption('male');
-    await page.getByTestId('education-select').selectOption('tecnico');
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Sexo', exact: true }), 'Masculino');
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Nivel de educación', exact: true }), 'Técnico');
 
     await page.getByRole('button', { name: /completar perfil/i }).click();
 

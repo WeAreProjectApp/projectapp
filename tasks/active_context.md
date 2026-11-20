@@ -1,3 +1,11 @@
+## PA-275 a PA-281 — correcciones de Panel y Plataforma
+
+El Gestor aplica el contexto de la URL antes de sincronizar sus filtros.
+Notificaciones abre el destino tras marcar lectura y conserva el aviso disponible
+si el marcado falla. Las regresiones ejercen los desplegables compartidos, el
+plural de la cola y los dos accesos por código con buzón local desechable. El
+cotejo manual en Chrome QA se retoma por indicación de Carlos.
+
 ## PA-267 — Identidad de versión y retiro del guion antiguo — en validación por CI
 
 Alcance confirmado por Carlos a partir del reporte de sa4 del 13-11-2026:

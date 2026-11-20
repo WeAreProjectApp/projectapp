@@ -166,7 +166,8 @@ export async function mockRequirementPackagesWorkspace(page, options = {}) {
         (!search || `${row.title} ${row.project_name}`.toLowerCase().includes(search.toLowerCase()))
         && (!status || row.status === status)
       ));
-      return json({ count: results.length, pending_count: results.length, results });
+      const pendingCount = results.filter(row => ['pending', 'evaluating', 'objected'].includes(row.status)).length;
+      return json({ count: results.length, pending_count: pendingCount, results });
     }
 
     if (apiPath === 'requirement-packages/examples/' && method === 'GET') {

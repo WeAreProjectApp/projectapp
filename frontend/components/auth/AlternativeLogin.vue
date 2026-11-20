@@ -4,11 +4,11 @@
     <BaseAlert v-if="error" variant="danger" role="alert">{{ error }}</BaseAlert>
     <p v-if="notice" class="text-sm text-text-muted" role="status">{{ notice }}</p>
     <form v-if="method === 'code'" class="space-y-4" @submit.prevent="challenge ? verify() : requestCode()">
-      <BaseFormField label="Correo electrónico" required>
-        <BaseInput v-model="email" type="email" autocomplete="username" :disabled="Boolean(challenge)" data-testid="access-email" />
+      <BaseFormField :label="emailLabel" :for="emailId" required>
+        <BaseInput :id="emailId" v-model="email" :aria-label="emailLabel" type="email" autocomplete="username" :disabled="Boolean(challenge)" data-testid="access-email" />
       </BaseFormField>
-      <BaseFormField v-if="challenge" label="Código de acceso" required>
-        <BaseInput v-model="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" data-testid="access-code" />
+      <BaseFormField v-if="challenge" :label="codeLabel" :for="codeId" required>
+        <BaseInput :id="codeId" v-model="code" :aria-label="codeLabel" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" data-testid="access-code" />
         <p class="mt-2 text-xs text-text-muted">El código dura 10 minutos. Solo funciona el último solicitado.</p>
       </BaseFormField>
       <LoginCaptcha v-if="captchaEnabled && !challenge" :site-key="siteKey" :reset-key="resetKey" :retry-available="captchaUnavailable" @update:token="captcha = $event" />
@@ -28,11 +28,15 @@
   </section>
 </template>
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, useId, watch } from 'vue';
 import LoginCaptcha from '~/components/auth/LoginCaptcha.vue';
 import { useAccessLogin } from '~/composables/useAccessLogin';
 const props = defineProps({ surface: { type: String, required: true }, next: { type: String, default: '' } });
 const emit = defineEmits(['authenticated']);
+const emailId = useId();
+const codeId = useId();
+const emailLabel = 'Correo electrónico';
+const codeLabel = 'Código de acceso';
 const runtime = useRuntimeConfig();
 const captchaEnabled = runtime.public.recaptchaEnabled !== false;
 const siteKey = runtime.public.recaptchaSiteKey;
