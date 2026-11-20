@@ -1,6 +1,6 @@
 import { test, expect } from '../helpers/test.js'
-import { mockCaptchaProvider, captchaCredentials } from '../helpers/captcha.js'
-import { PLATFORM_LOGIN } from '../helpers/flow-tags.js'
+import { mockCaptchaProvider, captchaCredentials, prepareLocallyDeliveredCode } from '../helpers/captcha.js'
+import { AUTHORIZED_LOGIN, PLATFORM_LOGIN } from '../helpers/flow-tags.js'
 
 test.describe('Platform CAPTCHA', () => {
   test.setTimeout(60_000)
@@ -81,5 +81,23 @@ test.describe('Platform CAPTCHA', () => {
     await passwordForm.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
 
     await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeEnabled()
+  })
+})
+
+test.describe('Platform login with a locally delivered email code', () => {
+  test.use({ trace: 'off', screenshot: 'off', video: 'off' })
+
+  test('keeps the client session from the accessible email code fields', {
+    tag: [...AUTHORIZED_LOGIN, '@outcome:success', '@role:platform-client'],
+  }, async ({ page }, testInfo) => {
+    await mockCaptchaProvider(page, testInfo.testId)
+    await page.goto('/en-us/platform/login', { waitUntil: 'domcontentloaded' })
+    const verify = await prepareLocallyDeliveredCode(page, 'platform')
+    await verify.click()
+
+    await expect(page).toHaveURL(/\/en-us\/platform\/documents$/)
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page).toHaveURL(/\/en-us\/platform\/documents$/)
+    await expect(page.getByRole('heading', { name: 'Mis documentos', exact: true })).toBeVisible()
   })
 })

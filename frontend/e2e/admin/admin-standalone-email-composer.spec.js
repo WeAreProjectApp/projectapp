@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
@@ -315,7 +316,7 @@ test.describe('Admin Standalone Email Composer', () => {
     await setupMocks(page);
     await openEmailsFromMenu(page);
     await page.getByRole('tab', { name: 'Historial' }).click();
-    await page.getByRole('combobox', { name: 'Filtrar por presencia de adjuntos' }).selectOption('false');
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Filtrar por presencia de adjuntos' }), 'Sin adjuntos confirmados');
     await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click();
 
     await expect(page.getByTestId('email-history-empty')).toHaveText('Ningún correo coincide con los filtros aplicados.');

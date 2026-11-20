@@ -49,7 +49,7 @@ export function useDocumentFilterQuery(documentStore, {
   const route = useRoute();
   const router = useRouter();
   const isApplyingQuery = ref(false);
-  const navigationModeReady = ref(false);
+  let hasAppliedQuery = false;
 
   function parseFolder(raw) {
     const value = firstQueryValue(raw);
@@ -162,10 +162,9 @@ export function useDocumentFilterQuery(documentStore, {
     if (currentPage) currentPage.value = nextState.page;
     if (focusedDocumentId) focusedDocumentId.value = nextState.focus;
 
-    // La preferencia de navegación se hidrata antes de esta primera aplicación.
-    // Hasta este punto el watcher no debe publicar ese valor sobre un `?by=`
-    // explícito: el enlace compartido gobierna la visita, no la memoria.
-    navigationModeReady.value = true;
+    // La preferencia puede cambiar mientras el listado espera la carga inicial.
+    // Publicar desde el store antes de leer la URL borraría el contexto del enlace.
+    hasAppliedQuery = true;
 
     // Normaliza basura y defaults escritos a mano. Los watchers originados por
     // estas asignaciones convergen en el mismo query y no agregan historial.
@@ -185,6 +184,8 @@ export function useDocumentFilterQuery(documentStore, {
   }
 
   function syncQuery() {
+    if (!hasAppliedQuery) return;
+
     const query = { ...route.query };
     const folder = documentStore.activeFolderId;
     const scope = documentStore.archiveScope;
@@ -233,10 +234,8 @@ export function useDocumentFilterQuery(documentStore, {
     else query.client = String(client);
     if (project == null) delete query.project;
     else query.project = String(project);
-    if (navigationModeReady.value) {
-      if (by === 'project' || by === 'client') query.by = by;
-      else delete query.by;
-    }
+    if (by === 'project' || by === 'client') query.by = by;
+    else delete query.by;
     if (search) query.q = search;
     else delete query.q;
     if (order === 'oldest') query.order = 'oldest';
@@ -269,11 +268,14 @@ export function useDocumentFilterQuery(documentStore, {
     viewMode?.value,
     currentPage?.value,
     focusedDocumentId?.value,
-  ], syncQuery, { deep: true });
+  ], () => {
+    if (!isApplyingQuery.value) syncQuery();
+  }, { deep: true });
 
   // El otro sentido: un popstate aplica la dirección completa y avisa al
   // listado qué clase de trabajo necesita repetir.
   watch(() => CONTROLLED_QUERY_KEYS.map((key) => route.query[key]), () => {
+    if (!hasAppliedQuery) return;
     const summary = applyQueryToStore();
     if (summary.changed) onNavigate?.(summary);
   }, { deep: true });

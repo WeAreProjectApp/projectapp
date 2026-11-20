@@ -1,5 +1,6 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import {
   ADMIN_CLIENT_EMAIL_COPY_HISTORY,
@@ -218,7 +219,7 @@ async function setupMocks(page, options = {}) {
         text: 'Código privado 123456',
       });
     }
-    if (apiPath === 'emails/history/51/attachments/71/' && method === 'GET') {
+    if (/^emails\/history\/(51|61)\/attachments\/71\/$/.test(apiPath) && method === 'GET') {
       calls.push({ method, path: apiPath, url: route.request().url() });
       return {
         status: 200,
@@ -238,7 +239,8 @@ async function setupMocks(page, options = {}) {
     }
     if (apiPath.startsWith('emails/history') && method === 'GET') {
       calls.push({ method, path: apiPath, url: route.request().url() });
-      return json(options.history ?? history);
+      const params = new URL(route.request().url()).searchParams;
+      return json(options.filterHistory?.(params) ?? options.history ?? history);
     }
     if (apiPath === 'emails/copy-recipients/' && method === 'GET') {
       return json({ results: rows, families, copy_mode: 'bcc' });
@@ -269,7 +271,7 @@ async function setupMocks(page, options = {}) {
 }
 
 async function navigateToEmails(page) {
-  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
   const navigation = page.getByRole('navigation', { name: 'Navegación del panel' });
   const emailLink = navigation.getByRole('link', { name: 'Emails', exact: true });
   await expect(emailLink).toBeVisible({ timeout: 20_000 });
@@ -441,10 +443,10 @@ test('filters the universal outbound history by recipient, family, status and da
 
   await page.getByRole('searchbox', { name: 'Buscar destinatario' })
     .fill('client@example.com');
-  await page.getByLabel('Filtrar por familia').selectOption('security');
-  await page.getByLabel('Filtrar por estado').selectOption('sent');
-  await page.getByLabel('Filtrar por presencia de adjuntos').selectOption('true');
-  await page.getByLabel('Filtrar por tipo de adjunto').selectOption('business:collection_account');
+  await selectChoiceOption(page, page.getByLabel('Filtrar por familia'), 'Seguridad y acceso');
+  await selectChoiceOption(page, page.getByLabel('Filtrar por estado'), 'Enviado');
+  await selectChoiceOption(page, page.getByLabel('Filtrar por presencia de adjuntos'), 'Con adjuntos');
+  await selectChoiceOption(page, page.getByLabel('Filtrar por tipo de adjunto'), 'Documento · Cuenta de cobro');
   await page.getByLabel('Fecha inicial').fill('2026-08-01');
   await page.getByLabel('Fecha final').fill('2026-08-26');
   await page.getByRole('button', { name: 'Aplicar filtros' }).click();
@@ -458,6 +460,71 @@ test('filters the universal outbound history by recipient, family, status and da
       && call.url.includes('attachment_type=business%3Acollection_account')
       && call.url.includes('date_from=2026-08-01')
       && call.url.includes('date_to=2026-08-26'))).toBe(true);
+});
+
+test('applies the attachment dropdowns to the retained history records', {
+  tag: [...ADMIN_OUTBOUND_EMAIL_HISTORY_FILTER, ...ADMIN_OUTBOUND_EMAIL_HISTORY_ATTACHMENTS, '@role:admin', '@outcome:display'],
+}, async ({ page }) => {
+  const proposal = {
+    ...exactHistory.results[0],
+    id: 61,
+    subject: 'Propuesta ficticia con PDF',
+    family: 'proposals',
+    family_label: 'Propuestas',
+    attachments: [{
+      ...exactHistory.results[0].attachments[0],
+      filename: 'propuesta-qa.pdf',
+      download_url: '/api/emails/history/61/attachments/71/',
+      preview_url: '/api/emails/history/61/attachments/71/?inline=1',
+    }],
+  };
+  const diagnostic = {
+    ...exactHistory.results[1],
+    id: 64,
+    subject: 'Diagnóstico ficticio sin adjuntos',
+    family: 'diagnostics',
+    family_label: 'Diagnósticos',
+  };
+  const calls = await setupMocks(page, {
+    filterHistory(params) {
+      let results = [];
+      if (!params.get('family')) results = [proposal, diagnostic];
+      if (params.get('status') === 'sent') {
+        if (params.get('family') === 'proposals'
+          && params.get('has_attachments') === 'true' && params.get('attachment_type') === 'format:pdf') results = [proposal];
+        if (params.get('family') === 'diagnostics'
+          && params.get('has_attachments') === 'false' && !params.has('attachment_type')) results = [diagnostic];
+      }
+      return { ...exactHistory, results, total: results.length };
+    },
+  });
+  await navigateToEmails(page);
+  await page.getByRole('tab', { name: 'Historial' }).click();
+  await expect(page.getByTestId('email-history-record-61')).toBeVisible();
+  const apply = page.getByRole('button', { name: 'Aplicar filtros' });
+  const family = page.getByRole('combobox', { name: 'Filtrar por familia' });
+  const attachments = page.getByRole('combobox', { name: 'Filtrar por presencia de adjuntos' });
+  const attachmentType = page.getByRole('combobox', { name: 'Filtrar por tipo de adjunto' });
+
+  await selectChoiceOption(page, family, 'Propuestas');
+  await selectChoiceOption(page, page.getByRole('combobox', { name: 'Filtrar por estado' }), 'Enviado');
+  await selectChoiceOption(page, attachments, 'Con adjuntos');
+  await selectChoiceOption(page, attachmentType, 'Formato · PDF');
+  await expect(page.getByTestId('email-history-record-64')).toBeVisible();
+  await apply.click();
+  await expect(page.getByTestId('email-history-record-64')).toHaveCount(0);
+  await page.getByRole('button', { name: /Propuesta ficticia con PDF/ }).click();
+  await page.getByRole('button', { name: 'Previsualizar' }).click();
+  await expect(page.getByTestId('email-pdf-preview-frame')).toBeVisible();
+  await expect.poll(() => calls.some(call => call.path === 'emails/history/61/attachments/71/')).toBe(true);
+  await page.keyboard.press('Escape');
+
+  await selectChoiceOption(page, family, 'Diagnósticos');
+  await selectChoiceOption(page, attachments, 'Sin adjuntos confirmados');
+  await selectChoiceOption(page, attachmentType, 'Todos los tipos');
+  await apply.click();
+  await expect(page.getByTestId('email-history-record-64')).toBeVisible();
+  await expect(page.getByTestId('email-history-record-61')).toHaveCount(0);
 });
 
 test('lets an admin inspect the retained full body of a security email', {

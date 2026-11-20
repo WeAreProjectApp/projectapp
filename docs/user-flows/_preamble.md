@@ -494,14 +494,14 @@ La revisión sigue contrato → alcance → fases de ejecución → etapas → g
 - **Role:** platform-admin / platform-client
 - **Priority:** P2
 - **Routes:** `/platform/notifications`
-- **API:** `GET /api/accounts/notifications/`, `PATCH .../mark-read/`, `POST .../mark-all-read/`, `GET .../unread-count/`
-- **Description:** In-app notification center with unread count badge in sidebar, filter tabs, mark-all-read, and click-to-navigate deep links.
+- **API:** `GET /api/accounts/notifications/`, `POST .../<id>/read/`, `POST .../mark-all-read/`, `GET .../unread-count/`
+- **Description:** Notification center with an unread count, an announced active filter, and keyboard-accessible links to project destinations.
 - **Steps:**
-  1. Sidebar badge shows unread notification count (polled every 30s).
-  2. User navigates to `/platform/notifications`.
-  3. Notification list renders with filter tabs (Todas/Sin leer/Leídas).
-  4. User clicks a notification → marked as read → navigates to relevant project module.
-  5. User clicks "Marcar todas como leídas" → all notifications marked read.
+  1. The user opens `/platform/notifications` and sees the unread count.
+  2. The list exposes the selected filter (Todas, Sin leer or Leídas).
+  3. The user tabs to a notice and presses Enter to mark it read once and open its destination.
+  4. If marking fails, the notice remains unread and focused for retry.
+  5. "Marcar todas como leídas" marks every notification as read.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/platform/platform-notifications.spec.js`
 

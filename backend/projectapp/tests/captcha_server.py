@@ -1,4 +1,4 @@
-"""Loopback browser-test server with a temporary database and fake Google HTTP.
+"""Loopback browser-test server with a temporary database, mail and fake Google HTTP.
 
 Never imported by runtime settings or URLs. Real Django forms, views, CSRF,
 sessions and JWT issuance run here; only the external provider is replaced.
@@ -6,11 +6,30 @@ sessions and JWT issuance run here; only the external provider is replaced.
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from socketserver import ThreadingMixIn
 from unittest.mock import patch
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
+
+
+LOGIN_CODE_FIXTURES = {
+    'panel': 'browser-panel-code@example.test',
+    'platform': 'browser-platform-code@example.test',
+}
+
+
+def take_login_code(outbox, recipient):
+    """Consume only the login message for the requested disposable account."""
+    for message in reversed(outbox):
+        if message.to != [recipient] or message.subject != 'Tu código de acceso — ProjectApp':
+            continue
+        match = re.match(r'Tu código de acceso es ([0-9]{6})\.', message.body)
+        if match:
+            outbox.remove(message)
+            return match[1]
+    return None
 
 
 def main():
@@ -32,12 +51,14 @@ def main():
     from django.conf import settings
     from django.contrib.auth import get_user_model
     from django.contrib.staticfiles.handlers import StaticFilesHandler
+    from django.core import mail
     from django.core.wsgi import get_wsgi_application
     from django.db import transaction
-    from django.http import HttpResponse
+    from django.http import HttpResponse, JsonResponse
     from django.test import override_settings
     from django.test.utils import setup_databases, teardown_databases
     from accounts.models import UserProfile
+    from accounts.tests.issue_browser_server import assert_memory_mailers
     from projectapp.tests.isolation import collect_storage_locations, settings_refusals, storage_refusals
 
     reasons = settings_refusals(settings, os.environ) + storage_refusals(
@@ -71,13 +92,14 @@ def main():
     with override_settings(
         ALLOWED_HOSTS=['localhost', '127.0.0.1'], DEBUG=True,
         CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:3199'],
-        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}},
         RECAPTCHA_ENABLED=True, RECAPTCHA_SITE_KEY='browser-test-site-key',
         RECAPTCHA_SECRET_KEY='browser-test-secret', RECAPTCHA_ALLOWED_HOSTNAMES=['127.0.0.1'],
         # Browser tests exercise the current runtime schema. Migration history
         # is covered separately and makes this isolated fixture too slow to start.
         MIGRATION_MODULES={config.label: None for config in apps.get_app_configs()},
     ):
+        assert_memory_mailers()
         databases = setup_databases(verbosity=0, interactive=False)
         try:
             with transaction.atomic():
@@ -88,14 +110,29 @@ def main():
                 UserProfile.objects.create(
                     user=user, role=UserProfile.ROLE_CLIENT, is_onboarded=True, profile_completed=True,
                 )
+                for surface, email in LOGIN_CODE_FIXTURES.items():
+                    staff = surface == 'panel'
+                    account = get_user_model().objects.create_user(username=email, email=email, is_staff=staff)
+                    UserProfile.objects.create(
+                        user=account,
+                        role=UserProfile.ROLE_ADMIN if staff else UserProfile.ROLE_CLIENT,
+                        is_onboarded=True, profile_completed=True, email_verified=True,
+                    )
             application = get_wsgi_application()
 
             def test_application(environ, start_response):
-                if environ.get('PATH_INFO') == '/__captcha_ready__':
+                path = environ.get('PATH_INFO', '')
+                if path == '/__captcha_ready__':
                     response = HttpResponse('ready')
-                    start_response('200 OK', list(response.items()))
-                    return [response.content]
-                return application(environ, start_response)
+                elif path.startswith('/__captcha_mailbox__/') and environ.get('REQUEST_METHOD') == 'POST':
+                    recipient = LOGIN_CODE_FIXTURES.get(path.removeprefix('/__captcha_mailbox__/'))
+                    code = take_login_code(getattr(mail, 'outbox', []), recipient) if recipient else None
+                    response = JsonResponse({'code': code}, status=200 if code else 404)
+                    response['Cache-Control'] = 'no-store'
+                else:
+                    return application(environ, start_response)
+                start_response(f'{response.status_code} {response.reason_phrase}', list(response.items()))
+                return [response.content]
 
             with patch('projectapp.recaptcha.requests.post', side_effect=google_verify):
                 with make_server(
