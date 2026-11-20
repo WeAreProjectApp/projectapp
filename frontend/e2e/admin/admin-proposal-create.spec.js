@@ -6,9 +6,21 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { fillRichTextSource } from '../helpers/editorial.js';
 import { ADMIN_PROPOSAL_CREATE, ADMIN_PROPOSAL_CREATE_FROM_JSON, ADMIN_PROPOSAL_CREATE_AND_SEND, ADMIN_PROPOSAL_CREATE_PREVIEW } from '../helpers/flow-tags.js';
+
+function mockCreationApi(page, handler) {
+  return mockApi(page, async (request) => {
+    const response = await handler(request);
+    if (response || request.apiPath !== 'proposals/defaults/') return response;
+    return {
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ expiration_days: 21, reminder_days: 3, urgency_reminder_days: 7 }),
+    };
+  });
+}
 
 const NEW_PROPOSAL_ID = 99;
 
@@ -36,7 +48,7 @@ test.describe('Admin Proposal Create', () => {
     tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin'],
   }, async ({ page }) => {
     // quality: allow-no-interaction (display — the create page renders its three mode tabs with JSON active by default; the create interactions are covered by the tests below)
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       return null;
     });
@@ -58,7 +70,7 @@ test.describe('Admin Proposal Create', () => {
   }, async ({ page }) => {
     let capturedPayload = null;
 
-    await mockApi(page, async ({ route, apiPath }) => {
+    await mockCreationApi(page, async ({ route, apiPath }) => {
       if (apiPath === 'auth/check/') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       }
@@ -93,10 +105,66 @@ test.describe('Admin Proposal Create', () => {
     expect(capturedPayload.title).toBe('Nueva Propuesta Web');
     expect(capturedPayload.client_name).toBe('Carlos López');
     expect(capturedPayload.client_email).toBe('carlos@test.com');
+    expect(capturedPayload).toMatchObject({ reminder_days: 3, urgency_reminder_days: 7 });
     expect(capturedPayload.email_intro).toBe(
       'Esta propuesta mejora la captación digital para generar nuevas ventas.',
     );
     expect(capturedPayload.text_formats).toEqual({ '/email_intro': 'markdown_html_v1' });
+  });
+
+  test('keeps the edited reminder when language defaults arrive out of order', {
+    tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    let capturedPayload;
+    let esLoads = 0;
+    let releaseFirstEs;
+    const heldEs = new Promise(resolve => { releaseFirstEs = resolve; });
+    const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    await mockCreationApi(page, async ({ apiPath, route }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'proposals/create/') {
+        capturedPayload = route.request().postDataJSON();
+        return json(mockCreatedProposal, 201);
+      }
+      if (apiPath === 'proposals/defaults/') {
+        const language = new URL(route.request().url()).searchParams.get('lang');
+        if (language === 'en') return json({ reminder_days: 5, urgency_reminder_days: 11 });
+        esLoads += 1;
+        if (esLoads === 1) {
+          await heldEs;
+          return json({ reminder_days: 4, urgency_reminder_days: 8 });
+        }
+        return json({ reminder_days: 3, urgency_reminder_days: 7 });
+      }
+      return null;
+    });
+    try {
+      await page.goto('/es-co/panel/proposals/create', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('button', { name: 'Manual', exact: true }).click();
+      const language = page.getByRole('combobox', { name: 'Idioma de la propuesta' });
+      const reminder = page.getByLabel('Recordatorio (días después de enviar)');
+      const urgency = page.getByLabel('Urgencia (días después de enviar)');
+      await expect.poll(() => esLoads).toBe(1);
+      await selectChoiceOption(page, language, 'English');
+      await expect(reminder).toHaveValue('5');
+      await expect(urgency).toHaveValue('11');
+      await reminder.fill('9');
+      await selectChoiceOption(page, language, 'Español');
+      await expect(urgency).toHaveValue('7');
+      const olderDefaults = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/proposals/defaults/'));
+      releaseFirstEs();
+      await (await olderDefaults).finished();
+      await page.getByLabel('Título').fill('Propuesta con recordatorio editado');
+      await page.getByLabel('Nombre').fill('Cliente de prueba');
+      await page.getByLabel('Email').fill('qa@example.test');
+
+      await page.getByRole('button', { name: 'Crear Propuesta', exact: true }).click();
+
+      await expect(page.getByText('Propuesta creada', { exact: true })).toBeVisible();
+      expect(capturedPayload).toMatchObject({ language: 'es', reminder_days: 9, urgency_reminder_days: 7 });
+    } finally {
+      releaseFirstEs();
+    }
   });
 
   test('a rejected submit shows the field error and keeps the admin on the create page', {
@@ -104,7 +172,7 @@ test.describe('Admin Proposal Create', () => {
     // away from create, losing the entered form data.
     tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       }
@@ -142,7 +210,7 @@ test.describe('Admin Proposal Create', () => {
   test('switching from Manual to JSON import tab hides manual form and shows textarea', {
     tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       return null;
     });
@@ -165,7 +233,7 @@ test.describe('Admin Proposal Create', () => {
   test('successful creation redirects to the new proposal edit page', {
     tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       if (apiPath === 'proposals/create/') return { status: 201, contentType: 'application/json', body: JSON.stringify(mockCreatedProposal) };
       if (apiPath === `proposals/${NEW_PROPOSAL_ID}/detail/`) return { status: 200, contentType: 'application/json', body: JSON.stringify(mockCreatedProposal) };
@@ -199,7 +267,7 @@ test.describe('Admin Proposal Create', () => {
     tag: [...ADMIN_PROPOSAL_CREATE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     // Bug caught: the custom project detail could become unreachable after the project type control changed.
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       return null;
     });
@@ -239,7 +307,7 @@ test.describe('Admin Proposal Create from JSON', () => {
   test('pasting valid JSON shows preview with client name and section count', {
     tag: [...ADMIN_PROPOSAL_CREATE_FROM_JSON, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       return null;
     });
@@ -259,7 +327,7 @@ test.describe('Admin Proposal Create from JSON', () => {
   test('pasting JSON without general key shows validation error', {
     tag: ['@outcome:error', ...ADMIN_PROPOSAL_CREATE_FROM_JSON, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       return null;
     });
@@ -277,7 +345,7 @@ test.describe('Admin Proposal Create from JSON', () => {
   test('pasting invalid JSON shows syntax error', {
     tag: ['@outcome:error', ...ADMIN_PROPOSAL_CREATE_FROM_JSON, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       return null;
     });
@@ -295,7 +363,7 @@ test.describe('Admin Proposal Create from JSON', () => {
   test('importing JSON does not override the configured expiration default', {
     tag: [...ADMIN_PROPOSAL_CREATE_FROM_JSON, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath.startsWith('proposals/defaults/')) {
         return { status: 200, contentType: 'application/json', body: JSON.stringify({ language: 'es', expiration_days: 21, sections_json: [] }) };
@@ -326,7 +394,7 @@ test.describe('Admin Proposal Create from JSON', () => {
   }, async ({ page }) => {
     let capturedPayload = null;
 
-    await mockApi(page, async ({ route, apiPath }) => {
+    await mockCreationApi(page, async ({ route, apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === 'proposals/create-from-json/') {
         capturedPayload = route.request().postDataJSON();
@@ -382,7 +450,7 @@ test.describe('Admin Proposal Create & Send', () => {
   test('"Crear y Enviar" button appears when client data is complete', {
     tag: [...ADMIN_PROPOSAL_CREATE_AND_SEND, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       return null;
     });
@@ -414,7 +482,7 @@ test.describe('Admin Proposal Create & Send', () => {
   }, async ({ page }) => {
     let sendCalled = false;
 
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === 'proposals/create/') {
         return { status: 201, contentType: 'application/json', body: JSON.stringify(mockCreatedProposal) };
@@ -453,7 +521,7 @@ test.describe('Admin Proposal Create & Send', () => {
   test('"Crear y Enviar" surfaces a failed send instead of a silent success', {
     tag: [...ADMIN_PROPOSAL_CREATE_AND_SEND, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === 'proposals/create/') {
         return { status: 201, contentType: 'application/json', body: JSON.stringify(mockCreatedProposal) };
@@ -501,7 +569,7 @@ test.describe('Admin Proposal Create Preview', () => {
   test('post-creation modal shows three action options', {
     tag: ['@outcome:success', '@outcome:display', ...ADMIN_PROPOSAL_CREATE_PREVIEW, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === 'proposals/create/') {
         return { status: 201, contentType: 'application/json', body: JSON.stringify(mockCreatedProposal) };
@@ -535,7 +603,7 @@ test.describe('Admin Proposal Create Preview', () => {
   test('post-creation modal shows "Enviar al Cliente" when client data is complete', {
     tag: ['@outcome:success', '@outcome:display', ...ADMIN_PROPOSAL_CREATE_PREVIEW, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
+    await mockCreationApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === 'proposals/create/') {
         return { status: 201, contentType: 'application/json', body: JSON.stringify(mockCreatedProposal) };

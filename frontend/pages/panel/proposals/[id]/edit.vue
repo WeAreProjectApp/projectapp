@@ -983,8 +983,8 @@ function parseSectionContentJson(section) {
 }
 
 function parsePercentFromLabel(label) {
-  if (!label) return null;
-  const match = String(label).match(/(\d+(?:[.,]\d+)?)\s*%/);
+  if (typeof label !== 'string') return null;
+  const match = label.match(/(\d+(?:[.,]\d+)?)\s*%/);
   if (!match) return null;
   const parsed = Number(match[1].replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : null;
@@ -997,12 +997,6 @@ function normalizePercent(value) {
   return Math.round(clamped * 100) / 100;
 }
 
-function formatPercent(value) {
-  const normalized = normalizePercent(value);
-  if (Number.isInteger(normalized)) return String(normalized);
-  return normalized.toFixed(2).replace(/\.?0+$/, '');
-}
-
 function extractInvestmentPercentages(contentJson) {
   const paymentOptions = Array.isArray(contentJson?.paymentOptions) ? contentJson.paymentOptions : [];
   return paymentOptions
@@ -1011,19 +1005,11 @@ function extractInvestmentPercentages(contentJson) {
     .map(percent => normalizePercent(percent));
 }
 
-function replaceOrPrefixPercent(label, percent, index) {
-  const percentText = `${formatPercent(percent)}%`;
-  const base = String(label || '').trim();
-  if (!base) return `${percentText} pago ${index + 1}`;
-  if (/(\d+(?:[.,]\d+)?)\s*%/.test(base)) {
-    return base.replace(/(\d+(?:[.,]\d+)?)\s*%/, percentText);
-  }
-  return `${percentText} ${base}`;
-}
-
 function buildPaymentDescription(percent) {
   const total = Number(form.total_investment) || 0;
-  const amount = Math.round(total * normalizePercent(percent) / 100);
+  const cents = BigInt(Math.round(total * 100));
+  const hundredthsOfPercent = BigInt(Math.round(normalizePercent(percent) * 100));
+  const amount = cents * hundredthsOfPercent / 1000000n;
   return `$${amount.toLocaleString('es-CO')} ${form.currency || 'COP'}`;
 }
 
@@ -1036,49 +1022,19 @@ function normalizeGeneralPaymentPercentage(index) {
   investmentPaymentPercentages.value[index] = normalizePercent(current);
 }
 
-watch(
-  () => parseSectionContentJson(investmentSection.value)?.paymentOptions,
-  (paymentOptions) => {
-    investmentPaymentPercentages.value = extractInvestmentPercentages({ paymentOptions });
-  },
-  { immediate: true, deep: true },
+const savedPaymentPercentages = computed(() =>
+  extractInvestmentPercentages(parseSectionContentJson(investmentSection.value)),
+);
+const paymentPercentagesChanged = computed(() =>
+  JSON.stringify(investmentPaymentPercentages.value.map(normalizePercent)) !== JSON.stringify(savedPaymentPercentages.value),
 );
 
-async function syncInvestmentPercentagesFromGeneral() {
-  const section = investmentSection.value;
-  if (!section?.id) return { success: true, skipped: true };
-
-  const contentJson = parseSectionContentJson(section);
-  const paymentOptions = Array.isArray(contentJson.paymentOptions) ? contentJson.paymentOptions : [];
-  if (!paymentOptions.length || !investmentPaymentPercentages.value.length) {
-    return { success: true, skipped: true };
+watch(savedPaymentPercentages, (percentages, previous) => {
+  const draft = investmentPaymentPercentages.value.map(normalizePercent);
+  if (!previous || JSON.stringify(draft) === JSON.stringify(previous)) {
+    investmentPaymentPercentages.value = [...percentages];
   }
-
-  let editablePercentIdx = 0;
-  const nextPaymentOptions = paymentOptions.map((option, idx) => {
-    if (parsePercentFromLabel(option?.label) == null) return option;
-    const percent = investmentPaymentPercentages.value[editablePercentIdx];
-    editablePercentIdx += 1;
-    if (percent == null) return option;
-    const normalized = normalizePercent(percent);
-    return {
-      ...option,
-      label: replaceOrPrefixPercent(option?.label, normalized, idx),
-      description: buildPaymentDescription(normalized),
-    };
-  });
-
-  const changed = JSON.stringify(paymentOptions) !== JSON.stringify(nextPaymentOptions);
-  if (!changed) return { success: true, skipped: true };
-
-  const result = await proposalStore.updateSection(section.id, {
-    content_json: {
-      ...contentJson,
-      paymentOptions: nextPaymentOptions,
-    },
-  });
-  return result.success ? { success: true } : { success: false };
-}
+}, { immediate: true });
 
 function clientFormValues() {
   const client = proposal.value.client;
@@ -1129,6 +1085,7 @@ function hydrateFormFromProposal() {
   });
   creatingNewClient.value = false;
   savedForm.value = JSON.parse(JSON.stringify(form));
+  investmentPaymentPercentages.value = [...savedPaymentPercentages.value];
 }
 
 onMounted(async () => {
@@ -1166,7 +1123,7 @@ const {
   guardedReload,
 } = useUnsavedGuard({
   flags: {
-    general: () => savedForm.value && Object.keys(form).some(key => JSON.stringify(form[key]) !== JSON.stringify(savedForm.value[key])),
+    general: () => paymentPercentagesChanged.value || (savedForm.value && Object.keys(form).some(key => JSON.stringify(form[key]) !== JSON.stringify(savedForm.value[key]))),
     sections: () => sectionsDirty.value,
     hourRate: () => hourRateDirty.value,
     emailIntro: () => emailIntroDirty.value,
@@ -1296,6 +1253,9 @@ async function handleUpdate() {
     !CLIENT_FIELDS.includes(key) && !EMAIL_FIELDS.includes(key) && JSON.stringify(form[key]) !== JSON.stringify(savedForm.value[key])
   ))));
   const payload = { ...submitted, source_hash: savedForm.value.source_hash };
+  if (paymentPercentagesChanged.value) {
+    payload.investment_payment_percentages = investmentPaymentPercentages.value.map(normalizePercent);
+  }
   if (Object.hasOwn(payload, 'expires_at') && payload.expires_at) {
     const d = new Date(payload.expires_at);
     payload.expires_at = isNaN(d.getTime()) ? null : d.toISOString();
@@ -1307,12 +1267,9 @@ async function handleUpdate() {
     Object.keys(submitted).forEach(key => { savedForm.value[key] = submitted[key]; });
     form.source_hash = result.data?.proposal_source_hash;
     savedForm.value.source_hash = form.source_hash;
-    const syncResult = await syncInvestmentPercentagesFromGeneral();
-    if (syncResult.success) {
-      notify.success({ title: 'Propuesta actualizada.' });
-    } else {
-      notify.error({ title: 'Se actualizó la propuesta, pero falló la sincronización de porcentajes de inversión.' });
-    }
+    notify.success({ title: 'Propuesta actualizada.' });
+  } else if (result.code === 'stale_source') {
+    notifyProposalFailure(result, 'La propuesta cambió. Revisa la versión vigente antes de guardar.');
   } else {
     const errors = result.errors;
     notify.error({

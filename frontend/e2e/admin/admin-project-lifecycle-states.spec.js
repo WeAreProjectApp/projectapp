@@ -711,7 +711,8 @@ test.describe('Admin project state catalog', () => {
       'El proyecto opera mientras se estabiliza la entrega.',
     );
     await page.getByLabel('Efecto operativo del nuevo estado').selectOption('operating');
-    await page.getByLabel('Color del nuevo estado').selectOption('purple');
+    await page.getByRole('combobox', { name: 'Color del nuevo estado' }).click();
+    await page.getByRole('option', { name: 'Morado', exact: true }).click();
     await page.getByTestId('catalog-create-state').click();
 
     await expect.poll(() => createBody).not.toBeNull();

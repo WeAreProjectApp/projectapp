@@ -165,6 +165,7 @@ function defaultStubs() {
     },
     BaseInput: BaseInputStub,
     BaseSelect: BaseSelectStub,
+    BaseChoiceSelect: BaseSelectStub,
     BaseTextarea: BaseTextareaStub,
     BaseButton: BaseButtonStub,
     BaseTabs: BaseTabsStub,

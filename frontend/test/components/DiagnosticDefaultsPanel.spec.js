@@ -87,7 +87,7 @@ function mountPanel() {
         UiTooltip: { template: '<div><slot /></div>' },
         NuxtLink: { template: '<a><slot /></a>' },
         BaseInput: BaseInputStub,
-        BaseSelect: BaseSelectStub,
+        BaseChoiceSelect: BaseSelectStub,
         BaseTextarea: BaseTextareaStub,
         BaseButton: BaseButtonStub,
         BaseTabs: BaseTabsStub,
@@ -311,7 +311,6 @@ describe('DiagnosticDefaultsPanel', () => {
       await flushPromises();
 
       await wrapper.find('[data-testid="defaults-language"]').setValue('en');
-      await wrapper.find('[data-testid="defaults-language"]').trigger('change');
       await flushPromises();
 
       expect(mockDiagnosticsStore.fetchDiagnosticDefaults).toHaveBeenCalledWith('en');

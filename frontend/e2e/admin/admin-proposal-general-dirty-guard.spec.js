@@ -54,6 +54,41 @@ async function openGeneral(page, proposal, { failSave = false } = {}) {
   return updates;
 }
 
+test('saving just the title sends no investment write', {
+  tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin', '@outcome:success'],
+}, async ({ page }) => {
+  await setAuthLocalStorage(page, { token: 'e2e-admin-token', userAuth: { id: 226, role: 'admin', is_staff: true } });
+  const proposal = createProposal({
+    expires_at: '2027-12-10T13:37:19Z',
+    hosting_percent: 60,
+    sections: [{
+      id: 1104,
+      section_type: 'investment',
+      title: 'Inversión',
+      content_json: {
+        hostingPlan: { hostingPercent: 60 },
+        paymentOptions: [
+          { label: '40% al firmar', description: 'COP $600.000' },
+          { label: '30% al diseño', description: 'COP $450.000' },
+          { label: '30% al entregar', description: 'COP $450.000' },
+        ],
+      },
+    }],
+  });
+  const sectionWrites = [];
+  page.on('request', request => {
+    if (request.method() === 'PATCH' && request.url().includes('/proposals/sections/')) sectionWrites.push(request);
+  });
+  const updates = await openGeneral(page, proposal);
+  await page.getByLabel('Título', { exact: true }).fill('Solo cambia el título');
+
+  await page.getByRole('button', { name: 'Guardar Cambios', exact: true }).click();
+
+  await expect(notice(page)).toBeHidden();
+  expect(updates).toEqual([{ title: 'Solo cambia el título', source_hash: proposal.proposal_source_hash }]);
+  expect(sectionWrites).toHaveLength(0);
+});
+
 for (const fixture of [
   { name: 'expired proposal', status: 'expired', expires_at: '2026-10-15T14:30:00-05:00' },
   { name: 'future control', status: 'draft', expires_at: '2026-11-20T14:30:00-05:00' },

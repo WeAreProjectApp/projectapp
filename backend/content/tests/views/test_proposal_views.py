@@ -16,6 +16,7 @@ from freezegun import freeze_time
 
 from content.models import (
     BusinessProposal,
+    EntityHistory,
     ProposalChangeLog,
     ProposalSection,
     ProposalSectionView,
@@ -1559,6 +1560,10 @@ class TestUpdateProposalFromJSON:
 class TestInvestmentSyncOnUpdate:
     """Verify that updating total_investment syncs to the investment section."""
 
+    @staticmethod
+    def _current_hash(admin_client, proposal):
+        return admin_client.get(reverse('retrieve-proposal', args=[proposal.pk])).data['proposal_source_hash']
+
     @pytest.fixture
     def proposal_with_investment_section(self, db):
         """Proposal with an investment section containing content_json."""
@@ -1568,6 +1573,7 @@ class TestInvestmentSyncOnUpdate:
             client_email='sync@test.com',
             total_investment=Decimal('1500000'),
             currency='COP',
+            hosting_percent=60,
             status='draft',
             expires_at=timezone.now() + timezone.timedelta(days=30),
         )
@@ -1579,8 +1585,9 @@ class TestInvestmentSyncOnUpdate:
             content_json={
                 'totalInvestment': '$1.500.000',
                 'currency': 'COP',
+                'hostingPlan': {'hostingPercent': 80, 'freeMonths': 3, 'freeMonthNote': 'Acuerdo especial'},
                 'paymentOptions': [
-                    {'label': '40% al firmar ✍️', 'description': '$600.000 COP'},
+                    {'label': '40% al firmar ✍️', 'description': 'COP $600.000', 'note': 'Contra contrato'},
                     {'label': '30% al diseño ✅', 'description': '$450.000 COP'},
                     {'label': '30% al deploy 🚀', 'description': '$450.000 COP'},
                 ],
@@ -1623,11 +1630,111 @@ class TestInvestmentSyncOnUpdate:
         """Updating unrelated fields does not modify the investment section."""
         p = proposal_with_investment_section
         inv_before = ProposalSection.objects.get(proposal=p, section_type='investment')
-        original_total = inv_before.content_json['totalInvestment']
+        history = EntityHistory.objects.get(entity_type='proposal', object_id=p.pk)
+        original_revision = history.revision
         url = reverse('update-proposal', kwargs={'proposal_id': p.id})
-        admin_client.patch(url, {'title': 'New Title Only'}, format='json')
+        response = admin_client.patch(url, {'title': 'New Title Only'}, format='json')
+
+        assert response.status_code == 200
         inv_after = ProposalSection.objects.get(proposal=p, section_type='investment')
-        assert inv_after.content_json['totalInvestment'] == original_total
+        assert inv_after.content_json == inv_before.content_json
+        assert list(history.entries.filter(number__gt=original_revision).values_list('changed_fields', flat=True)) == [
+            [{'field': 'title', 'label': 'Título'}],
+        ]
+
+    def test_updates_only_hosting_when_explicitly_changed(self, admin_client, proposal_with_investment_section):
+        p = proposal_with_investment_section
+        section = p.sections.get(section_type='investment')
+        expected = section.content_json
+        expected['hostingPlan']['hostingPercent'] = 0
+
+        result = admin_client.patch(reverse('update-proposal', args=[p.pk]), {'hosting_percent': 0}, format='json')
+
+        section.refresh_from_db()
+        assert result.status_code == 200
+        assert result.data['sections'][0]['content_json']['hostingPlan']['hostingPercent'] == 0
+        assert section.content_json == expected
+
+    def test_combined_save_updates_only_confirmed_investment_terms(self, admin_client, proposal_with_investment_section):
+        p = proposal_with_investment_section
+        section = p.sections.get(section_type='investment')
+        expected = section.content_json
+        expected['hostingPlan']['hostingPercent'] = 70
+        expected['paymentOptions'][0].update(label='45.5% al firmar ✍️', description='$682.500 COP')
+        expected['paymentOptions'][1].update(label='24.5% al diseño ✅', description='$367.500 COP')
+
+        result = admin_client.patch(reverse('update-proposal', args=[p.pk]), {
+            'hosting_percent': 70,
+            'investment_payment_percentages': [45.5, 24.5, 30],
+            'source_hash': self._current_hash(admin_client, p),
+        }, format='json')
+
+        p.refresh_from_db()
+        section.refresh_from_db()
+        assert result.status_code == 200
+        assert p.hosting_percent == 70
+        assert section.content_json == expected
+
+    def test_recalculates_existing_decimal_percent_on_currency_change(self, admin_client, proposal_with_investment_section):
+        p = proposal_with_investment_section
+        section = p.sections.get(section_type='investment')
+        section.content_json['paymentOptions'][0]['label'] = '40,5 % al firmar'
+        section.save(update_fields=['content_json'])
+
+        response = admin_client.patch(reverse('update-proposal', args=[p.pk]), {'currency': 'USD'}, format='json')
+
+        section.refresh_from_db()
+        assert response.status_code == 200
+        assert section.content_json['paymentOptions'][0]['description'] == '$607.500 USD'
+
+    @pytest.mark.parametrize('percentages', [[45, 55], [101, 0, 0], [45.111, 24.889, 30]])
+    def test_invalid_payment_list_preserves_metadata(self, admin_client, proposal_with_investment_section, percentages):
+        p = proposal_with_investment_section
+
+        response = admin_client.patch(reverse('update-proposal', args=[p.pk]), {
+            'title': 'Invalid payment terms',
+            'investment_payment_percentages': percentages,
+            'source_hash': self._current_hash(admin_client, p),
+        }, format='json')
+
+        assert response.status_code == 400
+        assert 'investment_payment_percentages' in response.data
+        assert BusinessProposal.objects.get(pk=p.pk).title == p.title
+
+    @pytest.mark.parametrize('version', ['', 'stale-version'])
+    def test_payment_edit_requires_current_hash_for_draft(self, admin_client, proposal_with_investment_section, version):
+        p = proposal_with_investment_section
+
+        response = admin_client.patch(reverse('update-proposal', args=[p.pk]), {
+            'title': 'Stale title',
+            'investment_payment_percentages': [45, 25, 30],
+            'source_hash': version,
+        }, format='json')
+
+        assert response.status_code == 409
+        assert response.data['code'] == 'stale_source'
+        assert response.data['source_hash'] == self._current_hash(admin_client, p)
+
+    def test_rolls_back_metadata_when_investment_write_fails(self, admin_client, proposal_with_investment_section, monkeypatch):
+        from django.db import IntegrityError
+        p = proposal_with_investment_section
+        history = EntityHistory.objects.get(entity_type='proposal', object_id=p.pk)
+        original_revision = history.revision
+
+        def fail_investment_write(*args, **kwargs):
+            raise IntegrityError('Injected investment write failure')
+
+        monkeypatch.setattr(ProposalSection, 'save', fail_investment_write)
+        with pytest.raises(IntegrityError):
+            admin_client.patch(reverse('update-proposal', args=[p.pk]), {
+                'title': 'Title to roll back',
+                'hosting_percent': 70,
+                'investment_payment_percentages': [45, 25, 30],
+                'source_hash': self._current_hash(admin_client, p),
+            }, format='json')
+
+        assert BusinessProposal.objects.get(pk=p.pk).title == p.title
+        assert not history.entries.filter(number__gt=original_revision).exists()
 
 
 # ---------------------------------------------------------------------------

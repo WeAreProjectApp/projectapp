@@ -102,6 +102,16 @@ ficticias lo sustituyen.
 
 Verificar `mcp_inventory --check`, paridad de esquemas, 13 herramientas en Integridad (10 de negocio + 3 de control), permisos administrativos, confirmación de aplicar/deshacer/revisar y ausencia de integridad en nuevas credenciales de Proyectos. Los accesos legacy/pre_split deben seguir operando con aviso; migrar conserva actor, permisos y vencimiento. Tras deploy: activar destino, configurar consumidores sin exponer sus credenciales, comprobar una revisión real de lectura y el barrido de Bogotá. Nada de esto se acredita por tests locales. Contrato completo en `DATA_INTEGRITY.md`.
 
+## PA-270 — edición de porcentajes de pago en Propuestas
+
+Comercial 6.8.0 y Propuestas 6.4.0 exponen el campo opcional
+`investment_payment_percentages` en `update_proposal_settings`. Envía las
+opciones con porcentaje en el orden de Inversión y usa `proposal_source_hash`
+de la lectura del editor en `if_match`. Confirma en una sola llamada el cambio
+de hosting y de pagos. Repite con una huella obsoleta y con una lista inválida
+para comprobar que ambas respuestas conservan los metadatos y la sección.
+El guardado de solo título conserva Inversión y sus revisiones.
+
 ## PA-216 — dirección del cliente creado durante el cierre (2026-11-07)
 
 Comercial 6.5.0 y Propuestas 6.3.0 incluyen `new_client.address` en el contrato

@@ -205,15 +205,12 @@
 
         <!-- Language -->
         <div>
-          <label class="block text-sm font-medium text-text-default mb-1">Idioma de la propuesta</label>
-          <select
+          <label for="create-manual-language" class="block text-sm font-medium text-text-default mb-1">Idioma de la propuesta</label>
+          <BaseChoiceSelect
+            id="create-manual-language"
             v-model="form.language"
-            class="w-full px-4 py-2.5 border border-border-default rounded-xl text-sm
-                   focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none bg-surface text-text-default"
-          >
-            <option value="es">Español</option>
-            <option value="en">English</option>
-          </select>
+            :options="[{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }]"
+          />
           <p class="text-xs text-text-subtle mt-1">Define los títulos e índices por defecto de las secciones.</p>
         </div>
 
@@ -266,15 +263,12 @@
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-text-default mb-1">Moneda</label>
-            <select
+            <label for="create-manual-currency" class="block text-sm font-medium text-text-default mb-1">Moneda</label>
+            <BaseChoiceSelect
+              id="create-manual-currency"
               v-model="form.currency"
-              class="w-full px-4 py-2.5 border border-border-default rounded-xl text-sm
-                     focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none bg-surface text-text-default"
-            >
-              <option value="COP">COP</option>
-              <option value="USD">USD</option>
-            </select>
+              :options="[{ value: 'COP', label: 'COP' }, { value: 'USD', label: 'USD' }]"
+            />
           </div>
         </div>
 
@@ -381,28 +375,39 @@
         <!-- Reminder days -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-text-default mb-1">Recordatorio (días después de enviar)</label>
+            <label for="create-reminder-days" class="block text-sm font-medium text-text-default mb-1">Recordatorio (días después de enviar)</label>
             <input
+              id="create-reminder-days"
               v-model.number="form.reminder_days"
+              @input="manualReminderEdits.reminder_days = true"
               type="number"
-              min="1"
-              max="30"
+              min="0"
+              max="365"
               class="w-full px-4 py-2.5 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
             />
             <p class="text-xs text-text-subtle mt-1">Se enviará un email recordatorio al cliente X días después de enviar la propuesta.</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-text-default mb-1">Urgencia (días después de enviar)</label>
+            <label for="create-urgency-days" class="block text-sm font-medium text-text-default mb-1">Urgencia (días después de enviar)</label>
             <input
+              id="create-urgency-days"
               v-model.number="form.urgency_reminder_days"
+              @input="manualReminderEdits.urgency_reminder_days = true"
               type="number"
-              min="1"
-              max="30"
+              min="0"
+              max="365"
               class="w-full px-4 py-2.5 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
             />
             <p class="text-xs text-text-subtle mt-1">Se enviará un email de urgencia X días después de enviar (incluye descuento si % > 0).</p>
           </div>
         </div>
+        <p v-if="manualReminderStatus === 'loading'" role="status" class="text-sm text-text-muted">
+          Cargando los días de recordatorio del idioma elegido…
+        </p>
+        <BaseAlert v-else-if="manualReminderStatus === 'error'" variant="warning">
+          <p>Introduce ambos días de recordatorio o vuelve a cargar los valores por defecto.</p>
+          <BaseButton variant="ghost" size="sm" @click="applyCreationDefaults(form.language, { manual: true })">Reintentar</BaseButton>
+        </BaseAlert>
 
         <!-- Discount -->
         <div>
@@ -1212,7 +1217,7 @@ function handleResetCreateTechnicalPrompt() {
 async function refreshCreateDefaults({ seedHosting = false } = {}) {
   loadCreateCommercialPrompt();
   loadCreateTechnicalPrompt();
-  await applyCreationDefaults(form.language, { seedHosting });
+  await applyCreationDefaults(form.language, { seedHosting, manual: true });
 }
 
 // Hosting is seeded only on mount: the manual panel-refresh button must not
@@ -1254,10 +1259,36 @@ const HOSTING_DEFAULT_FIELDS = [
   'hosting_discount_semiannual',
   'hosting_discount_quarterly',
 ];
+const REMINDER_FIELDS = ['reminder_days', 'urgency_reminder_days'];
+const manualReminderEdits = reactive({ reminder_days: false, urgency_reminder_days: false });
+const manualReminderStatus = ref('loading');
+let creationDefaultsRequest = 0;
+let manualReminderRequest = 0;
 
-async function applyCreationDefaults(lang = 'es', { seedHosting = false } = {}) {
+function isReminderDays(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 365;
+}
+
+async function applyCreationDefaults(lang = 'es', { seedHosting = false, manual = false } = {}) {
+  const request = ++creationDefaultsRequest;
+  const reminderRequest = manual ? ++manualReminderRequest : null;
+  if (manual) {
+    manualReminderStatus.value = 'loading';
+    for (const field of REMINDER_FIELDS) {
+      if (!manualReminderEdits[field]) form[field] = null;
+    }
+  }
   const result = await proposalStore.fetchProposalDefaults(lang);
-  if (!result.success || !result.data) return;
+  if (reminderRequest === manualReminderRequest && lang === form.language) {
+    const valid = result.success && REMINDER_FIELDS.every(field => isReminderDays(result.data?.[field]));
+    if (valid) {
+      for (const field of REMINDER_FIELDS) {
+        if (!manualReminderEdits[field]) form[field] = result.data[field];
+      }
+    }
+    manualReminderStatus.value = valid ? 'ready' : 'error';
+  }
+  if (request !== creationDefaultsRequest || !result.success || !result.data) return;
   const days = Number(result.data.expiration_days);
   if (Number.isInteger(days) && days > 0) {
     defaultExpirationDays.value = days;
@@ -1315,8 +1346,8 @@ const form = reactive({
   hosting_discount_semiannual: 20,
   hosting_discount_quarterly: 10,
   expires_at: defaultExpiryStr,
-  reminder_days: 10,
-  urgency_reminder_days: 15,
+  reminder_days: null,
+  urgency_reminder_days: null,
   discount_percent: 0,
   show_contract_terms: true,
   email_intro: '',
@@ -1385,9 +1416,15 @@ function sanitizeEmailMetadata(payload) {
   return payload;
 }
 
+function validateManualReminders() {
+  if (REMINDER_FIELDS.every(field => isReminderDays(form[field]))) return true;
+  errorMsg.value = 'Indica los días de recordatorio y de urgencia, entre 0 y 365.';
+  return false;
+}
+
 async function handleSubmit() {
   errorMsg.value = '';
-
+  if (!validateManualReminders()) return;
   const payload = sanitizeEmailMetadata({ ...form });
   if (payload.expires_at) {
     payload.expires_at = new Date(payload.expires_at).toISOString();
@@ -1404,7 +1441,7 @@ async function handleSubmit() {
 
 async function handleCreateAndSend() {
   errorMsg.value = '';
-
+  if (!validateManualReminders()) return;
   const payload = sanitizeEmailMetadata({ ...form });
   if (payload.expires_at) {
     payload.expires_at = new Date(payload.expires_at).toISOString();
@@ -1511,8 +1548,8 @@ function onCreateInlineJsonClient(typedName) {
 watch(
   [() => form.language, () => jsonForm.language],
   ([langA, langB], [prevA, prevB]) => {
-    const changed = langA !== prevA ? langA : langB !== prevB ? langB : null;
-    if (changed) applyCreationDefaults(changed);
+    if (langA !== prevA) applyCreationDefaults(langA, { manual: true });
+    else if (langB !== prevB) applyCreationDefaults(langB);
   },
 );
 

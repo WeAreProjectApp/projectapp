@@ -42,8 +42,9 @@
         />
       </BaseFormField>
 
-      <BaseFormField label="Idioma">
-        <BaseSelect
+      <BaseFormField label="Idioma" for="diagnostic-create-language">
+        <BaseChoiceSelect
+          id="diagnostic-create-language"
           v-model="language"
           :options="[
             { value: 'es', label: 'Español' },
@@ -95,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useDiagnosticsStore } from '~/stores/diagnostics';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import UnsavedChangesNotice from '~/components/panel/UnsavedChangesNotice.vue';
@@ -108,8 +109,18 @@ const router = useRouter();
 const store = useDiagnosticsStore();
 
 const selectedClientId = ref(null);
+const selectedClientName = ref('');
 const language = ref('es');
-const title = ref('');
+const titleOverride = ref(null);
+const title = computed({
+  get() {
+    if (titleOverride.value !== null) return titleOverride.value;
+    if (!selectedClientId.value || !selectedClientName.value) return '';
+    const prefix = language.value === 'en' ? 'Diagnostic' : 'Diagnóstico';
+    return `${prefix} — ${selectedClientName.value}`;
+  },
+  set(value) { titleOverride.value = value; },
+});
 const errorMsg = ref('');
 
 const FALLBACK_ERROR = 'No se pudo crear el diagnóstico. Verifica tu sesión e inténtalo de nuevo.';
@@ -137,10 +148,7 @@ commitBaseline();
 
 function onClientSelected(client) {
   errorMsg.value = '';
-  if (client && !title.value.trim()) {
-    const clientName = client.name || client.company || client.email || '';
-    if (clientName) title.value = `Diagnóstico — ${clientName}`;
-  }
+  selectedClientName.value = client?.name || client?.company || client?.email || '';
 }
 
 async function submit() {

@@ -7,6 +7,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { PANEL_BREAKPOINTS, PANEL_VIEWPORTS } from '../../config/responsive.js';
 import { ADMIN_DOCUMENT_STATES_MANAGE } from '../helpers/flow-tags.js';
 
@@ -189,12 +190,20 @@ test.describe('Admin Document States Manage', () => {
     await openCatalog(page);
 
     await page.getByTestId('catalog-new-state-name').fill('Esperando cliente');
-    await page.getByLabel('Grupo del nuevo estado').selectOption('2');
-    await page.getByLabel('Color del nuevo estado').selectOption('purple');
+    const group = page.getByRole('combobox', { name: 'Grupo del nuevo estado' });
+    await expect(group).toHaveText('Señales');
+    await selectChoiceOption(page, group, 'Ciclo');
+    const color = page.getByRole('combobox', { name: 'Color del nuevo estado' });
+    await expect(color).toHaveText('Gris');
+    await color.click();
+    await expect(page.getByRole('listbox').getByRole('option')).toHaveText(['Gris', 'Verde', 'Azul', 'Amarillo', 'Naranja', 'Rojo', 'Morado']);
+    await color.press('End');
+    await color.press('Enter');
     await page.getByTestId('catalog-create-state').click();
 
     await expect.poll(() => createBody).not.toBeNull();
-    expect(createBody).toMatchObject({ name: 'Esperando cliente', color: 'purple' });
+    expect(createBody).toMatchObject({ name: 'Esperando cliente', color: 'purple', group: 1 });
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('catalog-state-24')).toContainText('Esperando cliente');
   });
 
@@ -224,6 +233,35 @@ test.describe('Admin Document States Manage', () => {
     expect(updateBody.name).toBe('Urgencia crítica');
     expect(updateBody.color).toBe('orange');
     expect(updateBody.incompatibility_ids).toContain(13);
+  });
+
+  test('persists the selected mode for a new group', {
+    tag: [...ADMIN_DOCUMENT_STATES_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const catalog = initialStates();
+    const catalogGroups = [...groups];
+    let created;
+    await mockApi(page, async ({ apiPath, method, route }) => {
+      if (apiPath === 'document-state-groups/' && method === 'GET') return json(catalogGroups);
+      if (apiPath === 'document-state-groups/' && method === 'POST') {
+        created = { ...route.request().postDataJSON(), id: 3, is_active: true, state_count: 0 };
+        catalogGroups.push(created);
+        return json(created, 201);
+      }
+      return baseRoutes(apiPath, catalog);
+    });
+    await openCatalog(page);
+    const mode = page.getByRole('combobox', { name: 'Modo del nuevo grupo' });
+    await expect(mode).toHaveText('Varios activos');
+    await selectChoiceOption(page, mode, 'Uno activo');
+    await page.getByTestId('catalog-new-group-name').fill('Grupo de prueba');
+
+    await page.getByTestId('catalog-create-group').click();
+
+    await expect(page.getByTestId('catalog-group-3')).toContainText('Grupo de prueba');
+    expect(created.selection_mode).toBe('exclusive');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('catalog-group-3')).toContainText('Grupo de prueba');
   });
 
   test('merges a duplicate into an existing state', {

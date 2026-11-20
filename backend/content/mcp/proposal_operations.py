@@ -70,7 +70,7 @@ PROPOSAL_PARITY_TOOLS = [
 ]
 
 PROPOSAL_PARITY_TOOLS += PROPOSAL_APPROVAL_TOOLS + [
-    _op('update_proposal_settings', 'Edita parcialmente los ajustes del panel sin reenviar secciones; para cambiar estado usa update_proposal_status.', 'update-proposal', 'PATCH', ('proposal_id',), 'write'),
+    _op('update_proposal_settings', 'Edita parcialmente los ajustes del panel. Si envías porcentajes de pago, usa if_match con la huella de la edición. Para cambiar estado usa update_proposal_status.', 'update-proposal', 'PATCH', ('proposal_id',), 'write'),
     _op('get_proposal_company_settings', 'Consulta los datos de empresa y opciones vigentes del contrato de servicio.', 'get-company-settings'),
     _op('update_proposal_service_settings', 'Actualiza las opciones numéricas y valores predeterminados del contrato de servicio.', 'get-company-settings', 'PATCH', risk='write'),
     _op('read_proposal_contract_markdown', 'Lee el Markdown guardado del contrato; en modalidad split indica variant=product o service.', 'contract-markdown', path=('proposal_id',)),
