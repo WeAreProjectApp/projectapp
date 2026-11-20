@@ -133,7 +133,7 @@
 
     <!-- Empty -->
     <BaseEmptyState
-      v-else-if="!store.isLoading && filteredRows.length === 0"
+      v-else-if="filterQueryReady && !store.isLoading && filteredRows.length === 0"
       :title="hasActiveFilters ? 'Sin resultados con esos filtros' : 'Sin cuentas de cobro'"
       :description="hasActiveFilters
         ? 'Ajusta o limpia los filtros para ver más registros.'
@@ -306,7 +306,7 @@
 
     <!-- Detalle: el ingreso vinculado y el documento, sin salir del tab -->
     <CollectionAccountDetailModal
-      :open="detailOpen"
+      :open="filterQueryReady && detailOpen && Boolean(detailRow)"
       :record="detailRow"
       @saved="loadRecords"
       @close="closeDetail"
@@ -358,6 +358,7 @@ import {
   matchNumberRange,
   matchAnyToken,
 } from '~/composables/useAccountingFilters';
+import { collectionProjectFilter, optionalFilterIds } from '~/utils/accountingFilterQuery';
 import { useTableSort } from '~/composables/useTableSort';
 import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
 import { useAccountingStore } from '~/stores/accounting';
@@ -489,8 +490,14 @@ const {
   rebaseTab: rebaseFilterTab,
   reorderTabs: reorderFilterTabs,
   consumeParam,
+  filterQueryReady,
+  whenFiltersReady,
+  buildFilterQuery,
 } = useAccountingFilters({
   viewName: 'accounting_collections',
+  syncFiltersToUrl: true,
+  restoreUrlState: true,
+  urlFilterCodecs: { clients: optionalFilterIds, projects: collectionProjectFilter },
   ephemeralParams: ['focus'],
   builtinTabs: [
     // "Por cobrar" used to mean `issued` alone, which quietly left the vencidas
@@ -535,7 +542,7 @@ const {
 const focusParam = consumeParam('focus');
 const highlightId = ref(focusParam ? Number(focusParam) : null);
 
-const filteredRows = computed(() => applyFilters(store.collectionAccounts));
+const filteredRows = computed(() => applyFilters(filterQueryReady.value ? store.collectionAccounts : []));
 
 const {
   viewMode,
@@ -744,7 +751,7 @@ const activeTableComponent = computed(
 
 const activeTableProps = computed(() => {
   const common = {
-    loading: store.isLoading,
+    loading: !filterQueryReady.value || store.isLoading,
     showActions: true,
     showDefaultActions: false,
     rowActionsLayout: 'menu-start',
@@ -778,7 +785,9 @@ const activeTableListeners = computed(() => (
 ));
 
 async function loadRecords() {
-  await store.fetchCollectionAccounts();
+  if (!(await whenFiltersReady())) return;
+  const result = await store.fetchCollectionAccounts();
+  if (result.success && detailOpen.value && !detailRow.value) closeDetail();
 }
 
 // ── Internal notes ──
@@ -900,7 +909,7 @@ const {
   toFor: accountDetailTo,
   open: openDetailById,
   close: closeDetail,
-} = useDetailQueryParam('account', { rows: () => store.collectionAccounts });
+} = useDetailQueryParam('account', { rows: () => store.collectionAccounts, buildQuery: buildFilterQuery });
 
 function openDetail(row) {
   openDetailById(row.id);

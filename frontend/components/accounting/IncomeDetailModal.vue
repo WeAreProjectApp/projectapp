@@ -44,7 +44,7 @@
             <div>
               <p class="text-xs uppercase tracking-wider text-text-subtle">Total</p>
               <p class="text-sm text-text-default mt-1 tabular-nums" data-testid="income-detail-total">
-                {{ money(income.total_amount) }}
+                {{ formatMoney(income.total_amount ?? 0, 'COP', { decimals: 'auto' }) }}
               </p>
             </div>
             <div>

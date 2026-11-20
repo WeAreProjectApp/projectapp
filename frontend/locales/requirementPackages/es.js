@@ -88,7 +88,7 @@ export default {
   more: "Cargar siguientes",
   previous: "Anteriores",
   queue: "Solicitudes por tallas",
-  pendingCount: "{count} solicitudes necesitan atención",
+  pendingCount: "{count} solicitud necesita atención | {count} solicitudes necesitan atención",
   search: "Buscar proyecto o solicitud",
   projectSearch: "Buscar un proyecto",
   selectProject: "Seleccionar proyecto",

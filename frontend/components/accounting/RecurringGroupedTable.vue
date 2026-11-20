@@ -177,7 +177,9 @@
                 role="row"
                 :data-testid="`accounting-row-${row.id}`"
                 class="accounting-grid-row items-center min-h-9 bg-surface hover:bg-surface-raised transition-colors text-sm"
-                :class="row.id === highlightId ? 'accounting-row-flash' : ''"
+                :class="[row.id === highlightId ? 'accounting-row-flash' : '', interactiveRows ? 'cursor-pointer' : '']"
+                @click="interactiveRows && emit('row-click', row, $event)"
+                @auxclick.middle="interactiveRows && emit('row-auxclick', row, $event)"
               >
                 <span v-if="selectable" role="cell" :class="SELECT_PAD">
                   <input
@@ -400,6 +402,7 @@ const props = defineProps({
   weightSort: { type: String, default: '' },
   showActions: { type: Boolean, default: true },
   showDefaultActions: { type: Boolean, default: true },
+  interactiveRows: { type: Boolean, default: false },
   rowActionsLayout: {
     type: String,
     default: ROW_ACTION_LAYOUTS.INLINE_END,
@@ -410,7 +413,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  'edit', 'delete', 'reorder', 'toggle-group', 'toggle-weight-sort', 'update:selected',
+  'edit', 'delete', 'reorder', 'toggle-group', 'toggle-weight-sort', 'update:selected', 'row-click', 'row-auxclick',
 ]);
 
 function headerAriaSort(col) {
@@ -576,6 +579,7 @@ function toggleAll(checked) {
 /** `col` is already resolved, so alignment, padding and visibility come precomputed. */
 function cellClass(col) {
   const classes = [col.padClass, col.alignClass, responsiveGridCellClass(col)];
+  if (col.link) classes.push('relative');
   // Amounts must never wrap or clip; free text may truncate.
   if (col.format === 'money' || col.align === 'right') {
     classes.push('tabular-nums whitespace-nowrap');

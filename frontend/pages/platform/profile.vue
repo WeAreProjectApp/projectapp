@@ -93,72 +93,57 @@
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Apellido</label>
+            <label for="profile-last-name" class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Apellido</label>
             <input
+              id="profile-last-name"
               v-model="form.last_name"
               type="text"
               class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Empresa</label>
+            <label for="profile-company" class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Empresa</label>
             <input
+              id="profile-company"
               v-model="form.company_name"
               type="text"
               class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Telefono</label>
+            <label for="profile-phone" class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Teléfono</label>
             <input
+              id="profile-phone"
               v-model="form.phone"
               type="tel"
               class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Cedula</label>
+            <label for="profile-cedula" class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Cédula</label>
             <input
+              id="profile-cedula"
               v-model="form.cedula"
               type="text"
               class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Fecha de nacimiento</label>
+            <label for="profile-birth-date" class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Fecha de nacimiento</label>
             <input
+              id="profile-birth-date"
               v-model="form.date_of_birth"
               type="date"
               class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Sexo</label>
-            <select
-              v-model="form.gender"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
-            >
-              <option value="">Sin especificar</option>
-              <option value="male">Masculino</option>
-              <option value="female">Femenino</option>
-              <option value="other">Otro</option>
-              <option value="prefer_not_to_say">Prefiero no decir</option>
-            </select>
+            <label for="profile-gender" class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Sexo</label>
+            <BaseChoiceSelect id="profile-gender" v-model="form.gender" :options="genderOptions" />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Nivel de educacion</label>
-            <select
-              v-model="form.education_level"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
-            >
-              <option value="">Sin especificar</option>
-              <option value="primaria">Primaria</option>
-              <option value="secundaria">Secundaria</option>
-              <option value="tecnico">Tecnico</option>
-              <option value="universitario">Universitario</option>
-              <option value="posgrado">Posgrado</option>
-              <option value="otro">Otro</option>
-            </select>
+            <label for="profile-education" class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Nivel de educación</label>
+            <BaseChoiceSelect id="profile-education" v-model="form.education_level" :options="educationOptions" />
           </div>
         </div>
 
@@ -231,6 +216,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
+import { EDUCATION_LEVEL_OPTIONS, GENDER_OPTIONS } from '~/constants/platformProfileOptions'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import ThemePicker from '~/components/platform/ThemePicker.vue'
 
@@ -256,6 +242,10 @@ const showCropModal = ref(false)
 const cropSrc = ref('')
 const cropZoom = ref(1)
 const selectedFile = ref(null)
+
+const unspecified = { value: '', label: 'Sin especificar' }
+const genderOptions = [unspecified, ...GENDER_OPTIONS]
+const educationOptions = [unspecified, ...EDUCATION_LEVEL_OPTIONS]
 
 const form = reactive({
   first_name: '',

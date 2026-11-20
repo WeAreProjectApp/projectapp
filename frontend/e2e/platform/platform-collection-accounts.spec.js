@@ -4,7 +4,8 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
-import { setPlatformAuth, mockPlatformClient } from '../helpers/platform-auth.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
+import { setPlatformAuth, mockPlatformAdmin, mockPlatformClient } from '../helpers/platform-auth.js';
 
 test.setTimeout(60_000);
 
@@ -44,20 +45,21 @@ function json(body, status = 200) {
 async function arrangePlatform(page, {
   listFailure = false, pdfFailure = false, missingDetail = false,
   projectListFailure = false, hostingContextFailure = false,
+  user = mockPlatformClient, accountsFor, billingOptions,
 } = {}) {
   let listAttempts = 0;
   let projectListAttempts = 0;
   let hostingContextAttempts = 0;
-  await setPlatformAuth(page, { user: mockPlatformClient });
+  await setPlatformAuth(page, { user });
   await mockApi(page, async ({ route, apiPath, method }) => {
-    if (apiPath === 'accounts/me/' && method === 'GET') return json(mockPlatformClient);
+    if (apiPath === 'accounts/me/' && method === 'GET') return json(user);
     if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') return json({ unread_count: 0 });
     if (apiPath === 'accounts/projects/' && method === 'GET') return json([project]);
     if (apiPath === 'accounts/projects/1/' && method === 'GET') return json(project);
     if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') return json([]);
     if (apiPath === 'accounts/projects/1/subscription/' && method === 'GET') return json(null);
     if (apiPath === 'accounts/projects/1/billing-options/' && method === 'GET') {
-      return json({ project_id: 1, project_name: project.name, hosting_id: 7, contracts: [{ id: 10, title: 'Contrato Aurora', amendments: [{ id: 11, title: 'Otrosí fase dos' }] }] });
+      return json(billingOptions ?? { project_id: 1, project_name: project.name, hosting_id: 7, contracts: [{ id: 10, title: 'Contrato Aurora', amendments: [{ id: 11, title: 'Otrosí fase dos' }] }] });
     }
     if (apiPath === 'accounts/hosting/' && method === 'GET') return json([project]);
     if (apiPath === 'accounts/projects/1/hosting-context/' && method === 'GET') {
@@ -73,6 +75,7 @@ async function arrangePlatform(page, {
     if (apiPath === 'accounts/collection-accounts/' && method === 'GET') {
       listAttempts += 1;
       const params = new URL(route.request().url()).searchParams;
+      if (accountsFor) return json(accountsFor(params));
       if (listFailure && listAttempts === 1) return json({ detail: 'No se pudieron cargar las cuentas.' }, 500);
       if (params.get('project_id')) {
         projectListAttempts += 1;
@@ -94,6 +97,22 @@ async function arrangePlatform(page, {
     return null;
   });
 }
+
+function chooseFilter(page, filter, choice) {
+  return selectChoiceOption(page, page.getByRole('combobox', { name: filter, exact: true }), choice);
+}
+
+const qaContract = {
+  id: 15,
+  title: 'Contrato de prueba',
+  amendments: [{ id: 57, title: '[Demo] Otrosí A-1' }, { id: 58, title: '[Demo] Otrosí A-2' }],
+};
+const qaAccount = {
+  ...contractAccount,
+  id: 87,
+  public_number: 'PA-TECHSTAR-003',
+  context: { nature: 'contract', contract: qaContract, amendment: qaContract.amendments[0] },
+};
 
 async function enterAccountCentre(page) {
   await page.goto('/en-us/platform/projects', { waitUntil: 'domcontentloaded' });
@@ -137,9 +156,9 @@ test.describe('Platform billing centre', () => {
     // Catches the bug where contract/amendment filters stop scoping the client's visible account row.
     await arrangePlatform(page);
     await enterAccountCentre(page);
-    await page.getByLabel('Project').selectOption('1');
-    await page.getByRole('combobox', { name: 'Contract', exact: true }).selectOption('10');
-    await page.getByRole('combobox', { name: 'Amendment', exact: true }).selectOption('11');
+    await chooseFilter(page, 'Project', project.name);
+    await chooseFilter(page, 'Contract', 'Contrato Aurora');
+    await chooseFilter(page, 'Amendment', 'Otrosí fase dos');
     await expect(page.getByRole('link', { name: 'PA-AUR-001', exact: true })).toHaveCount(1);
     await page.getByRole('link', { name: 'PA-AUR-001', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'PA-AUR-001', exact: true })).toHaveText('PA-AUR-001');
@@ -175,7 +194,7 @@ test.describe('Platform billing centre', () => {
     // Catches the bug where an empty pending-context filter renders stale financial rows.
     await arrangePlatform(page);
     await enterAccountCentre(page);
-    await page.getByLabel('Nature').selectOption('pending');
+    await chooseFilter(page, 'Nature', 'Pending association');
     await expect(page.getByTestId('billing-accounts-empty')).toHaveText('No collection accounts match these filters.');
   });
 
@@ -218,8 +237,57 @@ test.describe('Platform billing centre', () => {
     await arrangePlatform(page);
     await enterProjectBilling(page, 'Collection accounts');
     await expect(page.getByTestId('billing-account-list').getByRole('heading', { name: 'Collection accounts', exact: true })).toHaveCount(1);
-    await page.getByLabel('Nature').selectOption('hosting');
+    await chooseFilter(page, 'Nature', 'Hosting');
     await expect(page.getByRole('link', { name: 'PA-AUR-H-002', exact: true })).toHaveCount(1);
+  });
+
+  test('client sees only the scoped account after choosing a project', {
+    tag: ['@flow:platform-collection-accounts-list', '@outcome:success', '@role:platform-client'],
+  }, async ({ page }) => {
+    await arrangePlatform(page, {
+      user: { ...mockPlatformClient, id: 2, user_id: 2 },
+      accountsFor: params => params.get('project_id') === '1' ? [qaAccount] : [qaAccount, pendingAccount],
+    });
+    await enterAccountCentre(page);
+    await expect(page.getByRole('link', { name: pendingAccount.public_number })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Contract', exact: true })).toHaveCount(0);
+
+    await chooseFilter(page, 'Project', project.name);
+    await expect(page.getByRole('combobox', { name: 'Contract', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: qaAccount.public_number })).toBeVisible();
+    await expect(page.getByRole('link', { name: pendingAccount.public_number })).toHaveCount(0);
+  });
+
+  test('admin clears the amendment when changing the contract context', {
+    tag: ['@flow:platform-project-collection-accounts', '@outcome:success', '@role:platform-admin'],
+  }, async ({ page }) => {
+    const queries = [];
+    await arrangePlatform(page, {
+      user: { ...mockPlatformAdmin, id: 72, user_id: 72 },
+      billingOptions: { project_id: 1, contracts: [qaContract] },
+      accountsFor: params => {
+        queries.push(Object.fromEntries(params));
+        return [qaAccount];
+      },
+    });
+    // quality: allow-deep-link (exercises filters within the admin's project context)
+    await page.goto('/en-us/platform/projects/1/collection-accounts', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('combobox', { name: 'Project', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Amendment', exact: true })).toHaveCount(0);
+    await chooseFilter(page, 'Contract', qaContract.title);
+    await page.getByRole('combobox', { name: 'Amendment', exact: true }).click();
+    const amendments = page.getByRole('listbox').getByRole('option');
+    await expect(amendments).toHaveText(['All', '[Demo] Otrosí A-1', '[Demo] Otrosí A-2']);
+    await amendments.getByText('[Demo] Otrosí A-1', { exact: true }).click();
+    await expect.poll(() => queries.at(-1)).toEqual({ project_id: '1', contract_id: '15', amendment_id: '57' });
+
+    await chooseFilter(page, 'Nature', 'Hosting');
+    await expect(page.getByRole('combobox', { name: 'Contract', exact: true })).toHaveText('All');
+    await expect(page.getByRole('combobox', { name: 'Amendment', exact: true })).toHaveCount(0);
+    await expect.poll(() => queries.at(-1)).toEqual({ project_id: '1', nature: 'hosting' });
+    await chooseFilter(page, 'Status', 'Issued');
+    await expect.poll(() => queries.at(-1)).toEqual({ project_id: '1', nature: 'hosting', commercial_status: 'issued' });
+    await expect(page.getByRole('link', { name: qaAccount.public_number })).toBeVisible();
   });
 
   test('client sees the project-scoped collection account before filtering it', {

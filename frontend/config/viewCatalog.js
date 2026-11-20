@@ -431,7 +431,7 @@ export const viewCatalogSections = [
         label: 'Calculadora de requerimientos', url: '/panel/requirement-calculator', group: 'Consultoría y asesoría',
         file: 'frontend/pages/panel/requirement-calculator/index.vue',
         reference: 'definición y parámetros versionados de la calculadora, documentos sincronizados y calibración interna',
-        notes: 'Comercial administra la definición, señales, valores y revisiones por panel/MCP. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.',
+        notes: 'Comercial administra la definición, señales y valores por panel/MCP. Versiones muestra las revisiones publicadas con paginación y avisa si todavía no hay publicaciones. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.',
         audience: 'admin', viewType: 'config',
       },
       {
@@ -988,7 +988,7 @@ export const viewCatalogSections = [
         reference: 'vista de hostings activos por cliente del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa.',
+        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa. Los filtros y el histórico de ciclos se recuperan desde la dirección de la vista.',
       },
       {
         label: 'Contabilidad — Bolsillo',
@@ -998,7 +998,7 @@ export const viewCatalogSections = [
         reference: 'vista del bolsillo ProjectApp con movimientos y saldo',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Cada movimiento muestra a quién pertenece: Empresa, Gustavo, Carlos o Sin vincular, tanto en tabla como en tarjetas. El detalle de consulta tiene dirección compartible, importe y fecha legibles, saldo real posterior independiente de filtros, vínculo directo a Ingresos o Gastos y reparto de abonos con pendientes actuales y saldo a favor. Notas completas e historial en un modal compacto. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Acceso interno.',
+        notes: 'Cada movimiento muestra a quién pertenece: Empresa, Gustavo, Carlos o Sin vincular, tanto en tabla como en tarjetas. El detalle de consulta tiene dirección compartible, importe y fecha legibles, saldo real posterior independiente de filtros, vínculo directo a Ingresos o Gastos y reparto de abonos con pendientes actuales y saldo a favor. Notas completas e historial en un modal compacto. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Acceso interno. Recargar el detalle y cerrarlo conserva los filtros y el neto de la consulta.',
       },
       {
         label: 'Contabilidad — Recurrentes',
@@ -1008,7 +1008,7 @@ export const viewCatalogSections = [
         reference: 'vista de pagos frecuentes mensuales del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. El enlace de detalle recupera el registro, el ámbito Vigentes o Archivados y los filtros. El Radar conserva su foco propio.',
       },
       {
         label: 'Contabilidad — Ads',
@@ -1018,7 +1018,7 @@ export const viewCatalogSections = [
         reference: 'vista del registro de gastos en ads del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. El enlace de detalle recupera el gasto y los filtros de la consulta, incluido el total filtrado.',
       },
       {
         label: 'Contabilidad — Tarjetas',
@@ -1048,7 +1048,7 @@ export const viewCatalogSections = [
         reference: 'centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento',
         audience: 'admin',
         viewType: 'list',
-        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite buscar y seleccionar un contrato existente del proyecto o de sus propuestas sin copiar el documento: coincidencias sin distinguir mayúsculas, tildes ni guiones bajos, resaltado, contratos y otrosíes primero y todas las versiones con fecha y carpeta o propuesta. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. Las cuentas de proyecto permiten dejar explícitamente el tipo o vínculo pendiente mediante interruptor: registra autor y fecha, muestra aviso amarillo en fila y detalle, ofrece filtro con conteo y alerta en el radar, y se completa después con razón y versión. El pendiente es interno y no bloquea emisión, envío ni liquidación por ese vínculo; históricos sin asociación conservan su criterio. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir. Marcar pagada una cuenta de un ingreso esperado abre el mismo modal unificado de liquidación con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión de la confirmación de pago al cliente.',
+        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite buscar y seleccionar un contrato existente del proyecto o de sus propuestas sin copiar el documento: coincidencias sin distinguir mayúsculas, tildes ni guiones bajos, resaltado, contratos y otrosíes primero y todas las versiones con fecha y carpeta o propuesta. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. Las cuentas de proyecto permiten dejar explícitamente el tipo o vínculo pendiente mediante interruptor: registra autor y fecha, muestra aviso amarillo en fila y detalle, ofrece filtro con conteo y alerta en el radar, y se completa después con razón y versión. El pendiente es interno y no bloquea emisión, envío ni liquidación por ese vínculo; históricos sin asociación conservan su criterio. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir. Marcar pagada una cuenta de un ingreso esperado abre el mismo modal unificado de liquidación con participaciones, diferencia, IVA configurable por ingreso con protecciones fiscales y revisión de la confirmación de pago al cliente. El detalle se puede recargar y cerrar conservando filtros como el rango Total.',
       },
       {
         label: 'Contabilidad — Asociación de cuenta',

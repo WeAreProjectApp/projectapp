@@ -34,7 +34,7 @@ def opportunities(request):
 
 @admin_api(['GET'])
 def opportunity_detail(request, pk):
-    return Response(records.detail(pk))
+    return Response(records.detail(pk, owner=request.user))
 
 
 @admin_api(['POST'])

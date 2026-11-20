@@ -6,7 +6,7 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from openpyxl import load_workbook
-from procurement.models import Classification, Delivery
+from procurement.models import Activity, Classification, Delivery
 
 pytestmark = pytest.mark.django_db
 
@@ -75,6 +75,31 @@ def test_opportunity_detail_keeps_full_description_for_the_review_screen(opportu
 
     assert response.status_code == 200
     assert response.json()['description'] == 'e' * 50000
+
+
+@pytest.mark.parametrize('owns_classification', [True, False])
+def test_opportunity_detail_projects_current_staff_classification(
+        opportunity, staff_user, other_staff_user, api_client, owns_classification):
+    record = opportunity('DEMO-015')
+    note = 'QA A10W-C1 20261119-01 · revisión ficticia de DEMO-015'
+    classification = Classification.objects.create(
+        opportunity=record, owner=staff_user, state='reviewing', notes=note,
+    )
+    activity = Activity.objects.create(
+        classification=classification, actor=staff_user, action='classify',
+        snapshot={'state': 'reviewing', 'notes': note, 'owner_id': staff_user.pk},
+    )
+    api_client.force_authenticate(user=staff_user if owns_classification else other_staff_user)
+    url = f'/api/procurement/opportunities/{record.pk}/'
+
+    first = api_client.get(url).json()
+    reloaded = api_client.get(url).json()
+
+    expected_own = first['classifications'][0] if owns_classification else None
+    assert first['classifications'][0]['notes'] == note
+    assert first['my_classification'] == expected_own
+    assert reloaded == first
+    assert list(Activity.objects.values_list('pk', flat=True)) == [activity.pk]
 
 
 def test_delivery_list_excludes_heavy_snapshot(staff_client):

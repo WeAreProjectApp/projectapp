@@ -8,7 +8,7 @@ if (typeof globalThis.structuredClone === 'undefined') {
   globalThis.structuredClone = (val) => JSON.parse(JSON.stringify(val));
 }
 
-const mockRoute = { query: {} };
+const mockRoute = require('vue').reactive({ query: {} });
 const mockReplace = jest.fn();
 
 jest.mock('vue-router', () => ({
@@ -43,9 +43,10 @@ jest.mock('~/composables/useSavedFilterTabs', () => {
   return { useSavedFilterTabs: () => stub, __stub: stub };
 });
 
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, nextTick } from 'vue';
 import * as savedFilterTabsModule from '~/composables/useSavedFilterTabs';
+import { collectionProjectFilter, numericFilterIds, optionalFilterIds, repeatedFilterText } from '~/utils/accountingFilterQuery';
 import {
   useAccountingFilters,
   matchDateRange,
@@ -851,5 +852,109 @@ describe('multi-value filter helpers', () => {
     it('does not invent keys the stored dict never had', () => {
       expect('kind' in coerceToDefaultShape({ search: 'x' }, defaults)).toBe(false);
     });
+  });
+});
+
+describe('accounting detail query restoration', () => {
+  function mountWithQuery(query) {
+    mockRoute.query = query;
+    let filters;
+    const wrapper = mount(defineComponent({
+      setup() {
+        filters = useAccountingFilters({
+          viewName: 'accounting_test',
+          defaults: { category: [], clients: [], projects: [], origin_card: [], status: [], totalMin: '' },
+          builtinTabs: [{ id: 'preset', name: 'Pendientes', filters: { status: ['issued'], category: [5] } }],
+          ephemeralParams: [{ name: 'client', boundTo: 'clients' }, 'focus'],
+          syncFiltersToUrl: true,
+          restoreUrlState: true,
+          urlFilterCodecs: { category: numericFilterIds, clients: optionalFilterIds,
+            projects: collectionProjectFilter, origin_card: repeatedFilterText },
+        });
+        return () => null;
+      },
+    }));
+    return { filters, wrapper };
+  }
+
+  it('round-trips filter values with distinct types or commas', async () => {
+    const query = {
+      category: '2,3', clients: '12,none', projects: '[12,"12","Web, fase 2"]',
+      origin_card: ['Visa, empresa', 'Mastercard'], account: '1',
+    };
+    const { filters, wrapper } = mountWithQuery(query);
+    await filters.whenFiltersReady();
+
+    expect(filters.currentFilters).toMatchObject({
+      category: [2, 3], clients: [12, 'none'], projects: [12, '12', 'Web, fase 2'],
+      origin_card: ['Visa, empresa', 'Mastercard'],
+    });
+    expect(filters.buildFilterQuery()).toEqual(query);
+    wrapper.unmount();
+  });
+
+  it('keeps valid filters while malformed values fall back', async () => {
+    const { filters, wrapper } = mountWithQuery({
+      accounting_testTab: 'preset', category: 'x', clients: '0,7', client: '12',
+      projects: '[false]', totalMin: '125000',
+    });
+    await filters.whenFiltersReady();
+
+    expect(filters.currentFilters).toMatchObject({
+      category: [5], clients: [12], projects: [], status: ['issued'], totalMin: '125000',
+    });
+    wrapper.unmount();
+  });
+
+  it('keeps an explicitly cleared filter above a legacy link', async () => {
+    const { filters, wrapper } = mountWithQuery({
+      accounting_testTab: 'preset', status: '', client: '12', clients: '', account: '1', focus: '1',
+    });
+    await filters.whenFiltersReady();
+
+    expect(filters.currentFilters).toMatchObject({ status: [], clients: [] });
+    expect(filters.buildFilterQuery()).toMatchObject({ status: '', clients: '', account: '1' });
+    expect(filters.buildFilterQuery()).not.toHaveProperty('client');
+    expect(filters.buildFilterQuery()).not.toHaveProperty('focus');
+    wrapper.unmount();
+  });
+
+  it('describes the empty cut after removing a built-in filter', async () => {
+    const { filters, wrapper } = mountWithQuery({ accounting_testTab: 'preset', movement: '10' });
+    await filters.whenFiltersReady();
+
+    filters.clearFilterKeys(['status']);
+    await nextTick();
+
+    expect(filters.buildFilterQuery()).toMatchObject({ status: '', movement: '10' });
+    wrapper.unmount();
+  });
+
+  it('waits for the saved preset before publishing the first query', async () => {
+    let resolve;
+    tabsStub.loadTabs.mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    tabsStub.updateTabFilters.mockClear();
+    const { filters, wrapper } = mountWithQuery({ accounting_testTab: '7', totalMin: '', account: '1' });
+    const ready = filters.whenFiltersReady();
+    expect(filters.filterQueryReady.value).toBe(false);
+    savedTabsRef.value = [{ id: 7, name: 'Corte', filters: { totalMin: '125000', status: ['issued'] } }];
+
+    resolve();
+    await ready;
+
+    expect(filters.currentFilters).toMatchObject({ totalMin: '', status: ['issued'] });
+    expect(tabsStub.updateTabFilters).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('restores another browser entry without saving it as a preset', async () => {
+    const { filters, wrapper } = mountWithQuery({ accounting_testTab: 'preset', status: '', account: '1' });
+    await filters.whenFiltersReady();
+
+    mockRoute.query = { accounting_testTab: 'preset', category: '8' };
+    await flushPromises();
+
+    expect(filters.currentFilters).toMatchObject({ category: [8], status: ['issued'] });
+    wrapper.unmount();
   });
 });

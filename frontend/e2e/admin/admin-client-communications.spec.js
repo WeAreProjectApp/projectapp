@@ -981,8 +981,9 @@ test.describe('Admin Client Communications', () => {
     await page.getByTestId('communication-settings-back').click();
     await openMainThread(page);
     await page.getByTestId('communication-composer-toggle').click();
+    await page.getByTestId('communication-details-toggle').click();
 
-    await expect(page.getByTestId('communication-message-channel')).toHaveValue('email');
+    await expect(page.getByRole('combobox', { name: 'Canal' })).toHaveText('Correo');
     await page.getByTestId('communication-message-subject')
       .fill('Inicio del trabajo');
     const composerContent = page.getByTestId('communication-message-content');

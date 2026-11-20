@@ -1091,7 +1091,7 @@ async function refreshView({ states = false } = {}) {
   const documentsRequest = isSearching.value
     ? runSearch(searchQuery.value.trim(), { page: docPage.value })
     : fetchBrowsePage(docPage.value);
-  const [docsResult] = await Promise.all([
+  const [docsResult, folderResult] = await Promise.all([
     documentsRequest,
     folderStore.fetchFolders(),
     documentStore.fetchCounts(),
@@ -1101,6 +1101,7 @@ async function refreshView({ states = false } = {}) {
   if (docsResult && !docsResult.success && !docsResult.cancelled) {
     loadError.value = docsResult.message || 'No se pudieron cargar los documentos.';
   }
+  return folderResult;
 }
 
 function loadDocuments() {
@@ -1156,12 +1157,12 @@ onMounted(async () => {
   await navigationStore.fetchPreference();
   filterQuery.applyQueryToStore();
   documentStore.browsePageSize = docPageSize.value;
-  await loadDocuments();
+  const folderResult = await loadDocuments();
   if (!showInactiveProjects.value && selectedProjectIsInactive.value) {
     await handleSelectNavigationEntity('all');
   }
   // La carpeta del deep link ya no existe: se cae a Todos y se refetchea.
-  if (filterQuery.validateFolder(folderStore)) {
+  if (folderResult.success && filterQuery.validateFolder(folderStore)) {
     docPage.value = 1;
     await fetchBrowsePage(1);
   }

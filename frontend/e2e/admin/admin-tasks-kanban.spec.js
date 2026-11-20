@@ -27,6 +27,45 @@ function board(overrides = {}) {
   };
 }
 
+const QA_COLUMN_IDS = {
+  todo: [1, 2, 9, 33],
+  in_progress: [3, 21, 25, 45, 49],
+  blocked: [4],
+  done: [5, 13, 17, 29, 37, 41, 53, 57],
+};
+
+function qaBoard() {
+  return Object.fromEntries(Object.entries(QA_COLUMN_IDS).map(([status, ids]) => [
+    status,
+    ids.map((id, position) => ({
+      id, position, status, title: `Tarea ficticia ${id}`, board_type: 'standard',
+      priority: 'medium', assignee: 72, assignee_name: 'Equipo QA',
+    })),
+  ]));
+}
+
+function columnIds(page, status) {
+  return page.getByTestId(`column-${status}`).getByTestId('task-card')
+    .evaluateAll(cards => cards.map(card => Number(card.dataset.taskId)));
+}
+
+async function dragTask(page, source, target, offsetY) {
+  await source.scrollIntoViewIfNeeded();
+  await target.scrollIntoViewIfNeeded();
+  const start = await source.boundingBox();
+  const end = await target.boundingBox();
+  const x = end.x + end.width / 2;
+  const y = end.y + offsetY;
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(x, y, { steps: 12 });
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.mouse.move(x + 1, y);
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.mouse.move(x + 2, y);
+  await page.mouse.up();
+}
+
 async function openTasksFromMenu(page) {
   await page.goto('/panel', { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
@@ -45,6 +84,86 @@ test.describe('Admin Kanban Tasks', () => {
       userAuth: { id: 9000, role: 'admin', is_staff: true },
     });
   });
+
+  for (const { locale, labels } of [
+    { locale: 'es-co', labels: ['Por hacer', 'En curso', 'Bloqueada', 'Completada'] },
+    { locale: 'en-us', labels: ['TO DO', 'In Progress', 'Blocked', 'Done'] },
+  ]) {
+    test(`renders localized column headings in ${locale}`, {
+      tag: [...ADMIN_KANBAN_TASKS, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      await mockApi(page, async ({ apiPath }) => {
+        if (apiPath === 'auth/check/') return authCheck;
+        if (apiPath === 'tasks/') return { status: 200, contentType: 'application/json', body: JSON.stringify(qaBoard()) };
+        return null;
+      });
+      // quality: allow-deep-link (selects the language at the Panel entry; the Kanban is reached through the sidebar)
+      await page.goto(`/${locale}/panel`, { waitUntil: 'domcontentloaded' });
+      await waitForNuxtApp(page);
+      await page.getByRole('link', { name: 'Kanban', exact: true }).click();
+
+      for (const [index, [status, ids]] of Object.entries(QA_COLUMN_IDS).entries()) {
+        const column = page.getByTestId(`column-${status}`);
+        await expect(column.getByRole('heading', { name: labels[index], exact: true })).toBeVisible();
+        await expect.poll(() => columnIds(page, status)).toEqual(ids);
+      }
+    });
+  }
+
+  for (const scenario of [
+    { name: 'persists a drop at the upper edge of another column card', status: 'in_progress',
+      before: 21, position: 1, sourceIds: [1, 2, 33], destinationIds: [3, 9, 21, 25, 45, 49] },
+    { name: 'accepts a drop in an empty column', status: 'blocked',
+      position: 0, sourceIds: [1, 2, 33], destinationIds: [9] },
+    { name: 'persists a drop within the current column', status: 'todo',
+      before: 2, position: 1, sourceIds: [1, 9, 2, 33], destinationIds: [1, 9, 2, 33] },
+    { name: 'cancels a release on a column heading', status: 'in_progress',
+      sourceIds: QA_COLUMN_IDS.todo, destinationIds: QA_COLUMN_IDS.in_progress },
+  ]) {
+    test(scenario.name, {
+      tag: [...ADMIN_KANBAN_TASKS, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      // quality: allow-no-interaction (dragTask drives the real mouse and drops the card at the measured destination)
+      const state = qaBoard();
+      if (scenario.status === 'blocked') state.blocked = [];
+      const payloads = [];
+      await page.setViewportSize(PANEL_VIEWPORTS.desktop);
+      await mockApi(page, async ({ apiPath, method, route }) => {
+        if (apiPath === 'auth/check/') return authCheck;
+        if (apiPath === 'tasks/') return { status: 200, contentType: 'application/json', body: JSON.stringify(state) };
+        if (apiPath === 'tasks/9/reorder/' && method === 'PATCH') {
+          const payload = route.request().postDataJSON();
+          payloads.push(payload);
+          const task = state.todo.find(row => row.id === 9);
+          state.todo = state.todo.filter(row => row.id !== 9);
+          state[payload.status].splice(payload.position, 0, { ...task, ...payload });
+          return { status: 200, contentType: 'application/json', body: JSON.stringify(state) };
+        }
+        return null;
+      });
+      await page.goto('/en-us/panel/tasks', { waitUntil: 'domcontentloaded' });
+      const source = page.getByTestId('column-todo').getByText('Tarea ficticia 9', { exact: true });
+      const destination = page.getByTestId(`column-${scenario.status}`);
+      const target = scenario.before ? destination.getByTestId('task-card').filter({
+        has: page.getByText(`Tarea ficticia ${scenario.before}`, { exact: true }),
+      }) : destination.getByTestId('task-drop-zone');
+      await expect(source).toBeVisible();
+
+      if (scenario.position === undefined) {
+        await dragTask(page, source, destination.getByRole('heading', { level: 2 }), 4);
+      } else {
+        const saved = page.waitForResponse('**/api/tasks/9/reorder/');
+        await dragTask(page, source, target, scenario.before ? -3 : 30);
+        await saved;
+      }
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect.poll(() => columnIds(page, 'todo')).toEqual(scenario.sourceIds);
+      await expect.poll(() => columnIds(page, scenario.status)).toEqual(scenario.destinationIds);
+      expect(payloads).toEqual(scenario.position === undefined
+        ? [] : [{ status: scenario.status, position: scenario.position }]);
+    });
+  }
 
   for (const profile of ['compact', 'desktop']) {
     for (const scenario of [

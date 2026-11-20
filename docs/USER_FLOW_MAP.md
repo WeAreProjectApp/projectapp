@@ -496,14 +496,14 @@ La revisión sigue contrato → alcance → fases de ejecución → etapas → g
 - **Role:** platform-admin / platform-client
 - **Priority:** P2
 - **Routes:** `/platform/notifications`
-- **API:** `GET /api/accounts/notifications/`, `PATCH .../mark-read/`, `POST .../mark-all-read/`, `GET .../unread-count/`
-- **Description:** In-app notification center with unread count badge in sidebar, filter tabs, mark-all-read, and click-to-navigate deep links.
+- **API:** `GET /api/accounts/notifications/`, `POST .../<id>/read/`, `POST .../mark-all-read/`, `GET .../unread-count/`
+- **Description:** Notification center with an unread count, an announced active filter, and keyboard-accessible links to project destinations.
 - **Steps:**
-  1. Sidebar badge shows unread notification count (polled every 30s).
-  2. User navigates to `/platform/notifications`.
-  3. Notification list renders with filter tabs (Todas/Sin leer/Leídas).
-  4. User clicks a notification → marked as read → navigates to relevant project module.
-  5. User clicks "Marcar todas como leídas" → all notifications marked read.
+  1. The user opens `/platform/notifications` and sees the unread count.
+  2. The list exposes the selected filter (Todas, Sin leer or Leídas).
+  3. The user tabs to a notice and presses Enter to mark it read once and open its destination.
+  4. If marking fails, the notice remains unread and focused for retry.
+  5. "Marcar todas como leídas" marks every notification as read.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/platform/platform-notifications.spec.js`
 
@@ -3250,11 +3250,13 @@ Two transitions that were previously bundled into other flows now have their own
   3. User fills in the form fields.
   4. User submits the form.
   5. API call to `POST /api/new-contact/`.
-  6. On success, user is redirected to `/contact-success`.
+  6. On success, the form locks further submissions and opens `/contact-success` in the active locale.
 - **Branches:**
   - [Branch A — Validation error] Form shows inline validation errors, user corrects and resubmits.
-  - [Branch B — API error] The localized `contact-submit-error` message renders below the submit button and the form remains editable (mechanism added 2026-08-03 — before that the store's `submitError` was never displayed). Covered by the `@outcome:error` spec.
-- **Coverage:** ✅ Covered (success + error)
+  - [Branch B — API error] The localized `contact-submit-error` message renders below the submit button and the form remains editable.
+  - [Branch C — Navigation failure] A successful submission stays locked if the router rejects the destination. The user action produces one POST.
+  - [Branch D — Locale display] The form and confirmation use the active locale in the visible copy and document language.
+- **Coverage:** `success`, `error`, `failure`, `display` in the browser spec.
 - **E2E Spec:** `e2e/public/public-contact.spec.js`
 
 ### FLOW: `public-privacy-policy`
@@ -5553,7 +5555,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 
 | Outcome | Inicio → acción → resultado observable |
 |---|---|
-| `display` | Abrir **Financiación → Otrosíes** → ver métricas, filtros y registros vigentes o el estado vacío. |
+| `display` | Abrir **Financiación → Otrosíes** → ver métricas y registros vigentes o el estado vacío. Usar búsqueda y los desplegables Estado, Modalidad y Alcance. Pulsar **Filtrar** para aplicar la selección. |
 | `success` | Pulsar **Nuevo otrosí** → seleccionar un cliente → verificar su identidad precargada → completar contrato, alcance, monto elegible y abono inicial → crear → abrir el borrador con el calendario de cuotas definido por la política vigente. |
 | `error` | Enviar datos incompletos o inválidos → el API y el formulario señalan los campos → los datos ya escritos permanecen disponibles. |
 | `failure` | Fallar la carga del registro → mostrar un estado de error explícito sin presentar una lista vacía engañosa. |
@@ -6451,7 +6453,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `platform-layout-title-mapping` | platform | P3 | display | 1 |
 | `platform-legacy-route-redirects` | platform | P2 | success | 1 |
 | `platform-login` | platform | P1 | success,error,failure | 1 |
-| `platform-notifications` | platform | P2 | success,display | 1 |
+| `platform-notifications` | platform | P2 | success,display,failure | 1 |
 | `platform-password-reset` | platform | P1 | success,error | 1 |
 | `platform-profile-avatar-picker` | platform | P2 | success | 1 |
 | `platform-profile-edit` | platform | P2 | success,error,display | 1 |
@@ -6553,7 +6555,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `public-consulting-pdf` | public | P2 | success,failure | — |
 | `public-consulting-share` | public | P2 | success,failure | — |
 | `public-consulting-theme` | public | P2 | success | — |
-| `public-contact-submit` | public | P1 | success,error | 1 |
+| `public-contact-submit` | public | P1 | success,error,failure,display | 1 |
 | `public-financing-explainer` | public | P2 | display,success,failure | 4 |
 | `public-financing-guide` | public | P2 | success,display | 2 |
 | `public-financing-language` | public | P2 | success | — |
@@ -6806,7 +6808,7 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
 - **Priority:** P2
 - **Routes:** `/panel/accounting/pocket`
 - **Copiar saldo:** El botón junto a Saldo del bolsillo copia el importe total con el formato mostrado, símbolo y separadores colombianos. Los filtros de movimientos no cambian el valor copiado. La confirmación o el error aparece junto al botón; durante la carga o si no se obtuvo el total, la acción permanece deshabilitada.
-- **Description:** ProjectApp pocket ledger with balance card and running-balance column (default view newest-first; the balance is computed chronologically). The pocket is the money entry point (Jul 2026): creating a movement also creates its linked income (IN → liquid/pocket) or expense (OUT). A new movement opens on Egreso, the common case, with every direction-dependent field already in its egreso variant; editing keeps the direction the record has. For IN the "Contabilidad" segmented is company-only; for OUT it is relabeled "Atribuir a" (Empresa/Gustavo/Carlos) because pocket money is company money: every OUT mirrors a company-ledger expense that counts against liquid utility — Empresa splits 50/50, a partner option registers a draw fully assigned to that partner (category personal). Linked movements open the edit modal with the direction locked and the attribution prefilled (derived from the split); edits mirror into the linked record and deleting either side cascades to the other (the delete confirm warns about the cascade). Unlinked historical movements keep plain CRUD and never gain a mirror. The row menu also offers **Ver nota** when the movement has a note.
+- **Description:** ProjectApp pocket ledger with balance card and running-balance column (default view newest-first; the balance is computed chronologically). The pocket is the money entry point (Jul 2026): creating a movement also creates its linked income (IN → liquid/pocket) or expense (OUT). A new movement opens on Egreso, the common case, with every direction-dependent field already in its egreso variant; editing keeps the direction the record has. For IN the "Contabilidad" segmented is company-only; for OUT it is relabeled "Atribuir a" (Empresa/Gustavo/Carlos) because pocket money is company money: every OUT mirrors a company-ledger expense that counts against liquid utility — Empresa splits 50/50, a partner option registers a draw fully assigned to that partner (category personal). Linked movements open the edit modal with the direction locked and the attribution prefilled (derived from the split); edits mirror into the linked record and deleting either side cascades to the other (the delete confirm warns about the cascade). Unlinked historical movements keep plain CRUD and never gain a mirror. The row menu also offers **Ver nota** when the movement has a note. Recargar un movimiento y cerrar su detalle conserva la consulta y el neto filtrado.
   Desde ago-2026 el panel de filtros expone todos los campos que el formulario captura (el criterio de *insumo*): además de Fecha, Tipo y Valor trae **Atribuir a** (multi Empresa/Gustavo/Carlos sobre el `linked_ledger` derivado del espejo) y **Vínculo** (Todos/Vinculados/Sin vincular sobre `is_auto_managed`, que es la forma de encontrar los movimientos que quedaron sin su registro espejo); los campos de texto libre entran por el buscador, que ahora cubre `notes` además de `concept`. Los dos filtros nuevos existen también en el servidor (un knob `q_filters` en la capa compartida), así que el export CSV y la MCP `list_pocket` cortan las mismas filas que la tabla, y el export ganó las columnas *Atribución* y *Vinculado*. Como el saldo es una acumulación cronológica, se calcula **después** de filtrar: con filtros activos la columna se relabela **Acumulado** y suma sólo las filas visibles, el subtítulo lo aclara, y la tarjeta de saldo —que el servidor calcula siempre sobre todos los movimientos— se rotula "(total, no refleja los filtros)" y suma una línea "N movimientos filtrados · neto X". La tira de pestañas (`ProposalFilterTabs`, el estándar PA-44) trae seis sembradas: Entradas, Salidas, Gustavo, Carlos, Empresa y Sin vincular (la migración `accounts/0050` las backfillea para los usuarios existentes), cada una con su conteo entre paréntesis —el (0) honesto incluido— calculado en el browser con `countTabs`, ya que el dataset completo está en el store; lo que no cabe en la tira colapsa en el menú "+N".
   El contrato responsivo conserva el significado del libro: por debajo de 1024 px el saldo corrido se mueve debajo del valor de cada movimiento en vez de desaparecer; los tabs del módulo y los filtros guardados pasan a selectores. Desde 1024 px regresan las tiras y la columna independiente de saldo. La aceptación automática fija los cinco viewports de referencia (412, 835, 1195, 1440 y 2560 px), comprueba que no haya desborde horizontal y limita el shell general a 1400 px en monitor grande; la certificación física se registra por separado.
   La acción inicial de cada movimiento (tres puntos, 44×44, en tabla y en tarjetas móviles) abre un menú con **Detalle e historial**, **Editar** y **Eliminar**; la columna de acciones mide 56 px y sólo aloja ese botón, así que el detalle con su historial de cambios vive dentro del menú.
@@ -6821,7 +6823,7 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
 - **Role:** superuser admin
 - **Priority:** P2
 - **Routes:** `/panel/accounting/recurring`
-- **Description:** Recurring operational costs remain normalized to a monthly denominator, but management now happens from each row. **Vigentes** and **Archivados** are separate scopes. In the current scope an inactive payment remains visible for administration but contributes $0 to the monthly COP/USD KPIs, group subtotals, participation percentages and charts; archived rows also stay out of those budget surfaces and out of upcoming-charge notices. The page states that rule next to the scope switch. Both grouped and classic views place the row's leading three-dots action before drag/data columns: detail and history; edit; duplicate; activate/deactivate; mute/reactivate reminders; and archive. Duplicate first GETs a non-persisted draft and opens the ordinary create form with name, price, currency, frequency, method, category and billing day inherited; reminder cadence, notes and archive state are cleared, and the reference date is recalculated from the next occurrence rather than copied. Archive deactivates without deleting and moves the row to Archivados; restore returns it as inactive; permanent deletion appears only there and requires typing `ELIMINAR`. Checkboxes enable atomic bulk activate, deactivate and archive; duplicate stays one-at-a-time. The editable category catalog, drag ordering, custom frequencies, currency conversion, classic view and category chart drill-down remain intact. Charts always use the active budget base and no longer offer an inactive-row toggle. Registering the real expense/pocket movement and a charge-history browser are explicitly deferred to the separate feature that makes a recurring definition an accounting origin. The row menu also offers **Ver nota** right after Detalle e historial when the payment has a note.
+- **Description:** Recurring operational costs remain normalized to a monthly denominator, but management now happens from each row. **Vigentes** and **Archivados** are separate scopes. In the current scope an inactive payment remains visible for administration but contributes $0 to the monthly COP/USD KPIs, group subtotals, participation percentages and charts; archived rows also stay out of those budget surfaces and out of upcoming-charge notices. The page states that rule next to the scope switch. Both grouped and classic views place the row's leading three-dots action before drag/data columns: detail and history; edit; duplicate; activate/deactivate; mute/reactivate reminders; and archive. Duplicate first GETs a non-persisted draft and opens the ordinary create form with name, price, currency, frequency, method, category and billing day inherited; reminder cadence, notes and archive state are cleared, and the reference date is recalculated from the next occurrence rather than copied. Archive deactivates without deleting and moves the row to Archivados; restore returns it as inactive; permanent deletion appears only there and requires typing `ELIMINAR`. Checkboxes enable atomic bulk activate, deactivate and archive; duplicate stays one-at-a-time. The editable category catalog, drag ordering, custom frequencies, currency conversion, classic view and category chart drill-down remain intact. Charts always use the active budget base and no longer offer an inactive-row toggle. Registering the real expense/pocket movement and a charge-history browser are explicitly deferred to the separate feature that makes a recurring definition an accounting origin. The row menu also offers **Ver nota** right after Detalle e historial when the payment has a note. El detalle de un recurrente se recupera con los filtros y el ámbito Vigentes o Archivados.
 
 #### Interaction matrix
 
@@ -6947,7 +6949,7 @@ El aviso interno de ingreso completo conserva cuerpo, objetivo y fallo en Histor
 - **Role:** superuser admin
 - **Priority:** P3
 - **Routes:** `/panel/accounting/ads`
-- **Description:** Advertising spend log with a running accumulated column computed over the full history, platform/card filters and modal CRUD. Row actions live behind the leading three-dots button (first column, no visible header): its menu offers **Detalle e historial**, **Ver nota** when the record has a note, **Editar** and **Eliminar** (with confirmation).
+- **Description:** Advertising spend log with a running accumulated column computed over the full history, platform/card filters and modal CRUD. Row actions live behind the leading three-dots button (first column, no visible header): its menu offers **Detalle e historial**, **Ver nota** when the record has a note, **Editar** and **Eliminar** (with confirmation). El enlace de un gasto conserva los filtros y recupera su detalle e historial al recargar.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-ads-history-settings.spec.js`
 
@@ -7031,7 +7033,7 @@ El filtro Documento vinculado muestra decisiones explícitas y su conteo dentro 
 - **Role:** superuser admin
 - **Priority:** P1
 - **Routes:** `/panel/accounting/collections`
-- **Description:** Inspecting one cuenta de cobro without leaving the tab. The row menu's "Detalle e historial" opens a modal keyed on the **cuenta**, not on the income — a cuenta raised from a hosting has no income at all (`hosting_billing_service` sets `hosting_record` only), and those rows previously had no inspection action of any kind. **Resumen** shows cliente and proyecto as separate facts, the concept and its items, and the linked income with its amounts, status (`IncomePaymentStateCell`), partner split and **historial de liquidación** (liquid children + linked deductions, from `GET accounting/incomes/<id>/detail/` — before that endpoint the children were unreachable from the panel). When the frozen `customer_name` differs from the linked client the modal says so outright, naming both, since issued documents are never rewritten. **Documento** embeds the PDF via `?inline=1` so previewing never downloads. "Ver en Ingresos" is the optional exit and passes `accounting_incomeTab=all`, because Ingresos otherwise lands on its "Solo esperados" builtin and filters the focused row out of its own list. (Ago 2026) On a cuenta with a zero-day term the "Emisión / Vence" cell shrinks to **"Emisión"** over a single date: keeping the paired label would have hung it over `formatDate`'s em-dash fallback, which reads as a missing datum rather than an absent plazo. (Ago 2026) The Documento tab probes the inline PDF URL before embedding it — spinner, then the viewer, and when the document cannot render, a message in the app's own words pointing at "Descargar PDF" instead of the browser's refused-connection page.
+- **Description:** Inspecting one cuenta de cobro without leaving the tab. The row menu's "Detalle e historial" opens a modal keyed on the **cuenta**, not on the income — a cuenta raised from a hosting has no income at all (`hosting_billing_service` sets `hosting_record` only), and those rows previously had no inspection action of any kind. **Resumen** shows cliente and proyecto as separate facts, the concept and its items, and the linked income with its amounts, status (`IncomePaymentStateCell`), partner split and **historial de liquidación** (liquid children + linked deductions, from `GET accounting/incomes/<id>/detail/` — before that endpoint the children were unreachable from the panel). When the frozen `customer_name` differs from the linked client the modal says so outright, naming both, since issued documents are never rewritten. **Documento** embeds the PDF via `?inline=1` so previewing never downloads. "Ver en Ingresos" is the optional exit and passes `accounting_incomeTab=all`, because Ingresos otherwise lands on its "Solo esperados" builtin and filters the focused row out of its own list. (Ago 2026) On a cuenta with a zero-day term the "Emisión / Vence" cell shrinks to **"Emisión"** over a single date: keeping the paired label would have hung it over `formatDate`'s em-dash fallback, which reads as a missing datum rather than an absent plazo. (Ago 2026) The Documento tab probes the inline PDF URL before embedding it — spinner, then the viewer, and when the document cannot render, a message in the app's own words pointing at "Descargar PDF" instead of the browser's refused-connection page. Al recargar o cerrar un borrador se conserva el rango Total del listado.
 - **Coverage:** ✅ Covered (columns separated, detail + settlement history, inline document embed, the exit landing on a non-filtering tab)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`
 
@@ -7142,7 +7144,7 @@ La preparación permite activar «Dejar documento pendiente»: conserva sólo el
 - **Role:** superuser admin
 - **Priority:** P2
 - **Routes:** `/panel/accounting/hostings`
-- **Description:** Cycle payment history per hosting (row menu «Ciclos de pago» → `HostingCyclesModal`): historical modality/amount snapshots remain immutable, while the register form offers quarterly, semiannual and every-9-month cycles and prefills the current contract amount/modality. "Extender vigencia" advances one current modality period. `total_paid`/`cycles_count` recompute from history; deleting a cycle recalculates but never rolls back `valid_to`.
+- **Description:** Cycle payment history per hosting (row menu «Ciclos de pago» → `HostingCyclesModal`): historical modality/amount snapshots remain immutable, while the register form offers quarterly, semiannual and every-9-month cycles and prefills the current contract amount/modality. "Extender vigencia" advances one current modality period. `total_paid`/`cycles_count` recompute from history; deleting a cycle recalculates but never rolls back `valid_to`. La dirección recupera el hosting elegido y conserva el filtro de modalidad al cerrar los ciclos.
 - **Coverage:** ✅ Covered (backfill badge history, register payment with advance_validity, delete with confirm)
 - **E2E Spec:** `e2e/admin/admin-accounting-hosting-billing-cycles.spec.js`
 
@@ -8415,7 +8417,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Role:** staff admin
 - **Priority:** P1
 - **Routes:** `/panel/procurement`
-- **Description:** Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible.
+- **Description:** Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible. Al recargar, el formulario recupera el estado y la nota del staff de la sesión. Otro staff ve el formulario inicial y puede consultar el seguimiento del equipo.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `frontend/e2e/admin/admin-procurement.spec.js` (validado en navegador)
 
@@ -8481,7 +8483,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Route:** `/panel/requirement-calculator`
 - **Description:** El administrador consulta revisiones paginadas, carga una anterior en el editor y la publica como una nueva revisión inmutable. Si falla la carga o publicación, no sustituye silenciosamente la definición vigente.
 - **Steps:** Abrir Versiones → consultar motivo y fecha → restaurar → comprobar el editor → confirmar Guardar.
-- **Branches:** Una falla al cargar conserva la definición actual y muestra el error; el pasado no se sobrescribe.
+- **Branches:** Versiones muestra un aviso si todavía no hay publicaciones. Con más de 20 revisiones aparecen los controles de paginación. Una falla al cargar muestra el error y conserva la definición actual y las revisiones históricas.
 - **Coverage:** ✅ Covered — `display`, `success`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`, incluida la publicación confirmada como nueva revisión.
 
 ### FLOW: `admin-project-requirement-calculator-draft`
@@ -8948,7 +8950,7 @@ Cobertura: `frontend/e2e/admin/admin-document-move-folder.spec.js`.
   3. Elige un proyecto o «Sin proyecto» y el listado consulta únicamente esa asociación.
   4. Dentro de un proyecto, abre una subcarpeta y luego un documento; al regresar desde el editor recupera la subcarpeta con el proyecto todavía seleccionado.
   5. Cambia a Clientes, elige una persona o «Sin cliente» y consulta su inventario.
-  6. Sale del módulo y vuelve: el último modo elegido reaparece.
+  6. Recarga o abre el enlace guardado de Clientes: recupera el cliente, la carpeta y el foco del documento. Al entrar sin enlace, reaparece el último modo elegido.
   7. Abre una carpeta propia; la navegación limpia cualquier proyecto o cliente previamente seleccionado.
 - **Branches:**
   - [Branch A — Display] Cada entidad declara conteos separados de carpetas y documentos; los proyectos no operativos están ocultos al entrar y, mientras su control excluyente está encendido, son los únicos que se listan. Los clientes archivados tienen su propio grupo secundario, y desde el 31-ago-2026 el mismo interruptor excluyente lo gobierna: en modo cliente se rotula «Ver clientes archivados» y, apagado, los archivados no se listan.

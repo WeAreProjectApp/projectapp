@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Configurar valores globales, excepciones por cliente, herencia, persistencia y conflictos sin conceder permisos. Incluye búsqueda dinámica, procedencia, auditoría y conservación del valor mostrado ante conflictos o errores. La carga inicial fallida conserva la navegación y permite recargar la configuración.",
+  "description": "Configurar valores globales, excepciones por cliente, herencia, persistencia y conflictos sin conceder permisos. Incluye búsqueda dinámica, procedencia, auditoría y conservación del valor mostrado ante conflictos o errores. La carga inicial fallida conserva la navegación y permite recargar la configuración. El selector permite encontrar al mismo cliente por su nombre completo o por su empresa.",
   "outcomes": [
     "success",
     "error",

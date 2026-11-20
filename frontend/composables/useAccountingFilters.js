@@ -1,7 +1,8 @@
-import { computed, getCurrentScope, onMounted, onScopeDispose, reactive, ref, toRaw, watch } from 'vue';
+import { computed, getCurrentScope, nextTick, onMounted, onScopeDispose, reactive, ref, toRaw, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useSavedFilterTabs } from '~/composables/useSavedFilterTabs';
+import { queryId } from '~/utils/accountingFilterQuery';
 
 /**
  * Generalization of useClientFilters into a factory reusable by the
@@ -224,6 +225,10 @@ export function useAccountingFilters({
   // be bookmarked and shared. Off by default: the views that filter in the
   // browser already restore their state from the tab alone.
   syncFiltersToUrl = false,
+  // Restore the whole query, including explicit clears and legacy seeds, before
+  // the listing loads. Existing syncFiltersToUrl clients keep their own policy.
+  restoreUrlState = false,
+  urlFilterCodecs = {},
   // With two instances on one page (Historial's two subtabs), only the one on
   // screen owns the query string — otherwise both would write the keys they
   // share and overwrite each other.
@@ -250,6 +255,14 @@ export function useAccountingFilters({
 
   const DEFAULT_FILTERS = Object.freeze({ search: '', ...structuredClone(defaults) });
   const queryKeys = urlFilterKeys || Object.keys(DEFAULT_FILTERS);
+  const restoreQuery = syncFiltersToUrl && restoreUrlState;
+  const filterQueryReady = ref(!restoreQuery);
+  const clearedUrlKeys = new Set();
+  let applyingQuery = false;
+  let scopeActive = true;
+  let queryGeneration = 0;
+  let tabLoad;
+  let initialQuery;
 
   // ── Params de deep link ────────────────────────────────────────────────────
   // Se leían sueltos con `route.query.x` en el `onMounted` de cada página y no
@@ -322,11 +335,18 @@ export function useAccountingFilters({
   function filtersFromQuery(query) {
     const parsed = {};
     for (const [key, fallback] of Object.entries(DEFAULT_FILTERS)) {
-      const raw = Array.isArray(query?.[key]) ? query[key][0] : query?.[key];
-      if (raw === undefined || raw === null || raw === '') continue;
-      parsed[key] = Array.isArray(fallback)
-        ? String(raw).split(',').filter(Boolean)
-        : String(raw);
+      const raw = query?.[key];
+      if (restoreQuery && raw === '') {
+        parsed[key] = structuredClone(fallback);
+        continue;
+      }
+      const codec = restoreQuery ? urlFilterCodecs[key] : undefined;
+      const single = Array.isArray(raw) ? raw[0] : raw;
+      if (single === undefined || single === null || single === '') continue;
+      const value = codec ? codec.read(raw) : Array.isArray(fallback)
+        ? String(single).split(',').filter(Boolean)
+        : String(single);
+      if (value !== undefined) parsed[key] = value;
     }
     return parsed;
   }
@@ -336,8 +356,12 @@ export function useAccountingFilters({
     const serialized = {};
     for (const [key, fallback] of Object.entries(DEFAULT_FILTERS)) {
       const value = currentFilters[key];
-      if (!isValueActive(value, fallback)) continue;
-      serialized[key] = Array.isArray(value) ? value.join(',') : String(value);
+      if (!isValueActive(value, fallback)) {
+        if (restoreQuery && clearedUrlKeys.has(key)) serialized[key] = '';
+        continue;
+      }
+      const codec = restoreQuery ? urlFilterCodecs[key] : undefined;
+      serialized[key] = codec ? codec.write(value) : Array.isArray(value) ? value.join(',') : String(value);
     }
     return serialized;
   }
@@ -356,6 +380,7 @@ export function useAccountingFilters({
   // Same reason, for a shared link: the filters have to be in place before
   // the page's first fetch, not after it.
   if (syncFiltersToUrl && isUrlOwner()) {
+    if (restoreQuery) Object.assign(currentFilters, filtersFromLegacyQuery(route?.query));
     Object.assign(currentFilters, filtersFromQuery(route?.query));
   }
   // Read after the landing tab, which stamps its own module: an explicit
@@ -368,7 +393,7 @@ export function useAccountingFilters({
   // Un param que dispara una acción de una sola vez (destacar una fila) agota
   // su contexto al montar: dejarlo puesto re-enciende el destello en cada F5.
   onMounted(() => {
-    dropParams(ephemeral.filter((p) => !p.boundTo).map((p) => p.name));
+    if (!restoreQuery) dropParams(ephemeral.filter((p) => !p.boundTo).map((p) => p.name));
   });
 
   // El que siembra un FILTRO se queda mientras ese filtro siga puesto — ahí el
@@ -376,7 +401,7 @@ export function useAccountingFilters({
   // en cuanto el filtro cambia o se limpia, que es lo que antes no pasaba
   // nunca: la URL seguía prometiendo un filtro ya apagado.
   ephemeral.filter((p) => p.boundTo).forEach(({ name, boundTo }) => {
-    if (seededQuery[name] === undefined) return;
+    if (restoreQuery || seededQuery[name] === undefined) return;
     watch(() => currentFilters[boundTo], (value) => {
       const stillSeeded = Array.isArray(value)
         && value.length === 1
@@ -492,12 +517,83 @@ export function useAccountingFilters({
 
   if (getCurrentScope()) {
     onScopeDispose(() => {
+      scopeActive = false;
+      queryGeneration += 1;
       if (searchTimer) clearTimeout(searchTimer);
     });
   }
 
   function numericTabId(value) {
     return typeof value === 'number' ? value : Number(value);
+  }
+
+  function filtersFromLegacyQuery(query) {
+    const filters = {};
+    for (const { name, boundTo } of ephemeral) {
+      const id = boundTo && queryId(query?.[name]);
+      if (id) filters[boundTo] = [id];
+    }
+    return filters;
+  }
+
+  function tabById(id) {
+    return builtinById.get(String(id)) || savedTabs.value.find((tab) => String(tab.id) === String(id));
+  }
+
+  async function applyQuery(query) {
+    const generation = ++queryGeneration;
+    const tabId = query[tabQueryParam] || defaultTabId;
+    if (queryId(String(tabId))) await tabLoad;
+    if (!scopeActive || generation !== queryGeneration || !isUrlOwner()) return;
+
+    const tab = tabById(tabId);
+    const explicit = filtersFromQuery(query);
+    applyingQuery = true;
+    clearedUrlKeys.clear();
+    for (const [key, value] of Object.entries(explicit)) {
+      if (!isValueActive(value, DEFAULT_FILTERS[key])) clearedUrlKeys.add(key);
+    }
+    const legacy = filtersFromLegacyQuery(query);
+    Object.assign(currentFilters, freshFilters(), readStoredFilters(tab?.filters), legacy, explicit);
+    activeTabId.value = tab?.id ?? defaultTabId;
+    if (searchTimer) clearTimeout(searchTimer);
+    searchInput.value = currentFilters.search;
+    if (Object.keys(explicit).length || Object.keys(legacy).length
+      || (tab && !builtinById.has(String(tab.id)))) isFilterPanelOpen.value = true;
+    await nextTick();
+    if (generation === queryGeneration) applyingQuery = false;
+  }
+
+  function whenFiltersReady() {
+    if (!restoreQuery) return Promise.resolve(true);
+    initialQuery ??= (async () => {
+      tabLoad = tabs.loadTabs().catch(() => []);
+      let query;
+      do {
+        query = route?.query;
+        await applyQuery(query || {});
+      } while (scopeActive && query !== route?.query);
+
+      if (!scopeActive) return false;
+      filterQueryReady.value = true;
+      syncUrl();
+      return true;
+    })();
+    return initialQuery;
+  }
+
+  function rememberClearedFilters() {
+    const inherited = {
+      ...readStoredFilters(tabById(activeTabId.value)?.filters),
+      ...filtersFromLegacyQuery(route?.query),
+    };
+    for (const [key, inheritedValue] of Object.entries(inherited)) {
+      if (key in DEFAULT_FILTERS && isValueActive(inheritedValue, DEFAULT_FILTERS[key])
+        && !isValueActive(currentFilters[key], DEFAULT_FILTERS[key])) clearedUrlKeys.add(key);
+    }
+    for (const key of clearedUrlKeys) {
+      if (isValueActive(currentFilters[key], DEFAULT_FILTERS[key])) clearedUrlKeys.delete(key);
+    }
   }
 
   /**
@@ -511,9 +607,8 @@ export function useAccountingFilters({
    * including 'all'. Omitting it there would make a reload of the cleared
    * view snap back to the default tab. The module param follows the same rule.
    */
-  function syncUrl() {
-    if (!route || !router) return;
-    const query = { ...route.query };
+  function buildFilterQuery(base = route?.query) {
+    const query = { ...base };
     if (String(activeTabId.value) === String(defaultTabId)) {
       delete query[tabQueryParam];
     } else {
@@ -530,7 +625,39 @@ export function useAccountingFilters({
         query[moduleQueryParam] = String(activeModule.value);
       }
     }
+    if (restoreQuery && isUrlOwner()) {
+      for (const { name, boundTo } of ephemeral) {
+        if (!(name in query)) continue;
+        const id = boundTo && queryId(query[name]);
+        const values = boundTo && currentFilters[boundTo];
+        if (id && values?.length === 1 && values[0] === id) {
+          // Retain the existing link shape when the singular key already
+          // describes the selection.
+          delete query[boundTo];
+        } else {
+          delete query[name];
+        }
+      }
+    }
+    return query;
+  }
+
+  const ownedKeys = [tabQueryParam, ...queryKeys, ...ephemeral.map(({ name }) => name)];
+  const querySignature = (query) => JSON.stringify(ownedKeys.map((key) => query?.[key]));
+  function syncUrl() {
+    if (!scopeActive || !route || !router) return;
+    if (restoreQuery && (applyingQuery || !filterQueryReady.value || !isUrlOwner())) return;
+    const query = buildFilterQuery();
+    if (restoreQuery && querySignature(query) === querySignature(route.query)) return;
     router.replace({ query });
+  }
+
+  if (restoreQuery) {
+    watch(() => querySignature(route?.query), async (signature) => {
+      if (!filterQueryReady.value || !isUrlOwner() || signature === querySignature(buildFilterQuery())) return;
+      await applyQuery(route.query);
+      syncUrl();
+    });
   }
 
   watch(activeTabId, syncUrl);
@@ -539,6 +666,10 @@ export function useAccountingFilters({
   watch(
     currentFilters,
     () => {
+      if (restoreQuery) {
+        if (applyingQuery || !filterQueryReady.value) return;
+        rememberClearedFilters();
+      }
       if (
         activeTabId.value !== 'all'
         && !builtinById.has(String(activeTabId.value))
@@ -551,6 +682,10 @@ export function useAccountingFilters({
   );
 
   onMounted(async () => {
+    if (restoreQuery) {
+      await whenFiltersReady();
+      return;
+    }
     try {
       await tabs.loadTabs();
     } catch {
@@ -643,6 +778,7 @@ export function useAccountingFilters({
   }
 
   function resetFilters() {
+    clearedUrlKeys.clear();
     Object.assign(currentFilters, freshFiltersKeepingModule(currentFilters));
     activeTabId.value = 'all';
   }
@@ -656,6 +792,7 @@ export function useAccountingFilters({
   }
 
   function selectTab(tabId) {
+    clearedUrlKeys.clear();
     const builtin = builtinById.get(String(tabId));
     if (builtin) {
       activeTabId.value = builtin.id;
@@ -693,6 +830,7 @@ export function useAccountingFilters({
   async function restoreTab(tabId) {
     const updated = await tabs.restoreTab(numericTabId(tabId));
     if (updated && String(activeTabId.value) === String(tabId)) {
+      clearedUrlKeys.clear();
       loadTabFilters(currentFilters, updated);
     }
     return updated;
@@ -734,5 +872,8 @@ export function useAccountingFilters({
     // re-claims the query string.
     syncUrl,
     filtersFromQuery,
+    filterQueryReady,
+    whenFiltersReady,
+    buildFilterQuery,
   };
 }

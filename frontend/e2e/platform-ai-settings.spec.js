@@ -91,6 +91,34 @@ async function openSettingsFromPanel(page) {
 test.describe('Platform AI settings', () => {
   test.setTimeout(60_000)
 
+  for (const { locale, heading, precedence, availability } of [
+    {
+      locale: 'es-co',
+      heading: 'Controles globales',
+      precedence: 'excepción explícita del cliente, luego el valor global guardado y, si falta, el valor inicial del catálogo',
+      availability: 'la cuenta debe ser elegible, el proveedor correspondiente debe estar configurado y la operación debe estar autorizada',
+    },
+    {
+      locale: 'en-us',
+      heading: 'Global controls',
+      precedence: 'explicit client override first, then the saved global value, then the catalog default',
+      availability: 'an eligible account, a configured provider for the feature, and permission for the operation',
+    },
+  ]) {
+    test(`explains AI availability in ${locale}`, {
+      tag: ['@flow:panel-platform-ai-settings', '@outcome:display'],
+    }, async ({ page }) => {
+      // quality: allow-no-interaction (display — verifies the rule and prerequisites shown on the activation tab)
+      // quality: allow-deep-link (the language prefix is the input of this bilingual copy check)
+      await setup(page)
+      await page.goto(`/${locale}/panel/platform/ai`, { waitUntil: 'domcontentloaded' })
+
+      const controls = page.locator('section').filter({ has: page.getByRole('heading', { name: heading, exact: true }) })
+      await expect(controls).toContainText(precedence)
+      await expect(controls).toContainText(availability)
+    })
+  }
+
   // Catches the regression where an apparently successful global switch did not change the server configuration.
   test('persists the global request limit', {
     tag: ['@flow:panel-platform-ai-settings', '@outcome:success'],

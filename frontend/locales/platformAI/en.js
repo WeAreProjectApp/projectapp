@@ -17,7 +17,7 @@ export default {
   functions: { voice_report: 'Reports', chatbot: 'Chatbot', all: 'All' },
   fields: { title: 'Title', description: 'Description', expected_behavior: 'Expected behavior', actual_behavior: 'Actual behavior', module_or_screen: 'Screen or module', message: 'Observation', steps_to_reproduce: 'Steps to reproduce (one per line)' },
   save: 'Save changes', saved: 'Data updated.', reload: 'Refresh', loading: 'Loading…',
-  global: 'Global controls', switchHint: 'Global off takes precedence. New clients start with both features off.',
+  global: 'Global controls', switchHint: 'Each feature uses the explicit client override first, then the saved global value, then the catalog default. Using AI or audio also requires an eligible account, a configured provider for the feature, and permission for the operation.',
   clients: 'Per client', search: 'Search clients', noClients: 'No clients match this search.', previous: 'Previous', next: 'Next', firstPage: 'This is the first page.', lastPage: 'No more results.',
   providerHint: 'Transcription uses OpenAI even when Haiku writes the report. Errors never switch the provider automatically. Jev belongs to the chatbot.',
   apiKey: 'New API key', keyConfigured: 'Key saved', keyMissing: 'No key', notTested: 'Not tested', keyRequired: 'Save a key to continue.', saveKey: 'Save or replace key', testKey: 'Test connection', deleteKey: 'Delete key',

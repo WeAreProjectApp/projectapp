@@ -27,6 +27,10 @@ const message = ref('')
 const modal = ref('')
 const form = ref({})
 const formId = ref(null)
+const recordTitle = computed(() => {
+  if (modal.value !== 'alert') return tr('saveSearch')
+  return tr(formId.value === null ? 'newAlert' : 'editAlert')
+})
 const deleteTarget = ref(null)
 const retryTarget = ref(null)
 const sentContent = ref(null)
@@ -184,7 +188,7 @@ watch(() => route.query.tab, value => { if (tabs.includes(String(value))) tab.va
       <BaseButton class="mb-4" data-testid="procurement-new-alert" @click="editAlert()"><BaseActionIcon action="create" />{{ tr('newAlert') }}</BaseButton>
       <p v-if="!store.alerts.length">{{ tr('empty') }}</p>
       <ul class="space-y-3"><li v-for="alert in store.alerts" :key="alert.id" class="rounded-xl border border-input-border p-4">
-        <h2 class="font-medium text-text-default">{{ alert.name }}</h2><p class="break-words text-sm text-text-subtle">{{ alert.recipients.join(', ') }} · {{ tr(alert.frequency) }} · {{ alert.is_active ? tr('active') : tr('disable') }}</p>
+        <h2 class="font-medium text-text-default">{{ alert.name }}</h2><p class="break-words text-sm text-text-subtle">{{ alert.recipients.join(', ') }} · {{ tr(alert.frequency) }} · {{ tr(alert.is_active ? 'activeStatus' : 'inactiveStatus') }}</p>
         <div class="mt-3 flex flex-wrap gap-2"><BaseButton variant="secondary" @click="editAlert(alert)"><BaseActionIcon action="edit" />{{ tr('edit') }}</BaseButton><BaseButton variant="secondary" @click="applySearch(alert)"><BaseActionIcon action="search" />{{ tr('preview') }}</BaseButton><BaseButton variant="secondary" :loading="store.saving" @click="attempt(() => store.saveAlert({ is_active: !alert.is_active }, alert.id), tr('alertUpdated'))">{{ alert.is_active ? tr('disable') : tr('enable') }}</BaseButton></div>
       </li></ul>
     </template>
@@ -205,9 +209,9 @@ watch(() => route.query.tab, value => { if (tabs.includes(String(value))) tab.va
       <ul class="space-y-3"><li v-for="delivery in store.deliveries" :key="delivery.id" class="rounded-xl border border-input-border p-4"><h2 class="break-words font-medium">{{ delivery.recipient }}</h2><p class="text-sm text-text-subtle">{{ tr(delivery.status) }} · {{ tr(delivery.frequency) }} · {{ date(delivery.created_at) }} · {{ tr('attempts') }}: {{ delivery.attempts }}</p><p v-if="delivery.error" class="mt-2 text-sm text-text-default">{{ delivery.error }}</p><div class="mt-3 flex flex-wrap gap-2"><BaseButton v-if="['failed', 'uncertain'].includes(delivery.status)" variant="secondary" @click="retryTarget = delivery"><BaseActionIcon action="retry" />{{ tr('retry') }}</BaseButton><BaseButton v-if="delivery.opportunity_count || delivery.snapshot?.opportunities?.length" variant="secondary" @click="openSent(delivery)"><BaseActionIcon action="search" />{{ tr('viewSent') }}</BaseButton></div></li></ul>
       <div class="mt-4 flex gap-2"><BaseButton v-if="deliveryPage > 1" variant="secondary" @click="deliveryPage--; refresh()">{{ tr('previous') }}</BaseButton><BaseButton v-if="deliveryPage * 25 < store.deliveryCount" variant="secondary" @click="deliveryPage++; refresh()">{{ tr('next') }}</BaseButton></div>
     </template>
-    <BaseModal :model-value="Boolean(modal)" kind="form-wide" padding="md" :close-on-backdrop="!store.saving" :close-on-esc="!store.saving" @update:model-value="value => { if (!value) modal = '' }">
+    <BaseModal :model-value="Boolean(modal)" title-id="procurement-record-title" kind="form-wide" padding="md" :close-on-backdrop="!store.saving" :close-on-esc="!store.saving" @update:model-value="value => { if (!value) modal = '' }">
       <form class="space-y-4" data-testid="procurement-record-form" @submit.prevent="saveForm">
-        <h2 class="text-xl text-text-default">{{ tr(modal === 'alert' ? 'newAlert' : 'saveSearch') }}</h2>
+        <h2 id="procurement-record-title" class="text-xl text-text-default">{{ recordTitle }}</h2>
         <p v-if="error" role="alert" class="text-sm text-text-default">{{ error }}</p>
         <BaseFormField :label="tr('name')" for="record-name"><BaseInput id="record-name" v-model="form.name" required maxlength="150" /></BaseFormField>
         <ProcurementFilters v-model="form.filters" />

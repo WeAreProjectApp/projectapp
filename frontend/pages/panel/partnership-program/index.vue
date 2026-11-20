@@ -224,9 +224,9 @@ function modalityLabel(value, fallback = '') {
       <section class="mt-5 rounded-2xl border border-border-default bg-surface p-4 sm:p-5">
         <form class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1fr)_12rem_12rem_10rem_auto]" @submit.prevent="loadAgreements">
           <BaseInput v-model="filters.q" :placeholder="t('financing.agreement.searchPlaceholder')" data-testid="financing-agreement-search" />
-          <BaseSelect v-model="filters.status" :options="statusOptions" />
-          <BaseSelect v-model="filters.modality" :options="modalityOptions" />
-          <BaseSelect v-model="filters.archived" :options="archiveOptions" />
+          <BaseChoiceSelect v-model="filters.status" :options="statusOptions" :aria-label="t('financing.agreement.filters.status')" />
+          <BaseChoiceSelect v-model="filters.modality" :options="modalityOptions" :aria-label="t('financing.agreement.filters.modality')" />
+          <BaseChoiceSelect v-model="filters.archived" :options="archiveOptions" :aria-label="t('financing.agreement.filters.scope')" />
           <BaseButton type="submit" variant="secondary" :loading="agreementsStore.isLoading">{{ t('financing.agreement.filters.submit') }}</BaseButton>
         </form>
       </section>
