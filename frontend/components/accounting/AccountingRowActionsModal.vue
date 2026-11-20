@@ -16,6 +16,7 @@ import BaseModalActions from '~/components/base/BaseModalActions.vue';
 const props = defineProps({
   open: { type: Boolean, default: false },
   record: { type: Object, default: null },
+  detailTo: { type: String, default: '' },
   title: { type: String, default: '' },
   subtitle: { type: String, default: '' },
   /** [{ id, action, label, danger?, disabled?, description?, testId? }] */
@@ -101,6 +102,12 @@ async function choose(action) {
               >{{ action.description }}</span>
             </span>
           </button>
+        </li>
+        <li v-if="detailTo" class="px-6 py-2">
+          <BaseButton as="a" :to="detailTo" target="_blank" rel="noopener noreferrer" variant="ghost" size="sm">
+            <BaseActionIcon action="view" />
+            <span>{{ $t('accountingPocket.openNewTab') }}</span>
+          </BaseButton>
         </li>
       </ul>
 

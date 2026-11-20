@@ -17,6 +17,13 @@ PA-286 bloquea nuevos envíos después de aceptar el contacto. La reproducción
 del atasco del router, previa a decidir un cambio de navegación, espera la
 retoma de Chrome QA. Los envíos de prueba requieren una copia desechable con
 correo local. PA-265 ya está en main mediante #591 y espera validación manual.
+## Retorno y correcciones del Panel · PA-287 y PA-289 a PA-294
+
+Siete fichas de QA sobre la revisión `63f97e41`. Contabilidad recupera el ámbito, los filtros y el detalle mediante la URL en Recurrentes, Bolsillo, Ads, Cuentas de cobro y Hosting. Los IDs y los nombres históricos conservan su tipo. Los filtros explícitos prevalecen sobre enlaces existentes y pestañas guardadas. El Radar mantiene el foco de Recurrentes. El detalle de Ingresos muestra los centavos del total.
+
+El Kanban guarda el destino del arrastre y traduce los encabezados de estado. Configuración de IA explica la precedencia y Feature flags busca por nombre completo. El editor de Portafolio asocia los cuatro rótulos bilingües. Mi seguimiento carga la clasificación propia desde el detalle de la oportunidad.
+
+La validación de sesión usa fixtures aislados con las huellas de QA. El cotejo manual queda para la retoma de Carlos.
 
 ## PA-267 — Identidad de versión y retiro del guion antiguo — en validación por CI
 

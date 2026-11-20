@@ -69,11 +69,13 @@ export async function setupProcurementApi(page, scenario = {}) {
     calls: { list: [], export: [], sync: 0, retry: [] },
   }
 
+  const viewerId = scenario.staffId ?? 1
+  const detailPath = `procurement/opportunities/${state.detail.id}/`
   await mockApi(page, async ({ route, apiPath, method }) => {
     const override = await scenario.onRequest?.({ route, apiPath, method, state })
     if (override) return override
 
-    if (apiPath === 'auth/check/') return json({ user: { id: 1, username: 'admin', is_staff: true } })
+    if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } })
     if (apiPath === 'proposals/' || apiPath === 'proposals/alerts/' || apiPath === 'proposals/client-profiles/') return json([])
     if (apiPath === 'proposals/dashboard/') return json({ total: 0, by_status: {} })
     if (apiPath === 'procurement/searches/' && method === 'GET') return json(state.searches)
@@ -85,7 +87,7 @@ export async function setupProcurementApi(page, scenario = {}) {
       state.calls.list.push(new URL(route.request().url()).searchParams.get('filters'))
       return json({ results: state.records, count: state.records.length })
     }
-    if (apiPath === `procurement/opportunities/${opportunity.id}/` && method === 'GET') return json(state.detail)
+    if (apiPath === detailPath && method === 'GET') return json(state.detail)
     if (apiPath === 'procurement/export/' && method === 'GET') {
       state.calls.export.push(new URL(route.request().url()).searchParams.get('filters'))
       return { status: 200, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', body: 'fixture workbook' }
@@ -109,14 +111,15 @@ export async function setupProcurementApi(page, scenario = {}) {
       state.sync = { ...state.sync, recent: [{ status: 'queued', message: 'Actualización solicitada' }] }
       return json(state.sync, 202)
     }
-    if (apiPath === `procurement/opportunities/${opportunity.id}/classification/` && method === 'POST') {
-      const classification = { id: 6, owner: 1, owner_name: 'admin', ...route.request().postDataJSON() }
-      state.detail = { ...state.detail, classifications: [classification], activities: [{ id: 3, actor: 'admin', created_at: '2026-11-05T12:01:00Z', snapshot: classification }] }
+    if (apiPath === `${detailPath}classification/` && method === 'POST') {
+      const classification = { id: 6, owner: viewerId, owner_name: 'admin', ...route.request().postDataJSON() }
+      state.detail = { ...state.detail, my_classification: classification, classifications: [classification], activities: [{ id: 3, actor: 'admin', created_at: '2026-11-05T12:01:00Z', snapshot: classification }] }
       return json(classification, 201)
     }
-    if (apiPath === `procurement/opportunities/${opportunity.id}/restore/` && method === 'POST') {
-      state.detail = { ...state.detail, classifications: [{ id: 6, owner: 1, owner_name: 'admin', state: 'interesting', notes: 'Cumple perfil' }] }
-      return json(state.detail.classifications[0])
+    if (apiPath === `${detailPath}restore/` && method === 'POST') {
+      const classification = { id: 6, owner: viewerId, owner_name: 'admin', state: 'interesting', notes: 'Cumple perfil' }
+      state.detail = { ...state.detail, my_classification: classification, classifications: [classification] }
+      return json(classification)
     }
     if (apiPath === `procurement/deliveries/${delivery.id}/retry/` && method === 'POST') {
       state.calls.retry.push(delivery.id)

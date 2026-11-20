@@ -6,10 +6,15 @@ import catalog from '../../../contracts/platform-features.json' with { type: 'js
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) })
 const flags = () => Object.fromEntries(catalog.features.map(item => [item.key, item.default_enabled]))
 
-async function setup(page, { failure = 0, loadFailure = 0, clientResponse = null } = {}) {
+async function setup(page, {
+  failure = 0,
+  loadFailure = 0,
+  clientResponse = null,
+  clientIdentity = { user_id: 9002, name: 'Cliente QA' },
+} = {}) {
   const state = { values: flags(), version: 0, overrides: {}, clientVersion: 0 }
   const payload = (client = false) => ({ version: client ? state.clientVersion : state.version,
-    global_version: state.version, user_id: client ? 9002 : null, name: client ? 'Cliente QA' : null,
+    global_version: state.version, user_id: client ? clientIdentity.user_id : null, name: client ? clientIdentity.name : null,
     features: catalog.features.map(item => ({ ...item, global_value: state.values[item.key],
       override: client ? state.overrides[item.key] ?? null : null,
       effective: client ? state.overrides[item.key] ?? state.values[item.key] : state.values[item.key],
@@ -18,9 +23,9 @@ async function setup(page, { failure = 0, loadFailure = 0, clientResponse = null
   await mockApi(page, ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'feature-admin', is_staff: true, is_superuser: true } })
     if (apiPath === 'platform/features/admin/clients/' && clientResponse) return clientResponse({ route })
-    if (apiPath === 'platform/features/admin/clients/') return json({ results: [{ user_id: 9002, name: 'Cliente QA' }], count: 1, page: 1 })
+    if (apiPath === 'platform/features/admin/clients/') return json({ results: [clientIdentity], count: 1, page: 1 })
     if (apiPath === 'platform/features/admin/events/') return json({ results: [], page: 1, count: 0 })
-    if (apiPath === 'platform/features/admin/' || apiPath === 'platform/features/admin/clients/9002/') {
+    if (apiPath === 'platform/features/admin/' || apiPath === `platform/features/admin/clients/${clientIdentity.user_id}/`) {
       const client = apiPath.includes('/clients/')
       if (method === 'GET' && loadFailure) {
         const status = loadFailure
@@ -110,6 +115,40 @@ test.describe('PA-263 availability administration', () => {
 
     await expect(row).toContainText('Procedencia: Global')
     await expect(row.getByTestId('feature-effective')).toHaveText('Valor efectivo: Deshabilitada')
+  })
+
+  test('finds the same client by full name or company', {
+    tag: ['@flow:panel-platform-feature-flags', '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const client = { user_id: 2, name: 'María Torres' }
+    await setup(page, {
+      clientIdentity: client,
+      clientResponse: ({ route }) => {
+        const search = new URL(route.request().url()).searchParams.get('search')
+        const results = ['María Torres', 'TechStartup'].includes(search) ? [client] : []
+        return json({ results, count: results.length, page: 1 })
+      },
+    })
+    await openClientSearch(page)
+    const searchInput = page.getByLabel('Buscar cliente por nombre, correo o empresa', { exact: true })
+    const picker = page.getByTestId('feature-client-picker')
+    const flag = page.getByTestId('feature-platform.ai_chatbot')
+
+    await searchInput.fill('María Torres')
+    await picker.click()
+    const selectionByName = page.waitForResponse('**/api/platform/features/admin/clients/2/')
+    await page.getByRole('menuitem', { name: 'María Torres', exact: true }).click()
+    await selectionByName
+    await expect(flag.getByTestId('feature-effective')).toHaveText('Valor efectivo: Deshabilitada')
+    await choose(page, 'platform.ai_chatbot', 'Habilitada')
+    await expect(flag.getByTestId('feature-effective')).toHaveText('Valor efectivo: Habilitada')
+
+    await searchInput.fill('TechStartup')
+    await picker.click()
+    const selectionByCompany = page.waitForResponse('**/api/platform/features/admin/clients/2/')
+    await page.getByRole('menuitem', { name: 'María Torres', exact: true }).click()
+    await selectionByCompany
+    await expect(flag).toContainText('Procedencia: Excepción del cliente')
   })
 
   test('conflict preserves the displayed value', { tag: ['@flow:panel-platform-feature-flags', '@outcome:error'] }, async ({ page }) => {

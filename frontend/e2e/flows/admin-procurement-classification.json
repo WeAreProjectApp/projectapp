@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible.",
+  "description": "Staff opens official detail, records personal analysis, discards with a required reason and restores the previous state. Team notes and decision history remain visible. Al recargar, el formulario recupera el estado y la nota del staff de la sesión. Otro staff ve el formulario inicial y puede consultar el seguimiento del equipo.",
   "outcomes": [
     "display",
     "success",

@@ -34,6 +34,7 @@ jest.mock('~/composables/useAccountingFilters', () => {
       currentFilters: ref({}), searchInput: ref(''), savedTabs: ref([]), activeTabId: ref(null),
       isFilterPanelOpen: ref(false), hasActiveFilters: ref(true), activeFilterCount: ref(1),
       isTabLimitReached: ref(false), applyFilters: (records) => records,
+      filterQueryReady: ref(true), whenFiltersReady: async () => true,
       countTabs: () => ({}), resetFilters: jest.fn(), selectTab: jest.fn(), saveTab: jest.fn(),
       deleteTab: jest.fn(), renameTab: jest.fn(), restoreTab: jest.fn(), rebaseTab: jest.fn(), reorderTabs: jest.fn(),
     }),

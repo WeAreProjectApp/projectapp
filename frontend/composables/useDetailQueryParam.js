@@ -19,12 +19,13 @@ import { computed, unref } from 'vue';
  * `?focus=` de hoy no sobrevive a una recarga.
  *
  * @param {string} name Nombre del parámetro (`income`, `account`, `hosting`…).
- * @param {{ rows?, key?: string, resolve?: (id: number) => object|null }} [options]
+ * @param {{ rows?, key?: string, resolve?: (id: number) => object|null, buildQuery?: Function }} [options]
  *   `rows` (array, ref o getter) o `resolve` sólo hacen falta para los modales
  *   que reciben el objeto de la fila y no un id. El que se lo trae solo del
- *   backend no necesita ninguno.
+ *   backend no necesita ninguno. `buildQuery` incorpora filtros ya aplicados
+ *   aunque la navegación que los escribe en la URL siga pendiente.
  */
-export function useDetailQueryParam(name, { rows, key = 'id', resolve } = {}) {
+export function useDetailQueryParam(name, { rows, key = 'id', resolve, buildQuery } = {}) {
   const route = useRoute();
   const router = useRouter();
 
@@ -55,7 +56,8 @@ export function useDetailQueryParam(name, { rows, key = 'id', resolve } = {}) {
 
   /** Destino del `<a href>` de la fila: el detalle al lado de los filtros vigentes. */
   function toFor(id) {
-    return { path: route.path, query: { ...route.query, [name]: String(id) } };
+    const query = buildQuery?.(route.query) ?? { ...route.query };
+    return { path: route.path, query: { ...query, [name]: String(id) } };
   }
 
   /** Push, no replace: el detalle es un paso, y atrás tiene que cerrarlo. */
@@ -65,7 +67,7 @@ export function useDetailQueryParam(name, { rows, key = 'id', resolve } = {}) {
 
   /** Replace: cerrar no es un paso nuevo, es deshacer el que abrió. */
   function close() {
-    const query = { ...route.query };
+    const query = buildQuery?.(route.query) ?? { ...route.query };
     delete query[name];
     router.replace({ path: route.path, query });
   }

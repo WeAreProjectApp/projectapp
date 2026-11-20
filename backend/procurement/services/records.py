@@ -50,11 +50,15 @@ def list_opportunities(data, owner):
     return result
 
 
-def detail(pk):
+def detail(pk, *, owner=None):
     opportunity = found(Opportunity, pk)
     result = dict(OpportunitySerializer(opportunity).data)
+    classifications = opportunity.classifications.select_related('owner')
     result['classifications'] = ClassificationSerializer(
-        opportunity.classifications.select_related('owner').order_by('-updated_at')[:100], many=True).data
+        classifications.order_by('-updated_at')[:100], many=True).data
+    if owner is not None:
+        own = classifications.filter(owner=owner).first()
+        result['my_classification'] = ClassificationSerializer(own).data if own else None
     activities = Activity.objects.filter(classification__opportunity=opportunity).select_related('actor')[:100]
     result['activities'] = [{'id': item.pk, 'actor': item.actor.username, 'action': item.action,
                              'snapshot': item.snapshot, 'created_at': item.created_at.isoformat()} for item in activities]

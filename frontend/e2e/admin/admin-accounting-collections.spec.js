@@ -1790,7 +1790,7 @@ test.describe('Admin Accounting Collections', () => {
     await expect(projects.last()).toContainText('Xpandia');
   });
 
-  test('two cuentas of one client each tell their own project truth, also after reload', {
+  test('restores the project filter for accounts of the same client', {
     tag: [...ADMIN_ACCOUNTING_COLLECTIONS, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
     // quality: allow-deep-link (the tab is a subnav entry; the coherence
@@ -1831,10 +1831,11 @@ test.describe('Admin Accounting Collections', () => {
     });
     await gotoCollections(page);
 
-    await expect(page.getByTestId('accounting-row-2')).toContainText('Mimittos');
-    await expect(
-      page.getByTestId('collection-no-project-3').filter({ visible: true }),
-    ).toHaveText('Sin proyecto');
+    const listRows = page.locator('[data-testid^="accounting-row-"]');
+    const linkedRow = page.getByTestId('accounting-row-2');
+    const noProject = page.getByTestId('collection-no-project-3').filter({ visible: true });
+    await expect(linkedRow).toContainText('Mimittos');
+    await expect(noProject).toHaveText('Sin proyecto');
 
     // The filter keys off the same live FK the cell shows: picking the
     // project keeps the linked cuenta and drops the blank sibling.
@@ -1842,16 +1843,15 @@ test.describe('Admin Accounting Collections', () => {
     await page.getByTestId('accounting-filter-panel')
       .getByRole('button', { name: /^Proyecto/ }).click();
     await page.getByLabel('Mimittos').check();
-    await expect(page.locator('[data-testid^="accounting-row-"]')).toHaveCount(1);
-    await expect(page.getByTestId('accounting-row-2')).toBeVisible();
+    await expect(listRows).toHaveCount(1);
+    await expect(page).toHaveURL(/[?&]projects=/);
 
-    // Requisito 18: the same truth after a reload (filters are ephemeral,
-    // both rows return, each with its own cell).
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('accounting-row-2')).toContainText('Mimittos');
-    await expect(
-      page.getByTestId('collection-no-project-3').filter({ visible: true }),
-    ).toHaveText('Sin proyecto');
+    await expect(listRows).toHaveCount(1);
+    await expect(linkedRow).toContainText('Mimittos');
+
+    await page.getByTestId('accounting-filter-reset').click();
+    await expect(noProject).toHaveText('Sin proyecto');
   });
 
   test('opening the detail shows the linked income and its settlement history', {

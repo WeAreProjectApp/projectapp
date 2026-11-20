@@ -47,8 +47,15 @@ export const useProcurementStore = defineStore('procurement', {
     },
     async removeSearch(id) { return this.mutate(async () => { await delete_request(`procurement/searches/${id}/`); await this.loadSearches() }) },
     async saveSettings(payload) { return this.mutate(async () => { this.settings = (await patch_request('procurement/settings/', payload)).data }) },
-    async classify(id, payload) { return this.mutate(async () => { await create_request(`procurement/opportunities/${id}/classification/`, payload); await this.open(id) }) },
-    async restore(id) { return this.mutate(async () => { await create_request(`procurement/opportunities/${id}/restore/`, {}); await this.open(id) }) },
+    async saveClassification(id, action, payload) {
+      const detailId = this.detailId
+      return this.mutate(async () => {
+        await create_request(`procurement/opportunities/${id}/${action}/`, payload)
+        if (detailId === this.detailId) await this.open(id)
+      })
+    },
+    classify(id, payload) { return this.saveClassification(id, 'classification', payload) },
+    restore(id) { return this.saveClassification(id, 'restore', {}) },
     async getDelivery(id) { return (await get_request(`procurement/deliveries/${id}/`)).data },
     async requestSync() { await create_request('procurement/sync/', {}); await this.loadSync() },
     async retry(id) { return this.mutate(async () => { await create_request(`procurement/deliveries/${id}/retry/`, {}); await this.loadDeliveries() }) },

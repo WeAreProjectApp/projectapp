@@ -1,7 +1,8 @@
 """Single precedence and write boundary for Panel, MCP and client availability."""
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q, F, Subquery
+from django.db.models import F, Q, Subquery, Value
+from django.db.models.functions import Concat, Trim
 from django.utils import timezone
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
@@ -201,10 +202,19 @@ def list_clients(actor, page=1, search=''):
     require_admin(actor)
     if len(search) > 200:
         raise ValidationError('La búsqueda admite hasta 200 caracteres.')
-    qs = get_user_model().objects.filter(profile__role='client').filter(
-        Q(email__icontains=search) | Q(first_name__icontains=search)
-        | Q(last_name__icontains=search) | Q(profile__company_name__icontains=search)).order_by('pk')
-    return paginate(qs, page, lambda user: {'user_id': user.pk, 'name': user.get_full_name() or user.email})
+    search = search.strip()
+    clients = get_user_model().objects.filter(profile__role='client')
+    if search:
+        clients = clients.alias(
+            full_name=Trim(Concat('first_name', Value(' '), 'last_name')),
+        ).filter(
+            Q(email__icontains=search) | Q(first_name__icontains=search)
+            | Q(last_name__icontains=search) | Q(full_name__icontains=search)
+            | Q(profile__company_name__icontains=search)
+        )
+    return paginate(clients.order_by('pk'), page, lambda user: {
+        'user_id': user.pk, 'name': user.get_full_name() or user.email,
+    })
 
 
 def events(actor, page=1, user_id=None):
