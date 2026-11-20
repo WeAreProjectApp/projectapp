@@ -4,7 +4,7 @@ jest.mock('vuedraggable', () => ({
   name: 'draggable',
   props: ['modelValue', 'itemKey', 'group', 'ghostClass'],
   emits: ['update:modelValue', 'end'],
-  template: '<div data-testid="draggable"><slot v-for="(element, index) in modelValue" name="item" :element="element" :index="index" /></div>',
+  template: '<div><slot v-for="(element, index) in modelValue" name="item" :element="element" :index="index" /></div>',
 }))
 
 jest.mock('../../components/Tasks/TaskCard.vue', () => ({
@@ -64,9 +64,11 @@ describe('TaskColumn', () => {
     expect(wrapper.emitted('add')).toBeTruthy()
   })
 
-  it('renders empty state draggable when tasks is empty', () => {
+  it('renders a drop zone for an empty column', () => {
     const wrapper = mountColumn({ tasks: [] })
-    expect(wrapper.find('[data-testid="draggable"]').exists()).toBe(true)
+    const dropZone = wrapper.get('[data-testid="task-drop-zone"]')
+    expect(dropZone.attributes('data-task-status')).toBe('todo')
+    expect(dropZone.findAll('[data-testid="task-card"]')).toHaveLength(0)
   })
 
   it('renders task count in header', () => {
