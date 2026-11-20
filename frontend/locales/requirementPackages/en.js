@@ -88,7 +88,7 @@ export default {
   more: "Load next",
   previous: "Previous",
   queue: "Requests by size",
-  pendingCount: "{count} requests need attention",
+  pendingCount: "{count} request needs attention | {count} requests need attention",
   search: "Search projects or requests",
   projectSearch: "Search for a project",
   selectProject: "Select project",

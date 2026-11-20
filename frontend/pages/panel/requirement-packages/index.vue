@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
   <div class="min-w-0 space-y-6 [overflow-wrap:anywhere]">
     <h1 class="text-2xl font-bold text-text-default">{{ tr("queue") }}</h1>
     <p v-if="queue" class="text-sm text-text-muted">
-      {{ tr("pendingCount", { count: queue.pending_count }) }}
+      {{ t("requirementPackages.pendingCount", queue.pending_count) }}
     </p>
     <p v-if="error" role="alert" class="text-sm text-danger-strong">
       {{ error }}

@@ -139,38 +139,24 @@
         <!-- Gender + Education row -->
         <div class="mb-6 grid grid-cols-2 gap-3">
           <div>
-            <label for="profile-gender" class="mb-1.5 block text-xs font-medium text-esmerald/70">Sexo <span class="text-red-400">*</span></label>
-            <select
+            <label for="profile-gender" class="mb-1.5 block text-xs font-medium text-esmerald/70">Sexo <span aria-hidden="true" class="text-red-400">*</span></label>
+            <BaseChoiceSelect
               id="profile-gender"
               v-model="form.gender"
+              :options="genderOptions"
               required
               data-testid="gender-select"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default"
-            >
-              <option value="" disabled>Selecciona</option>
-              <option value="male">Masculino</option>
-              <option value="female">Femenino</option>
-              <option value="other">Otro</option>
-              <option value="prefer_not_to_say">Prefiero no decir</option>
-            </select>
+            />
           </div>
           <div>
-            <label for="profile-education" class="mb-1.5 block text-xs font-medium text-esmerald/70">Nivel de educación <span class="text-red-400">*</span></label>
-            <select
+            <label for="profile-education" class="mb-1.5 block text-xs font-medium text-esmerald/70">Nivel de educación <span aria-hidden="true" class="text-red-400">*</span></label>
+            <BaseChoiceSelect
               id="profile-education"
               v-model="form.education_level"
+              :options="educationOptions"
               required
               data-testid="education-select"
-              class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default"
-            >
-              <option value="" disabled>Selecciona</option>
-              <option value="primaria">Primaria</option>
-              <option value="secundaria">Secundaria</option>
-              <option value="tecnico">Técnico</option>
-              <option value="universitario">Universitario</option>
-              <option value="posgrado">Posgrado</option>
-              <option value="otro">Otro</option>
-            </select>
+            />
           </div>
         </div>
 
@@ -195,6 +181,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
+import { EDUCATION_LEVEL_OPTIONS, GENDER_OPTIONS } from '~/constants/platformProfileOptions'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 definePageMeta({
   layout: false,
@@ -214,6 +201,10 @@ const fileInput = ref(null)
 const avatarFile = ref(null)
 const avatarPreview = ref('')
 const localError = ref('')
+
+const unselected = { value: '', label: 'Selecciona', disabled: true }
+const genderOptions = [unselected, ...GENDER_OPTIONS]
+const educationOptions = [unselected, ...EDUCATION_LEVEL_OPTIONS]
 
 const form = reactive({
   first_name: authStore.user?.first_name || '',

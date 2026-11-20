@@ -66,7 +66,7 @@ const BaseTextareaStub = {
   props: ['modelValue'], emits: ['update:modelValue'],
   template: '<textarea v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)"></textarea>',
 };
-const BaseSelectStub = {
+const BaseChoiceSelectStub = {
   props: ['modelValue', 'options'], emits: ['update:modelValue'],
   template: '<select v-bind="$attrs" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
 };
@@ -140,7 +140,7 @@ function mountModal(messages = [message()], attachToDocument = false) {
         BaseInput: BaseInputStub,
         BaseModal: BaseModalStub,
         BaseModalActions: { template: '<div><slot /></div>' },
-        BaseSelect: BaseSelectStub,
+        BaseChoiceSelect: BaseChoiceSelectStub,
         BaseSkeleton: true,
         BaseTextarea: BaseTextareaStub,
         CommunicationFolderPicker: true,

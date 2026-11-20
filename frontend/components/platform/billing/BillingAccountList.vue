@@ -21,6 +21,29 @@ const hostingId = ref('')
 const activeProject = computed(() => props.projectId || selectedProject.value)
 const contracts = computed(() => store.options?.contracts || [])
 const amendments = computed(() => contracts.value.find(row => String(row.id) === String(contractId.value))?.amendments || [])
+const allOption = computed(() => ({ value: '', label: t('platformBilling.all') }))
+const projectOptions = computed(() => [
+  allOption.value,
+  ...projects.projects.map(project => ({ value: String(project.id), label: project.name })),
+])
+const natureOptions = computed(() => [
+  allOption.value,
+  { value: 'contract', label: t('platformBilling.contract') },
+  { value: 'hosting', label: t('platformBilling.hosting') },
+  { value: 'pending', label: t('platformBilling.pendingAssociation') },
+])
+const contractOptions = computed(() => [
+  allOption.value,
+  ...contracts.value.map(contract => ({ value: String(contract.id), label: contract.title })),
+])
+const amendmentOptions = computed(() => [
+  allOption.value,
+  ...amendments.value.map(amendment => ({ value: String(amendment.id), label: amendment.title })),
+])
+const statusOptions = computed(() => [
+  allOption.value,
+  ...['issued', 'paid', 'cancelled'].map(value => ({ value, label: t(`platformBilling.states.${value}`) })),
+])
 const href = row => localePath(`/platform/collection-accounts/${row.id}`)
 const money = row => new Intl.NumberFormat(locale.value, { style: 'currency', currency: row.currency || 'COP' }).format(Number(row.total))
 const contextLabel = row => !row.project_id ? t('platformBilling.nonProjectAccount') : row.context?.nature === 'hosting' ? t('platformBilling.hosting') : row.context?.contract?.title || t('platformBilling.pendingAssociation')
@@ -42,7 +65,14 @@ function hydrateFilters() {
   amendmentId.value = String(route.query.amendment_id || '')
   hostingId.value = String(route.query.hosting_id || '')
 }
-function resetContextFilters() { contractId.value = ''; amendmentId.value = ''; hostingId.value = '' }
+function resetContractFilters() {
+  amendmentId.value = ''
+  hostingId.value = ''
+}
+function resetContextFilters() {
+  contractId.value = ''
+  resetContractFilters()
+}
 async function load() {
   await store.fetchAccounts({
     project_id: activeProject.value || undefined, nature: nature.value || undefined,
@@ -65,38 +95,26 @@ if (!props.projectId) projects.fetchProjects()
   <section class="space-y-5" data-testid="billing-account-list">
     <h1 class="text-2xl font-semibold text-text-default">{{ t('platformBilling.accounts') }}</h1>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <label v-if="!projectId" class="text-sm text-text-default">{{ t('platformBilling.project') }}
-        <select v-model="selectedProject" class="mt-1 w-full rounded-xl border border-border-default bg-surface p-2" @change="resetContextFilters">
-          <option value="">{{ t('platformBilling.all') }}</option>
-          <option v-for="project in projects.projects" :key="project.id" :value="String(project.id)">{{ project.name }}</option>
-        </select>
-      </label>
-      <label class="text-sm text-text-default">{{ t('platformBilling.nature') }}
-        <select v-model="nature" class="mt-1 w-full rounded-xl border border-border-default bg-surface p-2" @change="resetContextFilters">
-          <option value="">{{ t('platformBilling.all') }}</option>
-          <option value="contract">{{ t('platformBilling.contract') }}</option>
-          <option value="hosting">{{ t('platformBilling.hosting') }}</option>
-          <option value="pending">{{ t('platformBilling.pendingAssociation') }}</option>
-        </select>
-      </label>
-      <label v-if="activeProject" class="text-sm text-text-default">{{ t('platformBilling.contract') }}
-        <select v-model="contractId" class="mt-1 w-full rounded-xl border border-border-default bg-surface p-2" @change="amendmentId = ''; hostingId = ''">
-          <option value="">{{ t('platformBilling.all') }}</option>
-          <option v-for="contract in contracts" :key="contract.id" :value="String(contract.id)">{{ contract.title }}</option>
-        </select>
-      </label>
-      <label v-if="contractId" class="text-sm text-text-default">{{ t('platformBilling.amendment') }}
-        <select v-model="amendmentId" class="mt-1 w-full rounded-xl border border-border-default bg-surface p-2">
-          <option value="">{{ t('platformBilling.all') }}</option>
-          <option v-for="amendment in amendments" :key="amendment.id" :value="String(amendment.id)">{{ amendment.title }}</option>
-        </select>
-      </label>
-      <label class="text-sm text-text-default">{{ t('platformBilling.state') }}
-        <select v-model="status" class="mt-1 w-full rounded-xl border border-border-default bg-surface p-2">
-          <option value="">{{ t('platformBilling.all') }}</option>
-          <option v-for="value in ['issued', 'paid', 'cancelled']" :key="value" :value="value">{{ t(`platformBilling.states.${value}`) }}</option>
-        </select>
-      </label>
+      <div v-if="!projectId" class="space-y-1 text-sm text-text-default">
+        <label for="billing-filter-project">{{ t('platformBilling.project') }}</label>
+        <BaseChoiceSelect id="billing-filter-project" v-model="selectedProject" :options="projectOptions" @update:model-value="resetContextFilters" />
+      </div>
+      <div class="space-y-1 text-sm text-text-default">
+        <label for="billing-filter-nature">{{ t('platformBilling.nature') }}</label>
+        <BaseChoiceSelect id="billing-filter-nature" v-model="nature" :options="natureOptions" @update:model-value="resetContextFilters" />
+      </div>
+      <div v-if="activeProject" class="space-y-1 text-sm text-text-default">
+        <label for="billing-filter-contract">{{ t('platformBilling.contract') }}</label>
+        <BaseChoiceSelect id="billing-filter-contract" v-model="contractId" :options="contractOptions" @update:model-value="resetContractFilters" />
+      </div>
+      <div v-if="contractId" class="space-y-1 text-sm text-text-default">
+        <label for="billing-filter-amendment">{{ t('platformBilling.amendment') }}</label>
+        <BaseChoiceSelect id="billing-filter-amendment" v-model="amendmentId" :options="amendmentOptions" />
+      </div>
+      <div class="space-y-1 text-sm text-text-default">
+        <label for="billing-filter-status">{{ t('platformBilling.state') }}</label>
+        <BaseChoiceSelect id="billing-filter-status" v-model="status" :options="statusOptions" />
+      </div>
     </div>
     <p v-if="store.loading.accounts" role="status" class="text-text-muted">{{ t('platformBilling.loading') }}</p>
     <div v-else-if="store.errors.accounts" role="alert" class="rounded-xl border border-border-default p-4 text-text-default">

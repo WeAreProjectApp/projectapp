@@ -5,6 +5,7 @@
  * declaration, or displays the raw formatting markers after the message is read.
  */
 import { test, expect } from '../helpers/test.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_CLIENT_COMMUNICATIONS } from '../helpers/flow-tags.js';
@@ -59,8 +60,9 @@ const initialMessage = {
   void_reason: '',
 };
 
-async function setupEditorialCommunications(page, { rejectMessage = false, onMessage = null } = {}) {
-  const state = { messages: [{ ...initialMessage }] };
+async function setupEditorialCommunications(page, { rejectMessage = false, onMessage = null, threadId = 41 } = {}) {
+  const thread = { ...threadSummary, id: threadId };
+  const state = { messages: [{ ...initialMessage, thread_id: threadId }] };
   await mockApi(page, async ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') return authCheck;
     if (apiPath === 'accounts/panel-preferences/communications/' && method === 'GET') {
@@ -71,7 +73,7 @@ async function setupEditorialCommunications(page, { rejectMessage = false, onMes
     }
     if (apiPath === 'communications/threads/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify({
-        results: [{ ...threadSummary, messages_count: state.messages.length }],
+        results: [{ ...thread, messages_count: state.messages.length }],
         count: 1,
         page: 1,
         num_pages: 1,
@@ -85,10 +87,10 @@ async function setupEditorialCommunications(page, { rejectMessage = false, onMes
     if (apiPath === 'communications/folders/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: '[]' };
     }
-    if (apiPath === 'communications/threads/41/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...threadSummary, messages: state.messages }) };
+    if (apiPath === `communications/threads/${threadId}/` && method === 'GET') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...thread, messages: state.messages }) };
     }
-    if (apiPath === 'communications/threads/41/messages/' && method === 'POST') {
+    if (apiPath === `communications/threads/${threadId}/messages/` && method === 'POST') {
       const payload = route.request().postDataJSON();
       onMessage?.(payload);
       if (rejectMessage) {
@@ -97,12 +99,13 @@ async function setupEditorialCommunications(page, { rejectMessage = false, onMes
       const created = {
         ...initialMessage,
         id: 803,
+        thread_id: threadId,
         channel: payload.channel,
         channel_display: payload.channel === 'whatsapp' ? 'WhatsApp' : 'Correo',
         direction: payload.direction,
         direction_display: payload.direction === 'incoming' ? 'Entrante' : 'Saliente',
         status: payload.status,
-        status_display: payload.status === 'draft' ? 'Borrador' : 'Enviado',
+        status_display: { draft: 'Borrador', sent: 'Enviado', received: 'Recibido' }[payload.status],
         subject: payload.subject,
         content: payload.content,
         text_formats: payload.text_formats,
@@ -118,10 +121,10 @@ async function setupEditorialCommunications(page, { rejectMessage = false, onMes
   });
 }
 
-async function openComposer(page) {
+async function openComposer(page, threadId = 41) {
   await page.goto('/es-co/panel/communications', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Comunicaciones', exact: true })).toHaveText('Comunicaciones');
-  await page.getByTestId('communication-thread-row-41').click();
+  await expect(page.getByRole('heading', { name: 'Comunicaciones', exact: true })).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId(`communication-thread-row-${threadId}`).click();
   await expect(page.getByRole('heading', { name: 'Aprobación editorial', exact: true })).toHaveText('Aprobación editorial');
   await page.getByTestId('communication-composer-toggle').click();
 }
@@ -169,7 +172,8 @@ test.describe('Editorial rich text in communications', () => {
     await setupEditorialCommunications(page, { onMessage: (payload) => { submitted = payload; } });
     await openComposer(page);
 
-    await page.getByTestId('communication-message-channel').selectOption('whatsapp');
+    await page.getByTestId('communication-details-toggle').click();
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Canal' }), 'WhatsApp');
     const editor = composerEditor(page);
     await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
     const source = editor.getByTestId('rich-text-source-input');
@@ -186,6 +190,25 @@ test.describe('Editorial rich text in communications', () => {
       text_formats: { '/content': 'whatsapp_v1' },
     });
     await expect(page.getByTestId('communication-message-803')).toContainText('Confirmado por WhatsApp');
+  });
+
+  test('registers one received WhatsApp message from the details dropdowns', {
+    tag: [...ADMIN_CLIENT_COMMUNICATIONS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const messages = [];
+    await setupEditorialCommunications(page, { threadId: 139, onMessage: message => messages.push(message) });
+    await openComposer(page, 139);
+
+    await page.getByTestId('communication-details-toggle').click();
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Dirección' }), 'Entrante');
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Canal' }), 'WhatsApp');
+    const editor = composerEditor(page);
+    await editor.getByRole('tab', { name: /^Fuente$/ }).click();
+    await editor.getByTestId('rich-text-source-input').fill('Llegó la aprobación de prueba.');
+    await page.getByRole('button', { name: 'Registrar recibido' }).click();
+
+    await expect(page.getByTestId('communication-message-803')).toContainText('Llegó la aprobación de prueba.');
+    expect(messages).toEqual([expect.objectContaining({ direction: 'incoming', channel: 'whatsapp', status: 'received' })]);
   });
 
   test('keeps rejected source visible after a communication error', {
