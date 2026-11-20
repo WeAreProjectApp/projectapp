@@ -1423,6 +1423,8 @@ def diagnostic_defaults(request):
         config = DiagnosticDefaultConfig.objects.select_for_update().filter(language=lang).first()
         payload = dict(request.data)
         payload['language'] = lang
+        if config is None and 'sections_json' not in payload:
+            payload['sections_json'] = diagnostic_service.get_hardcoded_section_specs(lang)
         serializer = DiagnosticDefaultConfigSerializer(config, data=payload)
         if not serializer.is_valid():
             return error_response(

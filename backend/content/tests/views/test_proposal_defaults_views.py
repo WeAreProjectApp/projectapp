@@ -118,6 +118,7 @@ class TestPutProposalDefaults:
     @pytest.mark.parametrize(('language', 'reminder', 'urgency'), [('es', 3, 7), ('en', 5, 11)])
     def test_general_save_exposes_effective_system_sections(self, admin_client, language, reminder, urgency):
         url = reverse('proposal-defaults')
+        ProposalDefaultConfig.objects.create(language=language, sections_json=[])
 
         saved = admin_client.put(url, {
             'language': language, 'reminder_days': reminder, 'urgency_reminder_days': urgency,

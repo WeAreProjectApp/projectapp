@@ -3034,6 +3034,8 @@ def proposal_defaults(request):
             if stale is not None:
                 return stale
         payload['language'] = lang
+        if config is None and 'sections_json' not in payload:
+            payload['sections_json'] = ProposalService.get_hardcoded_defaults(lang)
         serializer = ProposalDefaultConfigSerializer(config, data=payload)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

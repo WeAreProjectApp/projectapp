@@ -117,7 +117,9 @@ class TestGetDiagnosticDefaults:
 # ── PUT ────────────────────────────────────────────────────────────────────
 
 class TestPutDiagnosticDefaults:
-    def test_first_general_save_keeps_using_the_system_template(self, admin_client):
+    def test_general_save_preserves_the_empty_system_configuration(self, admin_client):
+        DiagnosticDefaultConfig.objects.create(language='en', sections_json=[])
+
         response = admin_client.put(reverse('diagnostic-defaults'), {
             'language': 'en', 'default_currency': 'USD',
         }, format='json')
@@ -125,6 +127,15 @@ class TestPutDiagnosticDefaults:
         assert response.status_code == 200
         assert response.data['effective_sections_json'][1]['title'] == 'Application Overview'
         assert DiagnosticDefaultConfig.objects.get(language='en').sections_json == []
+
+    def test_initial_defaults_write_stores_system_template_for_language(self, admin_client):
+        url = reverse('diagnostic-defaults')
+        initial = admin_client.get(url, {'lang': 'en'})
+
+        response = admin_client.put(url, {'language': 'en', 'default_currency': 'USD'}, format='json')
+
+        assert response.status_code == 200
+        assert DiagnosticDefaultConfig.objects.get(language='en').sections_json == initial.data['sections_json']
 
     def test_creates_new_config(self, admin_client):
         url = reverse('diagnostic-defaults')
