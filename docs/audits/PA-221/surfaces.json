@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "sources": {
-    "frontend/config/viewCatalog.js": "1aae4df8d911fac271c80c646e322caac3e2f91a93a7335d20c6d962bd7476f7",
-    "frontend/config/viewCapabilityCatalog.js": "2ec8d5d30fe14932249000704f0b2bfab46f75ddb15eb034b6ea650edba47199"
+    "frontend/config/viewCatalog.js": "2ec5e2208d67065c53364d24b33edcc42594740e60b3fb10a57da2a56d9ddb8e",
+    "frontend/config/viewCapabilityCatalog.js": "12f2887f0d8fab462ff925486ade6a432307bd7754462ca2d5d40f2f9eb4009a"
   },
   "surfaces": [
     {
@@ -330,12 +330,12 @@
       "file": "frontend/pages/panel/defaults.vue",
       "audience": "admin",
       "view_type": "config",
-      "description": "Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a secciones y plantillas de correo.",
+      "description": "La pestaña Secciones identifica la plantilla del sistema cuando el idioma sigue sus valores base. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Aplica a secciones y plantillas de correo.",
       "features": [
         {
           "id": "panel-commercial-settings",
           "label": "Configurar mensajes y valores base",
-          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+          "summary": "Reúne defaults y plantillas para los flujos comerciales e identifica las secciones que vienen del sistema. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
         }
       ]
     },
@@ -369,7 +369,7 @@
         {
           "id": "panel-commercial-settings",
           "label": "Configurar mensajes y valores base",
-          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+          "summary": "Reúne defaults y plantillas para los flujos comerciales e identifica las secciones que vienen del sistema. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
         }
       ]
     },
@@ -403,7 +403,7 @@
         {
           "id": "panel-commercial-settings",
           "label": "Configurar mensajes y valores base",
-          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+          "summary": "Reúne defaults y plantillas para los flujos comerciales e identifica las secciones que vienen del sistema. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
         }
       ]
     },
@@ -829,7 +829,7 @@
       "file": "frontend/pages/panel/diagnostics/[id]/edit.vue",
       "audience": "admin",
       "view_type": "edit",
-      "description": "Documentos descarga el acuerdo final, el borrador y los adjuntos sin abrir ventanas. Los PDF e imágenes se previsualizan dentro del panel. Las descargas y las exportaciones CSV muestran el estado de carga y permiten reintentar errores. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye secciones y composición del correo.",
+      "description": "General muestra la vigencia guardada al confirmar el envío inicial. Documentos descarga el acuerdo final, el borrador y los adjuntos sin abrir ventanas. Los PDF e imágenes se previsualizan dentro del panel. Las descargas y las exportaciones CSV muestran el estado de carga y permiten reintentar errores. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar. Incluye secciones y composición del correo.",
       "features": [
         {
           "id": "panel-diagnostics",
@@ -851,7 +851,7 @@
         {
           "id": "panel-commercial-settings",
           "label": "Configurar mensajes y valores base",
-          "summary": "Reúne defaults y plantillas para los flujos comerciales. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
+          "summary": "Reúne defaults y plantillas para los flujos comerciales e identifica las secciones que vienen del sistema. Permite editar el contenido en modo Visual o Fuente Markdown, con listas, tablas, color y alineación conservados al alternar y guardar."
         }
       ]
     },
@@ -1404,7 +1404,7 @@
         {
           "id": "platform-change-requests",
           "label": "Gestionar solicitudes de cambio",
-          "summary": "Conserva el contexto contractual original y prepara respuestas con fuentes seleccionadas, citas verificadas y revisión humana. El cliente sólo recibe la respuesta y la conclusión de alcance, sin fuentes privadas."
+          "summary": "El alta señala el título y la entrega de origen cuando faltan. Conserva el contexto contractual original y prepara respuestas con fuentes seleccionadas, citas verificadas y revisión humana. El cliente sólo recibe la respuesta y la conclusión de alcance, sin fuentes privadas."
         }
       ]
     },
@@ -1420,7 +1420,7 @@
         {
           "id": "platform-deliverable-library",
           "label": "Consultar entregables",
-          "summary": "Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
+          "summary": "Desde Mis proyectos, la pestaña Recursos de cada proyecto abre su biblioteca. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
         }
       ]
     },
@@ -1696,12 +1696,12 @@
       "file": "frontend/pages/platform/projects/[id]/changes.vue",
       "audience": "client",
       "view_type": "list",
-      "description": "La solicitud conserva contrato, publicación y versión originales; la ampliación requiere una etapa editable explícita. Con IA habilitada admite una nota de voz para el requerimiento seleccionado, con propuesta revisable antes de llenar el formulario y marcador del cupo compartido con el chatbot. La respuesta contractual verifica citas y exige revisión humana, con evidencia pública limitada y auditoría privada.",
+      "description": "El alta indica junto a cada campo si falta el título o la entrega de origen. La solicitud conserva contrato, publicación y versión originales; la ampliación requiere una etapa editable explícita. Con IA habilitada admite una nota de voz para el requerimiento seleccionado, con propuesta revisable antes de llenar el formulario y marcador del cupo compartido con el chatbot. La respuesta contractual verifica citas y exige revisión humana, con evidencia pública limitada y auditoría privada.",
       "features": [
         {
           "id": "platform-change-requests",
           "label": "Gestionar solicitudes de cambio",
-          "summary": "Conserva el contexto contractual original y prepara respuestas con fuentes seleccionadas, citas verificadas y revisión humana. El cliente sólo recibe la respuesta y la conclusión de alcance, sin fuentes privadas."
+          "summary": "El alta señala el título y la entrega de origen cuando faltan. Conserva el contexto contractual original y prepara respuestas con fuentes seleccionadas, citas verificadas y revisión humana. El cliente sólo recibe la respuesta y la conclusión de alcance, sin fuentes privadas."
         }
       ]
     },
@@ -1751,7 +1751,7 @@
         {
           "id": "platform-deliverable-library",
           "label": "Consultar entregables",
-          "summary": "Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
+          "summary": "Desde Mis proyectos, la pestaña Recursos de cada proyecto abre su biblioteca. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
         }
       ]
     },
@@ -1767,7 +1767,7 @@
         {
           "id": "platform-deliverable-library",
           "label": "Consultar entregables",
-          "summary": "Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
+          "summary": "Desde Mis proyectos, la pestaña Recursos de cada proyecto abre su biblioteca. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables."
         }
       ]
     },
