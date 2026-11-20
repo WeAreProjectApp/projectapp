@@ -8,7 +8,7 @@
 
 | Outcome | Inicio → acción → resultado observable |
 |---|---|
-| `display` | Abrir **Financiación → Otrosíes** → ver métricas, filtros y registros vigentes o el estado vacío. |
+| `display` | Abrir **Financiación → Otrosíes** → ver métricas y registros vigentes o el estado vacío. Usar búsqueda y los desplegables Estado, Modalidad y Alcance. Pulsar **Filtrar** para aplicar la selección. |
 | `success` | Pulsar **Nuevo otrosí** → seleccionar un cliente → verificar su identidad precargada → completar contrato, alcance, monto elegible y abono inicial → crear → abrir el borrador con el calendario de cuotas definido por la política vigente. |
 | `error` | Enviar datos incompletos o inválidos → el API y el formulario señalan los campos → los datos ya escritos permanecen disponibles. |
 | `failure` | Fallar la carga del registro → mostrar un estado de error explícito sin presentar una lista vacía engañosa. |

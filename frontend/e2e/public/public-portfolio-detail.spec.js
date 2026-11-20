@@ -39,15 +39,23 @@ const mockWork = {
 };
 
 const mockWorks = [mockWork];
+const mockWorkEs = {
+  ...mockWork,
+  title: 'Rediseño de una plataforma de comercio electrónico',
+  meta_title: 'Rediseño de comercio electrónico — Project App',
+  meta_description: 'Caso de estudio de un rediseño de comercio electrónico.',
+};
 
 function setupMock(page) {
-  return mockApi(page, async ({ _route, apiPath }) => {
+  return mockApi(page, async ({ route, apiPath }) => {
     if (apiPath.startsWith('portfolio/')) {
       const slugMatch = apiPath.match(/^portfolio\/([^/?]+)\//);
       if (slugMatch) {
         const slug = slugMatch[1];
         if (slug === mockWork.slug) {
-          return { status: 200, contentType: 'application/json', body: JSON.stringify(mockWork) };
+          const { searchParams } = new URL(route.request().url());
+          const work = searchParams.get('lang') === 'es' ? mockWorkEs : mockWork;
+          return { status: 200, contentType: 'application/json', body: JSON.stringify(work) };
         }
         return { status: 404, contentType: 'application/json', body: JSON.stringify({ detail: 'Not found.' }) };
       }
@@ -57,7 +65,36 @@ function setupMock(page) {
   });
 }
 
+async function expectDocumentMetadata(page, work, lang) {
+  await expect(page.getByRole('heading', { level: 1, name: work.title, exact: true })).toBeVisible();
+  await expect(page).toHaveTitle(work.title);
+  await expect(page.locator('html')).toHaveAttribute('lang', lang);
+  await expect(page.locator('head meta[name="description"]')).toHaveAttribute('content', work.meta_description);
+  await expect(page.locator('head meta[property="og:title"]')).toHaveAttribute('content', work.meta_title);
+  await expect(page.locator('head meta[property="og:description"]')).toHaveAttribute('content', work.meta_description);
+  await expect(page.locator('head meta[property="og:image"]')).toHaveAttribute('content', work.cover_image);
+  await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute('href', 'https://projectapp.co/portfolio-works/ecommerce-redesign');
+  await expect(page.locator('head meta[name="robots"][content*="noindex"]')).toHaveCount(0);
+}
+
 test.describe('Portfolio Case Study Detail', () => {
+  test.setTimeout(60_000);
+
+  test('updates the detail metadata after switching language', {
+    tag: [...PUBLIC_PORTFOLIO_DETAIL, '@role:guest', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the metadata contract covers opening a shared case study URL)
+    await setupMock(page);
+    await page.goto('/en-us/portfolio-works/ecommerce-redesign', { waitUntil: 'domcontentloaded' });
+    await expectDocumentMetadata(page, mockWork, 'en-US');
+
+    await page.getByRole('button', { name: 'Switch to Spanish', exact: true }).filter({ visible: true }).click();
+    await expect(page).toHaveURL('/es-co/portfolio-works/ecommerce-redesign');
+    await expectDocumentMetadata(page, mockWorkEs, 'es-CO');
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expectDocumentMetadata(page, mockWorkEs, 'es-CO');
+  });
   test('renders case study with title, excerpt, and content sections', {
     tag: ['@outcome:display', ...PUBLIC_PORTFOLIO_DETAIL, '@role:guest'],
   }, async ({ page }) => {

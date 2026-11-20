@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { get_request, create_request, patch_request } from './services/request_http';
 
 const root = 'requirement-calculator/';
+export const REVISION_PAGE_SIZE = 20;
 
 const useRequirementCalculatorStore = defineStore('requirementCalculator', {
   state: () => ({ general: null, project: null, projectVersion: null, revisions: [], revisionCount: 0,
@@ -38,7 +39,7 @@ const useRequirementCalculatorStore = defineStore('requirementCalculator', {
     },
     loadRevisions(offset = 0) {
       return this.perform(async () => {
-        const data = (await get_request(`${root}revisions/?limit=20&offset=${offset}`)).data;
+        const data = (await get_request(`${root}revisions/?limit=${REVISION_PAGE_SIZE}&offset=${offset}`)).data;
         this.revisions = data.results;
         this.revisionCount = data.count;
         return data;

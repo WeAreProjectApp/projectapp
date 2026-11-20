@@ -121,6 +121,36 @@ describe('usePortfolioWorksStore', () => {
 
       expect(store.error).toBe('unknown');
     });
+
+    it('keeps the latest localized detail when an older response arrives later', async () => {
+      let resolveEnglish;
+      get_request.mockReturnValueOnce(new Promise(resolve => { resolveEnglish = resolve; }))
+        .mockResolvedValueOnce({ data: { ...mockWork, title: 'Portal de Cliente' } });
+
+      const englishRequest = store.fetchWork('client-portal', 'en');
+      await store.fetchWork('client-portal', 'es');
+      resolveEnglish({ data: { ...mockWork, title: 'Client Portal' } });
+      await englishRequest;
+
+      expect(store.currentWork.title).toBe('Portal de Cliente');
+    });
+
+    it('keeps the active detail loading after an obsolete request fails', async () => {
+      let rejectPrevious;
+      let resolveCurrent;
+      get_request.mockReturnValueOnce(new Promise((_, reject) => { rejectPrevious = reject; }))
+        .mockReturnValueOnce(new Promise(resolve => { resolveCurrent = resolve; }));
+
+      const previousRequest = store.fetchWork('missing', 'en');
+      const currentRequest = store.fetchWork('client-portal', 'en');
+      rejectPrevious({ response: { status: 404 } });
+      await previousRequest;
+
+      expect(store.isLoading).toBe(true);
+      expect(store.error).toBeNull();
+      resolveCurrent({ data: mockWork });
+      await currentRequest;
+    });
   });
 
   describe('fetchAdminWorks', () => {

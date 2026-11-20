@@ -3,11 +3,11 @@
     <main class="w-full py-20 px-6 lg:px-32">
       <div class="max-w-3xl mx-auto text-center">
         <h1 ref="titleRef" class="text-4xl lg:text-6xl font-bold text-text-brand mb-6 opacity-0">
-          {{ messages?.title || '¡Gracias por contactarnos!' }} <span ref="emojiRef">✨</span>
+          {{ t('contactSuccess.title') }} <span ref="emojiRef">✨</span>
         </h1>
         
         <p ref="messageRef" class="text-xl lg:text-2xl font-light text-green-light mb-12 opacity-0">
-          {{ messages?.message || 'Hemos recibido tu información. Nos pondremos en contacto contigo muy pronto para discutir tu proyecto web.' }}
+          {{ t('contactSuccess.message') }}
         </p>
 
         <div ref="buttonRef" class="opacity-0">
@@ -15,7 +15,7 @@
             :href="portfolioLink"
             class="inline-block px-12 py-5 text-xl lg:text-2xl font-medium bg-primary text-bone rounded-full hover:bg-primary-strong transition-colors duration-200"
           >
-            {{ messages?.button || 'Ver nuestro portafolio' }}
+            {{ t('contactSuccess.button') }}
           </a>
         </div>
       </div>
@@ -25,18 +25,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useLanguageStore } from '~/stores/language'
 import gsap from 'gsap'
 
-const languageStore = useLanguageStore()
-const { messages: allMessages, currentLocale } = storeToRefs(languageStore)
-
-const messages = computed(() => allMessages.value.contactSuccess || {})
-
-const portfolioLink = computed(() => {
-  return currentLocale.value ? `/${currentLocale.value}/portfolio-works` : '/portfolio-works'
-})
+const { t } = useI18n()
+const localePath = useLocalePath()
+const portfolioLink = computed(() => localePath('/portfolio-works'))
 
 const titleRef = ref(null)
 const emojiRef = ref(null)

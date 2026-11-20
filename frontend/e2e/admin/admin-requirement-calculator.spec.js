@@ -17,7 +17,9 @@ import {
 
 test.setTimeout(60_000);
 
-async function arrangeCalculator(page, { previewStatus = 200, revisionStatus = 200, actualStatus = 201 } = {}) {
+async function arrangeCalculator(page, {
+  previewStatus = 200, revisionStatus = 200, actualStatus = 201, historyStatus = 200, revisions,
+} = {}) {
   const calls = [];
   const definition = calculatorDefinition();
   let calibrationResponse = calibration;
@@ -44,11 +46,15 @@ async function arrangeCalculator(page, { previewStatus = 200, revisionStatus = 2
       return json({ ...generalCalculator(publishedDefinition), revision_id: 12, if_match: 'general-v12' });
     }
     if (apiPath === 'requirement-calculator/revisions/' && method === 'GET') {
-      const historical = { id: 9, note: 'Regla anterior', created_at: '2026-10-01T09:00:00Z' };
-      const results = publishedRevision
-        ? [{ id: 12, note: publishedNote, created_at: '2026-11-05T10:00:00Z' }, historical]
-        : [historical];
-      return json({ count: results.length, results });
+      if (historyStatus !== 200) return json({ detail: 'No se pudo cargar el historial.' }, historyStatus);
+      const { searchParams } = new URL(route.request().url());
+      const offset = Number(searchParams.get('offset'));
+      const limit = Number(searchParams.get('limit'));
+      const historical = revisions ?? [{ id: 9, note: 'Regla anterior', created_at: '2026-10-01T09:00:00Z' }];
+      const rows = publishedRevision
+        ? [{ id: 12, note: publishedNote, created_at: '2026-11-05T10:00:00Z' }, ...historical]
+        : historical;
+      return json({ count: rows.length, results: rows.slice(offset, offset + limit) });
     }
     if (apiPath === 'requirement-calculator/revisions/9/' && method === 'GET') {
       return revisionStatus === 200
@@ -156,6 +162,55 @@ test.describe('Admin requirement calculator', () => {
     await openCalculatorFromNavigation(page);
     await page.getByRole('button', { name: 'Versiones', exact: true }).click();
     await expect(page.getByText('Regla anterior', { exact: true })).toHaveText('Regla anterior');
+  });
+
+  test('shows an empty state when no revisions were published', {
+    tag: [...ADMIN_REQUIREMENT_CALCULATOR_REVISION_RESTORE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the protected panel page is setup for sidebar navigation)
+    await arrangeCalculator(page, { revisions: [] });
+    await openCalculatorFromNavigation(page);
+    await page.getByRole('button', { name: 'Versiones', exact: true }).click();
+
+    await expect(page.getByRole('status')).toHaveText('Aún no hay versiones publicadas');
+    await expect(page.getByRole('button', { name: 'Siguiente', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Definición', exact: true }).click();
+    await expect(page.getByTestId('calculator-title')).toHaveValue('Definición comercial vigente');
+  });
+
+  test('shows an error after failing to load published revisions', {
+    tag: [...ADMIN_REQUIREMENT_CALCULATOR_REVISION_RESTORE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the protected panel page is setup for sidebar navigation)
+    await arrangeCalculator(page, { historyStatus: 503 });
+    await openCalculatorFromNavigation(page);
+    await page.getByRole('button', { name: 'Versiones', exact: true }).click();
+
+    await expect(page.getByTestId('calculator-error')).toContainText('No se pudo cargar el historial.');
+    await expect(page.getByText('Aún no hay versiones publicadas', { exact: true })).toHaveCount(0);
+  });
+
+  test('pages through published revisions', {
+    tag: [...ADMIN_REQUIREMENT_CALCULATOR_REVISION_RESTORE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the protected panel page is setup for sidebar navigation)
+    const revisions = Array.from({ length: 21 }, (_, index) => ({
+      id: 21 - index, note: `Publicación ${21 - index}`, created_at: '2026-10-01T09:00:00Z',
+    }));
+    await arrangeCalculator(page, { revisions });
+    await openCalculatorFromNavigation(page);
+    await page.getByRole('button', { name: 'Versiones', exact: true }).click();
+
+    const previous = page.getByRole('button', { name: 'Anterior', exact: true });
+    const next = page.getByRole('button', { name: 'Siguiente', exact: true });
+    await expect(page.getByText('Publicación 21', { exact: true })).toBeVisible();
+    await expect(previous).toBeDisabled();
+    await next.click();
+
+    await expect(page.getByText('Publicación 1', { exact: true })).toBeVisible();
+    await expect(next).toBeDisabled();
+    await previous.click();
+    await expect(page.getByText('Publicación 21', { exact: true })).toBeVisible();
   });
 
   test('restores a historical definition through a confirmed revision', {

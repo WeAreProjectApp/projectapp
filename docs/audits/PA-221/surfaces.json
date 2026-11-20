@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "sources": {
-    "frontend/config/viewCatalog.js": "1aae4df8d911fac271c80c646e322caac3e2f91a93a7335d20c6d962bd7476f7",
-    "frontend/config/viewCapabilityCatalog.js": "7f166ac2f67b01b2ad7f597e8c3e16b42118b4b5b38b7e8eba204c5a37e2fcb3"
+    "frontend/config/viewCatalog.js": "9cd8bb8aef3b5641cf56d928c28d0e962fe0bd1dff305b6df1e1a9f1a3eaf50d",
+    "frontend/config/viewCapabilityCatalog.js": "0d1877f61540228037bfa128a021eba0952b5ef368244672c525883610a4afe9"
   },
   "surfaces": [
     {
@@ -131,12 +131,12 @@
       "file": "frontend/pages/panel/requirement-calculator/index.vue",
       "audience": "admin",
       "view_type": "config",
-      "description": "Comercial administra la definición, señales, valores y revisiones por panel/MCP. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.",
+      "description": "Comercial administra la definición, señales y valores por panel/MCP. Versiones muestra las revisiones publicadas con paginación y avisa si todavía no hay publicaciones. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.",
       "features": [
         {
           "id": "panel-requirement-calculator",
           "label": "Administrar calculadora y versiones por proyecto",
-          "summary": "Configura señales, pesos, porcentajes y valores internos, conserva revisiones y sincroniza el documento general. Prepara variantes particulares por proyecto en borrador, ajusta sólo parámetros y registra su aprobación para congelar documento y PDF. Revisa cierres con evidencia completa paginada y propuestas de calibración. La clasificación se realiza desde un chat externo por MCP."
+          "summary": "Configura señales, pesos, porcentajes y valores internos, consulta las revisiones publicadas en Versiones y sincroniza el documento general. Prepara variantes particulares por proyecto en borrador, ajusta sólo parámetros y registra su aprobación para congelar documento y PDF. Revisa cierres con evidencia completa paginada y propuestas de calibración. La clasificación se realiza desde un chat externo por MCP."
         }
       ]
     },

@@ -3250,11 +3250,13 @@ Two transitions that were previously bundled into other flows now have their own
   3. User fills in the form fields.
   4. User submits the form.
   5. API call to `POST /api/new-contact/`.
-  6. On success, user is redirected to `/contact-success`.
+  6. On success, the form locks further submissions and opens `/contact-success` in the active locale.
 - **Branches:**
   - [Branch A — Validation error] Form shows inline validation errors, user corrects and resubmits.
-  - [Branch B — API error] The localized `contact-submit-error` message renders below the submit button and the form remains editable (mechanism added 2026-08-03 — before that the store's `submitError` was never displayed). Covered by the `@outcome:error` spec.
-- **Coverage:** ✅ Covered (success + error)
+  - [Branch B — API error] The localized `contact-submit-error` message renders below the submit button and the form remains editable.
+  - [Branch C — Navigation failure] A successful submission stays locked if the router rejects the destination. The user action produces one POST.
+  - [Branch D — Locale display] The form and confirmation use the active locale in the visible copy and document language.
+- **Coverage:** `success`, `error`, `failure`, `display` in the browser spec.
 - **E2E Spec:** `e2e/public/public-contact.spec.js`
 
 ### FLOW: `public-privacy-policy`
@@ -5553,7 +5555,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 
 | Outcome | Inicio → acción → resultado observable |
 |---|---|
-| `display` | Abrir **Financiación → Otrosíes** → ver métricas, filtros y registros vigentes o el estado vacío. |
+| `display` | Abrir **Financiación → Otrosíes** → ver métricas y registros vigentes o el estado vacío. Usar búsqueda y los desplegables Estado, Modalidad y Alcance. Pulsar **Filtrar** para aplicar la selección. |
 | `success` | Pulsar **Nuevo otrosí** → seleccionar un cliente → verificar su identidad precargada → completar contrato, alcance, monto elegible y abono inicial → crear → abrir el borrador con el calendario de cuotas definido por la política vigente. |
 | `error` | Enviar datos incompletos o inválidos → el API y el formulario señalan los campos → los datos ya escritos permanecen disponibles. |
 | `failure` | Fallar la carga del registro → mostrar un estado de error explícito sin presentar una lista vacía engañosa. |
@@ -6553,7 +6555,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `public-consulting-pdf` | public | P2 | success,failure | — |
 | `public-consulting-share` | public | P2 | success,failure | — |
 | `public-consulting-theme` | public | P2 | success | — |
-| `public-contact-submit` | public | P1 | success,error | 1 |
+| `public-contact-submit` | public | P1 | success,error,failure,display | 1 |
 | `public-financing-explainer` | public | P2 | display,success,failure | 4 |
 | `public-financing-guide` | public | P2 | success,display | 2 |
 | `public-financing-language` | public | P2 | success | — |
@@ -8481,7 +8483,7 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Route:** `/panel/requirement-calculator`
 - **Description:** El administrador consulta revisiones paginadas, carga una anterior en el editor y la publica como una nueva revisión inmutable. Si falla la carga o publicación, no sustituye silenciosamente la definición vigente.
 - **Steps:** Abrir Versiones → consultar motivo y fecha → restaurar → comprobar el editor → confirmar Guardar.
-- **Branches:** Una falla al cargar conserva la definición actual y muestra el error; el pasado no se sobrescribe.
+- **Branches:** Versiones muestra un aviso si todavía no hay publicaciones. Con más de 20 revisiones aparecen los controles de paginación. Una falla al cargar muestra el error y conserva la definición actual y las revisiones históricas.
 - **Coverage:** ✅ Covered — `display`, `success`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`, incluida la publicación confirmada como nueva revisión.
 
 ### FLOW: `admin-project-requirement-calculator-draft`
