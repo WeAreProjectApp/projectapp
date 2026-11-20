@@ -169,7 +169,7 @@
 
     <!-- Empty -->
     <BaseEmptyState
-      v-else-if="!store.isLoading && filteredRows.length === 0"
+      v-else-if="filterQueryReady && !store.isLoading && filteredRows.length === 0"
       :title="emptyTitle"
       :description="emptyDescription"
     >
@@ -214,7 +214,7 @@
         v-if="isGrouped"
         v-model:selected="selectedIds"
         :selectable="!isArchivedScope"
-        :loading="store.isLoading"
+        :loading="!filterQueryReady || store.isLoading"
         :highlight-id="lastMutatedId"
         :columns="groupedColumns"
         :groups="displayGroups"
@@ -225,6 +225,9 @@
         :show-default-actions="false"
         row-actions-layout="menu-start"
         :sort-column-key="isArchivedScope ? '' : 'monthly_cop_cost'"
+        :interactive-rows="true"
+        @row-click="openRecurringRow"
+        @row-auxclick="openRecurringRow"
         @reorder="handleReorder"
         @toggle-group="toggleGroup"
         @toggle-weight-sort="toggleGroupedWeightSort"
@@ -235,6 +238,12 @@
             :busy="duplicatingId === row.id"
             @open="openActions"
           />
+        </template>
+        <template #cell-name="{ row }">
+          <BaseRowLink :to="recurringDetailTo(row.id)" stretch class="text-text-brand">
+            <HighlightText v-if="currentFilters.search" :text="row.name" :query="currentFilters.search" />
+            <template v-else>{{ row.name }}</template>
+          </BaseRowLink>
         </template>
         <template #cell-price="{ row }">
           <span class="tabular-nums">{{ formatMoney(Number(row.price), row.currency) }}</span>
@@ -279,7 +288,7 @@
         <AccountingTable
           v-model:selected="selectedIds"
           :selectable="!isArchivedScope"
-          :loading="store.isLoading"
+          :loading="!filterQueryReady || store.isLoading"
           :highlight-id="lastMutatedId"
           :columns="columns"
           :rows="pagedRows"
@@ -288,6 +297,9 @@
           :sort-dir="sortDir"
           :show-default-actions="false"
           row-actions-layout="menu-start"
+          :interactive-rows="true"
+          @row-click="openRecurringRow"
+          @row-auxclick="openRecurringRow"
           @sort="toggleSort"
         >
           <template #row-actions="{ row }">
@@ -296,6 +308,12 @@
               :busy="duplicatingId === row.id"
               @open="openActions"
             />
+          </template>
+          <template #cell-name="{ row }">
+            <BaseRowLink :to="recurringDetailTo(row.id)" stretch class="text-text-brand">
+              <HighlightText v-if="currentFilters.search" :text="row.name" :query="currentFilters.search" />
+              <template v-else>{{ row.name }}</template>
+            </BaseRowLink>
           </template>
           <template #cell-price="{ row }">
             <span class="tabular-nums">{{ formatMoney(Number(row.price), row.currency) }}</span>
@@ -344,7 +362,7 @@
         </AccountingTable>
 
         <BasePagination
-          v-if="!store.isLoading && filteredRows.length > 0"
+          v-if="filterQueryReady && !store.isLoading && filteredRows.length > 0"
           :current-page="currentPage"
           :total-pages="totalPages"
           :total-items="totalItems"
@@ -374,7 +392,8 @@
       :open="actionsOpen"
       :record="actionsRow"
       @close="actionsOpen = false"
-      @history="historyRow = $event"
+      :detail-to="actionsRow ? router.resolve(recurringDetailTo(actionsRow.id)).href : ''"
+      @history="openHistory($event.id)"
       @notes="noteRow = $event"
       @edit="openEditModal"
       @duplicate="duplicateRecurring"
@@ -421,10 +440,13 @@
     />
 
     <EntityHistoryRecordModal
-      :open="historyRow !== null"
+      :open="historyOpen"
       entity-type="recurring"
-      :record="historyRow"
-      @close="historyRow = null"
+      :record="historyRecord"
+      :loading="historyLoading"
+      :error="historyError"
+      @close="closeHistory"
+      @retry="reloadHistory"
     />
 
     <AccountingNoteModal
@@ -464,6 +486,9 @@ import { get_request } from '~/stores/services/request_http';
 import { useRadarFocus } from '~/composables/useRadarFocus';
 import { useDashboardAttentionText } from '~/composables/useDashboardAttentionText';
 import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
+import { useAccountingRecordDetail } from '~/composables/useAccountingRecordDetail';
+import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
+import { useRowNavigation } from '~/composables/useRowNavigation';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
@@ -499,6 +524,7 @@ import {
   matchIncludes,
   matchNumberRange,
 } from '~/composables/useAccountingFilters';
+import { numericFilterIds } from '~/utils/accountingFilterQuery';
 import { useAccountingStore } from '~/stores/accounting';
 import { buildExportParams } from '~/utils/accountingExportParams';
 import { formatMoney } from '~/utils/formatMoney';
@@ -538,20 +564,28 @@ async function loadRadarRecord() {
     radarRecord.value = response.data;
     collapsedGroupIds.value = [];
     goTo(1);
-    await radarFocus(`[data-testid="accounting-row-${id}"]`);
+    if (!historyOpen.value) await radarFocus(`[data-testid="accounting-row-${id}"]`);
   } catch (error) {
     if (token !== radarRequest) return;
     radarError.value = error.response?.status === 404 ? radarText.value.missing : error.response?.status === 403 ? radarText.value.forbidden : radarText.value.detailError;
   }
 }
 function clearRadarRecord() {
-  const query = { ...route.query };
+  const query = buildFilterQuery();
   delete query.recurring;
   delete query.radar;
   router.replace({ query });
 }
 const notify = usePanelNotify();
-const archiveScope = ref('current');
+const archiveScope = computed({
+  get: () => route.query.scope === 'archived' ? 'archived' : 'current',
+  set: (scope) => {
+    const query = buildFilterQuery();
+    if (scope === 'archived') query.scope = 'archived';
+    else delete query.scope;
+    router.replace({ query });
+  },
+});
 const archiveScopeOptions = [
   { value: 'current', label: 'Vigentes' },
   { value: 'archived', label: 'Archivados' },
@@ -580,8 +614,14 @@ const {
   restoreTab,
   rebaseTab,
   reorderTabs,
+  filterQueryReady,
+  whenFiltersReady,
+  buildFilterQuery,
 } = useAccountingFilters({
   viewName: 'accounting_recurring',
+  syncFiltersToUrl: true,
+  restoreUrlState: true,
+  urlFilterCodecs: { category: numericFilterIds },
   defaults: {
     category: [],
     frequency: [],
@@ -695,7 +735,7 @@ const exportParams = computed(() => ({
 // equivalent and status survive every width.
 const SHARED_COLUMNS = [
   {
-    key: 'name', label: 'Nombre', size: 'name', sortable: true,
+    key: 'name', label: 'Nombre', size: 'name', sortable: true, link: true,
     responsive: { primary: true, compact: 'keep', portrait: 'keep', landscape: 'keep' },
   },
   {
@@ -751,7 +791,11 @@ const columns = [
 
 const groupedColumns = SHARED_COLUMNS.map(({ sortable, ...col }) => col);
 
-const filteredRows = computed(() => radarId.value ? (radarRecord.value ? [radarRecord.value] : []) : applyFilters(store.recurringPayments));
+const filteredRows = computed(() => {
+  if (!filterQueryReady.value) return [];
+  if (radarId.value) return radarRecord.value ? [radarRecord.value] : [];
+  return applyFilters(store.recurringPayments);
+});
 const filteredIds = computed(() => filteredRows.value.map((row) => row.id));
 const { selectedIds, clearSelection, dropIds } = useRowSelection(
   () => store.recurringPayments,
@@ -1018,7 +1062,16 @@ function money(value) {
 const actionsOpen = ref(false);
 const actionsRow = ref(null);
 // Opened from the row menu: the leading track only fits the kebab.
-const historyRow = ref(null);
+const { openRow } = useRowNavigation();
+const { openId: historyId, isOpen: hasHistoryId, toFor: recurringDetailTo, open: openHistory, close: closeHistory } =
+  useDetailQueryParam('recurringDetail', { buildQuery: buildFilterQuery });
+const historyOpen = computed(() => filterQueryReady.value && hasHistoryId.value);
+const { record: historyRecord, loading: historyLoading, error: historyError, reload: reloadHistory } =
+  useAccountingRecordDetail('accounting/recurring/', historyId, historyOpen);
+
+function openRecurringRow(row, event) {
+  openRow(router.resolve(recurringDetailTo(row.id)).href, event);
+}
 // «Ver nota» is a menu entry only when the payment has one.
 const noteRow = ref(null);
 const duplicatingId = ref(null);
@@ -1250,6 +1303,7 @@ async function loadCategories() {
 }
 
 async function loadRecords() {
+  if (!(await whenFiltersReady())) return;
   const result = await store.fetchRecords('recurring', {
     archive_scope: archiveScope.value,
   });
@@ -1274,7 +1328,9 @@ watch(archiveScope, async () => {
   await loadRecords();
 });
 
-watch(radarId, loadRadarRecord);
+watch(radarId, async () => {
+  if (await whenFiltersReady()) await loadRadarRecord();
+});
 onMounted(loadAll);
 usePanelRefresh(loadAll);
 </script>

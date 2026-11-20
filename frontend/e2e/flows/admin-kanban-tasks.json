@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Internal Kanban task board at /panel/tasks (alias /panel/tareas redirects here). Admin can create, edit, move across TO DO/In Progress/Blocked/Done columns, and delete tasks. The seven primary fields in create and edit dialogs are named by their visible labels, preserving values, validation and mouse focus (PA-236).",
+  "description": "Internal Kanban task board at /panel/tasks (alias /panel/tareas redirects here). Admin can create, edit, move across TO DO/In Progress/Blocked/Done columns, and delete tasks. The seven primary fields in create and edit dialogs are named by their visible labels, preserving values, validation and mouse focus (PA-236). Los encabezados siguen el idioma de la ruta. Soltar una tarjeta guarda el estado y el orden de la columna de destino.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useProcurementStore } from '~/stores/procurement'
-import { useProposalStore } from '~/stores/proposals'
 import { PAGE_MAX_WIDTH } from '~/utils/tableLayout'
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
@@ -10,33 +9,58 @@ const tr = key => t(`procurement.${key}`)
 const lp = useLocalePath()
 const route = useRoute()
 const store = useProcurementStore()
-const auth = useProposalStore()
 const state = ref('interesting')
 const notes = ref('')
 const loading = ref(false)
 const error = ref('')
 const saved = ref(false)
-const mine = computed(() => store.detail?.classifications?.find(item => item.owner === auth.adminUser?.id))
+const mine = computed(() => store.detail?.my_classification)
 const states = computed(() => ['interesting', 'reviewing', 'applied', 'discarded'].map(value => ({ value, label: tr(value) })))
 const date = value => value ? new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(value)) : tr('unknown')
-async function load() {
-  error.value = ''; loading.value = true; store.close()
-  try { await store.open(route.params.id); state.value = mine.value?.state || 'interesting'; notes.value = mine.value?.notes || '' }
-  catch { error.value = tr('loadError') }
-  finally { loading.value = false }
+let generation = 0
+
+function hydrateForm() {
+  state.value = mine.value?.state ?? 'interesting'
+  notes.value = mine.value?.notes ?? ''
 }
+
+async function load() {
+  const current = ++generation
+  error.value = ''
+  saved.value = false
+  loading.value = true
+  store.close()
+  try {
+    await store.open(route.params.id)
+    if (current === generation) hydrateForm()
+  } catch {
+    if (current === generation) error.value = tr('loadError')
+  } finally {
+    if (current === generation) loading.value = false
+  }
+}
+
 async function save(restore = false) {
+  const current = generation
+  const id = route.params.id
   error.value = ''; saved.value = false
   if (!restore && state.value === 'discarded' && !notes.value.trim()) { error.value = tr('reasonRequired'); return }
   try {
-    if (restore) await store.restore(route.params.id)
-    else await store.classify(route.params.id, { state: state.value, notes: notes.value })
-    state.value = mine.value?.state || state.value; notes.value = mine.value?.notes || ''; saved.value = true
-  } catch { error.value = tr('saveError') }
+    if (restore) await store.restore(id)
+    else await store.classify(id, { state: state.value, notes: notes.value })
+    if (current !== generation) return
+    hydrateForm()
+    saved.value = true
+  } catch {
+    if (current === generation) error.value = tr('saveError')
+  }
 }
 onMounted(load)
 watch(() => route.params.id, load)
-onBeforeUnmount(() => store.close())
+onBeforeUnmount(() => {
+  generation += 1
+  store.close()
+})
 </script>
 
 <template>

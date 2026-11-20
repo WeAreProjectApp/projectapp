@@ -1,4 +1,10 @@
 export default {
+  taskBoardStatus: {
+    todo: 'Por hacer',
+    in_progress: 'En curso',
+    blocked: 'Bloqueada',
+    done: 'Completada',
+  },
   incomeCollection: {
     draft: 'Borrador',
     issued: 'Emitida',

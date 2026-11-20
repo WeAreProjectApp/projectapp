@@ -115,7 +115,7 @@
 
     <!-- Empty -->
     <BaseEmptyState
-      v-else-if="!store.isLoading && filteredRecords.length === 0"
+      v-else-if="filterQueryReady && !store.isLoading && filteredRecords.length === 0"
       :title="hasActiveFilters ? 'Sin resultados con esos filtros' : 'No hay hostings aún'"
       :description="hasActiveFilters
         ? 'Ajusta o limpia los filtros para ver más registros.'
@@ -142,7 +142,7 @@
       <AccountingTable
         v-model:selected="selectedIds"
         selectable
-        :loading="store.isLoading"
+        :loading="!filterQueryReady || store.isLoading"
         :highlight-id="lastMutatedId"
         :columns="columns"
         :rows="pagedRecords"
@@ -375,7 +375,7 @@
     />
 
     <HostingCyclesModal
-      :open="cyclesModalOpen"
+      :open="filterQueryReady && cyclesModalOpen && Boolean(cyclesRecord)"
       :record="cyclesRecord"
       @close="closeCyclesModal"
       @changed="onCyclesChanged"
@@ -447,6 +447,7 @@ import {
   matchIncludes,
   matchBooleanIncludes,
 } from '~/composables/useAccountingFilters';
+import { optionalFilterIds } from '~/utils/accountingFilterQuery';
 import { useAccountingStore } from '~/stores/accounting';
 import { usePanelProjectsStore } from '~/stores/panel_projects';
 import { buildExportParams } from '~/utils/accountingExportParams';
@@ -523,9 +524,14 @@ const {
   restoreTab: restoreFilterTab,
   rebaseTab: rebaseFilterTab,
   reorderTabs: reorderFilterTabs,
-  consumeParam,
+  filterQueryReady,
+  whenFiltersReady,
+  buildFilterQuery,
 } = useAccountingFilters({
   viewName: 'accounting_hosting',
+  syncFiltersToUrl: true,
+  restoreUrlState: true,
+  urlFilterCodecs: { clients: optionalFilterIds, projects: optionalFilterIds },
   // Ambos siembran un filtro: la URL los conserva mientras ese filtro esté
   // puesto y los suelta en cuanto se limpia.
   ephemeralParams: [
@@ -673,7 +679,7 @@ const exportParams = computed(() =>
 
 const hostingsMeta = computed(() => store.metaFor('hostings'));
 
-const filteredRecords = computed(() => applyFilters(store.hostings));
+const filteredRecords = computed(() => applyFilters(filterQueryReady.value ? store.hostings : []));
 
 // Weight over the filtered ACTIVE monthly income: inactive hostings show 0%
 // and stay out of the base, so the active ones read as a 100% composition.
@@ -854,7 +860,9 @@ async function applyProjectToSelection({ ids, project, mode, plan }) {
 }
 
 async function loadRecords() {
-  await store.fetchRecords('hostings');
+  if (!(await whenFiltersReady())) return;
+  const result = await store.fetchRecords('hostings');
+  if (result.success && cyclesModalOpen.value && !cyclesRecord.value) closeCyclesModal();
 }
 
 // -------------------------------------------------------------------
@@ -934,7 +942,7 @@ const {
   toFor: hostingCyclesTo,
   open: openCyclesById,
   close: closeCyclesModal,
-} = useDetailQueryParam('hosting', { rows: () => store.hostings });
+} = useDetailQueryParam('hosting', { rows: () => store.hostings, buildQuery: buildFilterQuery });
 
 function openCyclesModal(row) {
   openCyclesById(row.id);
@@ -1004,30 +1012,7 @@ async function sendBilling(context = {}) {
 }
 
 
-/**
- * Entry point for "ver los hostings de este cliente" from /panel/clients.
- * Seeds the client multi-select so the deep link lands already filtered.
- * The id must be a Number: `matchClients` compares against `record.client`,
- * which the API serializes numerically. The landing tab here is 'all', so
- * nothing filters the incoming rows back out.
- */
-function applyClientFromQuery() {
-  const raw = consumeParam('client');
-  if (!raw) return;
-  const clientId = Number(raw);
-  if (!Number.isFinite(clientId)) return;
-  currentFilters.clients = [clientId];
-  isFilterPanelOpen.value = true;
-}
-
 onMounted(() => {
-  // ?project=<id> — deep link from the /panel/projects counts. Seeded before
-  // the load; the `projects` matcher above already speaks this key.
-  const projectParam = Number(consumeParam('project'));
-  if (Number.isInteger(projectParam) && projectParam > 0) {
-    currentFilters.projects = [projectParam];
-  }
-  applyClientFromQuery();
   // Project filter options come from the full catalog (history.vue
   // pattern); the store swallows failures, so an error just means a
   // smaller dropdown, never a blocked page.

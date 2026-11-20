@@ -77,7 +77,7 @@
 
     <!-- Empty -->
     <BaseEmptyState
-      v-else-if="!store.isLoading && filteredRows.length === 0"
+      v-else-if="filterQueryReady && !store.isLoading && filteredRows.length === 0"
       :title="hasActiveFilters ? 'Sin resultados con esos filtros' : 'No hay gastos en Ads aún'"
       :description="hasActiveFilters
         ? 'Ajusta o limpia los filtros para ver más registros.'
@@ -101,7 +101,7 @@
 
     <template v-else>
       <AccountingTable
-        :loading="store.isLoading"
+        :loading="!filterQueryReady || store.isLoading"
         :highlight-id="lastMutatedId"
         :columns="columns"
         :rows="pagedRows"
@@ -110,6 +110,9 @@
         :sort-dir="sortDir"
         :show-default-actions="false"
         row-actions-layout="menu-start"
+        :interactive-rows="true"
+        @row-click="openAdSpendRow"
+        @row-auxclick="openAdSpendRow"
         @sort="toggleSort"
       >
         <template #row-actions="{ row }">
@@ -118,6 +121,11 @@
             :test-id="`ads-actions-${row.id}`"
             @open="actionsRow = row"
           />
+        </template>
+        <template #cell-platform_label="{ row }">
+          <BaseRowLink :to="adDetailTo(row.id)" stretch class="text-text-brand">
+            {{ row.platform_label || row.platform }}
+          </BaseRowLink>
         </template>
         <template #cell-origin_card="{ row }">
           {{ row.origin_card || '—' }}
@@ -136,7 +144,7 @@
       </p>
 
       <BasePagination
-        v-if="!store.isLoading && filteredRows.length > 0"
+        v-if="filterQueryReady && !store.isLoading && filteredRows.length > 0"
         :current-page="currentPage"
         :total-pages="totalPages"
         :total-items="totalItems"
@@ -155,6 +163,7 @@
       :title="actionsRow ? adSpendLabel(actionsRow) : ''"
       :subtitle="adSpendSummary(actionsRow)"
       :actions="adSpendActions"
+      :detail-to="actionsRow ? router.resolve(adDetailTo(actionsRow.id)).href : ''"
       test-id-prefix="ads"
       @close="actionsRow = null"
       @select="runAdSpendAction"
@@ -170,10 +179,13 @@
     />
 
     <EntityHistoryRecordModal
-      :open="historyRow !== null"
+      :open="historyOpen"
       entity-type="ads"
-      :record="historyRow"
-      @close="historyRow = null"
+      :record="historyRecord"
+      :loading="historyLoading"
+      :error="historyError"
+      @close="closeHistory"
+      @retry="reloadHistory"
     />
 
     <AccountingNoteModal
@@ -202,6 +214,9 @@
 
 <script setup>
 import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
+import { useAccountingRecordDetail } from '~/composables/useAccountingRecordDetail';
+import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
+import { useRowNavigation } from '~/composables/useRowNavigation';
 import { computed, onMounted, ref } from 'vue';
 import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
@@ -228,6 +243,7 @@ import {
   matchIncludes,
   matchNumberRange,
 } from '~/composables/useAccountingFilters';
+import { repeatedFilterText } from '~/utils/accountingFilterQuery';
 import { useAccountingStore } from '~/stores/accounting';
 import { buildExportParams } from '~/utils/accountingExportParams';
 import { leadingRowActions } from '~/utils/accountingRowActions';
@@ -262,8 +278,14 @@ const {
   restoreTab: restoreFilterTab,
   rebaseTab: rebaseFilterTab,
   reorderTabs: reorderFilterTabs,
+  filterQueryReady,
+  whenFiltersReady,
+  buildFilterQuery,
 } = useAccountingFilters({
   viewName: 'accounting_ads',
+  syncFiltersToUrl: true,
+  restoreUrlState: true,
+  urlFilterCodecs: { origin_card: repeatedFilterText },
   defaults: {
     spend_from: '',
     spend_to: '',
@@ -330,7 +352,7 @@ const columns = [
     responsive: { compact: 'group', portrait: 'group', landscape: 'keep' },
   },
   {
-    key: 'platform_label', label: 'Plataforma',
+    key: 'platform_label', label: 'Plataforma', link: true,
     responsive: { primary: true, compact: 'keep', portrait: 'keep', landscape: 'keep' },
   },
   {
@@ -351,7 +373,7 @@ const columns = [
   },
 ];
 
-const filteredRows = computed(() => applyFilters(store.adsRecords));
+const filteredRows = computed(() => applyFilters(filterQueryReady.value ? store.adsRecords : []));
 
 const filteredTotal = computed(() =>
   filteredRows.value.reduce((total, record) => total + (Number(record.amount) || 0), 0),
@@ -422,7 +444,17 @@ const {
 // Ver nota (when the spend has one), Editar and Eliminar.
 
 const actionsRow = ref(null);
-const historyRow = ref(null);
+const router = useRouter();
+const { openRow } = useRowNavigation();
+const { openId: historyId, isOpen: hasHistoryId, toFor: adDetailTo, open: openHistory, close: closeHistory } =
+  useDetailQueryParam('ads', { buildQuery: buildFilterQuery });
+const historyOpen = computed(() => filterQueryReady.value && hasHistoryId.value);
+const { record: historyRecord, loading: historyLoading, error: historyError, reload: reloadHistory } =
+  useAccountingRecordDetail('accounting/ads/', historyId, historyOpen);
+
+function openAdSpendRow(row, event) {
+  openRow(router.resolve(adDetailTo(row.id)).href, event);
+}
 const noteRow = ref(null);
 
 function adSpendLabel(row) {
@@ -442,7 +474,7 @@ const adSpendActions = computed(() => (actionsRow.value
   : []));
 
 const adSpendActionHandlers = {
-  history: (row) => { historyRow.value = row; },
+  history: (row) => openHistory(row.id),
   notes: (row) => { noteRow.value = row; },
   edit: (row) => openEditModal(row),
   delete: (row) => confirmDelete(row),
@@ -453,6 +485,7 @@ function runAdSpendAction(id, row) {
 }
 
 async function loadRecords() {
+  if (!(await whenFiltersReady())) return;
   const result = await store.fetchRecords('ads');
   if (!result.success) {
     notify.error({ title: 'No se pudieron cargar los gastos en Ads', detail: result.message });

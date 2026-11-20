@@ -37,11 +37,12 @@ const existingWork = {
 
 const updatedWork = { ...existingWork, title_es: 'Proyecto Actualizado' };
 
-function setupMock(page) {
+function setupMock(page, workId = 1) {
   return mockApi(page, async ({ apiPath, route }) => {
     if (apiPath === 'auth/check/') return authCheck;
-    if (apiPath === 'portfolio/admin/1/detail/') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(existingWork) };
+    if (apiPath === `portfolio/admin/${workId}/detail/`) {
+      const work = { ...existingWork, id: workId, is_published: workId !== 11 };
+      return { status: 200, contentType: 'application/json', body: JSON.stringify(work) };
     }
     if (apiPath === 'portfolio/admin/1/update/' && route.request().method() === 'PATCH') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(updatedWork) };
@@ -63,14 +64,30 @@ test.describe('Admin Portfolio Edit', () => {
     await page.goto('/panel/portfolio/1/edit');
 
     const esGroup = page.getByRole('group', { name: 'Español' });
-    await expect(esGroup.locator('label:has-text("Título (ES)")').locator('..').locator('input')).toHaveValue('Proyecto Existente');
-    await expect(esGroup.locator('label:has-text("Tagline (ES)")').locator('..').locator('input')).toHaveValue('Tagline ES.');
+    await expect(esGroup.getByRole('textbox', { name: 'Título (ES)', exact: true })).toHaveValue('Proyecto Existente');
+    await expect(esGroup.getByRole('textbox', { name: 'Tagline (ES)', exact: true })).toHaveValue('Tagline ES.');
 
     const enGroup = page.getByRole('group', { name: 'English' });
-    await expect(enGroup.locator('label:has-text("Title (EN)")').locator('..').locator('input')).toHaveValue('Existing Project');
+    await expect(enGroup.getByRole('textbox', { name: 'Title (EN)', exact: true })).toHaveValue('Existing Project');
 
     await expect(page.locator('label:has-text("Slug")').locator('..').locator('input')).toHaveValue('proyecto-existente');
   });
+
+  for (const workId of [2, 11]) {
+    test(`focuses each bilingual field through its label for work ${workId}`, {
+      tag: [...ADMIN_PORTFOLIO_EDIT, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      await setupMock(page, workId);
+      await page.goto(`/en-us/panel/portfolio/${workId}/edit`, { waitUntil: 'domcontentloaded' });
+
+      for (const label of ['Título (ES)', 'Tagline (ES)', 'Title (EN)', 'Tagline (EN)']) {
+        await page.getByText(label, { exact: true }).click();
+        await expect(page.getByRole('textbox', { name: label, exact: true })).toBeFocused();
+      }
+      await page.getByRole('textbox', { name: 'Title (EN)', exact: true }).press('Tab');
+      await expect(page.getByRole('textbox', { name: 'Tagline (EN)', exact: true })).toBeFocused();
+    });
+  }
 
   test('edits title and saves successfully', {
     tag: [...ADMIN_PORTFOLIO_EDIT, '@role:admin', '@outcome:success'],
@@ -79,7 +96,7 @@ test.describe('Admin Portfolio Edit', () => {
     await page.goto('/panel/portfolio/1/edit');
 
     const esGroup = page.getByRole('group', { name: 'Español' });
-    await esGroup.locator('label:has-text("Título (ES)")').locator('..').locator('input').fill('Proyecto Actualizado');
+    await esGroup.getByRole('textbox', { name: 'Título (ES)', exact: true }).fill('Proyecto Actualizado');
     await page.getByRole('button', { name: /Guardar cambios/ }).click();
 
     await expect(page.getByText('Proyecto guardado correctamente')).toContainText('Proyecto guardado correctamente');

@@ -17,7 +17,7 @@ export default {
   functions: { voice_report: 'Reportes', chatbot: 'Chatbot', all: 'Todas' },
   fields: { title: 'Título', description: 'Descripción', expected_behavior: 'Resultado esperado', actual_behavior: 'Resultado observado', module_or_screen: 'Pantalla o módulo', message: 'Observación', steps_to_reproduce: 'Pasos para reproducir (uno por línea)' },
   save: 'Guardar cambios', saved: 'Datos actualizados.', reload: 'Actualizar', loading: 'Cargando…',
-  global: 'Controles globales', switchHint: 'El apagado global prevalece. Los clientes nuevos comienzan con ambas funciones apagadas.',
+  global: 'Controles globales', switchHint: 'Para cada función se aplica primero la excepción explícita del cliente, luego el valor global guardado y, si falta, el valor inicial del catálogo. Para usar IA o audio, la cuenta debe ser elegible, el proveedor correspondiente debe estar configurado y la operación debe estar autorizada.',
   clients: 'Por cliente', search: 'Buscar cliente', noClients: 'No hay clientes para esta búsqueda.',
   previous: 'Anterior', next: 'Siguiente', firstPage: 'Estás en la primera página.', lastPage: 'No hay más resultados.',
   providerHint: 'La transcripción utiliza OpenAI aunque el redactor sea Haiku. No se cambia de proveedor automáticamente ante errores. Jev corresponde al chatbot.',

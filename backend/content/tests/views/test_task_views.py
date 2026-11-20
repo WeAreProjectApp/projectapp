@@ -134,6 +134,25 @@ class TestReorderTask:
         assert todo_task.status == 'done'
         assert todo_task.position == 0
 
+    def test_persists_drop_before_the_second_destination_task(self, admin_client):
+        source_ids = [1, 2, 9, 33]
+        destination_ids = [3, 21, 25, 45, 49]
+        Task.objects.bulk_create([
+            Task(pk=pk, title=f'Tarea {pk}', status=status, position=position)
+            for status, ids in [('todo', source_ids), ('in_progress', destination_ids)]
+            for position, pk in enumerate(ids)
+        ])
+
+        response = admin_client.patch(
+            reverse('reorder-task', kwargs={'task_id': 9}),
+            {'status': 'in_progress', 'position': 1}, format='json',
+        )
+
+        assert response.status_code == 200
+        assert list(Task.objects.filter(status='todo').order_by('position').values_list('pk', flat=True)) == [1, 2, 33]
+        assert list(Task.objects.filter(status='in_progress').order_by('position').values_list('pk', flat=True)) == [3, 9, 21, 25, 45, 49]
+        assert Task.objects.get(pk=9).position == 1
+
     def test_rejects_invalid_status(self, admin_client, todo_task):
         url = reverse('reorder-task', kwargs={'task_id': todo_task.id})
         response = admin_client.patch(
