@@ -116,6 +116,41 @@ test.describe('Admin procurement', () => {
     await expect(page.getByRole('alert')).toHaveText('La exportación SECOP falló.')
   })
 
+  for (const { staffId, status, description } of [
+    { staffId: 72, status: 'reviewing', description: 'the owner' },
+    { staffId: 73, status: 'interesting', description: 'another staff member' },
+  ]) {
+    test(`reload restores the classification form for ${description}`, {
+      tag: [...ADMIN_PROCUREMENT_CLASSIFICATION, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      const note = 'QA A10W-C1 20261119-01 · revisión ficticia de DEMO-015'
+      const classification = { id: 5, owner: 72, owner_name: 'Staff QA', state: 'reviewing', notes: note }
+      const record = { ...opportunity, id: 15, reference: 'DEMO-015' }
+      const writes = []
+      await setupProcurementApi(page, {
+        staffId,
+        detail: { ...record,
+          my_classification: staffId === 72 ? classification : null,
+          classifications: [classification],
+          activities: [{ id: 1, actor: 'Staff QA', created_at: '2026-11-19T16:04:56Z', snapshot: classification }],
+        },
+        onRequest: ({ apiPath, method }) => {
+          if (apiPath.startsWith('procurement/opportunities/15/') && method !== 'GET') writes.push(method)
+        },
+      })
+      await page.goto('/es-co/panel/procurement/15', { waitUntil: 'domcontentloaded' })
+      const form = page.getByTestId('procurement-classification-form')
+      await expect(form.getByLabel('Análisis y motivo')).toHaveValue(staffId === 72 ? note : '')
+
+      await page.reload({ waitUntil: 'domcontentloaded' })
+
+      await expect(form.getByLabel('Estado')).toHaveValue(status)
+      await expect(form.getByLabel('Análisis y motivo')).toHaveValue(staffId === 72 ? note : '')
+      await expect(page.getByTestId('procurement-detail').getByText(note, { exact: true })).toHaveCount(2)
+      expect(writes).toEqual([])
+    })
+  }
+
   test('records a discard rationale from the opportunity detail', {
     tag: [...ADMIN_PROCUREMENT_CLASSIFICATION, '@role:admin', '@outcome:display', '@outcome:success'],
   }, async ({ page }) => {
