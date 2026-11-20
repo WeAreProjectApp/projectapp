@@ -1,3 +1,5 @@
+import { expect } from '@playwright/test'
+
 /** Google is the sole simulated boundary; the app still submits real tokens. */
 export async function mockCaptchaProvider(page, testId, { mode = 'valid', failScript = false } = {}) {
   await page.route('https://www.google.com/recaptcha/api.js*', async (route) => {
@@ -38,4 +40,34 @@ export async function mockCaptchaProvider(page, testId, { mode = 'valid', failSc
 export const captchaCredentials = {
   email: 'browser-captcha@example.com',
   password: 'Browser-test-password-1',
+}
+
+export async function prepareLocallyDeliveredCode(page, surface) {
+  const form = page.getByRole('region', { name: 'Otras formas de iniciar sesión' })
+  await form.getByRole('tab', { name: 'Código por correo' }).click()
+  const email = form.getByRole('textbox', { name: 'Correo electrónico', exact: true })
+  await email.focus()
+  await expect(email).toBeFocused()
+  expect(await email.evaluate(input => input.labels[0]?.control === input)).toBe(true)
+  await form.getByRole('checkbox', { name: 'No soy un robot (prueba)' }).check()
+  await email.fill('correo-invalido')
+  const requestCode = form.getByRole('button', { name: 'Enviar código' })
+  await expect(requestCode).toBeDisabled()
+  await email.fill(`browser-${surface}-code@example.test`)
+  await requestCode.click()
+
+  const codeInput = form.getByRole('textbox', { name: 'Código de acceso', exact: true })
+  await codeInput.focus()
+  await expect(codeInput).toBeFocused()
+  expect(await codeInput.evaluate(input => input.labels[0]?.control === input)).toBe(true)
+  const verify = form.getByRole('button', { name: 'Verificar e iniciar sesión' })
+  await codeInput.fill('12345')
+  await expect(verify).toBeDisabled()
+  const message = await page.request.post(`http://127.0.0.1:3198/__captcha_mailbox__/${surface}`)
+  expect(message.ok()).toBe(true)
+  const { code } = await message.json()
+  expect(/^[0-9]{6}$/.test(code)).toBe(true)
+  await codeInput.fill(code)
+  await expect(verify).toBeEnabled()
+  return verify
 }

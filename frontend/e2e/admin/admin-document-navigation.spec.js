@@ -230,8 +230,11 @@ async function setupNavigationApi(page, {
   navigationFailures = 0,
   folders = [PROJECT_ROOT, PROJECT_PHASE, OWN_FOLDER],
   navigation = navigationPayload,
+  initialMode = 'project',
+  rowsFor = documentRowsFor,
+  details = [projectPhaseDocument],
 } = {}) {
-  let preferenceMode = 'project';
+  let preferenceMode = initialMode;
   let navigationAttempts = 0;
   const documentRequests = [];
 
@@ -253,7 +256,8 @@ async function setupNavigationApi(page, {
       }
       return jsonResponse(navigation);
     }
-    if (apiPath === 'documents/504/detail/') return jsonResponse(projectPhaseDocument);
+    const detail = details.find(document => apiPath === `documents/${document.id}/detail/`);
+    if (detail) return jsonResponse(detail);
     if (apiPath === 'document-folders/') {
       return jsonResponse(folders);
     }
@@ -272,7 +276,7 @@ async function setupNavigationApi(page, {
       const requestUrl = route.request().url();
       documentRequests.push(requestUrl);
       const query = new URL(requestUrl).searchParams;
-      const rows = documentRowsFor(query);
+      const rows = rowsFor(query);
       const pageSize = Number(query.get('page_size')) || 10;
       const requestedPage = Number(query.get('page')) || 1;
       const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -327,6 +331,52 @@ function expectListContext(page, expected) {
     const url = new URL(page.url());
     return Object.fromEntries([...url.searchParams.entries()].filter(([key]) => key in expected));
   }).toEqual(expected);
+}
+
+const octoberFolder = {
+  ...PROJECT_PHASE, id: 369, name: '10 - Octubre', slug: '10-octubre',
+  parent: null, project: null, client: 2, client_display_name: 'Cliente de prueba',
+  document_count: 2, active_document_count: 2,
+};
+const octoberDocuments = [
+  { ...projectPhaseDocument, id: 118, title: 'Cuenta de cobro de octubre' },
+  { ...projectPhaseDocument, id: 61, title: 'Constancia de octubre' },
+].map(document => ({
+  ...document, folder: octoberFolder.id, folder_name: octoberFolder.name,
+  client: 2, client_name: 'Cliente de prueba', client_display_name: 'Cliente de prueba', project: null, project_name: null,
+}));
+const octoberContext = { by: 'client', folder: '369', client: '2', focus: '61' };
+
+function setupOctoberNavigation(page) {
+  return setupNavigationApi(page, {
+    initialMode: 'client',
+    folders: [octoberFolder],
+    details: octoberDocuments,
+    navigation: {
+      ...navigationPayload,
+      clients: [{ ...navigationPayload.clients[0], id: 2, name: 'Cliente de prueba' }],
+    },
+    rowsFor: params => params.get('client') === '2' && params.get('folder') === '369'
+      ? octoberDocuments
+      : [unassignedDocument],
+  });
+}
+
+async function expectOctoberContext(page) {
+  await expectListContext(page, octoberContext);
+  await expect(page.getByTestId('documents-mode-client')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('documents-navigation-client-2')).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByTestId('folder-header-name')).toHaveText('10 - Octubre');
+  await expect(page.getByTestId('document-row-118')).toBeVisible();
+  await expect(page.getByTestId('document-row-61')).toBeVisible();
+  await expect(page.getByTestId('document-open-61')).toBeFocused();
+}
+
+function scopedDocumentRequests(requests) {
+  return requests.map(request => {
+    const query = new URL(request).searchParams;
+    return [query.get('folder'), query.get('client')];
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -465,6 +515,34 @@ test.describe('Admin document project/client navigation', () => {
       .toHaveAttribute('aria-current', 'page');
     await expect(page.getByTestId(`document-open-${projectPhaseDocument.id}`))
       .toBeFocused();
+  });
+
+  test('reloading the editor backlink preserves the client document context', {
+    tag: [...ADMIN_DOCUMENT_NAVIGATION, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const api = await setupOctoberNavigation(page);
+    // quality: allow-deep-link (the regression starts from a saved client folder)
+    await page.goto('/es-co/panel/documents?by=client&folder=369&client=2', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('document-open-61').click();
+    await page.getByRole('link', { name: 'Volver a «10 - Octubre»', exact: true }).first().click();
+    await expectOctoberContext(page);
+
+    const beforeReload = api.documentRequests.length;
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expectOctoberContext(page);
+    expect(scopedDocumentRequests(api.documentRequests.slice(beforeReload))).toEqual([['369', '2']]);
+  });
+
+  test('opening a shared client document URL loads only its folder', {
+    tag: [...ADMIN_DOCUMENT_NAVIGATION, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const api = await setupOctoberNavigation(page);
+    // quality: allow-deep-link (the address is the input to this regression)
+    // quality: allow-no-interaction (direct address entry must recover the folder and focus without extra clicks)
+    await page.goto(`/es-co/panel/documents?${new URLSearchParams(octoberContext)}`, { waitUntil: 'domcontentloaded' });
+
+    await expectOctoberContext(page);
+    expect(scopedDocumentRequests(api.documentRequests)).toEqual([['369', '2']]);
   });
 
   test('contains an unbroken project name inside the folder header', {

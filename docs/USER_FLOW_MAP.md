@@ -496,14 +496,14 @@ La revisión sigue contrato → alcance → fases de ejecución → etapas → g
 - **Role:** platform-admin / platform-client
 - **Priority:** P2
 - **Routes:** `/platform/notifications`
-- **API:** `GET /api/accounts/notifications/`, `PATCH .../mark-read/`, `POST .../mark-all-read/`, `GET .../unread-count/`
-- **Description:** In-app notification center with unread count badge in sidebar, filter tabs, mark-all-read, and click-to-navigate deep links.
+- **API:** `GET /api/accounts/notifications/`, `POST .../<id>/read/`, `POST .../mark-all-read/`, `GET .../unread-count/`
+- **Description:** Notification center with an unread count, an announced active filter, and keyboard-accessible links to project destinations.
 - **Steps:**
-  1. Sidebar badge shows unread notification count (polled every 30s).
-  2. User navigates to `/platform/notifications`.
-  3. Notification list renders with filter tabs (Todas/Sin leer/Leídas).
-  4. User clicks a notification → marked as read → navigates to relevant project module.
-  5. User clicks "Marcar todas como leídas" → all notifications marked read.
+  1. The user opens `/platform/notifications` and sees the unread count.
+  2. The list exposes the selected filter (Todas, Sin leer or Leídas).
+  3. The user tabs to a notice and presses Enter to mark it read once and open its destination.
+  4. If marking fails, the notice remains unread and focused for retry.
+  5. "Marcar todas como leídas" marks every notification as read.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/platform/platform-notifications.spec.js`
 
@@ -6453,7 +6453,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `platform-layout-title-mapping` | platform | P3 | display | 1 |
 | `platform-legacy-route-redirects` | platform | P2 | success | 1 |
 | `platform-login` | platform | P1 | success,error,failure | 1 |
-| `platform-notifications` | platform | P2 | success,display | 1 |
+| `platform-notifications` | platform | P2 | success,display,failure | 1 |
 | `platform-password-reset` | platform | P1 | success,error | 1 |
 | `platform-profile-avatar-picker` | platform | P2 | success | 1 |
 | `platform-profile-edit` | platform | P2 | success,error,display | 1 |
@@ -8950,7 +8950,7 @@ Cobertura: `frontend/e2e/admin/admin-document-move-folder.spec.js`.
   3. Elige un proyecto o «Sin proyecto» y el listado consulta únicamente esa asociación.
   4. Dentro de un proyecto, abre una subcarpeta y luego un documento; al regresar desde el editor recupera la subcarpeta con el proyecto todavía seleccionado.
   5. Cambia a Clientes, elige una persona o «Sin cliente» y consulta su inventario.
-  6. Sale del módulo y vuelve: el último modo elegido reaparece.
+  6. Recarga o abre el enlace guardado de Clientes: recupera el cliente, la carpeta y el foco del documento. Al entrar sin enlace, reaparece el último modo elegido.
   7. Abre una carpeta propia; la navegación limpia cualquier proyecto o cliente previamente seleccionado.
 - **Branches:**
   - [Branch A — Display] Cada entidad declara conteos separados de carpetas y documentos; los proyectos no operativos están ocultos al entrar y, mientras su control excluyente está encendido, son los únicos que se listan. Los clientes archivados tienen su propio grupo secundario, y desde el 31-ago-2026 el mismo interruptor excluyente lo gobierna: en modo cliente se rotula «Ver clientes archivados» y, apagado, los archivados no se listan.

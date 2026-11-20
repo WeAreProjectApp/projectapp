@@ -18,6 +18,7 @@
             :key="tab.value"
             type="button"
             class="rounded-full px-3.5 py-1.5 text-xs font-medium transition"
+            :aria-pressed="activeFilter === tab.value"
             :class="activeFilter === tab.value
               ? 'bg-primary text-on-primary dark:bg-accent dark:text-on-accent'
               : 'text-text-muted hover:bg-surface-muted/50 dark:hover:bg-white/10'"
@@ -28,6 +29,10 @@
         </div>
       </div>
     </div>
+
+    <BaseAlert v-if="readError" variant="danger" role="alert" class="mb-4">
+      {{ readError }}
+    </BaseAlert>
 
     <!-- Loading -->
     <div v-if="notifStore.isLoading" class="py-20 text-center">
@@ -45,18 +50,17 @@
     </div>
 
     <!-- List -->
-    <div v-else class="space-y-2" data-enter>
-      <div
-        v-for="notif in filteredNotifications"
+    <ul v-else class="space-y-2" data-enter>
+      <li
+        v-for="{ notif, to } in notificationRows"
         :key="notif.id"
-        class="group flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition"
+        class="relative flex items-start gap-4 rounded-2xl border p-4 transition"
         :class="notif.is_read
           ? 'border-border-muted bg-surface hover:border-border-default  dark:hover:border-white/10'
           : 'border-border-default bg-surface-muted/30 hover:border-border-default dark:bg-white/5 dark:hover:border-white/15'"
-        @click="handleNotifClick(notif)"
       >
         <!-- Icon -->
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" :class="typeIconBg(notif.type)">
+        <div aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" :class="typeIconBg(notif.type)">
           <svg class="h-5 w-5" :class="typeIconColor(notif.type)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <template v-if="notif.type === 'bug_reported' || notif.type === 'bug_status_changed'">
               <path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3.003 3.003 0 116 0v1" />
@@ -92,7 +96,24 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-2">
             <h4 class="text-sm font-medium" :class="notif.is_read ? 'text-text-muted' : 'text-text-default'">
-              {{ notif.title }}
+              <BaseRowLink
+                v-if="to"
+                :to="to"
+                stretch
+                :aria-busy="pendingReadIds.has(notif.id) || undefined"
+                @click.capture="followNotification($event, notif, to)"
+              >
+                {{ notif.title }}
+              </BaseRowLink>
+              <BaseButton
+                v-else
+                unstyled
+                class="text-left after:absolute after:inset-0 after:content-['']"
+                :aria-busy="pendingReadIds.has(notif.id) || undefined"
+                @click="activateNotification(notif)"
+              >
+                {{ notif.title }}
+              </BaseButton>
             </h4>
             <span v-if="!notif.is_read" class="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
           </div>
@@ -102,21 +123,25 @@
             <span>{{ formatTimeAgo(notif.created_at) }}</span>
           </div>
         </div>
-      </div>
-    </div>
+      </li>
+    </ul>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import BaseRowLink from '~/components/base/BaseRowLink.vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
 import { usePlatformNotificationsStore } from '~/stores/platform-notifications'
+import { isPlainActivation } from '~/utils/rowNavigation'
 
 definePageMeta({ layout: 'platform', middleware: ['platform-auth'] })
 usePageEntrance('#platform-notifications')
 
 const notifStore = usePlatformNotificationsStore()
 const activeFilter = ref('all')
+const pendingReadIds = reactive(new Set())
+const readError = ref('')
 
 const filterTabs = [
   { value: 'all', label: 'Todas' },
@@ -166,6 +191,10 @@ function formatTimeAgo(dateStr) {
 }
 
 const localePath = useLocalePath()
+const notificationRows = computed(() => filteredNotifications.value.map(notif => ({
+  notif,
+  to: getNotifRoute(notif),
+})))
 
 function getNotifRoute(notif) {
   if (!notif.project) return null
@@ -182,12 +211,31 @@ function getNotifRoute(notif) {
   return localePath(base + (typeRoutes[notif.type] || ''))
 }
 
-async function handleNotifClick(notif) {
-  if (!notif.is_read) {
-    await notifStore.markRead(notif.id)
+function followNotification(event, notif, to) {
+  if (!isPlainActivation(event)) return
+  event.preventDefault()
+  return activateNotification(notif, to)
+}
+
+async function activateNotification(notif, to) {
+  if (pendingReadIds.has(notif.id)) return
+  readError.value = ''
+  if (notif.is_read) {
+    if (to) await navigateTo(to)
+    return
   }
-  const route = getNotifRoute(notif)
-  if (route) navigateTo(route)
+
+  pendingReadIds.add(notif.id)
+  try {
+    const result = await notifStore.markRead(notif.id)
+    if (!result.success) {
+      readError.value = 'No pudimos marcar el aviso como leído. Intenta de nuevo.'
+      return
+    }
+    if (to) await navigateTo(to)
+  } finally {
+    pendingReadIds.delete(notif.id)
+  }
 }
 
 async function handleMarkAllRead() {

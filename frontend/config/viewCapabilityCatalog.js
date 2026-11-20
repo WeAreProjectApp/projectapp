@@ -462,8 +462,8 @@ const platformCapabilities = [
     'Mantiene al usuario enterado sin obligarlo a revisar cada espacio por separado.',
     [
       feature('platform-notification-center', 'Revisar novedades',
-        'Agrupa las notificaciones que requieren atención del usuario.',
-        'Funciona como bandeja operativa para regresar al contexto indicado.',
+        'Agrupa los avisos, anuncia el filtro activo y permite abrir su destino con el teclado.',
+        'Un aviso cuyo marcado falla queda disponible para reintentar.',
         ['/platform/notifications'],
         { icon: 'bell', actors: ['client', 'team'], stage: 'Comunicación' }),
     ],

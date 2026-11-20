@@ -477,6 +477,19 @@ jobs:
           name: playwright-traces-captcha
           path: frontend/test-results/
           retention-days: 7
+      - name: Exercise email-code login with the disposable mailbox
+        working-directory: frontend
+        run: npx playwright test --config playwright.captcha.config.js authorized-email-code.spec.js --reporter=blob
+        env:
+          CI: 'true'
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: blob-report-email-code
+      - name: Upload email-code login blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-blob-email-code
+          path: frontend/blob-report-email-code/
+          retention-days: 1
 
   # Delivery decisions run against real JWT APIs and a disposable test database.
   frontend-delivery-tests:

@@ -2,7 +2,7 @@
   "schema": 1,
   "sources": {
     "frontend/config/viewCatalog.js": "9cd8bb8aef3b5641cf56d928c28d0e962fe0bd1dff305b6df1e1a9f1a3eaf50d",
-    "frontend/config/viewCapabilityCatalog.js": "12f5a3cf79832029c2de36007a99cb6ecca589967eac9e7653870d272e949431"
+    "frontend/config/viewCapabilityCatalog.js": "0d1877f61540228037bfa128a021eba0952b5ef368244672c525883610a4afe9"
   },
   "surfaces": [
     {
@@ -1567,7 +1567,7 @@
         {
           "id": "platform-notification-center",
           "label": "Revisar novedades",
-          "summary": "Agrupa las notificaciones que requieren atención del usuario."
+          "summary": "Agrupa los avisos, anuncia el filtro activo y permite abrir su destino con el teclado."
         }
       ]
     },

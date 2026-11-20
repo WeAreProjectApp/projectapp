@@ -3,6 +3,7 @@
  * record at every supported viewport, instead of merely rendering a shell.
  */
 import { test, expect, assertResponsiveScenario } from '../helpers/test.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
@@ -33,7 +34,7 @@ async function exerciseBillingView(page, view) {
   }
 
   if (view.key.endsWith('collection-accounts/index.vue')) {
-    await page.getByLabel('Nature').selectOption('hosting');
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Nature', exact: true }), 'Hosting');
     const account = page.getByRole('link', { name: hostingAccount.public_number, exact: true });
     await expect(account).toHaveCount(1);
     return account;
@@ -58,7 +59,7 @@ async function exerciseBillingView(page, view) {
   }
 
   if (view.key.endsWith('projects/[id]/collection-accounts.vue')) {
-    await page.getByLabel('Nature').selectOption('hosting');
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Nature', exact: true }), 'Hosting');
     const account = page.getByRole('link', { name: hostingAccount.public_number, exact: true });
     await expect(account).toHaveCount(1);
     return account;
