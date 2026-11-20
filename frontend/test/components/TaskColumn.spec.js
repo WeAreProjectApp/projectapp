@@ -3,8 +3,8 @@ import { mount } from '@vue/test-utils'
 jest.mock('vuedraggable', () => ({
   name: 'draggable',
   props: ['modelValue', 'itemKey', 'group', 'ghostClass'],
-  emits: ['update:modelValue', 'change'],
-  template: '<div data-testid="draggable"></div>',
+  emits: ['update:modelValue', 'end'],
+  template: '<div data-testid="draggable"><slot v-for="(element, index) in modelValue" name="item" :element="element" :index="index" /></div>',
 }))
 
 jest.mock('../../components/Tasks/TaskCard.vue', () => ({
@@ -19,6 +19,7 @@ function mountColumn(props = {}) {
   return mount(TaskColumn, {
     props: {
       status: 'todo',
+      boardKey: 'standard',
       label: 'Por hacer',
       tasks: [],
       ...props,
@@ -127,37 +128,34 @@ describe('TaskColumn', () => {
     expect(wrapper.text()).toContain('Unassigned')
   })
 
-  // ── handleGroupChange / move emit ─────────────────────────────────────────
+  it('emits the destination status from the completed drag', async () => {
+    const wrapper = mountColumn({ tasks: [{ id: 9, title: 'Moving task' }] })
+    const source = wrapper.getComponent({ name: 'draggable' })
+    const target = document.createElement('div')
+    target.dataset.taskBoard = 'standard'
+    target.dataset.taskStatus = 'in_progress'
+    target.getBoundingClientRect = () => ({ left: 0, top: 0, right: 100, bottom: 100 })
 
-  it('emits move when draggable emits change with an added event', async () => {
-    const tasks = [{ id: 1, title: 'X', assignee_name: 'Alice' }]
-    const wrapper = mountColumn({ status: 'in_progress', label: 'En progreso', tasks })
-    const draggables = wrapper.findAllComponents({ name: 'draggable' })
-    await draggables[0].vm.$emit('change', {
-      added: { element: { id: 5 }, newIndex: 0 },
+    await source.vm.$emit('end', {
+      from: source.element, to: target, item: wrapper.get('[data-sort-task-id="9"]').element,
+      oldDraggableIndex: 2, newDraggableIndex: 1, originalEvent: { clientX: 50, clientY: 50 },
     })
-    expect(wrapper.emitted('move')).toBeTruthy()
-    expect(wrapper.emitted('move')[0][0]).toMatchObject({ taskId: 5, status: 'in_progress' })
+
+    expect(wrapper.emitted('move')).toEqual([[{
+      taskId: 9, status: 'in_progress', boardKey: 'standard', index: 1,
+    }]])
   })
 
-  it('emits move when draggable emits change with a moved event', async () => {
-    const tasks = [{ id: 3, title: 'Y', assignee_name: 'Alice' }]
-    const wrapper = mountColumn({ status: 'todo', label: 'Por hacer', tasks })
-    const draggables = wrapper.findAllComponents({ name: 'draggable' })
-    await draggables[0].vm.$emit('change', {
-      moved: { element: { id: 3 }, newIndex: 1 },
-    })
-    expect(wrapper.emitted('move')).toBeTruthy()
-    expect(wrapper.emitted('move')[0][0]).toMatchObject({ taskId: 3, status: 'todo' })
-  })
+  it('discards a release outside the destination', async () => {
+    const wrapper = mountColumn({ tasks: [{ id: 9, title: 'Moving task' }] })
+    const source = wrapper.getComponent({ name: 'draggable' })
+    source.element.getBoundingClientRect = () => ({ left: 0, top: 0, right: 100, bottom: 100 })
 
-  it('does not emit move when draggable emits only a removed event', async () => {
-    const tasks = [{ id: 1, title: 'A', assignee_name: 'Alice' }]
-    const wrapper = mountColumn({ tasks })
-    const draggables = wrapper.findAllComponents({ name: 'draggable' })
-    await draggables[0].vm.$emit('change', {
-      removed: { element: { id: 1 }, oldIndex: 0 },
+    await source.vm.$emit('end', {
+      from: source.element, to: source.element, item: wrapper.get('[data-sort-task-id="9"]').element,
+      oldDraggableIndex: 2, newDraggableIndex: 1, originalEvent: { clientX: 200, clientY: 50 },
     })
-    expect(wrapper.emitted('move')).toBeFalsy()
+
+    expect(wrapper.emitted('move')).toBeUndefined()
   })
 })

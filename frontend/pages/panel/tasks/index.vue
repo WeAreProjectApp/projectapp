@@ -89,6 +89,8 @@
               v-for="status in columnStatuses"
               :key="status"
               :status="status"
+              :board-key="board.key"
+              :drag-disabled="taskStore.isUpdating"
               :label="t(`panelUsability.taskBoardStatus.${status}`)"
               :tasks="(taskStore.boardTasks[board.key] || {})[status] || []"
               @add="openCreateOnBoard(board.key, status)"
@@ -183,6 +185,7 @@ import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
+import { positionForTaskDrop } from '~/utils/taskBoardOrder';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
@@ -393,7 +396,14 @@ async function handleUnarchive(task) {
   }
 }
 
-async function handleMove({ taskId, status, position }) {
+async function handleMove({ taskId, status, boardKey, index }) {
+  const board = taskStore.boardTasks[boardKey];
+  const task = taskStore.getTaskById(taskId);
+  const target = board?.[status];
+  if (!task || !target || taskStore.isUpdating) return;
+  const position = positionForTaskDrop(target, task, index);
+  if (task.status === status && target[position]?.id === taskId) return;
+
   const result = await taskStore.moveTask(taskId, status, position);
   if (!result.success) {
     notifyTaskFailure(result, 'No se pudo mover la tarea');
