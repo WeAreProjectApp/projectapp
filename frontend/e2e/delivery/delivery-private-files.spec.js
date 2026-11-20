@@ -7,6 +7,7 @@ import { waitForNuxtApp } from '../helpers/navigation.js'
 import { authenticate, backendUrl, fixture, frontendUrl } from './helpers.js'
 
 const categories = [
+  { value: 'documents', label: 'Documentos' },
   { value: 'contract', label: 'Contrato' },
   { value: 'amendment', label: 'Otrosí' },
   { value: 'legal_annex', label: 'Anexo legal' },
@@ -26,6 +27,8 @@ async function openResources(page, data) {
 
 async function openResourceDetail(page, data, resource) {
   await openResources(page, data)
+  const category = categories.find(item => item.value === resource.category)
+  await page.getByRole('button', { name: category.label, exact: true }).click()
   const detailPromise = page.waitForResponse((response) =>
     response.url().endsWith(`/deliverables/${resource.id}/`) && response.request().method() === 'GET',
   )
@@ -85,7 +88,7 @@ for (const kind of ['current', 'previous']) {
     // Catches a raw media link, a wrong version, changed bytes, or loss of the backend filename.
     const data = await fixture(request, testInfo, 'private-resources')
     await authenticate(page, request, data)
-    const resource = data.resources.find((item) => item.category === 'contract')
+    const resource = data.resources.find((item) => item.category === 'documents')
     const detail = await openResourceDetail(page, data, resource)
     const file = selectedFile(detail, kind)
     const expected = resource[`expected_${kind}`]

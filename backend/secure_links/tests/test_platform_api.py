@@ -36,6 +36,17 @@ def test_create_encrypts_the_payload(platform_client, project, client_profile):
     assert CREDENTIALS['password'] not in str(SecureLink.objects.values().get(pk=link.pk))
 
 
+def test_list_returns_the_chosen_validity_and_language(platform_client, project):
+    created = platform_client.post(base(project), payload(validity_days=1, language='es'), format='json')
+
+    listed = platform_client.get(base(project), {'status': 'active'})
+
+    assert created.status_code == 201
+    assert listed.status_code == 200
+    link = listed.data['results'][0]
+    assert (link['id'], link['validity_days'], link['language']) == (created.data['link']['id'], 1, 'es')
+
+
 def test_list_returns_only_metadata(platform_client, project, create_owned):
     """Listing links exposes metadata only and prevents cache retention."""
     link, url, _ = create_owned()

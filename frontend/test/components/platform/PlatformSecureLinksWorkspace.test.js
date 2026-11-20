@@ -18,7 +18,7 @@ const stubs = {
   BaseAlert: { template: '<div><slot /></div>' },
   BaseFormField: { template: '<label><slot /></label>' },
   BaseInput: { props: ['modelValue'], emits: ['update:modelValue'], template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
-  BaseSelect: { props: ['modelValue', 'options'], emits: ['update:modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>' },
+  BaseChoiceSelect: { props: ['modelValue', 'options'], emits: ['update:modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>' },
   BaseButton: { props: ['type', 'loading'], emits: ['click'], template: '<button :type="type || \'button\'" :disabled="loading" @click="$emit(\'click\')"><slot /></button>' },
   PlatformSecureLinkForm: { template: '<div data-testid="platform-secure-form">fake-secret-for-test</div>' },
   PlatformSecureLinkDetail: { template: '<div data-testid="platform-secure-detail" />' },

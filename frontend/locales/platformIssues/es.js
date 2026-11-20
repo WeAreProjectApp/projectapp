@@ -18,6 +18,8 @@ export default {
     discard: 'Descartar preparación', reload: 'Actualizar fuentes y versiones',
   },
   source: 'Entrega de origen (opcional)', requiredSource: 'Entrega de origen',
+  changeRequestTitleRequired: 'Escribe el título de la solicitud.',
+  changeRequestSourceRequired: 'Selecciona la entrega de origen.',
   general: 'Bug general del proyecto', selectSource: 'Selecciona una guía publicada',
   generalHint: 'Puedes reportar un fallo aunque el proyecto no tenga guías publicadas.',
   original: 'Contexto original', legacy: 'El reporte anterior no registró una versión original.',

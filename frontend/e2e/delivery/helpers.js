@@ -1,6 +1,7 @@
 import { expect } from '../helpers/test.js'
 import { setPlatformAuth } from '../helpers/platform-auth.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
+import { selectChoiceOption } from '../helpers/choice-select.js'
 
 export const backendUrl = 'http://127.0.0.1:3202'
 export const frontendUrl = 'http://127.0.0.1:3203'
@@ -45,10 +46,15 @@ export async function openReview(page, data) {
 
 export async function submitDecision(page, data, index, decision, message = '') {
   await openReview(page, data)
-  await page.getByTestId(`delivery-review-decision-${data.requirement_ids[index]}`).selectOption(decision)
+  await chooseReviewDecision(page, data.requirement_ids[index], decision)
   await page.getByTestId(`delivery-review-message-${data.requirement_ids[index]}`).fill(message)
   await page.getByTestId('delivery-review-submit').click()
   await expect(page.getByTestId('delivery-review-form')).toHaveCount(0)
+}
+
+export async function chooseReviewDecision(page, requirementId, decision) {
+  const labels = { approved: 'Aprobar', objected: 'Objetar', rejected: 'Rechazar' }
+  await selectChoiceOption(page, page.getByTestId(`delivery-review-decision-${requirementId}`), labels[decision])
 }
 
 export async function publish(page, stageId) {

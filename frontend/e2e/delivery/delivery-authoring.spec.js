@@ -1,5 +1,5 @@
 import { test, expect } from '../helpers/test.js'
-import { addRequirement, assertTouchAction, authenticate, fixture, openWorkspace, publish } from './helpers.js'
+import { addRequirement, assertTouchAction, authenticate, chooseReviewDecision, fixture, openWorkspace, publish } from './helpers.js'
 import { preparePrompt, roleGuidePayload } from './prompt-helpers.js'
 import { viewportUse } from '../helpers/viewports.js'
 import { batchForScenario } from '../responsive/catalog-scenarios.js'
@@ -156,7 +156,7 @@ for (const name of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) {
       await authenticate(page, request, data)
       await openWorkspace(page, data)
       await page.getByTestId(`delivery-review-open-${data.stage_id}`).click()
-      await page.getByTestId(`delivery-review-decision-${data.requirement_ids[0]}`).selectOption('approved')
+      await chooseReviewDecision(page, data.requirement_ids[0], 'approved')
       await page.getByTestId('delivery-review-submit').scrollIntoViewIfNeeded()
       await assertTouchAction(page, page.getByTestId('delivery-review-submit'), name, testInfo)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

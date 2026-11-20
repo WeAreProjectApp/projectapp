@@ -8,6 +8,7 @@ import {
   createdPlatformSecureUrl, installPlatformSecureLinksMock, openPlatformSecureLinks, platformSecureLink,
 } from '../helpers/platform-secure-links.js';
 import { json } from '../helpers/secure-links.js';
+import { selectChoiceOption } from '../helpers/choice-select.js';
 
 test.setTimeout(60_000);
 
@@ -19,6 +20,62 @@ async function openCreateForm(page) {
   await page.getByTestId('platform-secure-title').fill('Credenciales de staging');
   await page.getByTestId('secure-link-field-password').fill('fixture-password-only');
 }
+
+test('status filter returns to all links', {
+  tag: ['@flow:platform-secure-link-manage', '@outcome:success'],
+}, async ({ page }) => {
+  const { calls } = await installPlatformSecureLinksMock(page, { links: [
+    platformSecureLink(),
+    platformSecureLink({ id: 9, title: 'Revoked test link', status: 'revoked' }),
+  ] });
+  await openPlatformSecureLinks(page, 'en-us');
+  const status = page.getByRole('combobox', { name: 'Status', exact: true });
+  await expect(status).toHaveText('All');
+  await status.click();
+  await expect(page.getByRole('listbox').getByRole('option')).toHaveText(['All', 'Available', 'Opened', 'Expired', 'Revoked']);
+  await status.press('Escape');
+  await selectChoiceOption(page, status, 'Revoked');
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  await expect(page.getByTestId('platform-secure-row-7')).toHaveCount(0);
+  await expect(page.getByTestId('platform-secure-row-9')).toBeVisible();
+  expect(calls.filters.at(-1)).toBe('revoked');
+
+  await selectChoiceOption(page, status, 'All');
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  await expect(page.getByTestId('platform-secure-row-7')).toBeVisible();
+  expect(calls.filters.at(-1)).toBeNull();
+});
+
+test('one day in Spanish persists for a link created in the English workspace', {
+  tag: ['@flow:platform-secure-link-create', '@outcome:success'],
+}, async ({ page }) => {
+  const { calls } = await installPlatformSecureLinksMock(page, { links: [] });
+  await openPlatformSecureLinks(page, 'en-us');
+  await page.getByRole('button', { name: 'Create link', exact: true }).click();
+  const form = page.getByTestId('platform-secure-form');
+  const validity = form.getByRole('combobox', { name: 'Validity', exact: true });
+  const language = form.getByRole('combobox', { name: 'Recipient language', exact: true });
+  await expect(validity).toHaveText('7 days');
+  await expect(language).toHaveText('English');
+  await validity.click();
+  await expect(page.getByRole('listbox').getByRole('option')).toHaveText(['1 day', '3 days', '7 days']);
+  await page.getByRole('option', { name: '1 day', exact: true }).click();
+  await selectChoiceOption(page, language, 'Español');
+  await page.getByTestId('platform-secure-title').fill('One day test link');
+  await page.getByTestId('secure-link-field-password').fill('fixture-value-for-browser-only');
+  await page.getByTestId('platform-secure-submit').click();
+  await expect(page.getByTestId('platform-secure-created')).toBeVisible();
+  expect(calls.creates).toHaveLength(1);
+  expect(calls.creates[0]).toMatchObject({ validity_days: 1, language: 'es' });
+  const loaded = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/secure-links/')
+    && response.request().method() === 'GET');
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('platform-secure-row-8')).toContainText('One day test link');
+  const metadata = await (await loaded).json();
+  expect(metadata.results[0]).toMatchObject({ validity_days: 1, language: 'es' });
+});
 
 test('client creates a credentials link without mutable ownership and clears its URL when closing', {
   tag: ['@flow:platform-secure-link-create', '@outcome:display', '@outcome:success'],

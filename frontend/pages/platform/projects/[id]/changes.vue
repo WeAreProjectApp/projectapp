@@ -105,20 +105,16 @@
                 </div>
               </td>
               <td class="px-4 py-3">
-                <select
+                <BaseChoiceSelect
                   v-if="authStore.isAdmin && !cr.is_archived"
-                  :value="cr.status"
-                  class="rounded-full border border-border-default bg-surface-muted/40 px-2 py-1 text-[10px] font-medium text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40"
+                  :model-value="cr.status"
+                  :options="statusOptions"
+                  :disabled="crStore.isUpdating"
+                  aria-label="Estado rápido"
+                  size="sm"
                   @click.stop
-                  @change="onQuickStatus(cr, $event.target.value)"
-                >
-                  <option value="pending">Pendiente</option>
-                  <option value="evaluating">En evaluación</option>
-                  <option value="approved">Aprobada</option>
-                  <option value="rejected">Rechazada</option>
-                  <option value="needs_clarification">Requiere aclaración</option>
-                  <option value="out_of_scope">Fuera de alcance</option>
-                </select>
+                  @update:model-value="onQuickStatus(cr, $event)"
+                />
                 <span
                   v-else
                   class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
@@ -202,14 +198,15 @@
             <div v-if="isCreateOpen" class="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border-default bg-surface p-6 shadow-2xl sm:p-8">
               <h2 class="mb-5 text-lg font-bold text-text-default">Nueva solicitud de cambio</h2>
 
-              <form class="space-y-4" @submit.prevent="handleCreate">
-                <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="change-source" required />
+              <form class="space-y-4" novalidate @submit.prevent="handleCreate">
+                <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="change-source"
+                  :error="createSourceError" required />
                 <VoiceReportInput :project-id="projectId" scenario="change" :requirement-id="createForm.source_requirement_id" @apply="applyVoiceReport" />
                 <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
-                <div>
-                  <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
-                  <input v-model="createForm.title" type="text" required placeholder="¿Qué cambio necesitas?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
-                </div>
+                <BaseFormField v-slot="{ errorId, invalid }" label="Título" for="change-title" :error="createTitleError" required size="sm">
+                  <BaseInput id="change-title" v-model="createForm.title" required placeholder="¿Qué cambio necesitas?"
+                    :error="invalid" :aria-describedby="errorId" />
+                </BaseFormField>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Descripción</label>
                   <textarea v-model="createForm.description" rows="3" placeholder="Describe el cambio con el mayor detalle posible..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
@@ -220,13 +217,8 @@
                     <input v-model="createForm.module_or_screen" type="text" placeholder="Ej: Catálogo" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-text-muted focus:border-border-default dark:bg-surface-muted dark:text-white dark:placeholder:text-text-subtle dark:focus:border-lemon/40" />
                   </div>
                   <div>
-                    <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Prioridad sugerida</label>
-                    <select v-model="createForm.suggested_priority" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
-                      <option value="low">Baja</option>
-                      <option value="medium">Media</option>
-                      <option value="high">Alta</option>
-                      <option value="critical">Crítica</option>
-                    </select>
+                    <label for="change-priority" class="mb-1.5 block text-xs font-medium text-text-muted">Prioridad sugerida</label>
+                    <BaseChoiceSelect id="change-priority" v-model="createForm.suggested_priority" :options="priorityOptions" />
                   </div>
                 </div>
                 <label class="flex items-center gap-2 text-xs text-text-muted">
@@ -260,8 +252,8 @@
                 <p v-if="crStore.error" role="alert" class="text-xs text-danger-strong">{{ crStore.error }}</p>
                 <div class="flex justify-end gap-3 pt-2">
                   <BaseButton variant="ghost" size="md" @click="isCreateOpen = false">Cancelar</BaseButton>
-                  <BaseButton variant="accent" size="md" type="submit" :disabled="!createForm.title.trim() || crStore.isUpdating">
-                    {{ crStore.isUpdating ? 'Creando...' : 'Crear solicitud' }}
+                  <BaseButton variant="accent" size="md" type="submit" :loading="isCreating">
+                    {{ isCreating ? 'Creando...' : 'Crear solicitud' }}
                   </BaseButton>
                 </div>
               </form>
@@ -430,15 +422,8 @@
                     <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Evaluar solicitud</p>
                     <div class="space-y-3">
                       <div>
-                        <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Estado</label>
-                        <select v-model="evalForm.status" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none focus:border-border-default dark:bg-surface-muted dark:text-white dark:focus:border-lemon/40">
-                          <option value="pending">Pendiente</option>
-                          <option value="evaluating">En evaluación</option>
-                          <option value="approved">Aprobada</option>
-                          <option value="rejected">Rechazada</option>
-                          <option value="needs_clarification">Requiere aclaración</option>
-                          <option value="out_of_scope">Fuera de alcance</option>
-                        </select>
+                        <label for="change-evaluation-status" class="mb-1 block text-xs font-medium text-text-muted">Estado</label>
+                        <BaseChoiceSelect id="change-evaluation-status" v-model="evalForm.status" :options="statusOptions" />
                       </div>
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Respuesta</label>
@@ -534,7 +519,7 @@
         <p class="text-sm text-text-muted">{{ t('platformDelivery.selectDraftStage') }}</p>
         <BaseAlert v-if="convertError" variant="danger" role="alert">{{ convertError }}</BaseAlert>
         <BaseFormField :label="t('platformDelivery.draftStage')" for="change-request-stage" required>
-          <BaseSelect id="change-request-stage" v-model="convertStageId" :options="draftStageOptions" :placeholder="t('platformDelivery.select')" />
+          <BaseChoiceSelect id="change-request-stage" v-model="convertStageId" :options="draftStageOptions" :placeholder="t('platformDelivery.select')" />
         </BaseFormField>
         <BaseModalActions><BaseButton variant="ghost" @click="isConvertOpen = false">{{ t('platformDelivery.cancel') }}</BaseButton><BaseButton type="submit" :loading="crStore.isUpdating">{{ t('platformDelivery.convert') }}</BaseButton></BaseModalActions>
       </form>
@@ -582,7 +567,7 @@ let evaluationRetry = null
 const commentEvidence = ref({ document_ids: [] })
 const deliveryStore = usePlatformDeliveryStore()
 const isConvertOpen = ref(false)
-const convertStageId = ref('')
+const convertStageId = ref(null)
 const convertError = ref('')
 const draftStageOptions = computed(() => deliveryStore.scopes
   .filter((scope) => !detailCR.value?.origin_context?.contract_id || scope.contract_id === detailCR.value.origin_context.contract_id)
@@ -633,6 +618,8 @@ const importError = ref('')
 const importLoading = ref(false)
 
 const isCreateOpen = ref(false)
+const isCreating = ref(false)
+const createAttempted = ref(false)
 const createForm = reactive({
   title: '',
   description: '',
@@ -641,6 +628,11 @@ const createForm = reactive({
   is_urgent: false,
   source_requirement_id: null,
 })
+const selectedSource = computed(() => projectRequirements.value.find((row) => row.id === createForm.source_requirement_id))
+const createSourceError = computed(() => createAttempted.value && !selectedSource.value
+  ? t('platformIssues.changeRequestSourceRequired') : '')
+const createTitleError = computed(() => createAttempted.value && !createForm.title.trim()
+  ? t('platformIssues.changeRequestTitleRequired') : '')
 
 const screenshotFile = ref(null)
 const screenshotPreview = ref(null)
@@ -695,9 +687,14 @@ function priorityLabel(p) {
   return map[p] || p
 }
 
+const statusOptions = ['pending', 'evaluating', 'approved', 'rejected', 'needs_clarification', 'out_of_scope']
+  .map(value => ({ value, label: statusLabel(value) }))
+const priorityOptions = ['low', 'medium', 'high', 'critical'].map(value => ({ value, label: priorityLabel(value) }))
+
 function openCreateModal() {
   crStore.error = ''
   if (!projectRequirements.value.length) return
+  createAttempted.value = false
   createForm.title = ''
   createForm.description = ''
   createForm.module_or_screen = ''
@@ -745,11 +742,17 @@ function applyVoiceReport(proposal) {
 }
 
 async function handleCreate() {
-  if (!createForm.title.trim() || !createForm.source_requirement_id) return
+  if (isCreating.value) return
+  createAttempted.value = true
+  if (createTitleError.value || createSourceError.value) {
+    document.getElementById(createSourceError.value ? 'change-source' : 'change-title')?.focus()
+    return
+  }
+  const title = createForm.title.trim()
   let payload
   if (screenshotFile.value) {
     payload = new FormData()
-    payload.append('title', createForm.title)
+    payload.append('title', title)
     payload.append('description', createForm.description)
     payload.append('module_or_screen', createForm.module_or_screen)
     payload.append('suggested_priority', createForm.suggested_priority)
@@ -757,19 +760,24 @@ async function handleCreate() {
     payload.append('source_requirement_id', String(createForm.source_requirement_id))
     payload.append('screenshot', screenshotFile.value)
   } else {
-    payload = { ...createForm }
+    payload = { ...createForm, title }
   }
-  const source = issueSourcePayload(projectRequirements.value.find((row) => row.id === createForm.source_requirement_id))
+  const source = issueSourcePayload(selectedSource.value)
   if (payload instanceof FormData) {
     Object.entries(source).forEach(([key, value]) => payload.set(key, String(value)))
     payload.set('request_id', crypto.randomUUID())
   } else {
     Object.assign(payload, source, { request_id: crypto.randomUUID() })
   }
-  const result = await crStore.createChangeRequest(projectId.value, payload)
-  if (result.success) {
-    if (screenshotPreview.value) URL.revokeObjectURL(screenshotPreview.value)
-    isCreateOpen.value = false
+  isCreating.value = true
+  try {
+    const result = await crStore.createChangeRequest(projectId.value, payload)
+    if (result.success) {
+      if (screenshotPreview.value) URL.revokeObjectURL(screenshotPreview.value)
+      isCreateOpen.value = false
+    }
+  } finally {
+    isCreating.value = false
   }
 }
 
@@ -807,7 +815,7 @@ async function handleEvaluate() {
 }
 
 async function openConvert() {
-  convertStageId.value = ''
+  convertStageId.value = null
   convertError.value = ''
   const result = await deliveryStore.fetchDelivery(projectId.value)
   if (!result.success) { convertError.value = result.message || t('platformDelivery.loadError') }

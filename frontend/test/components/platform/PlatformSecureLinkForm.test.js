@@ -13,7 +13,7 @@ const stubs = {
   BaseAlert: { template: '<div><slot /></div>' },
   BaseFormField: { template: '<label><slot /></label>' },
   BaseInput: { props: ['modelValue'], emits: ['update:modelValue'], template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
-  BaseSelect: { props: ['modelValue', 'options'], emits: ['update:modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>' },
+  BaseChoiceSelect: { props: ['modelValue', 'options'], emits: ['update:modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>' },
   BaseButton: { props: ['type', 'loading'], emits: ['click'], template: '<button role="button" :type="type || \'button\'" :disabled="loading" @click="$emit(\'click\')"><slot /></button>' },
   SecureLinkTypeField: { template: '<div />' },
   SecureLinkFields: { props: ['modelValue'], emits: ['update:modelValue'], template: '<input data-testid="secure-link-field-password" :value="modelValue.password || \'\'" @input="$emit(\'update:modelValue\', { password: $event.target.value })" />' },

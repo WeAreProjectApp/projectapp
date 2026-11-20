@@ -1,4 +1,5 @@
 <script setup>
 definePageMeta({ layout: false, middleware: ['platform-auth'] })
-await navigateTo('/platform/projects')
+const localePath = useLocalePath()
+await navigateTo(localePath('/platform/projects'), { replace: true })
 </script>

@@ -1,5 +1,6 @@
 import { test, expect } from '../helpers/test.js'
 import { apiPost, backendUrl, fixture, login, open, openFromDelivery } from './helpers.js'
+import { selectChoiceOption } from '../helpers/choice-select.js'
 
 async function mailboxCount(request) {
   const response = await request.get(`${backendUrl}/__issues_mailbox__`)
@@ -132,6 +133,13 @@ test.describe('Tickets reales de proyecto', () => {
     await page.getByRole('button', { name: 'Nueva solicitud', exact: true }).click()
     await chooseIssueSource(page, 'Traslado entre sucursales')
     await page.getByPlaceholder('¿Qué cambio necesitas?').fill('Ampliar el traslado')
+    const priority = page.getByRole('combobox', { name: 'Prioridad sugerida' })
+    await expect(priority).toHaveText('Media')
+    await selectChoiceOption(page, priority, 'Alta')
+    const posts = []
+    page.on('request', (sent) => {
+      if (sent.method() === 'POST' && sent.url().endsWith('/change-requests/')) posts.push(sent)
+    })
     const submitted = page.waitForResponse((response) => response.url().endsWith('/change-requests/') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Crear solicitud', exact: true }).click()
     const response = await submitted
@@ -139,8 +147,118 @@ test.describe('Tickets reales de proyecto', () => {
     const ticket = await response.json()
     expect(ticket.origin_context.publication_id).toBe(data.publication_id)
     expect(ticket.origin_context.requirement_id).toBe(data.requirement_ids[0])
+    expect(ticket.suggested_priority).toBe('high')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    const row = page.getByRole('row').filter({ hasText: 'Ampliar el traslado' })
+    await expect(row.getByText('Alta', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Ampliar el traslado', exact: true }).press('Enter')
     await expect(page.getByTestId('issue-history')).toContainText('Ronda 1')
+    await expect(page.getByText('Alta', { exact: true }).last()).toBeVisible()
+    expect(posts).toHaveLength(1)
+  })
+
+  for (const scenario of [
+    {
+      name: 'título sin entrega',
+      arrange: page => page.getByPlaceholder('¿Qué cambio necesitas?').fill('Ampliar el traslado'),
+      error: 'Selecciona la entrega de origen.',
+    },
+    {
+      name: 'entrega sin título',
+      arrange: page => chooseIssueSource(page, 'Traslado entre sucursales'),
+      error: 'Escribe el título de la solicitud.',
+    },
+  ]) {
+    test(`solicitud con ${scenario.name} señala el dato faltante antes del POST`, {
+      tag: ['@flow:platform-change-requests', '@outcome:error'],
+    }, async ({ page, request }, testInfo) => {
+      const data = await fixture(request, testInfo)
+      await open(page, request, data, data.project.id, 'changes')
+      await page.getByRole('button', { name: 'Nueva solicitud', exact: true }).click()
+      await scenario.arrange(page)
+      const posts = []
+      page.on('request', (sent) => {
+        if (sent.method() === 'POST' && sent.url().endsWith('/change-requests/')) posts.push(sent)
+      })
+
+      await page.getByRole('button', { name: 'Crear solicitud', exact: true }).click()
+
+      await expect(page.getByRole('alert', { name: '' }).filter({ hasText: scenario.error })).toBeVisible()
+      expect(posts).toHaveLength(0)
+    })
+  }
+
+  test('equipo aplica el estado rápido desde la fila de solicitud', {
+    tag: ['@flow:platform-change-requests', '@outcome:success'],
+  }, async ({ page, request }, testInfo) => {
+    const data = await fixture(request, testInfo)
+    const client = await login(request, data.client)
+    const ticket = await apiPost(request, client, `projects/${data.project.id}/change-requests/`, {
+      title: 'Cambio rápido de estado', source_requirement_id: data.requirement_ids[0],
+    })
+    await open(page, request, data, data.project.id, 'changes', '', 'admin')
+    const row = page.getByRole('row').filter({ hasText: ticket.title })
+    const status = row.getByRole('combobox', { name: 'Estado rápido' })
+
+    await selectChoiceOption(page, status, 'En evaluación')
+
+    await expect(status).toHaveText('En evaluación')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(status).toHaveText('En evaluación')
+  })
+
+  test('equipo guarda la evaluación con el contrato elegido', {
+    tag: ['@flow:platform-change-requests', '@outcome:success'],
+  }, async ({ page, request }, testInfo) => {
+    const data = await fixture(request, testInfo)
+    const client = await login(request, data.client)
+    const ticket = await apiPost(request, client, `projects/${data.project.id}/change-requests/`, {
+      title: 'Evaluación con contrato', source_requirement_id: data.requirement_ids[0],
+    })
+    await open(page, request, data, data.project.id, 'changes', '', 'admin')
+    await page.getByText(ticket.title, { exact: true }).click()
+    await page.getByRole('button', { name: 'Evaluar', exact: true }).click()
+    const contract = page.getByRole('combobox', { name: 'Contrato aplicable' })
+    await selectChoiceOption(page, contract, 'Sin contrato seleccionado')
+    await selectChoiceOption(page, contract, `Contrato ${data.fixture_key}`)
+    await selectChoiceOption(page, page.getByRole('combobox', { name: 'Estado', exact: true }), 'En evaluación')
+    const saved = page.waitForResponse(response => response.url().endsWith(`/change-requests/${ticket.id}/evaluate/`) && response.request().method() === 'POST')
+
+    await page.getByRole('button', { name: 'Guardar evaluación', exact: true }).click()
+
+    const response = await saved
+    expect(response.status()).toBe(200)
+    expect(response.request().postDataJSON()).toMatchObject({ contract_id: data.contract_id, status: 'evaluating' })
+    await expect(contract).toHaveCount(0)
+  })
+
+  test('equipo convierte la solicitud en el borrador elegido', {
+    tag: ['@flow:platform-change-requests', '@outcome:success'],
+  }, async ({ page, request }, testInfo) => {
+    const data = await fixture(request, testInfo)
+    const client = await login(request, data.client)
+    const admin = await login(request, data.admin)
+    const ticket = await apiPost(request, client, `projects/${data.project.id}/change-requests/`, {
+      title: 'Solicitud para convertir', source_requirement_id: data.requirement_ids[0],
+    })
+    await apiPost(request, admin, `projects/${data.project.id}/change-requests/${ticket.id}/evaluate/`, {
+      status: 'approved', expected_version: ticket.version,
+    })
+    await open(page, request, data, data.project.id, 'changes', '', 'admin')
+    await page.getByText(ticket.title, { exact: true }).click()
+    const convert = page.getByRole('button', { name: 'Preparar como requerimiento', exact: true })
+    await convert.click()
+    const dialog = page.getByRole('dialog')
+    await selectChoiceOption(page, dialog.getByRole('combobox', { name: /etapa de destino en borrador/i }), 'Borrador privado del equipo')
+    const saved = page.waitForResponse(response => response.url().endsWith(`/change-requests/${ticket.id}/convert/`) && response.request().method() === 'POST')
+
+    await dialog.getByRole('button', { name: 'Preparar como requerimiento', exact: true }).click()
+
+    const response = await saved
+    const converted = await response.json()
+    expect(response.status()).toBe(201)
+    expect(response.request().postDataJSON().stage_id).toBe(data.hidden_stage_id)
+    await expect(page.getByText(`Convertida en requerimiento #${converted.linked_requirement_id}`)).toBeVisible()
   })
 
   // Catches the regression that made a stale evaluation look as if the team's response had been applied.

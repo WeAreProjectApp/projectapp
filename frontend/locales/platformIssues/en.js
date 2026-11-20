@@ -18,6 +18,8 @@ export default {
     discard: 'Discard preparation', reload: 'Refresh sources and versions',
   },
   source: 'Original delivery (optional)', requiredSource: 'Original delivery',
+  changeRequestTitleRequired: 'Enter a title for the request.',
+  changeRequestSourceRequired: 'Select the original delivery.',
   general: 'General project bug', selectSource: 'Select a published guide',
   generalHint: 'You can report a failure even when the project has no published guides.',
   original: 'Original context', legacy: 'This earlier report did not record an original version.',
