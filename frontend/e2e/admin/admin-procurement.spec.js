@@ -123,12 +123,14 @@ test.describe('Admin procurement', () => {
     test(`reload restores the classification form for ${description}`, {
       tag: [...ADMIN_PROCUREMENT_CLASSIFICATION, '@role:admin', '@outcome:display'],
     }, async ({ page }) => {
+      // quality: allow-deep-link (setup starts at the authenticated proposals page; navigation reaches the opportunity through the sidebar and list)
       const note = 'QA A10W-C1 20261119-01 · revisión ficticia de DEMO-015'
       const classification = { id: 5, owner: 72, owner_name: 'Staff QA', state: 'reviewing', notes: note }
       const record = { ...opportunity, id: 15, reference: 'DEMO-015' }
       const writes = []
       await setupProcurementApi(page, {
         staffId,
+        records: [record],
         detail: { ...record,
           my_classification: staffId === 72 ? classification : null,
           classifications: [classification],
@@ -138,7 +140,8 @@ test.describe('Admin procurement', () => {
           if (apiPath.startsWith('procurement/opportunities/15/') && method !== 'GET') writes.push(method)
         },
       })
-      await page.goto('/es-co/panel/procurement/15', { waitUntil: 'domcontentloaded' })
+      await openProcurementFromSidebar(page)
+      await page.getByTestId('procurement-opportunity-15').getByRole('link', { name: record.title }).click()
       const form = page.getByTestId('procurement-classification-form')
       await expect(form.getByLabel('Análisis y motivo')).toHaveValue(staffId === 72 ? note : '')
 

@@ -92,13 +92,15 @@ test.describe('Admin Kanban Tasks', () => {
     test(`renders localized column headings in ${locale}`, {
       tag: [...ADMIN_KANBAN_TASKS, '@role:admin', '@outcome:display'],
     }, async ({ page }) => {
-      // quality: allow-no-interaction (display — locale determines the column headings for the same ordered board)
       await mockApi(page, async ({ apiPath }) => {
         if (apiPath === 'auth/check/') return authCheck;
         if (apiPath === 'tasks/') return { status: 200, contentType: 'application/json', body: JSON.stringify(qaBoard()) };
         return null;
       });
-      await page.goto(`/${locale}/panel/tasks`, { waitUntil: 'domcontentloaded' });
+      // quality: allow-deep-link (selects the language at the Panel entry; the Kanban is reached through the sidebar)
+      await page.goto(`/${locale}/panel`, { waitUntil: 'domcontentloaded' });
+      await waitForNuxtApp(page);
+      await page.getByRole('link', { name: 'Kanban', exact: true }).click();
 
       for (const [index, [status, ids]] of Object.entries(QA_COLUMN_IDS).entries()) {
         const column = page.getByTestId(`column-${status}`);
@@ -121,6 +123,7 @@ test.describe('Admin Kanban Tasks', () => {
     test(scenario.name, {
       tag: [...ADMIN_KANBAN_TASKS, '@role:admin', '@outcome:success'],
     }, async ({ page }) => {
+      // quality: allow-no-interaction (dragTask drives the real mouse and drops the card at the measured destination)
       const state = qaBoard();
       if (scenario.status === 'blocked') state.blocked = [];
       const payloads = [];

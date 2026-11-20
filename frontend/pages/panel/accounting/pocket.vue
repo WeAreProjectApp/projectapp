@@ -110,7 +110,7 @@
 
     <!-- Empty -->
     <BaseEmptyState
-      v-else-if="!store.isLoading && filteredMovements.length === 0"
+      v-else-if="filterQueryReady && !store.isLoading && filteredMovements.length === 0"
       :title="hasActiveFilters ? 'Sin resultados con esos filtros' : 'No hay movimientos aún'"
       :description="hasActiveFilters
         ? 'Ajusta o limpia los filtros para ver más registros.'
@@ -162,7 +162,7 @@
       <PocketMovementCards
         v-if="isCompactCards"
         :rows="pagedMovements"
-        :loading="store.isLoading"
+        :loading="!filterQueryReady || store.isLoading"
         :highlight-id="lastMutatedId"
         :has-active-filters="hasActiveFilters"
         :detail-to-for="movementDetailTo"
@@ -172,7 +172,7 @@
 
       <AccountingTable
         v-else
-        :loading="store.isLoading"
+        :loading="!filterQueryReady || store.isLoading"
         :highlight-id="lastMutatedId"
         :columns="columns"
         :rows="pagedMovements"
@@ -288,7 +288,7 @@
     />
 
     <PocketMovementDetailModal
-      :open="detailOpen"
+      :open="filterQueryReady && detailOpen"
       :movement-id="detailMovementId"
       @close="closeMovementDetail"
     />
@@ -366,7 +366,7 @@ const { openRow } = useRowNavigation();
 const {
   openId: detailMovementId, isOpen: detailOpen, toFor: movementDetailTo,
   open: openMovementDetail, close: closeMovementDetail,
-} = useDetailQueryParam('movement');
+} = useDetailQueryParam('movement', { buildQuery: (query) => buildFilterQuery(query) });
 const balanceClipboard = useClipboardFeedback();
 async function copyPocketBalance() {
   if (store.isLoading || store.error === 'fetch_failed') return;
@@ -404,8 +404,13 @@ const {
   restoreTab: restoreFilterTab,
   rebaseTab: rebaseFilterTab,
   reorderTabs: reorderFilterTabs,
+  filterQueryReady,
+  whenFiltersReady,
+  buildFilterQuery,
 } = useAccountingFilters({
   viewName: 'accounting_pocket',
+  syncFiltersToUrl: true,
+  restoreUrlState: true,
   defaults: {
     dateAfter: '',
     dateBefore: '',
@@ -496,7 +501,7 @@ const pocketBalance = computed(() => Number(store.metaFor('pocket').balance ?? 0
 // `withRunningBalance` always returns fresh rows in a fresh array, so reversing
 // it in place is safe and yields the newest-first default view.
 const filteredMovements = computed(() =>
-  withRunningBalance(applyFilters(store.pocketMovements)).reverse(),
+  withRunningBalance(applyFilters(filterQueryReady.value ? store.pocketMovements : [])).reverse(),
 );
 
 // Net of the visible cut = the last accumulated value, which the reversed array
@@ -641,6 +646,7 @@ function openAllocations(row) {
 }
 
 async function loadRecords() {
+  if (!(await whenFiltersReady())) return;
   await store.fetchRecords('pocket');
 }
 

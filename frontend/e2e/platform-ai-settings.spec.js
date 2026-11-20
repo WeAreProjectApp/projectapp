@@ -109,6 +109,7 @@ test.describe('Platform AI settings', () => {
       tag: ['@flow:panel-platform-ai-settings', '@outcome:display'],
     }, async ({ page }) => {
       // quality: allow-no-interaction (display — verifies the rule and prerequisites shown on the activation tab)
+      // quality: allow-deep-link (the language prefix is the input of this bilingual copy check)
       await setup(page)
       await page.goto(`/${locale}/panel/platform/ai`, { waitUntil: 'domcontentloaded' })
 
