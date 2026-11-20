@@ -11,9 +11,11 @@
   3. User fills in the form fields.
   4. User submits the form.
   5. API call to `POST /api/new-contact/`.
-  6. On success, user is redirected to `/contact-success`.
+  6. On success, the form locks further submissions and opens `/contact-success` in the active locale.
 - **Branches:**
   - [Branch A — Validation error] Form shows inline validation errors, user corrects and resubmits.
-  - [Branch B — API error] The localized `contact-submit-error` message renders below the submit button and the form remains editable (mechanism added 2026-08-03 — before that the store's `submitError` was never displayed). Covered by the `@outcome:error` spec.
-- **Coverage:** ✅ Covered (success + error)
+  - [Branch B — API error] The localized `contact-submit-error` message renders below the submit button and the form remains editable.
+  - [Branch C — Navigation failure] A successful submission stays locked if the router rejects the destination. The user action produces one POST.
+  - [Branch D — Locale display] The form and confirmation use the active locale in the visible copy and document language.
+- **Coverage:** `success`, `error`, `failure`, `display` in the browser spec.
 - **E2E Spec:** `e2e/public/public-contact.spec.js`

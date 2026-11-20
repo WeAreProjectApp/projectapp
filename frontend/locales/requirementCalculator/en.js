@@ -56,6 +56,7 @@ export default {
   "loading": "Processing…",
   "tabs": "Calculator sections",
   "versions": "Versions",
+  "noPublishedVersions": "No versions have been published yet",
   "assigned": "The project has an approved version. Regular queries use that version.",
   "unassigned": "The project has no approved version. Queries use the general definition with a warning.",
   "projectVersion": "Project version",

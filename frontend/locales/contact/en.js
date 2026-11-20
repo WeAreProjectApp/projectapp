@@ -8,6 +8,8 @@ export default {
         project: "Tell us about your web project",
         budget: "Estimated budget (USD)",
         submit: "Send message",
+        submitting: "Sending...",
+        received: "Your message was received.",
         error: "We could not send your message. Please try again."
     },
     budgetOptions: [

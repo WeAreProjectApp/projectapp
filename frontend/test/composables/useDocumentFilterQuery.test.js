@@ -25,6 +25,11 @@ describe('useDocumentFilterQuery', () => {
     return scope.run(() => useDocumentFilterQuery(store, options))
   }
 
+  async function startFilterQuery(options) {
+    setupFilterQuery(options).applyQueryToStore()
+    await nextTick()
+  }
+
   beforeEach(() => {
     scope = effectScope()
     store = reactive({
@@ -62,18 +67,21 @@ describe('useDocumentFilterQuery', () => {
     expect(mockRoute.query.by).toBe('client')
   })
 
-  it('does not publish the stored mode before applying an explicit ?by', async () => {
+  it('preserves the shared client URL while the saved preference loads', async () => {
     const navigationMode = ref('project')
-    mockRoute.query = { by: 'project' }
-    const { applyQueryToStore } = setupFilterQuery({ navigationMode })
+    const focusedDocumentId = ref(null)
+    mockRoute.query = { by: 'client', folder: '369', client: '2', focus: '61' }
+    const { applyQueryToStore } = setupFilterQuery({ navigationMode, focusedDocumentId })
 
-    // Simula la preferencia remota que termina de hidratarse antes del montaje.
     navigationMode.value = 'client'
     await nextTick()
-
-    expect(mockRoute.query.by).toBe('project')
     applyQueryToStore()
-    expect(navigationMode.value).toBe('project')
+    await nextTick()
+
+    expect(mockReplace).not.toHaveBeenCalled()
+    expect(store.activeFolderId).toBe(369)
+    expect(store.activeClientId).toBe(2)
+    expect(focusedDocumentId.value).toBe(61)
   })
 
   it('publishes the stored navigation mode when the url has no override', () => {
@@ -146,7 +154,7 @@ describe('useDocumentFilterQuery', () => {
 
   it('follows the browser back and forward buttons', async () => {
     const onNavigate = jest.fn()
-    setupFilterQuery({ onNavigate })
+    await startFilterQuery({ onNavigate })
 
     // Lo que hace un popstate: cambia la URL sin pasar por el store.
     mockRoute.query = { folder: '9', scope: 'archived' }
@@ -159,7 +167,7 @@ describe('useDocumentFilterQuery', () => {
 
   it('does not refetch when the url change came from the store itself', async () => {
     const onNavigate = jest.fn()
-    setupFilterQuery({ onNavigate })
+    await startFilterQuery({ onNavigate })
 
     store.activeFolderId = 3
     await nextTick()
@@ -212,7 +220,7 @@ describe('useDocumentFilterQuery', () => {
     const searchQuery = ref('')
     const currentPage = ref(1)
     const focusedDocumentId = ref(null)
-    setupFilterQuery({
+    await startFilterQuery({
       searchQuery, currentPage, focusedDocumentId, onNavigate,
     })
 
@@ -228,7 +236,7 @@ describe('useDocumentFilterQuery', () => {
   })
 
   it('writes state changes to the url with replace, omitting the defaults', async () => {
-    setupFilterQuery()
+    await startFilterQuery()
 
     store.activeFolderId = 7
     store.archiveScope = 'archived'
@@ -246,7 +254,7 @@ describe('useDocumentFilterQuery', () => {
 
   it('writes search state without changing its origin scope', async () => {
     const searchQuery = ref('')
-    setupFilterQuery({ searchQuery })
+    await startFilterQuery({ searchQuery })
 
     store.archiveScope = 'archived'
     searchQuery.value = 'contrato'
@@ -260,7 +268,7 @@ describe('useDocumentFilterQuery', () => {
     const viewMode = ref('list')
     const currentPage = ref(1)
     const focusedDocumentId = ref(null)
-    setupFilterQuery({ viewMode, currentPage, focusedDocumentId })
+    await startFilterQuery({ viewMode, currentPage, focusedDocumentId })
 
     viewMode.value = 'grid'
     currentPage.value = 4
@@ -278,7 +286,7 @@ describe('useDocumentFilterQuery', () => {
   })
 
   it('canonicalizes document state filters in the url', async () => {
-    setupFilterQuery()
+    await startFilterQuery()
 
     store.activeStateIds = [20, 11, 20]
     store.withoutStateIds = [13, 13]
@@ -335,7 +343,7 @@ describe('useDocumentFilterQuery', () => {
   })
 
   it('writes the association axes to the url and clears them when off', async () => {
-    setupFilterQuery()
+    await startFilterQuery()
 
     store.activeClientId = 'none'
     await nextTick()
@@ -348,7 +356,7 @@ describe('useDocumentFilterQuery', () => {
 
   it('back and forward with an association param reach the store', async () => {
     const onNavigate = jest.fn()
-    setupFilterQuery({ onNavigate })
+    await startFilterQuery({ onNavigate })
 
     mockRoute.query = { client: '7' }
     await nextTick()

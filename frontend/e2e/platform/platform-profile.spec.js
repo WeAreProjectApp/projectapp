@@ -26,15 +26,79 @@ const meResponse = (user) => ({
 });
 
 function setupProfileMocks(page, user) {
-  return mockApi(page, async ({ apiPath, method }) => {
-    if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
+  let savedProfile = { ...user };
+  return mockApi(page, async ({ apiPath, method, route }) => {
+    if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(savedProfile);
     if (apiPath === 'accounts/me/' && method === 'PATCH') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...user, first_name: 'Updated' }) };
+      savedProfile = { ...savedProfile, ...route.request().postDataJSON() };
+      return meResponse(savedProfile);
     }
     if (apiPath.startsWith('accounts/clients/')) {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
     }
     return null;
+  });
+}
+
+const REQUIRED_PROFILE_FIELDS = [
+  'Nombre', 'Apellido', 'Empresa', 'Teléfono', 'Cédula',
+  'Fecha de nacimiento', 'Sexo', 'Nivel de educación',
+];
+
+const profileEditCases = [
+  {
+    user: { ...mockPlatformClient, id: 2, user_id: 2, education_level: 'universitario' },
+    label: 'Nivel de educación', before: 'Universitario', key: 'ArrowDown',
+    field: 'education_level', value: 'posgrado', after: 'Posgrado',
+    otherLabel: 'Sexo', otherValue: 'Femenino',
+  },
+  {
+    user: { ...mockPlatformAdmin, id: 72, user_id: 72 },
+    label: 'Sexo', before: 'Masculino', key: 'End',
+    field: 'gender', value: 'prefer_not_to_say', after: 'Prefiero no decir',
+    otherLabel: 'Nivel de educación', otherValue: 'Universitario',
+  },
+];
+
+for (const { user, label, before, key, field, value, after, otherLabel, otherValue } of profileEditCases) {
+  test(`persists a keyboard selection in the labeled ${user.role} profile`, {
+    tag: ['@outcome:success', ...PLATFORM_PROFILE_EDIT, `@role:platform-${user.role}`],
+  }, async ({ page }) => {
+    test.setTimeout(60_000);
+    await setPlatformAuth(page, { user });
+    await setupProfileMocks(page, user);
+    await page.goto('/en-us/platform/profile', { waitUntil: 'domcontentloaded' });
+    const main = page.locator('main');
+    const save = main.getByRole('button', { name: 'Guardar cambios' });
+    await expect(save).toBeVisible({ timeout: 30_000 });
+    await Promise.all(REQUIRED_PROFILE_FIELDS.map(name =>
+      expect(main.getByLabel(name, { exact: true })).toHaveAccessibleName(name)));
+
+    const choice = main.getByRole('combobox', { name: label, exact: true });
+    await expect(choice).toHaveText(before);
+    await choice.focus();
+    await choice.press('ArrowDown');
+    await choice.press(key);
+    await choice.press('Enter');
+    await expect(choice).toHaveText(after);
+
+    const patch = page.waitForRequest(request =>
+      request.method() === 'PATCH' && new URL(request.url()).pathname === '/api/accounts/me/');
+    await save.click();
+    const expectedFields = {
+      first_name: user.first_name, last_name: user.last_name, company_name: user.company_name,
+      phone: user.phone, cedula: user.cedula, date_of_birth: user.date_of_birth,
+      gender: user.gender, education_level: user.education_level, [field]: value,
+    };
+    expect((await patch).postDataJSON()).toEqual(expectedFields);
+    await expect(main.getByText('Perfil actualizado correctamente.')).toBeVisible();
+
+    const read = page.waitForResponse(response =>
+      response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/accounts/me/');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    expect(await (await read).json()).toMatchObject(expectedFields);
+    await expect(choice).toHaveText(after);
+    await expect(main.getByRole('combobox', { name: otherLabel, exact: true })).toHaveText(otherValue);
   });
 }
 

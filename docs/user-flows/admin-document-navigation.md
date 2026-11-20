@@ -12,7 +12,7 @@
   3. Elige un proyecto o «Sin proyecto» y el listado consulta únicamente esa asociación.
   4. Dentro de un proyecto, abre una subcarpeta y luego un documento; al regresar desde el editor recupera la subcarpeta con el proyecto todavía seleccionado.
   5. Cambia a Clientes, elige una persona o «Sin cliente» y consulta su inventario.
-  6. Sale del módulo y vuelve: el último modo elegido reaparece.
+  6. Recarga o abre el enlace guardado de Clientes: recupera el cliente, la carpeta y el foco del documento. Al entrar sin enlace, reaparece el último modo elegido.
   7. Abre una carpeta propia; la navegación limpia cualquier proyecto o cliente previamente seleccionado.
 - **Branches:**
   - [Branch A — Display] Cada entidad declara conteos separados de carpetas y documentos; los proyectos no operativos están ocultos al entrar y, mientras su control excluyente está encendido, son los únicos que se listan. Los clientes archivados tienen su propio grupo secundario, y desde el 31-ago-2026 el mismo interruptor excluyente lo gobierna: en modo cliente se rotula «Ver clientes archivados» y, apagado, los archivados no se listan.

@@ -232,8 +232,9 @@
             <p class="mb-2 text-xs text-text-muted" data-testid="communication-details-summary">{{ detailsSummary }}</p>
             <BaseCollapse id="communication-message-details" :open="detailsOpen">
             <BaseFormRow :cols="3" :gap="3" at="sm">
-              <BaseFormField label="Dirección">
-                <BaseSelect
+              <BaseFormField label="Dirección" :for="directionId">
+                <BaseChoiceSelect
+                  :id="directionId"
                   v-model="messageForm.direction"
                   :options="DIRECTION_OPTIONS"
                   :disabled="Boolean(editingMessageId)"
@@ -242,8 +243,9 @@
                   @update:model-value="onDirectionChange"
                 />
               </BaseFormField>
-              <BaseFormField label="Canal">
-                <BaseSelect
+              <BaseFormField label="Canal" :for="channelId">
+                <BaseChoiceSelect
+                  :id="channelId"
                   v-model="messageForm.channel"
                   :options="CHANNEL_OPTIONS"
                   data-testid="communication-message-channel"
@@ -378,6 +380,8 @@ const store = useCommunicationsStore();
 const documentStore = useDocumentStore();
 const notify = usePanelNotify();
 const { t } = useI18n();
+const directionId = useId();
+const channelId = useId();
 const composerRef = ref(null);
 const timelineRef = ref(null);
 const composerOpen = ref(false);

@@ -1,3 +1,22 @@
+## PA-275 a PA-281 — correcciones de Panel y Plataforma
+
+El Gestor aplica el contexto de la URL antes de sincronizar sus filtros.
+Notificaciones abre el destino tras marcar lectura y conserva el aviso disponible
+si el marcado falla. Las regresiones ejercen los desplegables compartidos, el
+plural de la cola y los dos accesos por código con buzón local desechable. El
+cotejo manual en Chrome QA se retoma por indicación de Carlos.
+## PA-282, PA-283, PA-284, PA-285 y PA-288 — Correcciones de QA (2026-11-20)
+
+Versiones de la Calculadora distingue vacío, carga y error y conserva la página
+vigente ante fallos. Otrosíes usa desplegables con nombres accesibles. Contratación
+estatal distingue estados, acciones y títulos de alertas. Contacto y Nosotros
+usan textos localizados. Portafolio y Linktree clásico declaran el idioma del
+documento y Portafolio usa el título del trabajo vigente.
+
+PA-286 bloquea nuevos envíos después de aceptar el contacto. La reproducción
+del atasco del router, previa a decidir un cambio de navegación, espera la
+retoma de Chrome QA. Los envíos de prueba requieren una copia desechable con
+correo local. PA-265 ya está en main mediante #591 y espera validación manual.
 ## Retorno y correcciones del Panel · PA-287 y PA-289 a PA-294
 
 Siete fichas de QA sobre la revisión `63f97e41`. Contabilidad recupera el ámbito, los filtros y el detalle mediante la URL en Recurrentes, Bolsillo, Ads, Cuentas de cobro y Hosting. Los IDs y los nombres históricos conservan su tipo. Los filtros explícitos prevalecen sobre enlaces existentes y pestañas guardadas. El Radar mantiene el foco de Recurrentes. El detalle de Ingresos muestra los centavos del total.

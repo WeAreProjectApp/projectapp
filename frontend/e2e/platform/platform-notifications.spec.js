@@ -48,20 +48,46 @@ const mockNotifications = [
 
 const meResponse = (user) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(user) });
 
-function setupMocks(page, { user }) {
+const deliveryStage = { id: 17, key: 'E1', title: 'Etapa de prueba publicada', status: 'in_review', publication_id: 31, requirements: [] };
+const deliveryNotice = {
+  id: 85, type: 'delivery_published', title: 'Nueva etapa para revisar',
+  message: 'Ya puedes abrir la etapa de prueba.', is_read: false,
+  project: 2, project_name: 'Proyecto de prueba', related_object_type: 'delivery_stage',
+  related_object_id: deliveryStage.id, created_at: '2026-11-19T14:00:00Z',
+};
+const deliveryProject = { id: 2, name: deliveryNotice.project_name, status: 'active', progress: 25 };
+const deliveryWorkspace = {
+  project: deliveryProject, contracts: [{ id: 3, key: 'C1', title: 'Contrato de prueba' }],
+  scopes: [{ id: 4, contract_id: 3, title: 'Alcance', phases: [{ id: 5, title: 'Fase', stages: [deliveryStage] }] }],
+};
+
+function setupMocks(page, { user, notifications = mockNotifications, markReadStatus = () => 200 }) {
+  const rows = notifications.map(notification => ({ ...notification }));
   return mockApi(page, async ({ apiPath, method }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
     if (apiPath === 'accounts/notifications/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(mockNotifications) };
+      return meResponse(rows);
     }
     if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify({ unread_count: 2 }) };
+      return meResponse({ count: rows.filter(notification => !notification.is_read).length });
     }
     if (apiPath === 'accounts/notifications/mark-all-read/' && method === 'POST') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify({ marked_read: 2 }) };
     }
-    if (apiPath.match(/accounts\/notifications\/\d+\/read\/$/) && method === 'PATCH') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify({ id: 1, is_read: true }) };
+    const readEndpoint = apiPath.match(/^accounts\/notifications\/(\d+)\/read\/$/);
+    if (readEndpoint && method === 'POST') {
+      const id = Number(readEndpoint[1]);
+      const status = await markReadStatus(id);
+      if (status !== 200) return { ...meResponse({ detail: 'Error de prueba al marcar lectura' }), status };
+      const notification = rows.find(row => row.id === id);
+      notification.is_read = true;
+      return meResponse(notification);
+    }
+    if (apiPath === 'accounts/projects/2/' && method === 'GET') {
+      return meResponse(deliveryProject);
+    }
+    if (apiPath === 'accounts/projects/2/delivery/' && method === 'GET') {
+      return meResponse(deliveryWorkspace);
     }
     if (apiPath === 'accounts/projects/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
@@ -111,8 +137,86 @@ test.describe('Platform Notifications — Admin', () => {
     await page.goto('/platform/notifications', { waitUntil: 'domcontentloaded' });
     await page.getByRole('heading', { name: /notificaciones/i }).waitFor({ state: 'visible', timeout: 30000 });
 
-    await expect(page.getByText(/sin leer/i)).toBeVisible();
+    await expect(page.getByText('3 sin leer', { exact: true })).toBeVisible();
   });
+});
+
+async function openDeliveryNotice(page, markReadStatus) {
+  await setPlatformAuth(page, { user: mockPlatformClient });
+  await setupMocks(page, {
+    user: mockPlatformClient,
+    notifications: [deliveryNotice, mockNotifications[0]],
+    markReadStatus,
+  });
+  // quality: allow-deep-link (this regression starts from the notification filters)
+  await page.goto('/en-us/platform/notifications', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Notificaciones', exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('2 sin leer', { exact: true })).toBeVisible();
+  const unread = page.getByRole('button', { name: 'Sin leer', exact: true });
+  await expect(page.getByRole('button', { name: 'Todas', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await unread.click();
+  await expect(unread).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Todas', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  const read = page.getByRole('button', { name: 'Leídas', exact: true });
+  await expect(read).toHaveAttribute('aria-pressed', 'false');
+  await read.focus();
+  await page.keyboard.press('Tab');
+  return page.getByRole('link', { name: deliveryNotice.title, exact: true });
+}
+
+test('one Enter opens the published stage after persisting a single read', {
+  tag: [...PLATFORM_NOTIFICATIONS, '@role:platform-client', '@outcome:success'],
+}, async ({ page }) => {
+  test.setTimeout(60_000);
+  const requests = [];
+  const { promise, resolve } = Promise.withResolvers();
+  const notice = await openDeliveryNotice(page, id => { requests.push(id); return promise; });
+  await expect(notice).toBeFocused();
+  await expect(notice).toHaveCSS('box-shadow', /.+px /);
+
+  await page.keyboard.press('Enter');
+  await expect(notice).toHaveAttribute('aria-busy', 'true');
+  await expect(notice).toBeFocused();
+  await expect(page).toHaveURL(/\/platform\/notifications$/);
+  await expect(page.getByText('2 sin leer', { exact: true })).toBeVisible();
+  resolve(200);
+
+  await expect(page).toHaveURL(/\/platform\/projects\/2\/delivery\?stage=17$/);
+  await expect(page.getByTestId('delivery-stage-17')).toHaveAttribute('aria-current', 'location');
+  expect(requests).toEqual([deliveryNotice.id]);
+  await page.goBack({ waitUntil: 'domcontentloaded' });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('1 sin leer', { exact: true })).toBeVisible();
+  const read = page.getByRole('button', { name: 'Leídas', exact: true });
+  await read.click();
+  await expect(read).toHaveAttribute('aria-pressed', 'true');
+  await expect(notice).toBeVisible();
+});
+
+test('a failed read keeps the unread notice available for keyboard retry', {
+  tag: [...PLATFORM_NOTIFICATIONS, '@role:platform-client', '@outcome:failure'],
+}, async ({ page }) => {
+  test.setTimeout(60_000);
+  const requests = [];
+  const { promise, resolve } = Promise.withResolvers();
+  const notice = await openDeliveryNotice(page, id => {
+    requests.push(id);
+    return requests.length === 1 ? promise : 200;
+  });
+  await expect(notice).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(notice).toHaveAttribute('aria-busy', 'true');
+  await page.keyboard.press('Enter');
+  resolve(503);
+
+  await expect(page.getByRole('alert')).toHaveText('No pudimos marcar el aviso como leído. Intenta de nuevo.');
+  await expect(notice).toBeFocused();
+  await expect(notice).toHaveAttribute('href', /\/platform\/projects\/2\/delivery\?stage=17$/);
+  await expect(page.getByText('2 sin leer', { exact: true })).toBeVisible();
+  expect(requests).toEqual([deliveryNotice.id]);
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('delivery-stage-17')).toBeVisible();
+  expect(requests).toEqual([deliveryNotice.id, deliveryNotice.id]);
 });
 
 test.describe('Platform Notifications — Client', () => {

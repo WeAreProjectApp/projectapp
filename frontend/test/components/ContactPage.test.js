@@ -1,4 +1,8 @@
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
+import { createI18n, useI18n } from 'vue-i18n';
+import contactEn from '../../locales/contact/en';
+import contactEs from '../../locales/contact/es';
 
 jest.mock('gsap', () => ({
   __esModule: true,
@@ -28,30 +32,13 @@ jest.mock('pinia', () => ({
 
 jest.mock('../../stores/language', () => ({
   useLanguageStore: jest.fn(() => ({
-    messages: require('vue').ref({
-      contact: {
-        title: 'Need a professional website?',
-        subtitle: 'We develop custom websites.',
-        form: {
-          fullName: 'Full name',
-          phone: 'Phone number',
-          email: 'Your email',
-          project: 'Tell us about your project',
-          budget: 'Estimated budget',
-          submit: 'Send message',
-          error: 'We could not send your message. Please try again.',
-        },
-        budgetOptions: ['500-5K', '5-10K', '10-20K'],
-      },
-    }),
-    currentLocale: require('vue').ref('es-co'),
+    currentLocale: require('vue').ref('en-us'),
   })),
 }));
 
 // Shared store instance so tests can drive submitError / sendContact.
 const mockContactsStore = {
   isSubmitting: require('vue').ref(false),
-  submitSuccess: require('vue').ref(false),
   submitError: require('vue').ref(null),
   sendContact: jest.fn(),
 };
@@ -66,12 +53,19 @@ jest.mock('../../composables/useGtagConversions', () => ({
 
 const mockRouterPush = jest.fn();
 global.useRouter = jest.fn(() => ({ push: mockRouterPush }));
+global.useI18n = useI18n;
 
 import ContactPage from '../../components/pages/ContactPage.vue';
 
-function mountContactPage() {
+function mountContactPage(locale = 'en-us') {
+  const i18n = createI18n({
+    legacy: false,
+    locale,
+    messages: { 'en-us': { contact: contactEn }, 'es-co': { contact: contactEs } },
+  });
   return mount(ContactPage, {
     global: {
+      plugins: [i18n],
       stubs: { CompanyDetails: { template: '<section data-testid="company-details-stub" />' } },
     },
   });
@@ -117,27 +111,33 @@ describe('ContactPage', () => {
 
 describe('ContactPage submit error display', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     mockContactsStore.submitError.value = null;
     mockContactsStore.sendContact.mockReset();
     mockRouterPush.mockReset();
   });
 
-  it('shows the localized error and does not redirect when submission fails', async () => {
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  it('shows the Spanish error after a rejected submission', async () => {
     // The store may hold a raw DRF payload object — the page must render the
     // localized generic message, never "[object Object]".
     mockContactsStore.sendContact.mockImplementation(async () => {
       mockContactsStore.submitError.value = { email: ['Enter a valid email.'] };
       return { success: false, error: mockContactsStore.submitError.value };
     });
-    const wrapper = mountContactPage();
+    const wrapper = mountContactPage('es-co');
     expect(wrapper.find('[data-testid="contact-submit-error"]').exists()).toBe(false);
 
     await wrapper.find('form').trigger('submit');
-    await wrapper.vm.$nextTick();
+    await nextTick();
 
     const alert = wrapper.find('[data-testid="contact-submit-error"]');
     expect(alert.exists()).toBe(true);
-    expect(alert.text()).toBe('We could not send your message. Please try again.');
+    expect(alert.text()).toBe('No pudimos enviar tu mensaje. Por favor inténtalo de nuevo.');
     expect(alert.text()).not.toContain('object');
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
@@ -147,9 +147,22 @@ describe('ContactPage submit error display', () => {
     const wrapper = mountContactPage();
 
     await wrapper.find('form').trigger('submit');
-    await wrapper.vm.$nextTick();
+    await nextTick();
 
     expect(wrapper.find('[data-testid="contact-submit-error"]').exists()).toBe(false);
     expect(mockContactsStore.sendContact).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a second submission after acceptance', async () => {
+    mockContactsStore.sendContact.mockResolvedValue({ success: true, data: { id: 1 } });
+    const wrapper = mountContactPage();
+    const form = wrapper.get('[data-testid="contact-form"]');
+
+    await form.trigger('submit');
+    await nextTick();
+    await form.trigger('submit');
+
+    expect(mockContactsStore.sendContact).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('button[type="submit"]').element.disabled).toBe(true);
   });
 });

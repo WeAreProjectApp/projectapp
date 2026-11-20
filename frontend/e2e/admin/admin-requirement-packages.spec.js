@@ -42,24 +42,38 @@ test.describe('Admin requirement packages', () => {
     });
   });
 
-  test('filters the queue from the Panel and keeps the matching project visible', {
+  test('pluralizes the pending queue as its search narrows the results', {
     tag: ['@outcome:display', ...ADMIN_REQUIREMENT_PACKAGES_QUEUE, '@role:admin'],
   }, async ({ page }) => {
-    // Bug caught: the queue search removes the only matching request or its project destination.
+    // Bug caught: the heading uses the wrong count or loses the status filter after search.
     // quality: allow-deep-link (authenticated shell entry; the test reaches the package view through visible navigation)
     await mockRequirementPackagesWorkspace(page, {
       admin: true,
       queueRows: [
-        { id: 701, title: 'Mostrar el estado del pedido', project_id: 1, project_name: 'Atlas Workspace', status: 'offered' },
-        { id: 702, title: 'Enviar el resumen mensual', project_id: 2, project_name: 'Sin relación', status: 'pending' },
+        { id: 2, title: 'Actualizar inventario', project_id: 1, project_name: 'App Móvil Inventarios', status: 'pending' },
+        { id: 1, title: 'Enviar el resumen mensual', project_id: 2, project_name: 'Contabilidad', status: 'pending' },
+        { id: 3, title: 'Oferta anterior', project_id: 1, project_name: 'App Móvil Inventarios', status: 'offered' },
       ],
     });
     await openQueue(page);
 
+    await page.getByRole('button', { name: 'Solicitudes' }).click();
+    await page.getByRole('menuitem', { name: 'Pendiente de evaluación' }).click();
+    const search = page.getByRole('searchbox', { name: 'Buscar proyecto o solicitud' });
+    await search.fill('App Móvil Inventarios');
+    await expect(page.getByText('1 solicitud necesita atención', { exact: true })).toBeVisible();
+    await expect(page.getByText('Actualizar inventario', { exact: true })).toBeVisible();
+    await expect(page.getByText('Enviar el resumen mensual', { exact: true })).toHaveCount(0);
+
+    await search.fill('Búsqueda sin coincidencias');
+    await expect(page.getByText('0 solicitudes necesitan atención', { exact: true })).toBeVisible();
+
+    await search.clear();
+    await expect(page.getByText('2 solicitudes necesitan atención', { exact: true })).toBeVisible();
+    await expect(page.getByText('Actualizar inventario', { exact: true })).toBeVisible();
     await expect(page.getByText('Enviar el resumen mensual', { exact: true })).toBeVisible();
-    await page.getByLabel('Buscar proyecto o solicitud').fill('Atlas');
-    await expect(page.getByText('Mostrar el estado del pedido', { exact: true })).toBeVisible();
-    await expect(page.getByText('Sin relación', { exact: false })).not.toBeVisible();
+    await expect(page.getByText('Oferta anterior', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Pendiente de evaluación' })).toBeVisible();
   });
 
   test('opens the selected queue request in its matching project workspace', {

@@ -286,6 +286,7 @@ test.describe('Admin procurement', () => {
     })
     await openProcurementFromSidebar(page)
     await page.getByTestId('procurement-new-alert').click()
+    await expect(page.getByRole('dialog', { name: 'Nueva alerta', exact: true })).toBeVisible()
     const form = page.getByTestId('procurement-record-form')
     await form.getByLabel('Nombre').fill('Obras urgentes')
     await form.getByLabel('Destinatarios (separados por comas)').fill('carlos@example.test, equipo@example.test')
@@ -294,6 +295,58 @@ test.describe('Admin procurement', () => {
     await form.getByTestId('procurement-save').click()
     await expect(form).toBeHidden()
     expect(payloads).toEqual([{ name: 'Obras urgentes', filters: {}, recipients: ['carlos@example.test', 'equipo@example.test'], frequency: 'weekly', is_active: true }])
+  })
+
+  test('shows the matching action for each alert status', {
+    tag: [...ADMIN_PROCUREMENT_ALERTS, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the protected setup page leads to Alertas through the sidebar)
+    await setupProcurementApi(page, {
+      alerts: [
+        { id: 1, name: 'Oportunidades software', recipients: ['alert@example.test'], frequency: 'daily', is_active: false },
+        { id: 2, name: 'Seguridad de redes', recipients: ['alert@example.test'], frequency: 'daily', is_active: true },
+      ],
+    })
+    await openProcurementFromSidebar(page)
+    await page.getByRole('button', { name: 'Alertas', exact: true }).click()
+
+    const inactive = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Oportunidades software', exact: true }) })
+    await expect(inactive.getByText('alert@example.test · Resumen diario · Inactiva', { exact: true })).toBeVisible()
+    await expect(inactive.getByRole('button', { name: 'Activar', exact: true })).toBeEnabled()
+    const active = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Seguridad de redes', exact: true }) })
+    await expect(active.getByText('alert@example.test · Resumen diario · Activa', { exact: true })).toBeVisible()
+    await expect(active.getByRole('button', { name: 'Desactivar', exact: true })).toBeEnabled()
+  })
+
+  test('cancels editing an existing alert without saving it', {
+    tag: [...ADMIN_PROCUREMENT_ALERTS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the protected setup page leads to Alertas through the sidebar)
+    const alert = { id: 2, name: 'DEMO-015', recipients: ['alert@example.test'], frequency: 'weekly', is_active: false, version: 1 }
+    const writes = []
+    await setupProcurementApi(page, {
+      alerts: [alert],
+      onRequest: ({ apiPath, method }) => {
+        if (apiPath.startsWith('procurement/alerts/') && method !== 'GET') writes.push(method)
+        return null
+      },
+    })
+    await openProcurementFromSidebar(page)
+    await page.getByRole('button', { name: 'Alertas', exact: true }).click()
+    const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: alert.name, exact: true }) })
+    await card.getByRole('button', { name: 'Editar', exact: true }).click()
+
+    const dialog = page.getByRole('dialog', { name: 'Editar alerta', exact: true })
+    await expect(dialog.getByLabel('Nombre')).toHaveValue(alert.name)
+    await expect(dialog.getByLabel('Destinatarios (separados por comas)')).toHaveValue(alert.recipients[0])
+    await expect(dialog.getByLabel('Frecuencia')).toHaveValue(alert.frequency)
+    await expect(dialog.getByRole('checkbox', { name: 'Alerta activa' })).not.toBeChecked()
+    await dialog.getByLabel('Nombre').fill('Cambio sin guardar')
+    await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click()
+
+    await expect(dialog).toBeHidden()
+    await expect(card).toBeVisible()
+    expect(writes).toEqual([])
   })
 
   test('keeps the alert form open for duplicate recipients', {

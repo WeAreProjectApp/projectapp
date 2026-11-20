@@ -8,6 +8,8 @@ export default {
         project: "Cuéntanos sobre tu proyecto web",
         budget: "Presupuesto estimado (USD)",
         submit: "Enviar mensaje",
+        submitting: "Enviando...",
+        received: "Recibimos tu mensaje.",
         error: "No pudimos enviar tu mensaje. Por favor inténtalo de nuevo."
     },
     budgetOptions: [
