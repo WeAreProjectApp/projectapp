@@ -86,12 +86,12 @@
           <!-- Kanban boards -->
           <div v-else class="flex gap-2 overflow-x-auto pb-2">
             <TaskColumn
-              v-for="col in columns"
-              :key="col.status"
-              :status="col.status"
-              :label="col.label"
-              :tasks="(taskStore.boardTasks[board.key] || {})[col.status] || []"
-              @add="openCreateOnBoard(board.key, col.status)"
+              v-for="status in columnStatuses"
+              :key="status"
+              :status="status"
+              :label="t(`panelUsability.taskBoardStatus.${status}`)"
+              :tasks="(taskStore.boardTasks[board.key] || {})[status] || []"
+              @add="openCreateOnBoard(board.key, status)"
               @edit="openEdit"
               @move="handleMove"
             />
@@ -186,6 +186,7 @@ import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
+const { t } = useI18n();
 const taskStore = useTaskStore();
 const route = useRoute();
 const radarFocus = useRadarFocus();
@@ -225,12 +226,7 @@ const boards = [
   { key: 'monthly',  label: 'Mensual' },
 ];
 
-const columns = [
-  { status: 'todo',        label: 'TO DO' },
-  { status: 'in_progress', label: 'In Progress' },
-  { status: 'blocked',     label: 'Blocked' },
-  { status: 'done',        label: 'Done' },
-];
+const columnStatuses = ['todo', 'in_progress', 'blocked', 'done'];
 
 const BOARD_LABELS = {
   standard: 'Sin periodicidad',

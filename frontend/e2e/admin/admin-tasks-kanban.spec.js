@@ -27,6 +27,28 @@ function board(overrides = {}) {
   };
 }
 
+const QA_COLUMN_IDS = {
+  todo: [1, 2, 9, 33],
+  in_progress: [3, 21, 25, 45, 49],
+  blocked: [4],
+  done: [5, 13, 17, 29, 37, 41, 53, 57],
+};
+
+function qaBoard() {
+  return Object.fromEntries(Object.entries(QA_COLUMN_IDS).map(([status, ids]) => [
+    status,
+    ids.map((id, position) => ({
+      id, position, status, title: `Tarea ficticia ${id}`, board_type: 'standard',
+      priority: 'medium', assignee: 72, assignee_name: 'Equipo QA',
+    })),
+  ]));
+}
+
+function columnIds(page, status) {
+  return page.getByTestId(`column-${status}`).getByTestId('task-card')
+    .evaluateAll(cards => cards.map(card => Number(card.dataset.taskId)));
+}
+
 async function openTasksFromMenu(page) {
   await page.goto('/panel', { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
@@ -45,6 +67,29 @@ test.describe('Admin Kanban Tasks', () => {
       userAuth: { id: 9000, role: 'admin', is_staff: true },
     });
   });
+
+  for (const { locale, labels } of [
+    { locale: 'es-co', labels: ['Por hacer', 'En curso', 'Bloqueada', 'Completada'] },
+    { locale: 'en-us', labels: ['TO DO', 'In Progress', 'Blocked', 'Done'] },
+  ]) {
+    test(`renders localized column headings in ${locale}`, {
+      tag: [...ADMIN_KANBAN_TASKS, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      // quality: allow-no-interaction (display — locale determines the column headings for the same ordered board)
+      await mockApi(page, async ({ apiPath }) => {
+        if (apiPath === 'auth/check/') return authCheck;
+        if (apiPath === 'tasks/') return { status: 200, contentType: 'application/json', body: JSON.stringify(qaBoard()) };
+        return null;
+      });
+      await page.goto(`/${locale}/panel/tasks`, { waitUntil: 'domcontentloaded' });
+
+      for (const [index, [status, ids]] of Object.entries(QA_COLUMN_IDS).entries()) {
+        const column = page.getByTestId(`column-${status}`);
+        await expect(column.getByRole('heading', { name: labels[index], exact: true })).toBeVisible();
+        await expect.poll(() => columnIds(page, status)).toEqual(ids);
+      }
+    });
+  }
 
   for (const profile of ['compact', 'desktop']) {
     for (const scenario of [
