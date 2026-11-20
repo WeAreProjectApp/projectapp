@@ -150,6 +150,17 @@ describe('IncomeDetailModal — the income and what it was paid', () => {
     expect(wrapper.text()).toContain('250.000');
   });
 
+  it('preserves cents in the largest supported income total', async () => {
+    get_request.mockResolvedValue({
+      data: detail({ income: { total_amount: '999999999999.99' } }),
+    });
+
+    const wrapper = await open();
+
+    expect(wrapper.get('[data-testid="income-detail-total"]').text())
+      .toBe('$999.999.999.999,99 COP');
+  });
+
   it('shows the forecast classification with its manual inclusion state', async () => {
     get_request.mockResolvedValue({
       data: detail({
