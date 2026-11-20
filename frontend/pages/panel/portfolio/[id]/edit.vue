@@ -46,12 +46,12 @@
       <fieldset class="border border-border-default rounded-xl p-5 space-y-4">
         <legend class="text-sm font-medium text-text-default px-2">Español</legend>
         <div>
-          <label class="block text-sm font-medium text-text-default mb-1">Título (ES)</label>
-          <input v-model="form.title_es" type="text" required class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
+          <label for="portfolio-edit-title-es" class="block text-sm font-medium text-text-default mb-1">Título (ES)</label>
+          <input id="portfolio-edit-title-es" v-model="form.title_es" type="text" required class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-text-default mb-1">Tagline (ES)</label>
-          <input v-model="form.excerpt_es" type="text" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
+          <label for="portfolio-edit-excerpt-es" class="block text-sm font-medium text-text-default mb-1">Tagline (ES)</label>
+          <input id="portfolio-edit-excerpt-es" v-model="form.excerpt_es" type="text" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
         </div>
         <div>
           <label class="block text-sm font-medium text-text-default mb-1">Contenido JSON (ES)</label>
@@ -63,12 +63,12 @@
       <fieldset class="border border-border-default rounded-xl p-5 space-y-4">
         <legend class="text-sm font-medium text-text-default px-2">English</legend>
         <div>
-          <label class="block text-sm font-medium text-text-default mb-1">Title (EN)</label>
-          <input v-model="form.title_en" type="text" required class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
+          <label for="portfolio-edit-title-en" class="block text-sm font-medium text-text-default mb-1">Title (EN)</label>
+          <input id="portfolio-edit-title-en" v-model="form.title_en" type="text" required class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-text-default mb-1">Tagline (EN)</label>
-          <input v-model="form.excerpt_en" type="text" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
+          <label for="portfolio-edit-excerpt-en" class="block text-sm font-medium text-text-default mb-1">Tagline (EN)</label>
+          <input id="portfolio-edit-excerpt-en" v-model="form.excerpt_en" type="text" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all" />
         </div>
         <div>
           <label class="block text-sm font-medium text-text-default mb-1">Content JSON (EN)</label>
