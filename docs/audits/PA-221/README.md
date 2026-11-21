@@ -3,6 +3,82 @@
 Estado del ticket: **TO DO por indicación de Carlos**. Este expediente no cambia
 su acceso, no sustituye evidencias históricas y no acredita un dictamen nuevo.
 
+## Ronda w2 · 21 de noviembre de 2026
+
+PA-221 conserva **TO DO** y su acceso. DEVQA-000 sigue en pausa. El cotejo
+QA-NOC-004 se conserva con las operaciones 1 y 3 del proyecto 42 en `2aa73489`.
+
+### Comprobaciones de implementación
+
+- El inventario de `main` en `c6022760b` contiene 866 herramientas y 116 vistas,
+  85 con gestor y 31 con excepción. Las 866 operaciones figuran como
+  `mapped_unverified`. El CSV histórico de esta carpeta corresponde a las
+  831 herramientas del PR #584. [JSON y CSV del corte de main](https://github.com/WeAreProjectApp/projectapp/actions/runs/44805736011/artifacts/14671761702)
+- El cotejo de nombres, grupos y herramientas del registro encontró las 866
+  operaciones de negocio en las capacidades de sus 12 gestores. El recorrido
+  en Chrome y los permisos efectivos se acreditan por separado en DEV.
+- El inventario publicaba 14 destinos con nombres antiguos de ingresos y
+  aprobación de propuestas. La lista por destino y la migración de permisos
+  usan ahora la misma traducción. El cotejo del registro encuentra las 1295
+  referencias de reemplazo en los catálogos de destino.
+- La lectura de la configuración local de Codex encontró cuatro referencias
+  antiguas, `clients`, `proposals`, `blog` y `linkedin-personal`. La fecha de
+  uso y la migración de cada consumidor se comprueban en su entorno.
+
+### Regresión focal de NM1
+
+La ejecución requiere habilitación expresa de Carlos y un **DEV LISTO**
+vigente de la dupla, con los SHA servidos, roles, acceso al Gestor de integridad
+y casos ficticios. Comparar por modelo, ID, campo, valor anterior y valor
+posterior la vista previa, las lecturas independientes de persistencia y el
+historial de una misma operación. Guardar rol, huella, motivo e ID. La
+lectura inmediatamente posterior a la vista previa debe coincidir con la inicial.
+
+El caso base exige los cuatro nombres de proyecto, carpeta documental, hilo y
+carpeta de Enlaces seguros. La variante añade el cliente de la carpeta de
+Enlaces seguros. Al deshacer, cotejar los cuatro o cinco cambios y releer el
+conjunto completo. En casos independientes con una edición posterior,
+comparar el conjunto justo antes y después del rechazo, incluida la edición
+posterior. La vista previa de deshacer identifica cada campo registrado por
+modelo e ID y presenta sus valores en sentido de restauración.
+En todos los tipos de registro de NM1 el motor coteja los cambios de negocio
+del conjunto bloqueado con el detalle aprobado. Si difieren, revierte el lote
+con `impact_mismatch`. En documentos y conversaciones se incluye el último
+editor y en los clientes se muestran las copias afectadas. Estos casos de
+implementación complementan la regresión focal del proyecto en DEV.
+
+La skill, los siete dominios y sus alcances, las fusiones, las reasignaciones
+DC9–DC11, los emitidos y las reglas de informe o derivación llevan evidencia
+propia. El seguimiento desde el barrido programado hasta el Radar depende de
+confirmación expresa de ese alcance por Carlos.
+
+### Auditoría funcional y retiro
+
+1. Registrar por función de Panel y Plataforma el gestor, herramienta
+   ejercida, vista, rol, resultado y evidencias de acción, permiso y
+   confirmación. Regenerar desde el SHA servido. Para exportar los resultados
+   del JSON validado usar `mcp_surface_matrix --verify <reporte-qa.json> --format csv --output <resultados.csv>`.
+   El CSV conserva por separado las herramientas comprobadas de cada función.
+2. Previsualizar cada origen y catálogo en DEV con `mcp_retirement` sin
+   `--apply`. Guardar la elegibilidad o los bloqueos con el entorno y SHA.
+3. Completar una [ficha por origen, catálogo y destino](retiros-w2.csv).
+   El inventario incluye los doce adaptadores y los catálogos `pre_split` de
+   Comercial y Proyectos. Las celdas vacías son datos pendientes. Abrir una
+   fila por consumidor y entorno cuando haya varios. Registrar autorización
+   (responsable, alcance y fecha), despliegue, equivalencia de la operación y
+   permisos, y la ejecución del consumidor real posterior al despliegue.
+   Documentar todas las migraciones o revocaciones, incluidos clientes externos.
+4. El operador verifica de nuevo en el destino la matriz vigente, los 30 días
+   desde publicación, los 14 días continuos sin llamadas antiguas y cero
+   confirmaciones pendientes. Un hueco de observación mayor de diez minutos
+   reinicia la ventana. Sólo aplica un retiro elegible desde el clon de
+   servicio del entorno autorizado. Retirar `pre_split` conserva activo el
+   gestor canónico de Comercial o Proyectos.
+5. Guardar el recibo, la huella del reporte y el resultado posterior por destino.
+   Comprobar el catálogo del Panel, el registro operativo, el rechazo autenticado
+   `410 CONNECTOR_RETIRED` y una operación del reemplazo con sus permisos vigentes.
+   [Condiciones operativas](../../MCP_MODULE_UNIFICATION.md#retiro-y-recuperación)
+
 ## Corte y alcance
 
 - Base de implementación: `295b65efb77af8303ec28b269ae1935a995a6f0e`.

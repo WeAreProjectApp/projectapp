@@ -11,6 +11,8 @@ from uuid import UUID
 
 from django.apps import apps
 
+from content.services.data_integrity.hashing import canonical, digest
+
 GUARD_FIELDS = ('updated_at', 'retention_context_id')
 FIELDS = {}
 
@@ -76,3 +78,24 @@ def diff_items(before, after):
                               'before': old.get(name), 'after': new.get(name),
                               'guard': name in GUARD_FIELDS})
     return items
+
+
+def matches_preview(changes, items):
+    """Compare the promised and recorded business deltas, including duplicate entries."""
+    def identity(entry, id_field):
+        return canonical([entry['model'], entry[id_field], entry['field'], entry['before'], entry['after']])
+
+    promised = sorted(identity(change, 'id') for change in changes)
+    observed = sorted(identity(item, 'pk') for item in items if not item['guard'])
+    return promised == observed
+
+
+def record_guards(snapshot):
+    """Keep the field set and a digest of each locked row for checking a later undo."""
+    return [{'model': label, 'id': json_value(pk), 'fields': sorted(values), 'hash': digest(values)}
+            for (label, pk), values in snapshot.items() if values is not None]
+
+
+def record_changed(guard, snapshot):
+    values = snapshot[(guard['model'], guard['id'])]
+    return values is None or digest({key: values.get(key) for key in guard['fields']}) != guard['hash']

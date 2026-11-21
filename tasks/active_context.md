@@ -1,3 +1,11 @@
+## PA-221 · evidencia de integridad y retiro por destino
+
+El expediente w2 conserva TO DO, el acceso actual y la pausa de DEVQA-000. Se
+revisaron las referencias de reemplazo de 12 gestores y 12 adaptadores y la
+exportación de resultados funcionales. La reprueba de NM1 requiere habilitación de
+Carlos y DEV LISTO. Los consumidores se acreditan en su entorno después del
+despliegue. [Expediente y fichas](../docs/audits/PA-221/README.md)
+
 ## w1 · PA-289, PA-251 y PA-286
 
 La navegación existente de Contacto mostró el encabezado y retiró el formulario tras un envío en la misma pestaña. Django registró un contacto y el buzón de prueba recibió tres entregas. Frontend y backend sirvieron `f62befdc9499efb1336b639eec62f687456b63e8` en [CI](https://github.com/WeAreProjectApp/projectapp/actions/runs/44939845811/job/136954421520).

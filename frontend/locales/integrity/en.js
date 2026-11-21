@@ -30,6 +30,26 @@ export default {
   "undoPreview": "Preview undo",
   "reviews": "Finding decisions",
   "confirmTitle": "Review before confirming",
+  "before": "Before",
+  "after": "After",
+  "noValue": "No value",
+  "records": {
+    "accounts": { "project": "Project", "userprofile": "Client profile" },
+    "auth": { "user": "User" },
+    "content": {
+      "documentfolder": "Document folder", "document": "Document", "businessproposal": "Proposal",
+      "communicationthread": "Conversation", "communicationfolder": "Communications folder",
+      "webappdiagnostic": "Diagnostic"
+    },
+    "secure_links": { "securelinkfolder": "Secure Links folder" }
+  },
+  "fields": {
+    "name": "Name", "title": "Title", "client_id": "Client",
+    "client_user_id": "Client user", "project_id": "Project", "updated_by_id": "Last editor",
+    "slug": "URL slug", "company_name": "Company", "first_name": "First name", "last_name": "Last name",
+    "client_name": "Client name", "client_company": "Client company",
+    "client_email": "Client email", "client_phone": "Client phone"
+  },
   "reason": "Reason",
   "cancel": "Cancel",
   "confirm": "Confirm",

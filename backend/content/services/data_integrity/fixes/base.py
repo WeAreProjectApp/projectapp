@@ -15,6 +15,8 @@ class Fixer:
     # Exclusive fixers (merges) run alone in an operation, under their own cap.
     exclusive = False
     max_closure = None
+    # The preview identifies every business field the writer changes in its closure.
+    exact_changes = False
     # {model_label: (attnames...)} this fixer may change, signal side effects included.
     fields = {}
 

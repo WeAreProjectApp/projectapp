@@ -2,6 +2,7 @@
 import pytest
 from accounts.models import Project, UserProfile
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
 
 from content.models import (
     BusinessProposal,
@@ -39,7 +40,8 @@ def nm1_finding(model, pk, field=None):
 
 
 def fix(actor, finding):
-    _, result = apply(actor, [selection(finding)])
+    preview, result = apply(actor, [selection(finding)])
+    assert planned_changes(preview) == recorded_changes(result['operation_id'])
     return result['operation_id']
 
 
@@ -148,6 +150,18 @@ def test_a_name_the_writer_would_split_differently_is_blocked(make_client_profil
     assert User.objects.get(pk=profile.user_id).last_name == ' Pérez'
 
 
+def test_company_undo_preserves_a_proposal_that_already_had_the_clean_name(make_client_profile, superuser):
+    """The inverse writer must leave an already-correct copy as the operator saw it."""
+    profile = make_client_profile(company=' Kore  SAS', first_name='', last_name='')
+    proposal = make_proposal(profile, client_name='Kore SAS')
+    operation_id = fix(superuser, nm1_finding('accounts.userprofile', profile.pk))
+
+    undo(superuser, operation_id)
+
+    assert UserProfile.objects.get(pk=profile.pk).company_name == ' Kore  SAS'
+    assert BusinessProposal.objects.get(pk=proposal.pk).client_name == 'Kore SAS'
+
+
 # ── Projects ─────────────────────────────────────────────────────────────────
 
 def _project_names(project, root, thread):
@@ -155,29 +169,125 @@ def _project_names(project, root, thread):
             CommunicationThread.objects.get(pk=thread.pk).title]
 
 
-def test_project_name_preview_matches_the_applied_managed_names(make_client_profile, superuser):
-    """Fails if confirmation omits a managed root value that the project rename records and changes."""
-    project = make_project(make_client_profile(), ' Kore  App')
+def _project_rename_state(project):
+    project.refresh_from_db()
     root = DocumentFolder.objects.get(managed_project=project)
     thread = CommunicationThread.objects.get(managed_project=project)
     secure_root = SecureLinkFolder.objects.get(managed_project=project)
+    return {
+        ('accounts.project', project.pk, 'name'): project.name,
+        ('content.documentfolder', root.pk, 'name'): root.name,
+        ('content.communicationthread', thread.pk, 'title'): thread.title,
+        ('secure_links.securelinkfolder', secure_root.pk, 'name'): secure_root.name,
+        ('secure_links.securelinkfolder', secure_root.pk, 'client_id'): secure_root.client_id,
+    }
+
+
+@pytest.fixture(params=[4, 5], ids=['four-names', 'four-names-and-client'])
+def project_rename(request, make_client_profile, superuser):
+    profile = make_client_profile()
+    project = make_project(profile, ' Kore  App')
+    later_edit = {'name': 'Edición posterior'}
+    if request.param == 5:
+        SecureLinkFolder.objects.filter(managed_project=project).update(client_id=make_client_profile().pk)
+        later_edit = {'client_id': None}
+    scope = resolve_scope('project', project.pk)
+    fixes = [selection(nm1_finding('accounts.project', project.pk))]
+    initial = _project_rename_state(project)
+    preview = engine.preview_fixes(scope, fixes, actor=superuser)
+    after_preview = _project_rename_state(project)
+    result = engine.apply_fixes(scope, fixes, actor=superuser, reason='Verificar el impacto de NM1.',
+                                request_id='nm1-project-rename', expected_impact_hash=preview['impact_hash'])
+    return {'project': project, 'initial': initial, 'after_preview': after_preview, 'preview': preview,
+            'operation': result, 'count': request.param, 'later_edit': later_edit, 'client_id': profile.pk}
+
+
+def test_project_name_preview_matches_the_applied_managed_names(project_rename):
+    """Match the complete promised delta against independent reads and the stored operation."""
+    case = project_rename
+    final = _project_rename_state(case['project'])
+    expected = {key: case['client_id'] if key[2] == 'client_id' else 'Kore App' for key in final}
+    persisted = {(*key, before, final[key]) for key, before in case['initial'].items() if final[key] != before}
+
+    assert case['after_preview'] == case['initial']
+    assert final == expected
+    planned_count = len(case['preview']['steps'][0]['changes'])
+    assert planned_count == case['operation']['steps'][0]['items'] == len(persisted) == case['count']
+    assert planned_changes(case['preview']) == persisted == recorded_changes(case['operation']['operation_id'])
+
+
+def test_project_name_undo_restores_every_announced_field(project_rename, superuser):
+    """Each announced field must be identifiable and return to its original value."""
+    case = project_rename
+    reversal, _ = undo(superuser, case['operation']['operation_id'])
+    announced = {(model, pk, field, after, before) for model, pk, field, before, after in planned_changes(case['preview'])}
+
+    assert planned_changes(reversal) == announced
+    assert _project_rename_state(case['project']) == case['initial']
+
+
+def test_project_name_rejected_undo_preserves_every_field(project_rename, superuser):
+    """A later edit must survive along with all the other applied fields."""
+    case = project_rename
+    project = case['project']
+    operation_id = case['operation']['operation_id']
+    SecureLinkFolder.objects.filter(managed_project=project).update(**case['later_edit'])
+    before_attempt = _project_rename_state(project)
+    impact = engine.preview_undo(operation_id)
+
+    with pytest.raises(IntegrityConflict) as rejected:
+        engine.undo_operation(operation_id, actor=superuser, reason='Revisar cambio posterior.',
+                              request_id='nm1-changed-undo', expected_impact_hash=impact['impact_hash'])
+
+    assert rejected.value.detail['code'] == 'undo_blocked'
+    assert _project_rename_state(project) == before_attempt
+    assert not DataIntegrityOperation.objects.filter(reverts_id=operation_id).exists()
+
+
+def test_project_undo_blocks_a_later_edit_to_an_originally_correct_link(make_client_profile, superuser):
+    """A bulk update of an unmodified relation must survive the attempted inverse writer."""
+    project = make_project(make_client_profile(), ' Kore  App')
+    operation_id = fix(superuser, nm1_finding('accounts.project', project.pk))
+    SecureLinkFolder.objects.filter(managed_project=project).update(client_id=None)
+    state = _project_rename_state(project)
+    preview = engine.preview_undo(operation_id)
+
+    with pytest.raises(IntegrityConflict) as rejected:
+        engine.undo_operation(operation_id, actor=superuser, reason='Conservar el nuevo vínculo.',
+                              request_id='nm1-later-link', expected_impact_hash=preview['impact_hash'])
+
+    assert rejected.value.detail['code'] == 'undo_blocked'
+    assert _project_rename_state(project) == state
+    assert not DataIntegrityOperation.objects.filter(reverts_id=operation_id).exists()
+
+
+@pytest.fixture
+def unannounced_root_update(make_client_profile):
+    other_client = make_client_profile()
+
+    def change_folder_client(sender, instance, created, **kwargs):
+        if not created:
+            SecureLinkFolder.objects.filter(managed_project=instance).update(client_id=other_client.pk)
+
+    post_save.connect(change_folder_client, sender=Project)
+    try:
+        yield
+    finally:
+        post_save.disconnect(change_folder_client, sender=Project)
+
+
+def test_project_name_apply_rolls_back_an_unannounced_writer_effect(make_client_profile, superuser, unannounced_root_update):
+    """If a domain signal writes a fifth, unapproved field, the whole transaction must roll back."""
+    project = make_project(make_client_profile(), ' Kore  App')
+    initial = _project_rename_state(project)
     finding = nm1_finding('accounts.project', project.pk)
-    preview = engine.preview_fixes(resolve_scope('all'), [selection(finding)], actor=superuser)
 
-    operation_id = fix(superuser, finding)
+    with pytest.raises(IntegrityConflict) as rejected:
+        fix(superuser, finding)
 
-    assert _project_names(project, root, thread) == ['Kore App'] * 3
-    assert SecureLinkFolder.objects.get(pk=secure_root.pk).name == 'Kore App'
-    assert recorded(operation_id) == {('accounts.project', project.pk, 'name'),
-                                      ('content.documentfolder', root.pk, 'name'),
-                                      ('content.communicationthread', thread.pk, 'title'),
-                                      ('secure_links.securelinkfolder', secure_root.pk, 'name')}
-    assert planned_changes(preview) == recorded_changes(operation_id)
-
-    undo(superuser, operation_id)
-
-    assert _project_names(project, root, thread) == [' Kore  App'] * 3
-    assert SecureLinkFolder.objects.get(pk=secure_root.pk).name == ' Kore  App'
+    assert rejected.value.detail['code'] == 'impact_mismatch'
+    assert _project_rename_state(project) == initial
+    assert not DataIntegrityOperation.objects.exists()
 
 
 def test_project_name_preview_includes_stale_managed_root_relations(make_client_profile, superuser):
@@ -275,6 +385,21 @@ def test_folder_fix_and_undo_round_trip(superuser):
 
     undo(superuser, operation_id)
     assert DocumentFolder.objects.get(pk=folder.pk).name == 'Actas  2026'
+
+
+def test_folder_preview_announces_the_available_legacy_slug(superuser):
+    """A missing slug receives the first free suffix, and undo must restore the empty value."""
+    DocumentFolder.objects.create(name='Actas 2026')
+    parent = DocumentFolder.objects.create(name='Archivo')
+    folder = DocumentFolder.objects.create(name='Actas  2026', parent=parent)
+    DocumentFolder.objects.filter(pk=folder.pk).update(slug='')
+
+    preview, result = apply(superuser, [selection(nm1_finding('content.documentfolder', folder.pk))])
+
+    assert ('content.documentfolder', folder.pk, 'slug', '', 'actas-2026-2') in planned_changes(preview)
+    assert DocumentFolder.objects.get(pk=folder.pk).slug == 'actas-2026-2'
+    undo(superuser, result['operation_id'])
+    assert DocumentFolder.objects.get(pk=folder.pk).slug == ''
 
 
 def test_a_folder_whose_clean_name_exists_beside_it_is_blocked(superuser):

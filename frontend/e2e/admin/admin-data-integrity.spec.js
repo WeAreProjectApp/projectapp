@@ -43,7 +43,9 @@ async function openIntegrity(page, options = {}) {
 async function selectFinding(page) {
   await page.getByRole('checkbox', { name: 'Incluir en la corrección', exact: true }).check();
   await page.getByTestId('integrity-preview').click();
-  await expect(page.getByTestId('integrity-confirm-modal')).toContainText('Carpeta: Sin carpeta → Actas · 51');
+  const modal = page.getByTestId('integrity-confirm-modal');
+  await expect(modal.getByTestId('integrity-before')).toHaveText('"Sin carpeta"');
+  await expect(modal.getByTestId('integrity-after')).toHaveText('"Actas · 51"');
 }
 
 async function fillReason(page, reason) {
@@ -75,6 +77,37 @@ test('shows a rejected review request', { tag: [...ADMIN_DATA_INTEGRITY_FINDINGS
   await page.getByTestId('integrity-scan').click();
   await expect(page.getByRole('alert')).toContainText('Completa identificador del registro.');
   expect(fixture.state.calls.scans).toHaveLength(0);
+});
+
+// Changes with the same project label must still identify each record and its exact values.
+test('identifies every field in a project naming preview', { tag: [...ADMIN_DATA_INTEGRITY_FIX, '@role:admin', '@outcome:display'] }, async ({ page }) => {
+  // quality: allow-deep-link (the localized Dashboard is the entry point; the sidebar opens integrity)
+  const names = { label: 'Proyecto Alfa', before: '  Proyecto   Alfa ', after: 'Proyecto Alfa' };
+  await arrange(page, {
+    finding: { rule_id: 'NM1', title: 'Espacios en el nombre', domain: 'naming', inputs: {}, suggestion: {}, fixable_kinds: ['rename'], subjects: [{ model: 'accounts.project', id: 42, label: 'Proyecto Alfa' }] },
+    previewChanges: [
+      { ...names, model: 'accounts.project', id: 42, field: 'name' },
+      { ...names, model: 'content.documentfolder', id: 12, field: 'name' },
+      { ...names, model: 'content.communicationthread', id: 19, field: 'title' },
+      { ...names, model: 'secure_links.securelinkfolder', id: 27, field: 'name' },
+      { label: 'Proyecto Alfa', model: 'secure_links.securelinkfolder', id: 27, field: 'client_id', before: null, after: 8 },
+    ],
+  });
+  await openFromDesktopDashboard(page);
+  await page.getByRole('checkbox', { name: 'Incluir en la corrección', exact: true }).check();
+  await page.getByTestId('integrity-preview').click();
+  const modal = page.getByTestId('integrity-confirm-modal');
+  await expect(modal.getByTestId('integrity-change-record')).toHaveText([
+    'Proyecto #42 · Nombre', 'Carpeta documental #12 · Nombre', 'Conversación #19 · Título',
+    'Carpeta de Enlaces seguros #27 · Nombre', 'Carpeta de Enlaces seguros #27 · Cliente',
+  ]);
+  const project = modal.getByRole('listitem').filter({ hasText: 'Proyecto #42' });
+  await expect(project.getByTestId('integrity-before')).toHaveJSProperty('textContent', '"  Proyecto   Alfa "');
+  await expect(project.getByTestId('integrity-before')).toHaveCSS('white-space', 'pre-wrap');
+  await expect(project.getByTestId('integrity-after')).toHaveText('"Proyecto Alfa"');
+  const relation = modal.getByRole('listitem').filter({ hasText: 'Carpeta de Enlaces seguros #27 · Cliente' });
+  await expect(relation.getByTestId('integrity-before')).toHaveText('Sin valor');
+  await expect(relation.getByTestId('integrity-after')).toHaveText('8');
 });
 
 // Bug caught: confirming a valid preview fails to persist the correction or its required reason.

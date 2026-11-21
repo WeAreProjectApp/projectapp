@@ -124,7 +124,7 @@ export function buildDataIntegrityApi(options = {}) {
         blockers: [],
         steps: [{
           fingerprint: state.findings[0].fingerprint,
-          changes: [{ label: 'Carpeta', before: 'Sin carpeta', after: 'Actas · 51' }],
+          changes: options.previewChanges ?? [{ label: 'Carpeta', before: 'Sin carpeta', after: 'Actas · 51' }],
           subjects: state.findings[0].subjects,
         }],
       });

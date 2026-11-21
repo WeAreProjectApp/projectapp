@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "El administrador selecciona hasta veinte hallazgos corregibles, elige parámetros y revisa antes/después y bloqueos. La aplicación requiere motivo y confirmación del impacto vigente. Un lote bloqueado o vencido no modifica registros.",
+  "description": "El administrador selecciona hasta veinte hallazgos corregibles, elige parámetros y revisa los cambios y bloqueos. Al corregir el nombre de un proyecto identifica cada registro y campo y compara sus valores exactos. La aplicación requiere motivo y confirmación del impacto vigente. Un lote bloqueado o vencido no modifica registros.",
   "outcomes": [
     "display",
     "success",

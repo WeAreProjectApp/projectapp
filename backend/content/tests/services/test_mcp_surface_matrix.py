@@ -1,16 +1,20 @@
 """Schema and fail-closed gates for the PA-221 MCP surface matrix."""
 import copy
+import csv
 import hashlib
 import json
 
 import pytest
+from django.core.management import call_command
+from django.core.management.base import CommandError
 
+from content.management.commands.mcp_inventory import inventory
 from content.mcp.coverage import CoverageError, build_matrix, load_verified_report, validate_report
 
 
 SYNTHETIC_EVIDENCE = ['docs/audits/PA-221/README.md']
-PERMISSION_EVIDENCE = ['docs/audits/PA-221/README.md']
-CONFIRMATION_EVIDENCE = ['docs/audits/PA-221/README.md']
+PERMISSION_EVIDENCE = ['docs/audits/2026-10-19-mcp-audit.md']
+CONFIRMATION_EVIDENCE = ['docs/audits/2026-11-05-data-integrity.md']
 
 
 def synthetic_verified_report():
@@ -141,6 +145,68 @@ def test_synthetic_report_requires_current_metadata_and_complete_checks(tmp_path
         'operations': len(current['rows']),
         'surfaces': len(current['surfaces']),
     }
+
+
+def test_inventory_lists_discoverable_tools_at_every_replacement_destination():
+    """A registered replacement must name the tool actually published by that destination."""
+    connectors = inventory()['connectors']
+    published = {row['slug']: set(row['published_tools']) for row in connectors}
+
+    missing = [(source['slug'], tool['name'], target) for source in connectors for tool in source['tools']
+               for target in tool['replacement_targets'] if target['tool'] not in published[target['connector']]]
+
+    assert missing == []
+
+
+@pytest.fixture
+def verified_csv(tmp_path, verified_report):
+    source = tmp_path / 'qa.json'
+    destination = tmp_path / 'qa.csv'
+    source.write_text(json.dumps(verified_report), encoding='utf-8')
+    call_command('mcp_surface_matrix', '--verify', str(source), '--format', 'csv', '--output', str(destination))
+    with destination.open(encoding='utf-8', newline='') as stream:
+        return list(csv.DictReader(stream))
+
+
+def test_verified_csv_names_the_tool_exercised_for_the_dashboard(verified_csv):
+    """A view action must export only its checked tools and associated functional evidence."""
+    [feature] = [row for row in verified_csv if row['modulo_vista'] == '/panel · panel-command-center']
+    assert (feature['herramienta'], feature['rol_probado'], feature['resultado'], feature['evidencia_funcional']) == (
+        'get_operations_dashboard', 'QA MCP functional actor', 'mapped_verified', SYNTHETIC_EVIDENCE[0])
+
+
+def test_verified_csv_preserves_confirmation_evidence_for_a_sensitive_operation(verified_csv):
+    """The report given to Operations must retain both the permission and confirmation evidence."""
+    [operation] = [row for row in verified_csv if row['tipo_fila'] == 'operacion_mcp'
+                   and row['herramienta'] == 'apply_integrity_fixes']
+    assert (operation['evidencia_permiso'], operation['evidencia_confirmacion']) == (
+        PERMISSION_EVIDENCE[0], CONFIRMATION_EVIDENCE[0])
+
+
+def test_verified_export_keeps_the_original_evidence_file(tmp_path, verified_report):
+    """The CSV output cannot replace its validated JSON, even through another name."""
+    source = tmp_path / 'qa.json'
+    original = json.dumps(verified_report)
+    source.write_text(original, encoding='utf-8')
+    output = tmp_path / 'same.csv'
+    output.symlink_to(source)
+
+    with pytest.raises(CommandError, match='salida distinta'):
+        call_command('mcp_surface_matrix', '--verify', str(source), '--format', 'csv', '--output', str(output))
+
+    assert source.read_text(encoding='utf-8') == original
+
+
+def test_static_matrix_cannot_be_exported_as_verified_csv(tmp_path):
+    """No functional export may be created from the generated inventory alone."""
+    source = tmp_path / 'static.json'
+    destination = tmp_path / 'qa.csv'
+    source.write_text(json.dumps(build_matrix()), encoding='utf-8')
+
+    with pytest.raises(CommandError, match='evidencia'):
+        call_command('mcp_surface_matrix', '--verify', str(source), '--format', 'csv', '--output', str(destination))
+
+    assert not destination.exists()
 
 
 @pytest.mark.parametrize(
