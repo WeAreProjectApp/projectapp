@@ -18,11 +18,11 @@ import {
 test.setTimeout(60_000);
 
 async function arrangeCalculator(page, {
-  previewStatus = 200, revisionStatus = 200, actualStatus = 201, historyStatus = 200, revisions,
+  previewStatus = 200, revisionStatus = 200, actualStatus = 201, historyStatus = 200, revisions, report = calibration,
 } = {}) {
   const calls = [];
   const definition = calculatorDefinition();
-  let calibrationResponse = calibration;
+  let calibrationResponse = report;
   let publishedDefinition = definition;
   let publishedNote = '';
   let publishedRevision = false;
@@ -65,6 +65,13 @@ async function arrangeCalculator(page, {
       return previewStatus === 200
         ? json({ markdown: '# Vista previa calculada\nTalla M' })
         : json({ detail: previewStatus === 400 ? 'La talla XS requiere puntos.' : 'No fue posible previsualizar.' }, previewStatus);
+    }
+    if (apiPath === 'requirement-calculator/calibration/reviews/' && method === 'POST') {
+      const decision = route.request().postDataJSON();
+      const reviewed = { ...calibrationResponse.package_coverage[0], economic_status: 'accepted',
+        last_review: { note: decision.note, created_at: '2026-11-21T12:00:00Z' } };
+      calibrationResponse = { ...calibrationResponse, package_coverage: [reviewed, ...calibrationResponse.package_coverage.slice(1)] };
+      return json(reviewed);
     }
     if (apiPath === 'requirement-calculator/calibration/' && method === 'GET') return json(calibrationResponse);
     if (apiPath === 'requirement-calculator/estimates/' && method === 'GET') return json(estimates);
@@ -258,6 +265,33 @@ test.describe('Admin requirement calculator', () => {
     await page.getByRole('button', { name: 'Calibración', exact: true }).click();
     await expect(page.getByText('Datos insuficientes', { exact: true })).toHaveText('Datos insuficientes');
     await expect(page.getByText(/Cierres: 1 \/ mínimo 3/)).toContainText('Mediana real interna: 24 h');
+  });
+
+  test('keeps a measured cost shortfall visible until a staff member reviews the corpus', {
+    tag: [...ADMIN_REQUIREMENT_CALCULATOR_CALIBRATION, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const cohort = { ...calibration.cohorts[0], definition_digest: 'definition-xs', size: 'XS', samples: 3,
+      minimum_samples: 3, median_hours: 5, cost_samples: 3, status: 'measured', median_cost_cop: 70000,
+      standard_value_cop: 50000, covers_median_cost: false, propose_review: true, propose_hours_review: false };
+    const row = { size: 'XS', definition_digest: cohort.definition_digest, corpus_digest: 'corpus-xs',
+      samples: 3, verified_cost_samples: 3, standard_value_cop: 50000, median_verified_cost_cop: 70000,
+      covers_verified_median_cost: false, economic_status: 'provisional', last_review: null };
+    const calls = await arrangeCalculator(page, { report: { ...calibration, cohorts: [cohort], package_coverage: [row] } });
+    await openCalculatorFromNavigation(page);
+    await page.getByRole('button', { name: 'Calibración', exact: true }).click();
+
+    const xs = page.getByTestId('calculator-cost-XS');
+    await expect(xs).toContainText('XS · Provisional');
+    await expect(xs).toContainText('70000 COP');
+    await expect(page.getByTestId('calculator-cost-warning')).toContainText('no cubre');
+    await expect(page.getByTestId('calculator-hours-warning')).toHaveCount(0);
+    expect(calls.filter(call => call.apiPath.endsWith('/reviews/'))).toHaveLength(0);
+
+    await xs.getByLabel('Motivo y cobertura revisada').fill('Revisado contra el parte ficticio.');
+    await xs.getByRole('button', { name: 'Aceptar corpus económico' }).click();
+    await expect(xs).toContainText('XS · Corpus aceptado');
+    await expect(xs).toContainText('Revisado contra el parte ficticio.');
+    await expect(page.getByTestId('calculator-cost-warning')).toContainText('no cubre');
   });
 
   test('loads the full evidence history on demand instead of truncating it in the summary', {

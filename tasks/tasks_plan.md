@@ -17,9 +17,11 @@ La ampliación en rama de sesión conserva estados y agrupación de eventos; inc
 
 > **PA-254 — 2026-11-12, en implementación:** paquetes, ejemplos por proyecto, compras online/externas, evaluación manual y consumo tras consentimiento. CI, QA manual y entrega se documentan por separado; sin despliegue ni evidencia económica real. Ver `docs/PA254_REQUIREMENT_PACKAGES.md`.
 
+Para el cotejo w3 de PA-254 se incorpora el costo respaldado y la revisión explícita por talla. Sigue pendiente contrastar un corpus real con el administrador responsable.
+
 ## PA-263 — Feature flags de Plataforma
 
-Implementación en rama de sesión: catálogo, precedencia global/cliente, protección de operaciones, Panel, compatibilidad de IA/Ayuda y MCP. Entrega técnica pendiente de CI; QA manual y servicios siguen pausados. Ver `docs/PLATFORM_FEATURE_FLAGS.md`.
+Implementación en rama de sesión: catálogo con valor inicial habilitado en cada clave existente o nueva, precedencia global/cliente, protección de operaciones, Panel, compatibilidad de IA/Ayuda y MCP. Entrega técnica pendiente de CI; QA manual y servicios siguen pausados. Ver `docs/PLATFORM_FEATURE_FLAGS.md`.
 
 > **Contratación estatal interna — 2026-11-05:** desarrollo independiente en rama de sesión: panel/API/MCP, filtros OR palabras/UNSPSC más criterios AND, alertas inmediata/diaria/semanal con destinatarios editables y seguimiento con análisis externo. Pruebas locales por capas aprobadas; entrega y CI en el PR #552. Operación en `docs/PROCUREMENT.md`; sin lectura de buzones ni IA interna.
 

@@ -1062,9 +1062,9 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `building-with-us` | 3.0.0 | 16 | Presentación pública bilingüe y contrato privado versionados, preview, confirmación, restauración, PDF e inicialización del espejo; creado inactivo, sin uploads ni videos |
 | `building-on-demand` | 4.0.0 | 44 | Programa ES/EN, oferta, economía privada y contrato versionados; CRUD de planes, plazos, tareas, preguntas y tarjetas, orden, rangos, preview, confirmación, restauración, espejo y PDFs; video con carga MP4, sustitución, retirada, restauración y visibilidad; creado inactivo |
 | `additional-modules` | 4.0.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
-| `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
+| `commercial` | 6.9.0 | 178 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
 | `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 6.1.0 | 230 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, ciclo de vida y control visual de hosting, paquetes por tallas, feature flags, telemetría y capacidad informativa |
+| `projects` | 7.0.0 | 230 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, ciclo de vida y control visual de hosting, paquetes por tallas, feature flags, telemetría y capacidad informativa |
 | `data-integrity` | 1.0.1 | 13 | Integridad transversal: catálogo, revisiones persistentes, hallazgos, correcciones con motivo, decisiones y deshacer |
 | `documents` | 8.2.0 | 84 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
@@ -3167,6 +3167,28 @@ modo no cambian. Revisar historial, actor/vía y recibos. Repetir con versión
 anterior y credencial sin permiso: rechazo sin escritura. Sólo la confirmación
 del sitio acredita aplicación; la validación manual permanece pausada.
 
-## PA-263 · Feature flags (Proyectos 6.1.0)
+## PA-254 · Calibración económica en Comercial 6.9.0
 
-Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento de las seis herramientas, consulta global y por cliente, actualización confirmada, retirada con null, persistencia, 409 con versión superada y denegación de una credencial/actor sin acceso administrativo. Contrastar con el mismo caso en Panel y una cuenta cliente; REST no acredita MCP. IA/audio parten apagados y la excepción del cliente prevalece. Los adaptadores anteriores de IA/Ayuda usan la fuente nueva. Automatizadas sólo en CI; DevQA cotejará herramientas, operaciones, rol, resultado y límites sobre el mismo SHA/entorno al levantarse la pausa.
+`get_requirement_calibration` añade `propose_hours_review` a cada cohorte.
+`propose_review` conserva el criterio combinado anterior. `covers_median_cost`
+continúa indicando si el estándar cubre la mediana registrada. El bloque
+`package_coverage` muestra XS/S/M de la definición general vigente o de la
+huella solicitada, incluidos los tamaños sin muestras. Presenta conteos,
+mediana con respaldo y estado de revisión humana.
+
+Contrastar el mismo juego ficticio en Panel y MCP. Con tres cierres de cinco
+horas XS, un valor estándar de 50.000 COP y costo respaldado de 70.000 COP
+por cierre, deben resultar `covers_median_cost=false`,
+`propose_hours_review=false`, `propose_review=true` y talla provisional.
+A 55.000 COP la advertencia sigue visible y la señal combinada es falsa.
+Usar `list_requirement_estimates` por talla y huella y
+`list_requirement_actuals` para revisar el desglose, incluidos reemplazos.
+`record_requirement_actual` acepta el desglose opcional. Un cierre sin respaldo
+permanece fuera de la mediana económica. `accept_requirement_cost_review`
+requiere la huella vigente del corpus, el motivo, una cuenta administrativa
+personal y confirmación. Contrastar 409 ante un cierre posterior. Los cambios
+de precio y los movimientos del paquete tienen sus propios procedimientos.
+
+## PA-263 · Feature flags (Proyectos 7.0.0)
+
+Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento de las seis herramientas, consulta global y por cliente, actualización confirmada, retirada con null, persistencia, 409 con versión superada y denegación de una credencial/actor sin acceso administrativo. Contrastar con el mismo caso en Panel y una cuenta cliente; REST no acredita MCP. Cada clave parte habilitada, incluidas IA/audio. Probar una instalación limpia, una clave nueva y la conservación de globales y excepciones previos. Las excepciones prevalecen. Los adaptadores anteriores de IA/Ayuda usan la fuente nueva. Automatizadas sólo en CI; DevQA cotejará herramientas, operaciones, rol, resultado y límites sobre el mismo SHA/entorno al levantarse la pausa.

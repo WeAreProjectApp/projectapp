@@ -85,8 +85,7 @@ test.describe('PA-263 availability administration', () => {
     await setup(page)
     await open(page)
 
-    await expect(page.getByTestId('feature-platform.documents').getByTestId('feature-effective')).toHaveText('Valor efectivo: Habilitada')
-    await expect(page.getByTestId('feature-platform.ai_chatbot').getByTestId('feature-effective')).toHaveText('Valor efectivo: Deshabilitada')
+    await expect(page.getByTestId('feature-effective')).toHaveText(catalog.features.map(() => 'Valor efectivo: Habilitada'))
   })
 
   test('global change survives reloading', { tag: ['@flow:panel-platform-feature-flags', '@outcome:success'] }, async ({ page }) => {
@@ -139,9 +138,9 @@ test.describe('PA-263 availability administration', () => {
     const selectionByName = page.waitForResponse('**/api/platform/features/admin/clients/2/')
     await page.getByRole('menuitem', { name: 'María Torres', exact: true }).click()
     await selectionByName
-    await expect(flag.getByTestId('feature-effective')).toHaveText('Valor efectivo: Deshabilitada')
-    await choose(page, 'platform.ai_chatbot', 'Habilitada')
     await expect(flag.getByTestId('feature-effective')).toHaveText('Valor efectivo: Habilitada')
+    await choose(page, 'platform.ai_chatbot', 'Deshabilitada')
+    await expect(flag.getByTestId('feature-effective')).toHaveText('Valor efectivo: Deshabilitada')
 
     await searchInput.fill('TechStartup')
     await picker.click()

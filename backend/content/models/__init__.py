@@ -170,5 +170,5 @@ from .consulting import ConsultingProgram, ConsultingProgramRevision
 from .data_integrity_scan import DataIntegrityScan, DataIntegrityFinding, DataIntegrityReview, DataIntegrityScanLease
 
 from .requirement_calculator import (
-    RequirementCalculator, CalculatorRevision, ProjectCalculatorVersion, CalculatorEstimate, CalculatorActual, ProjectCalculatorChange,
+    RequirementCalculator, CalculatorRevision, ProjectCalculatorVersion, CalculatorEstimate, CalculatorActual, CalculatorCostReview, ProjectCalculatorChange,
 )

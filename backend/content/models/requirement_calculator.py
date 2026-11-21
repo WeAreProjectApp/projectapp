@@ -91,6 +91,8 @@ class CalculatorActual(models.Model):
     supersedes = models.OneToOneField('self', null=True, blank=True, on_delete=models.PROTECT, related_name='correction')
     actual_hours = models.DecimalField(max_digits=12, decimal_places=2)
     hourly_cost_cop = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    cost_breakdown = models.JSONField(default=list, blank=True)
+    verified_cost_cop = models.DecimalField(max_digits=26, decimal_places=4, null=True, editable=False)
     evidence = models.TextField()
     cause = models.TextField()
     author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
@@ -120,4 +122,25 @@ class ProjectCalculatorChange(models.Model):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError('Los ajustes de la calculadora se conservan como eventos.')
+        return super().save(*args, **kwargs)
+
+
+class CalculatorCostReview(models.Model):
+    """A staff decision on an exact set of immutable delivery records."""
+    definition_digest = models.CharField(max_length=64)
+    size = models.CharField(max_length=2)
+    corpus_digest = models.CharField(max_length=64)
+    corpus = models.JSONField()
+    note = models.TextField()
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-pk']
+        constraints = [models.UniqueConstraint(fields=('definition_digest', 'size', 'corpus_digest'),
+                                                name='calculator_cost_review_corpus')]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('La decisión conserva el corpus revisado y su autoría.')
         return super().save(*args, **kwargs)

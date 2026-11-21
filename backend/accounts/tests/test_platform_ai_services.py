@@ -216,3 +216,11 @@ def test_invalidating_all_refreshes_each_function_cache(staff_admin):
 
     assert platform_ai.cache_version('chatbot') != chat_before
     assert platform_ai.cache_version('voice_report') != voice_before
+
+
+def test_default_ai_flags_require_provider_credentials_for_availability(client_user):
+    """An enabled catalog allows eligible users to see availability without invoking a provider."""
+    available = platform_ai.ai_capabilities(client_user)
+
+    assert available['chatbot'] == {'enabled': True, 'available': False, 'voice_available': False}
+    assert available['voice_reporting'] == {'enabled': True, 'available': False}

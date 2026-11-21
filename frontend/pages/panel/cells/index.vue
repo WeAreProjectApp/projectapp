@@ -20,6 +20,7 @@ definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const localePath = useLocalePath();
 const store = useBuildingOnDemandStore();
 const videoSettings = useExplainerVideosStore();
 const explainer = useExplainerVideo('building-on-demand', computed(() => store.previewLanguage), computed(() => videoSettings.settings?.resources?.[`building-on-demand:${store.previewLanguage}`]));
@@ -90,6 +91,7 @@ onMounted(async () => {
       <BuildingOnDemandAdminMcpHint :connector="store.connector" />
 
       <template v-if="activeSection === 'program'">
+        <BaseButton as="NuxtLink" variant="secondary" data-testid="cells-calculator" :to="localePath('/panel/requirement-calculator')">{{ t('buildingOnDemandAdmin.consultSizes') }}</BaseButton>
         <ExplainerVisibilityToggle module="building-on-demand" i18n-namespace="buildingOnDemand" test-id="building-on-demand-explainer" />
         <ExplainerVideoCard v-if="explainer" :video="explainer" i18n-namespace="buildingOnDemand" variant="compact" test-id="building-on-demand-explainer" />
         <VideoResourceManager module="building-on-demand" :language="store.previewLanguage" />

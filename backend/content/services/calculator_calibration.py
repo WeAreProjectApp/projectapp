@@ -8,6 +8,7 @@ from content.models import (
     CalculatorRevision,
     ProjectCalculatorVersion,
 )
+from content.services.calculator_costs import closure_costs, package_coverage
 from content.services.requirement_calculator import digest
 from django.db import transaction
 from django.db.models import Count, Prefetch
@@ -59,6 +60,7 @@ def record_actual(data, *, actor):
     previous = estimate.actuals.filter(correction__isnull=True).first()
     if (previous is not None and previous.pk != previous_id) or (previous is None and previous_id is not None):
         raise ValidationError('Indica el último cierre como supersedes_id para registrar una corrección.')
+    values.update(closure_costs(values))
     values.setdefault('hourly_cost_cop', estimate.snapshot['calibration']['hourly_cost_cop'])
     event = CalculatorActual.objects.create(**values, author=actor)
     return {'id': event.pk, 'estimate_id': estimate.pk, 'supersedes_id': event.supersedes_id}
@@ -73,6 +75,8 @@ def _actual_payload(event, *, summary=False):
             'hourly_cost_cop': str(event.hourly_cost_cop) if event.hourly_cost_cop is not None else None,
             'evidence': _clip(event.evidence, 128) if summary else event.evidence,
             'cause': _clip(event.cause, 128) if summary else event.cause,
+            'verified_cost_cop': str(event.verified_cost_cop) if event.verified_cost_cop is not None else None,
+            **({} if summary else {'cost_breakdown': event.cost_breakdown}),
             'supersedes_id': event.supersedes_id, 'author_id': event.author_id,
             'created_at': event.created_at.isoformat()}
 
@@ -87,12 +91,16 @@ def _estimate_payload(row, *, summary=False):
             'signal_ids': row.signal_ids[:3] if summary else row.signal_ids, 'expected_size': row.expected_size}
 
 
-def estimates(*, limit=20, offset=0):
+def estimates(*, limit=20, offset=0, definition_digest=None, size=None):
     if not 1 <= limit <= 50 or offset < 0:
         raise ValidationError('Usa limit entre 1 y 50 y offset no negativo.')
     queryset = (CalculatorEstimate.objects.select_related('project').defer('snapshot')
         .annotate(actual_count=Count('actuals'))
         .prefetch_related(Prefetch('actuals', queryset=CalculatorActual.objects.order_by('-pk')[:3], to_attr='recent_actuals')))
+    if definition_digest:
+        queryset = queryset.filter(definition_digest=definition_digest)
+    if size:
+        queryset = queryset.filter(size=size)
     return {'count': queryset.count(), 'results': [
         {**_estimate_payload(row, summary=True), 'is_summary': True, 'actual_count': row.actual_count,
          'actuals': [_actual_payload(event, summary=True) for event in row.recent_actuals]}
@@ -112,7 +120,8 @@ def actual_history(estimate_id, *, limit=3, offset=0):
     return {'count': rows.count(), 'results': [_actual_payload(row) for row in rows[offset:offset + limit]]}
 
 
-def report(*, limit=20, offset=0):
+def report(*, limit=20, offset=0, definition_digest=None):
+    selected_definition = definition_digest
     if not 1 <= limit <= 50 or offset < 0:
         raise ValidationError('Usa limit entre 1 y 50 y offset no negativo.')
     # Cohorts are separated by effective definition, including negotiated parameters.
@@ -145,6 +154,7 @@ def report(*, limit=20, offset=0):
         cost = median(costs) if costs else None
         value = Decimal(band['standard_value_cop']) if band['standard_value_cop'] is not None else None
         deficit = ((cost - value) / value * 100) if cost is not None and value else None
+        hours_review = enough and abs(deviation) > Decimal(rule['deviation_percent'])
         results.append({'definition_digest': definition_digest, 'revision_id': group['revision_id'],
                         'size': size, 'samples': len(group['hours']), 'cost_samples': len(costs),
                         'minimum_samples': rule['minimum_samples'],
@@ -153,12 +163,14 @@ def report(*, limit=20, offset=0):
                         'median_cost_cop': str(cost) if cost is not None else None,
                         'standard_value_cop': str(value) if value is not None else None,
                         'covers_median_cost': value >= cost if value is not None and cost is not None else None,
-                        'propose_review': enough and (abs(deviation) > Decimal(rule['deviation_percent']) or
-                            (len(costs) >= rule['minimum_samples'] and deficit is not None and deficit > Decimal(rule['deviation_percent'])))})
+                        'propose_hours_review': hours_review,
+                        'propose_review': hours_review or (enough and len(costs) >= rule['minimum_samples']
+                            and deficit is not None and deficit > Decimal(rule['deviation_percent']))})
     references = CalculatorEstimate.objects.exclude(expected_size='')
     from django.db.models import F
     return {'count': len(results), 'cohorts': results[offset:offset + limit], 'provisional': not results or any(
                 row['status'] == 'insufficient_data' or row['cost_samples'] < row['minimum_samples']
                 or row['standard_value_cop'] is None for row in results),
+            'package_coverage': package_coverage(selected_definition),
             'consistency': {'reviewed': references.count(), 'disagreements': references.exclude(size=F('expected_size')).count()},
             'note': 'Muestras por definición efectiva y talla. Los cierres corregidos se conservan y sólo su último evento alimenta la medición. Las alertas no cambian precios ni reglas.'}

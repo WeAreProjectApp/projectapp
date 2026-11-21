@@ -40,7 +40,7 @@ La ampliación en rama de sesión conserva estados y agrupación de eventos; inc
 
 ## PA-263 — disponibilidad de Plataforma (2026-11-12)
 
-Catálogo compartido con globales y excepciones por cliente; la excepción prevalece. Todas las capacidades ordinarias parten habilitadas; IA y audio parten apagados. Panel, API y MCP comparten servicio, versión y auditoría; se conservan permisos y condiciones técnicas. Implementación en rama de sesión, migraciones por deploy y automatizadas exclusivamente en CI. La pausa de QA manual y servicios sigue vigente; esta nota no acredita validación ni despliegue. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
+Catálogo compartido con globales y excepciones por cliente; la excepción prevalece. Todas las capacidades existentes y futuras parten habilitadas, incluidas IA y audio. Los globales y excepciones explícitos se conservan. Panel, API y MCP comparten servicio, versión y auditoría; se conservan permisos y condiciones técnicas. Implementación en rama de sesión, migraciones por deploy y automatizadas exclusivamente en CI. La pausa de QA manual y servicios sigue vigente; esta nota no acredita validación ni despliegue. Contrato: [Feature flags](../PLATFORM_FEATURE_FLAGS.md).
 
 > **PA-248 — 2026-11-07:** el historial de decisiones de facturación conserva
 > pertenencia por proyecto o contexto de retención; el borrado selectivo nunca
