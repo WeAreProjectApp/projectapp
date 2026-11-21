@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "features": [
     {
       "key": "platform.delivery",
@@ -401,7 +401,7 @@
       "label_es": "Chatbot",
       "label_en": "Chatbot",
       "module": "IA y audio",
-      "default_enabled": false,
+      "default_enabled": true,
       "routes": [],
       "capabilities": [],
       "targets": [
@@ -418,7 +418,7 @@
       "label_es": "Reportes por voz",
       "label_en": "Voice reports",
       "module": "IA y audio",
-      "default_enabled": false,
+      "default_enabled": true,
       "routes": [],
       "capabilities": [],
       "targets": [
@@ -435,7 +435,7 @@
       "label_es": "Audio del chatbot",
       "label_en": "Chatbot audio",
       "module": "IA y audio",
-      "default_enabled": false,
+      "default_enabled": true,
       "routes": [],
       "capabilities": [],
       "targets": [],

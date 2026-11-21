@@ -7,12 +7,7 @@ from pathlib import Path
 import re
 
 
-API_FILES = (
-    'accounts/urls.py', 'accounts/project_collaboration_urls.py', 'accounts/delivery_urls.py',
-    'accounts/billing_urls.py', 'accounts/issue_report_urls.py', 'secure_links/platform_urls.py',
-    'accounts/ai_urls.py', 'accounts/appi_urls.py', 'accounts/platform_help_urls.py',
-    'accounts/feature_flags_urls.py', 'accounts/requirement_package_urls.py',
-)
+PLATFORM_MOUNTS = ('api/accounts/', 'api/platform/', 'api/requirement-packages/')
 
 
 def normalized(route):
@@ -29,7 +24,7 @@ def path_names(nodes, bindings=None):
                 names.update(path_names(node.body, {**bindings, node.target.id: item}))
             continue
         for call in ast.walk(node):
-            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == 'path'):
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id in ('path', 're_path')):
                 continue
             for keyword in call.keywords:
                 if keyword.arg != 'name':
@@ -43,15 +38,51 @@ def path_names(nodes, bindings=None):
     return names
 
 
+def mounted_api_names(backend):
+    """Follow includes from the Platform mounts, including direct named endpoints."""
+    visited = set()
+    names = set()
+
+    def collect(module, *, entry=False):
+        if module in visited:
+            return
+        visited.add(module)
+        source = backend.joinpath(*module.split('.')).with_suffix('.py')
+        nodes = ast.parse(source.read_text()).body
+        if not entry:
+            names.update(path_names(nodes))
+        for node in ast.walk(ast.Module(body=nodes, type_ignores=[])):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id in ('path', 're_path') and len(node.args) >= 2):
+                continue
+            route, view = node.args[:2]
+            if entry and not (isinstance(route, ast.Constant) and isinstance(route.value, str)
+                              and route.value.startswith(PLATFORM_MOUNTS)):
+                continue
+            if isinstance(view, ast.Call) and isinstance(view.func, ast.Name) and view.func.id == 'include':
+                target = view.args[0]
+                if isinstance(target, (ast.Tuple, ast.List)):
+                    target = target.elts[0]
+                if not isinstance(target, ast.Constant) or not isinstance(target.value, str):
+                    raise ValueError(f'Include de Plataforma sin módulo identificable en {source}')
+                collect(target.value)
+            elif entry:
+                names.update(path_names([node]))
+
+    collect('projectapp.urls', entry=True)
+    return names
+
+
 def audit(catalog, pages, api_names, capabilities):
     problems = []
     keys, routes, apis, mapped_capabilities = set(), {}, {}, set()
+    targets = set()
     for feature in catalog['features']:
         key = feature['key']
         if key in keys:
             problems.append(f'Clave duplicada: {key}')
         keys.add(key)
-        if feature['default_enabled'] is key.startswith('platform.ai_'):
+        if feature.get('default_enabled') is not True:
             problems.append(f'Valor inicial incompatible con PA-263: {key}')
         for route in feature['routes']:
             route = normalized(route)
@@ -62,7 +93,12 @@ def audit(catalog, pages, api_names, capabilities):
             if name in apis:
                 problems.append(f'API controlada dos veces: {name}')
             apis[name] = key
-        mapped_capabilities.update(feature['capabilities'])
+        for field, seen, label in (('capabilities', mapped_capabilities, 'Capacidad'),
+                                   ('targets', targets, 'Destino')):
+            for name in feature[field]:
+                if name in seen:
+                    problems.append(f'{label} con control duplicado: {name}')
+                seen.add(name)
         if not feature['routes'] and not feature.get('surfaces'):
             problems.append(f'Falta superficie visible: {key}')
     route_exemptions = {normalized(route) for route in catalog['route_exemptions']}
@@ -83,10 +119,7 @@ def inventory(root):
         name = '/platform/' + str(path.relative_to(root / 'frontend/pages/platform').with_suffix(''))
         name = re.sub(r'\[([^\]]+)\]', r':\1', name).removesuffix('/index')
         pages.append(normalized(name))
-    names = {'platform-help-videos'}
-    for filename in API_FILES:
-        tree = ast.parse((root / 'backend' / filename).read_text())
-        names.update(path_names(tree.body))
+    names = mounted_api_names(root / 'backend')
     source = (root / 'frontend/config/viewCapabilityCatalog.js').read_text().split('const platformCapabilities = [', 1)[1].split('const public', 1)[0]
     capabilities = re.findall(r"feature\('([^']+)'", source)
     return pages, names, capabilities

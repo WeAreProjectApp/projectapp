@@ -1363,8 +1363,10 @@ CALCULATOR_GENERAL_CONTRACTS = (
         read_only='id author created_at',
         read_write='definition_digest revision project_version project request_id requirement size signal_ids explanation expected_size',
         excluded=_excluded('Copia interna inmutable de los parámetros aplicados; los resultados de calibración usan esa copia sin exponerla al cliente.', 'snapshot')),
-    _contract('content.CalculatorActual', read_only='id author created_at',
-        read_write='estimate supersedes actual_hours hourly_cost_cop evidence cause'),
+    _contract('content.CalculatorActual', read_only='id author created_at verified_cost_cop',
+        read_write='estimate supersedes actual_hours hourly_cost_cop evidence cause cost_breakdown'),
+    _contract('content.CalculatorCostReview', read_only='id corpus author created_at',
+        read_write='definition_digest size corpus_digest note'),
 )
 
 CALCULATOR_PROJECT_CONTRACTS = (

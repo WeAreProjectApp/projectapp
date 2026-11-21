@@ -204,6 +204,7 @@ test.describe('Platform requirement packages', () => {
 
     await expect(page.getByTestId('package-request-detail')).toContainText('Talla S');
     await expect(page.getByTestId('package-request-detail')).toContainText('Mostrar el estado confirmado del pedido.');
+    await expect(page.getByTestId('package-request-detail')).not.toContainText(/costo interno|costo mediano|horas reales|tarifa por hora|cierres/i);
     await expect(page.getByText(`El cupo se descontará de la compra ${REQUIREMENT_PACKAGE_PAID_ORDER_ID}.`)).toBeVisible();
   });
 

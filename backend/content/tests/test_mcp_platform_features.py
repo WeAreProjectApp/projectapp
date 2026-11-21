@@ -30,7 +30,7 @@ def test_mcp_catalog_exposes_effective_defaults(credential):
 
     flags = {item['key']: item for item in result['features']}
     assert flags['platform.documents']['effective'] is True
-    assert flags['platform.ai_chatbot']['effective'] is False
+    assert flags['platform.ai_chatbot']['effective'] is True
     assert flags['platform.requirement_packages']['effective'] is True
 
 

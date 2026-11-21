@@ -105,6 +105,10 @@ Rama propia: filtros dinámicos, consultas paginadas estables de 15 minutos, pri
 
 > **PA-264 — en implementación:** control visual de hosting por producción, con configuración central, mensajes independientes y recibos del destino. QA manual y servicios siguen pausados; no hay activaciones ni despliegues.
 
+## PA-254 y PA-263 — corrección w3 (2026-11-21)
+
+El catálogo de 18 claves y sus futuras altas comienzan habilitados. La precedencia y la configuración explícita guardada se conservan. La calculadora conserva su indicador combinado histórico y expone una alerta exclusiva de horas. Panel muestra costo respaldado y revisión humana por talla y versión. El censo real y su aceptación corresponden al equipo designado. Detalles en [Paquetes por tallas](../docs/PA254_REQUIREMENT_PACKAGES.md) y [Feature flags](../docs/PLATFORM_FEATURE_FLAGS.md).
+
 ## PA-254 — Paquetes por tallas y solicitudes (2026-11-12)
 
 En implementación en `feat/12112026-pa254-requirement-packages`: ejemplos

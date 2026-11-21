@@ -141,7 +141,23 @@ class EstimateSerializer(ClosedSerializer):
     expected_size = serializers.ChoiceField(choices=OUTCOMES, required=False, allow_blank=True)
 
 
+class CostLineSerializer(ClosedSerializer):
+    participant = serializers.CharField(max_length=160)
+    period = serializers.CharField(max_length=160)
+    hours = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal('.01'))
+    hourly_cost_cop = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('.01'))
+    evidence = serializers.CharField(max_length=2000)
+
+
+class CostReviewSerializer(ClosedSerializer):
+    definition_digest = serializers.RegexField(r'^[0-9a-f]{64}$')
+    size = serializers.ChoiceField(choices=('XS', 'S', 'M'))
+    corpus_digest = serializers.RegexField(r'^[0-9a-f]{64}$')
+    note = serializers.CharField(max_length=2000)
+
+
 class ActualSerializer(ClosedSerializer):
+    cost_breakdown = CostLineSerializer(many=True, max_length=100, required=False)
     estimate_id = serializers.IntegerField(min_value=1)
     actual_hours = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal('.01'))
     hourly_cost_cop = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('.01'), required=False, allow_null=True)

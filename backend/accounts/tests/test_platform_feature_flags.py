@@ -15,14 +15,26 @@ def actor(admin_user):
     return admin_user
 
 
-def test_initial_catalog_keeps_ai_audio_off(client_user):
+def test_new_installation_enables_every_catalogued_feature(client_user):
     result = features.values_for(client_user.pk)
 
-    assert result['platform.documents'] is True
+    assert result == dict.fromkeys(features.FEATURES, True)
+    assert not PlatformFeatureSettings.objects.exists()
+    assert not ClientPlatformFeatureSettings.objects.exists()
+
+
+@pytest.mark.parametrize('key', ['platform.new_reports', 'platform.ai_new_reports'])
+def test_new_feature_inherits_its_default_in_existing_accounts(actor, client_user, monkeypatch, key):
+    features.update(actor, {'expected_version': 0, 'values': {'platform.ai_chatbot': False}})
+    features.update(actor, {'expected_version': 0, 'values': {'platform.documents': False}}, client_user.pk)
+    monkeypatch.setitem(features.FEATURES, key, {'key': key, 'default_enabled': True})
+
+    result = features.values_for(client_user.pk)
+
+    assert result[key] is True
     assert result['platform.ai_chatbot'] is False
-    assert result['platform.ai_voice_reports'] is False
-    assert result['platform.ai_chatbot_audio'] is False
-    assert PlatformFeatureSettings.objects.count() == 0
+    assert result['platform.documents'] is False
+    assert PlatformFeatureEvent.objects.count() == 2
 
 
 @pytest.mark.parametrize('global_value', [True, False])

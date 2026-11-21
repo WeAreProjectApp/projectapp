@@ -11,8 +11,8 @@ cliente, antes/después y versión.
 
 **Excepción del cliente → global guardado → valor inicial del catálogo.**
 Heredar elimina la excepción, incluso si tenía el mismo valor que el global.
-Todas las capacidades ordinarias comienzan habilitadas; chatbot, reportes por voz
-y audio del chatbot comienzan deshabilitados. Un flag jamás concede permisos,
+Las 18 claves del catálogo y cada clave futura comienzan habilitadas, incluidas
+chatbot, reportes por voz y audio. Se puede apagar cualquiera desde el Panel. Un flag jamás concede permisos,
 habilita credenciales ausentes ni cambia cuotas, publicaciones o preparación
 técnica. Modelo de datos conserva su condición previa de disponibilidad.
 
@@ -57,15 +57,15 @@ obligaciones financieras, webhooks o trabajos comerciales automáticos.
 ## Persistencia y compatibilidad
 
 Migración aditiva `accounts.0093_platform_feature_flags`; la aplica el deploy,
-nunca la sesión desde el worktree. La configuración inicial no importa los
-interruptores anteriores: aplica los valores iniciales acordados. Credenciales,
+nunca la sesión desde el worktree. El cambio de catálogo sólo afecta a las funciones que heredan sin global guardado.
+Todos los globales y las excepciones explícitas existentes conservan su valor. Credenciales,
 cuotas, contenido y progreso de Ayuda permanecen independientes.
 
 Las páginas de IA y Ayuda enlazan al administrador central. Sus endpoints/MCP
 anteriores conservan adaptadores: valores globales escriben globales; booleanos
 por cliente crean excepciones. Los campos legados sólo conservan proyecciones y
 versiones para compatibilidad; ninguna evaluación los usa como otra fuente.
-El contrato Proyectos publica 6.1.0: conserva el cambio de precedencia de 6.0.0 y añade la disponibilidad independiente de Paquetes de requerimientos.
+Proyectos 7.0.0 publica el nuevo valor inicial de IA y audio con la misma precedencia y conserva el control independiente de Paquetes de requerimientos.
 
 ## API y MCP
 
@@ -90,8 +90,8 @@ confirmación, permisos y versión a través del mismo servicio del Panel.
 
 Para cada capacidad nueva o modificada, Implementación declara clave existente,
 alta de clave o exclusión justificada; revisa módulo/vista, navegación, enlace
-directo, API, descargas y accesos indirectos. Una clave nueva ordinaria parte
-habilitada; las de IA/audio parten deshabilitadas. Los servicios técnicos y
+directo, API, descargas y accesos indirectos. Cada clave debe declarar `default_enabled: true`, incluidas las de IA/audio.
+El verificador de CI rechaza cualquier falso por defecto. Los servicios técnicos y
 permisos siguen siendo condiciones separadas.
 
 CI ejecuta `scripts/check_platform_features.py`: detecta vistas, endpoints y
@@ -121,5 +121,5 @@ central. La precedencia anterior global-Y-cliente se sustituye explícitamente
 por la excepción del cliente; los casos se actualizan a ese contrato.
 
 La regla prospectiva también está en las fuentes canónicas del toolkit
-(`682d82aa`, incluido en `master` por `7a2c61a9`), con espejo Codex renderizado.
+(regla original `682d82aa`, corrección de los valores iniciales `a2fe98f5`), con espejo Codex renderizado.
 No se propagó runtime ni se publicó en Slack.

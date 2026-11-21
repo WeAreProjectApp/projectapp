@@ -6,12 +6,14 @@ from rest_framework.response import Response
 
 from content.serializers.requirement_calculator import (
     ActualSerializer,
+    CostReviewSerializer,
     ApproveSerializer,
     DefinitionWriteSerializer,
     EstimateSerializer,
     ProjectDraftSerializer,
 )
 from content.services import calculator_calibration as calibration
+from content.services.calculator_costs import accept_cost_review
 from content.services import requirement_calculator as service
 
 
@@ -113,7 +115,8 @@ def calculator_context(request):
 @permission_classes([IsAdminUser])
 def calculator_estimates(request):
     if request.method == 'GET':
-        return Response(calibration.estimates(**pagination(request)))
+        return Response(calibration.estimates(**pagination(request),
+            definition_digest=request.query_params.get('definition_digest'), size=request.query_params.get('size')))
     return Response(calibration.record_estimate(validated(EstimateSerializer, request.data), actor=request.user), status=201)
 
 
@@ -126,7 +129,14 @@ def calculator_actuals(request):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def calculator_calibration(request):
-    return Response(calibration.report(**pagination(request)))
+    return Response(calibration.report(**pagination(request), definition_digest=request.query_params.get('definition_digest')))
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def calculator_cost_review(request):
+    values = validated(CostReviewSerializer, request.data)
+    return Response(accept_cost_review(values, actor=request.user))
 
 
 @api_view(['GET'])

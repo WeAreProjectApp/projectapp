@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "sources": {
-    "frontend/config/viewCatalog.js": "2574a11a50c4e8e5fc8d4bb82d3299769cfe556a618a739d49c4bb2165839ff8",
-    "frontend/config/viewCapabilityCatalog.js": "0d39e5b4a3158b649734a3c52c41b70e46983252a2b93e6d824cd7a27c3aa0e9"
+    "frontend/config/viewCatalog.js": "ffb90c9b9f8563a5a86296d2103e25a244fca967d4c165002e07879d51ccdeae",
+    "frontend/config/viewCapabilityCatalog.js": "6ea16ac68afc1e5aab372d23227b1acca61bb999c201f316ac8e8a40d2ed00c6"
   },
   "surfaces": [
     {
@@ -131,12 +131,12 @@
       "file": "frontend/pages/panel/requirement-calculator/index.vue",
       "audience": "admin",
       "view_type": "config",
-      "description": "Comercial administra la definición, señales y valores por panel/MCP. Versiones muestra las revisiones publicadas con paginación y avisa si todavía no hay publicaciones. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.",
+      "description": "Comercial administra la definición, señales y valores por panel/MCP. Versiones muestra las revisiones publicadas con paginación y avisa si todavía no hay publicaciones. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración muestra por separado alertas de horas, insuficiencia del valor y cobertura económica de XS/S/M. El equipo documenta su decisión sobre los cierres respaldados, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.",
       "features": [
         {
           "id": "panel-requirement-calculator",
           "label": "Administrar calculadora y versiones por proyecto",
-          "summary": "Configura señales, pesos, porcentajes y valores internos, consulta las revisiones publicadas en Versiones y sincroniza el documento general. Prepara variantes particulares por proyecto en borrador, ajusta sólo parámetros y registra su aprobación para congelar documento y PDF. Revisa cierres con evidencia completa paginada y propuestas de calibración. La clasificación se realiza desde un chat externo por MCP."
+          "summary": "Configura señales, pesos, porcentajes y valores internos, consulta las revisiones publicadas en Versiones y sincroniza el documento general. Prepara variantes particulares por proyecto en borrador, ajusta sólo parámetros y registra su aprobación para congelar documento y PDF. Distingue alerta de horas y suficiencia del valor estándar. Permite consultar cierres respaldados y documentar la aceptación del corpus de una talla por revisión. La clasificación se realiza desde un chat externo por MCP."
         }
       ]
     },
@@ -182,12 +182,12 @@
       "file": "frontend/pages/panel/cells/index.vue",
       "audience": "admin",
       "view_type": "config",
-      "description": "Programa, Economía y Contrato conservan consulta de contenido; Programa también permite previsualizar, mostrar u ocultar, cargar, sustituir, quitar y restaurar el video por idioma; ?tab=economics y ?tab=contract abren las dos últimas. Copia URLs, descarga PDFs, previsualiza ES/EN y consulta historial paginado. Economía reúne los números internos. Contrato muestra el Markdown y su espejo en ProjectApp/Contratos, con estados sincronizado, desactualizado, sin inicializar o contrato no disponible. El contrato enlaza a su documento exacto en el Gestor para editar contenido y presentación, con versión, historial y PDF sincronizados. Textos y cifras del programa se editan mediante el conector MCP Programas (programs); building-on-demand se conserva en retirada. El video se administra aquí o desde el mismo conector, sin crear versiones del programa. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. La edición vía MCP admite anotaciones de formato.",
+      "description": "Programa, Economía y Contrato conservan consulta de contenido; Programa enlaza a la calculadora interna para consultar tallas y permite previsualizar, mostrar u ocultar, cargar, sustituir, quitar y restaurar el video por idioma; ?tab=economics y ?tab=contract abren las dos últimas. Copia URLs, descarga PDFs, previsualiza ES/EN y consulta historial paginado. Economía reúne los números internos. Contrato muestra el Markdown y su espejo en ProjectApp/Contratos, con estados sincronizado, desactualizado, sin inicializar o contrato no disponible. El contrato enlaza a su documento exacto en el Gestor para editar contenido y presentación, con versión, historial y PDF sincronizados. Textos y cifras del programa se editan mediante el conector MCP Programas (programs); building-on-demand se conserva en retirada. El video se administra aquí o desde el mismo conector, sin crear versiones del programa. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. La edición vía MCP admite anotaciones de formato.",
       "features": [
         {
           "id": "panel-building-on-demand",
           "label": "Consultar Células de Building on Demand",
-          "summary": "Distribuye el programa bilingüe, descarga PDFs y consulta Programa, Economía y Contrato, con vista previa ES/EN e historial paginado. Economía reúne los números internos. El contrato muestra su documento en ProjectApp/Contratos y enlaza al Gestor para editarlo con revisión, historial y PDF sincronizados, o explica si aún no está disponible. Programa también reproduce el video explicativo y permite gestionar su archivo por idioma, visibilidad y restauración. Las ediciones del contenido comercial se confirman mediante el conector MCP Programas (programs); building-on-demand se conserva temporalmente como compatibilidad. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. El MCP acepta formato por texto y Markdown contractual."
+          "summary": "Distribuye el programa bilingüe, descarga PDFs y consulta Programa, Economía y Contrato, con vista previa ES/EN e historial paginado. Economía reúne los números internos. El contrato muestra su documento en ProjectApp/Contratos y enlaza al Gestor para editarlo con revisión, historial y PDF sincronizados, o explica si aún no está disponible. Programa enlaza a la calculadora interna para consultar tallas, reproduce el video explicativo y permite gestionar su archivo por idioma, visibilidad y restauración. Las ediciones del contenido comercial se confirman mediante el conector MCP Programas (programs); building-on-demand se conserva temporalmente como compatibilidad. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. El MCP acepta formato por texto y Markdown contractual."
         }
       ]
     },
@@ -997,12 +997,12 @@
       "file": "frontend/pages/panel/platform/feature-flags.vue",
       "audience": "admin",
       "view_type": "config",
-      "description": "La excepción explícita prevalece sobre el global. Todas comienzan habilitadas salvo IA y audio; no concede permisos. Gestión equivalente por MCP. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación.",
+      "description": "La excepción explícita prevalece sobre el global. Todas comienzan habilitadas para usuarios autorizados, incluidas IA y audio. Gestión equivalente por MCP. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación.",
       "features": [
         {
           "id": "panel-platform-features",
           "label": "Controlar funcionalidades de clientes",
-          "summary": "Configura globales y excepciones por cliente, muestra herencia y resultado efectivo y conserva auditoría. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación. IA y audio parten apagados; los flags no conceden permisos."
+          "summary": "Configura globales y excepciones por cliente, muestra herencia y resultado efectivo y conserva auditoría. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación. Todas las funciones parten habilitadas para usuarios autorizados, incluidas IA y audio."
         }
       ]
     },
