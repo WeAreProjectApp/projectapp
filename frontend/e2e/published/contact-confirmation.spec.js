@@ -23,6 +23,7 @@ test('renders the accepted contact receipt in the submitting tab', {
   await expect(page).toHaveURL('/en-us/contact-success')
   const heading = page.getByRole('heading', { level: 1 }).and(page.getByTestId('contact-success-heading'))
   await expect(heading).toBeVisible()
+  await expect(heading).toContainText(/\p{L}/u)
   await expect(heading).toHaveCSS('opacity', '1')
   await expect(form).toHaveCount(0)
   expect(posts).toHaveLength(1)

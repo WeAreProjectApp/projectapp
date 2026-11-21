@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 import pytest
 from django.conf import settings as django_settings
+from django.db import transaction
 
 from content.email_copy_families import TASKS_OPERATIONS
 from content.models import (
@@ -96,7 +97,10 @@ def stored_amounts():
 def test_income_previews_preserve_the_book(
     live_server, client, superuser, make_income, make_client_profile, mailoutbox, tmp_path,
 ):
-    owner = make_client_profile(email='settlement-recipient@example.test')
+    # The user signal fills in a missing profile on commit. Create the explicit
+    # profile in the same transaction as its user, as onboarding does.
+    with transaction.atomic():
+        owner = make_client_profile(email='settlement-recipient@example.test')
     unpaid = make_income(concept='Diagnóstico técnico - Cobro único', period_date=date(2025, 11, 1),
                          total_amount=Decimal('999999999999.99'))
     partial = make_income(concept='Cobro parcial ficticio', period_date=date(2025, 11, 2),

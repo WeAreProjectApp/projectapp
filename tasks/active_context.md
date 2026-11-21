@@ -1,5 +1,7 @@
 ## w1 · PA-289, PA-251 y PA-286
 
+La navegación existente de Contacto mostró el encabezado y retiró el formulario tras un envío en la misma pestaña. Django registró un contacto y el buzón de prueba recibió tres entregas. Frontend y backend sirvieron `f62befdc9499efb1336b639eec62f687456b63e8` en [CI](https://github.com/WeAreProjectApp/projectapp/actions/runs/44939845811/job/136954421520).
+
 La regresión de CI compara los centavos del detalle y la revisión de Liquidar con SQLite, y comprueba la transición de Contacto sobre la compilación servida por Django. QA manual sigue en pausa. Al reanudar, registrar por comprobación el turno autorizado, origen y actor, y los SHA que devuelvan `/version.json` y `/api/version/`. Carlos asignará el entorno vigente para los centavos. El checkpoint R73 de DEV C permanece reservado. El retorno filtrado se sigue con PA-294. Contacto requiere turno de escritura aislado en DEV B y correo local. La localización corresponde a PA-284.
 
 ## PA-275 a PA-281 — correcciones de Panel y Plataforma

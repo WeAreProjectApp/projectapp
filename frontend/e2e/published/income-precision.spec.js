@@ -64,10 +64,10 @@ async function checkDetail(page, id, values, action) {
   })
   await expect.poll(() => query(page).income).toBe(String(id))
   const detail = page.getByTestId('income-detail-modal')
-  await expect(detail.getByTestId('income-detail-total')).toHaveText(values.totalText)
-  await expect(detail.getByTestId('vat-total')).toHaveText(values.totalText)
-  await expect(detail.getByTestId('income-detail-paid')).toHaveText(values.paidText)
-  await expect(detail.getByTestId('income-detail-pending')).toHaveText(values.pendingText)
+  await expect(detail.getByTestId('income-detail-total').filter({ visible: true })).toHaveText(values.totalText)
+  await expect(detail.getByTestId('vat-total').filter({ visible: true })).toHaveText(values.totalText)
+  await expect(detail.getByTestId('income-detail-paid').filter({ visible: true })).toHaveText(values.paidText)
+  await expect(detail.getByTestId('income-detail-pending').filter({ visible: true })).toHaveText(values.pendingText)
   return income
 }
 
@@ -88,7 +88,8 @@ for (const item of detailCases) {
     const filters = query(page)
     const expectedRows = [seed.unpaid, seed.partial].sort((a, b) => a - b)
     await expect.poll(() => visibleRowIds(page)).toEqual(expectedRows)
-    await expect(page.getByTestId('accounting-row-' + id)).toContainText(item.totalText)
+    await expect(page.getByTestId('accounting-row-' + id).getByText(item.totalText, { exact: true })
+      .filter({ visible: true })).toBeVisible()
 
     const open = () => page.getByTestId('income-open-' + id).filter({ visible: true }).click()
     const reload = () => page.reload({ waitUntil: 'domcontentloaded' })
@@ -120,7 +121,8 @@ async function openSettlement(page, id, totalText) {
   })
   // Fail closed even if the form accidentally dispatches a real settlement.
   await page.route(/\/api\/accounting\/incomes\/(?:bulk-settle|\d+\/settle)\/$/, route => route.abort())
-  await expect(page.getByTestId('accounting-row-' + id).filter({ visible: true })).toContainText(totalText)
+  await expect(page.getByTestId('accounting-row-' + id).getByText(totalText, { exact: true })
+    .filter({ visible: true })).toBeVisible()
   await page.getByTestId('income-actions-' + id).filter({ visible: true }).click()
   const actions = page.getByTestId('income-actions-modal')
   await expect(actions).toContainText(totalText)
@@ -146,9 +148,9 @@ async function checkRemainder(page, carlos, gustavo, remainder) {
 }
 
 async function checkVat(scope, amounts) {
-  await expect(scope.getByTestId('vat-base')).toHaveText(amounts.base)
-  await expect(scope.getByTestId('vat-tax')).toHaveText(amounts.tax)
-  await expect(scope.getByTestId('vat-total')).toHaveText(amounts.total)
+  await expect(scope.getByTestId('vat-base').filter({ visible: true })).toHaveText(amounts.base)
+  await expect(scope.getByTestId('vat-tax').filter({ visible: true })).toHaveText(amounts.tax)
+  await expect(scope.getByTestId('vat-total').filter({ visible: true })).toHaveText(amounts.total)
 }
 
 async function reviewThenCancel(page, id, draft, amounts, recipient) {
