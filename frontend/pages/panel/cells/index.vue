@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { definePageMeta, useI18n, useRoute, useRouter } from '#imports';
+import { definePageMeta, useI18n, useLocalePath, useRoute, useRouter } from '#imports';
 import BuildingOnDemandAdminContractPanel from '~/components/BuildingOnDemand/admin/ContractPanel.vue';
 import BuildingOnDemandAdminDistributionCard from '~/components/BuildingOnDemand/admin/DistributionCard.vue';
 import BuildingOnDemandAdminEconomicsTable from '~/components/BuildingOnDemand/admin/EconomicsTable.vue';
