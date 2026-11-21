@@ -14,6 +14,7 @@ const props = defineProps({
   rateDisabled: { type: Boolean, default: false },
   rateDisabledReason: { type: String, default: '' },
   compact: { type: Boolean, default: false },
+  showCents: Boolean,
 })
 const emit = defineEmits(['update:modelValue', 'update:rate', 'capture'])
 const rateId = useId()
@@ -83,6 +84,6 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
       </template>
     </BaseFormRow>
     <p v-if="invalid" class="text-sm text-danger-strong" role="alert">Revisa el importe y el porcentaje de IVA.</p>
-    <VatBreakdown :total="modelValue" :rate="rate" />
+    <VatBreakdown :total="modelValue" :rate="rate" :show-cents="showCents" />
   </div>
 </template>

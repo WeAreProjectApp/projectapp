@@ -25,6 +25,14 @@ describe('VatBreakdown', () => {
     expect(wrapper.text()).toContain('IVA (0 %)')
   })
 
+  it.each([
+    [true, '$119,06 COP'],
+    [false, '$119 COP'],
+  ])('uses the requested precision for a fractional total (showCents=%s)', (showCents, expected) => {
+    const wrapper = mountBreakdown({ total: '119.06', showCents })
+    expect(wrapper.get('[data-testid="vat-total"]').text()).toBe(expected)
+  })
+
   it('labels a historical amount with no VAT rate as unrecorded', () => {
     // Fails if historical documents without a VAT rate are silently displayed as exempt.
     const wrapper = mountBreakdown({ total: '45', rate: null })

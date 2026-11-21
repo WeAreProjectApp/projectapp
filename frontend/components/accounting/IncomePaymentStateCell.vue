@@ -50,10 +50,10 @@ const mutedTitle = computed(() => (
     </span>
     <span v-else class="text-text-subtle">—</span>
     <span
-      v-if="row.payment_status === 'partial'"
+      v-if="row.payment_status === 'partial' && row.pending_amount != null"
       class="text-2xs text-warning-strong tabular-nums"
     >
-      faltan {{ formatMoney(Number(row.pending_amount)) }}
+      faltan {{ formatMoney(row.pending_amount, '', { decimals: 'auto' }) }}
     </span>
     <span
       v-if="row.requires_collection_account"

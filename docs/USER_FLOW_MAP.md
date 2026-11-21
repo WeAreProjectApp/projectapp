@@ -3257,7 +3257,7 @@ Two transitions that were previously bundled into other flows now have their own
   - [Branch C — Navigation failure] A successful submission stays locked if the router rejects the destination. The user action produces one POST.
   - [Branch D — Locale display] The form and confirmation use the active locale in the visible copy and document language.
 - **Coverage:** `success`, `error`, `failure`, `display` in the browser spec.
-- **E2E Spec:** `e2e/public/public-contact.spec.js`
+- **E2E Spec:** `e2e/public/public-contact.spec.js` and `e2e/published/contact-confirmation.spec.js`. On the Django build, a single accepted POST removes the form and displays the confirmation heading in the submitting tab. The disposable mailbox receives three local deliveries for one contact.
 
 ### FLOW: `public-privacy-policy`
 
@@ -6078,9 +6078,9 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
 | `admin-accounting-hosting-link` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
-| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 20 |
+| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 21 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
-| `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 42 |
+| `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 43 |
 | `admin-accounting-income-reminder-mute` | admin | P1 | display,success,error,failure | 6 |
 | `admin-accounting-list-error-retry` | admin | P3 | failure,display | 1 |
 | `admin-accounting-pocket` | admin | P2 | display,success,error,failure | 7 |
@@ -6555,7 +6555,7 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `public-consulting-pdf` | public | P2 | success,failure | — |
 | `public-consulting-share` | public | P2 | success,failure | — |
 | `public-consulting-theme` | public | P2 | success | — |
-| `public-contact-submit` | public | P1 | success,error,failure,display | 1 |
+| `public-contact-submit` | public | P1 | success,error,failure,display | 2 |
 | `public-financing-explainer` | public | P2 | display,success,failure | 4 |
 | `public-financing-guide` | public | P2 | success,display | 2 |
 | `public-financing-language` | public | P2 | success | — |
@@ -6708,7 +6708,7 @@ Vincular cliente y proyecto conserva su flujo. La barra añade valor total selec
   - [Branch J] Duplicating (Aug 2026) always produces an **expected** record, whatever the original was — reopening the next period of an already collected hosting is the case it exists for — and never carries what belonged to the original occurrence: settlement links, cuenta de cobro, deductions, history and silenced reminders all stay behind, so the duplicate enters the payment calendar clean. The proposed date is the original's plus one hosting cycle, resolved server-side by matching the client (narrowed by project) among active hostings when the origin is Hosting; an ambiguous or absent match leaves the field empty and its `required` blocks the save until a date is chosen. A failing draft raises "No se pudo preparar el duplicado" and opens no form. (Ago 2026) **Origen is required** on every income the form writes — creating, editing and duplicating alike. `BaseSegmented` carries no native `required`, so the refusal is the form's own ("Elige la línea de negocio del ingreso."), held back until the first submit attempt so a freshly opened form never opens complaining; the write serializer enforces the same rule on create and on any update that writes the field, which is what turns editing a legacy row into the gradual backfill of the book. A partial PATCH that does not touch `origin` leaves the record as unclassified as it was, and settling is exempt on purpose: the liquid child and the rescheduled balance copy the parent's line of business, blank included, since refusing to collect money over a classification would block Liquidar on most of the book.
   - [Branch K] (Ago 2026) Una mutación **refresca en sitio**. Al eliminar, la fila deja su grupo de inmediato y el contador del grupo, el conteo de resultados y los totales de la cabecera (Total esperado / líquido / perdido) se recalculan solos, porque derivan del set filtrado. Dos cosas que hacían que eso *pareciera* una recarga se corrigieron con el mismo cambio, y valen para las seis vistas de contabilidad: las tablas pintan skeleton **sólo cuando todavía no hay nada en pantalla**, no encima de datos ya visibles, y la paginación vuelve a la página 1 cuando cambian los **filtros**, no cada vez que se reconstruyen las filas — borrar una fila desde la página 3 ya no deja al lector en la 1.
 - **Coverage:** Covered — las cuatro clases de resultado. El recorrido de liquidación individual usa el modal único y envía la deducción por el contrato compartido. Se conserva la cobertura de CRUD, orden persistido Mes/Total, cabecera y filtros, y borrado sin recargar ni mover la página. Los recorridos colectivos, errores de previsualización y confirmación, IVA y cinco perfiles del modal están en `admin-accounting-income-bulk-settle`.
-- **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
+- **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js` y `e2e/published/income-precision.spec.js`. Al abrir o recargar un ingreso parcial, Abonado y Pendiente reproducen los importes del API y suman el total mostrado en el detalle y en el desglose del IVA. Cerrar recupera la lista filtrada de origen.
 
 #### IVA opcional
 
@@ -6752,7 +6752,7 @@ La autoría de pruebas de este delta se valida en CI sobre el SHA del PR; no acr
 - **Failure:** Un rechazo de vista previa conserva el formulario. Un conflicto al registrar conserva los datos para volver a revisar. El fallo de correo no deshace el abono.
 - **Display:** Participaciones muestra Carlos, Gustavo y el remanente positivo de ProjectApp incluso contraída; recibido 119 equivale a 59 + 59 + 1. Actualiza el remanente al editar importe o reparto manual, conserva centavos y oculta cero. Un único diálogo con lista, valor recibido, fecha, destino y resumen. Cada ingreso muestra un switch junto a IVA antes de expandir: apagar significa Sin IVA (0 %). La configuración permite capturar base o total incluido y ver base, IVA y total; distingue Sin registrar. Diferencia se abre al faltar dinero. El pie de acciones tiene padding propio. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
 - **Coverage:** Las cuatro clases de resultado tienen recorridos focales; los cinco perfiles de pantalla verifican el modal con IVA expandido. La ruta individual comparte el mismo modal.
-- **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
+- **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js` y `e2e/published/income-precision.spec.js`. Con importe positivo y confirmación seleccionada para el destinatario local habilitado, Liquidar abre la revisión. Volver a editar y Cancelar conservan el original con cero pagos y cero avisos.
 
 El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
 

@@ -632,6 +632,23 @@ jobs:
           name: playwright-blob-pwa
           path: frontend/blob-report/
           retention-days: 1
+      - name: Exercise income precision and contact confirmation on the Django build
+        working-directory: backend
+        run: pytest --no-migrations --no-cov --liveserver=127.0.0.1:0 content/tests/browser/published_build.py -v -s
+      - name: Upload published contact report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-blob-published-contact
+          path: frontend/published-blob/contact-confirmation/*.zip
+          retention-days: 1
+      - name: Upload published income report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-blob-published-income
+          path: frontend/published-blob/income-precision/*.zip
+          retention-days: 1
       - name: Upload PWA failure traces
         if: failure()
         uses: actions/upload-artifact@v4

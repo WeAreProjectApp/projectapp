@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-bone flex items-center justify-center">
     <main class="w-full py-20 px-6 lg:px-32">
       <div class="max-w-3xl mx-auto text-center">
-        <h1 ref="titleRef" class="text-4xl lg:text-6xl font-bold text-text-brand mb-6 opacity-0">
+        <h1 ref="titleRef" data-testid="contact-success-heading" class="text-4xl lg:text-6xl font-bold text-text-brand mb-6 opacity-0">
           {{ t('contactSuccess.title') }} <span ref="emojiRef">✨</span>
         </h1>
         
