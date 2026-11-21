@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { REVISION_PAGE_SIZE, useRequirementCalculatorStore } from '~/stores/requirement_calculator';
+import CostCoverage from '~/components/RequirementCalculator/CostCoverage.vue';
 import DefinitionEditor from '~/components/RequirementCalculator/DefinitionEditor.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 
@@ -25,6 +26,9 @@ const historyStatus = ref('idle');
 const estimateOffset = ref(0);
 const calibrationOffset = ref(0);
 const estimateDetails = ref({});
+const coverageDigest = ref('');
+const sampleFilter = ref(null);
+const costLines = ref([]);
 const actual = ref({ estimate_id: '', actual_hours: '', hourly_cost_cop: '', evidence: '', cause: '' });
 const selectedVersion = computed(() => store.projectVersion?.id === Number(selectedVersionId.value) ? store.projectVersion : null);
 const readOnly = computed(() => Boolean(projectId.value && selectedVersion.value?.status !== 'draft'));
@@ -120,8 +124,8 @@ async function selectTab(value) {
   tab.value = value;
   if (value === 'versions') await loadHistory(historyOffset.value);
   if (value === 'calibration') {
-    await store.loadCalibration(calibrationOffset.value);
-    await store.loadEstimates(estimateOffset.value);
+    await store.loadCalibration(calibrationOffset.value, coverageDigest.value);
+    await store.loadEstimates(estimateOffset.value, sampleFilter.value?.definition_digest, sampleFilter.value?.size);
   }
 }
 async function loadHistory(offset) {
@@ -133,11 +137,29 @@ async function loadHistory(offset) {
 }
 async function estimatesPage(direction) {
   estimateOffset.value += direction * 20;
-  await store.loadEstimates(estimateOffset.value);
+  await store.loadEstimates(estimateOffset.value, sampleFilter.value?.definition_digest, sampleFilter.value?.size);
 }
 async function calibrationPage(direction) {
   calibrationOffset.value += direction * 20;
-  await store.loadCalibration(calibrationOffset.value);
+  await store.loadCalibration(calibrationOffset.value, coverageDigest.value);
+}
+async function selectCoverage(key = '') {
+  coverageDigest.value = key;
+  await store.loadCalibration(calibrationOffset.value, key);
+}
+async function inspectSamples(row = null) {
+  sampleFilter.value = row;
+  actual.value.estimate_id = '';
+  estimateOffset.value = 0;
+  await store.loadEstimates(0, row?.definition_digest, row?.size);
+}
+async function acceptCost(row, note) {
+  const result = await store.acceptCostReview({ definition_digest: row.definition_digest, size: row.size,
+    corpus_digest: row.corpus_digest, note });
+  if (result) {
+    await selectCoverage(coverageDigest.value);
+    success.value = t('requirementCalculator.costDecisionSaved');
+  }
 }
 async function loadEstimateDetails(id, offset = 0) {
   const [detail, history] = await Promise.all([store.getEstimate(id), store.loadActualHistory(id, offset)]);
@@ -149,10 +171,12 @@ async function saveActual() {
   const last = estimate?.actuals.find((row) => !corrected.has(row.id));
   const result = await store.recordActual({ estimate_id: Number(actual.value.estimate_id),
     actual_hours: actual.value.actual_hours, evidence: actual.value.evidence, cause: actual.value.cause,
-    ...(actual.value.hourly_cost_cop ? { hourly_cost_cop: actual.value.hourly_cost_cop } : {}),
+    ...(costLines.value.length ? { cost_breakdown: costLines.value }
+      : actual.value.hourly_cost_cop ? { hourly_cost_cop: actual.value.hourly_cost_cop } : {}),
     ...(last ? { supersedes_id: last.id } : {}) });
   if (result) {
     actual.value = { estimate_id: '', actual_hours: '', hourly_cost_cop: '', evidence: '', cause: '' };
+    costLines.value = [];
     estimateDetails.value = {};
     await selectTab('calibration');
     success.value = t('requirementCalculator.actualSaved');
@@ -231,13 +255,17 @@ async function saveActual() {
     <section v-if="tab === 'calibration' && !projectId" class="space-y-6">
       <p class="rounded-xl bg-surface-muted p-4 text-sm text-text-muted">{{ t('requirementCalculator.provisional') }}</p>
       <p v-if="store.calibration" class="text-sm text-text-default">{{ t('requirementCalculator.consistency', store.calibration.consistency) }}</p>
+      <BaseButton v-if="coverageDigest" variant="link" :disabled="store.busy" @click="selectCoverage()">{{ t('requirementCalculator.currentCoverage') }}</BaseButton>
+      <BaseButton v-if="store.error && store.calibration" variant="link" :disabled="store.busy" @click="selectCoverage(coverageDigest)">{{ t('requirementCalculator.reloadCoverage') }}</BaseButton>
+      <CostCoverage v-if="store.calibration?.package_coverage?.length" :rows="store.calibration.package_coverage" :busy="store.busy" @inspect="inspectSamples" @accept="acceptCost" />
       <article v-for="cohort in store.calibration?.cohorts || []" :key="`${cohort.definition_digest}-${cohort.size}`" class="space-y-2 rounded-xl border border-border-default p-4">
         <p class="font-semibold text-text-default">{{ cohort.size }} · {{ t('requirementCalculator.revision') }} #{{ cohort.revision_id }}</p>
         <p class="text-sm text-text-muted">{{ t('requirementCalculator.measurement', { samples: cohort.samples, minimum: cohort.minimum_samples, hours: cohort.median_hours, deviation: cohort.deviation_percent }) }}</p>
         <p class="text-sm text-text-default">{{ t(`requirementCalculator.${cohort.status}`) }}</p>
         <p v-if="cohort.median_cost_cop" class="text-sm text-text-muted">{{ t('requirementCalculator.costMeasurement', { cost: cohort.median_cost_cop, value: cohort.standard_value_cop || '—', samples: cohort.cost_samples }) }}</p>
-        <p v-if="cohort.covers_median_cost === false" class="text-sm text-danger-strong">{{ t('requirementCalculator.underCost') }}</p>
-        <p v-if="cohort.propose_review" class="text-sm font-semibold text-danger-strong">{{ t('requirementCalculator.reviewSuggested') }}</p>
+        <p v-if="cohort.covers_median_cost === false" data-testid="calculator-cost-warning" class="text-sm text-danger-strong">{{ t('requirementCalculator.underCost') }}</p>
+        <p v-if="cohort.propose_hours_review" class="text-sm font-semibold text-danger-strong" data-testid="calculator-hours-warning">{{ t('requirementCalculator.hoursReview') }}</p>
+        <BaseButton v-if="cohort.definition_digest !== store.calibration?.package_coverage?.[0]?.definition_digest" variant="link" :disabled="store.busy" @click="selectCoverage(cohort.definition_digest)">{{ t('requirementCalculator.showCoverage') }}</BaseButton>
       </article>
       <div v-if="!store.calibration?.cohorts.length" class="text-sm text-text-muted">{{ t('requirementCalculator.noActuals') }}</div>
       <div v-if="store.calibration?.count > 20" class="flex flex-wrap gap-3">
@@ -245,6 +273,7 @@ async function saveActual() {
         <BaseButton variant="secondary" :disabled="calibrationOffset + 20 >= store.calibration.count || store.busy" :disabled-reason="t('requirementCalculator.lastPage')" @click="calibrationPage(1)">{{ t('requirementCalculator.next') }}</BaseButton>
       </div>
       <h2 class="text-lg font-semibold text-text-default">{{ t('requirementCalculator.estimates') }}</h2>
+      <BaseButton v-if="sampleFilter" variant="link" @click="inspectSamples()">{{ t('requirementCalculator.clearSamples', { size: sampleFilter.size }) }}</BaseButton>
       <article v-for="estimate in store.estimates" :key="estimate.id" class="space-y-2 rounded-xl border border-border-default p-4">
         <p class="font-medium text-text-default">#{{ estimate.id }} · {{ estimate.size }} · {{ estimate.project_name }}</p>
         <p class="whitespace-pre-wrap text-sm text-text-muted">{{ estimate.requirement }}</p>
@@ -254,7 +283,10 @@ async function saveActual() {
         <div v-if="estimateDetails[estimate.id]" class="space-y-3 border-t border-border-default pt-3">
           <p class="whitespace-pre-wrap text-sm text-text-default">{{ estimateDetails[estimate.id].requirement }}</p>
           <p class="whitespace-pre-wrap text-sm text-text-muted">{{ estimateDetails[estimate.id].explanation }}</p>
-          <p v-for="event in estimateDetails[estimate.id].actuals" :key="event.id" class="whitespace-pre-wrap text-sm text-text-muted">#{{ event.id }} · {{ event.evidence }} · {{ event.cause }}</p>
+          <div v-for="event in estimateDetails[estimate.id].actuals" :key="event.id" class="space-y-1 break-words text-sm text-text-muted">
+            <p>#{{ event.id }} · {{ event.evidence }} · {{ event.cause }}</p>
+            <p v-for="(line, index) in event.cost_breakdown" :key="index">{{ t('requirementCalculator.costLineDetail', line) }}</p>
+          </div>
           <div class="flex flex-wrap gap-3">
             <BaseButton variant="secondary" :disabled="estimateDetails[estimate.id].offset === 0 || store.busy" :disabled-reason="t('requirementCalculator.firstPage')" @click="loadEstimateDetails(estimate.id, estimateDetails[estimate.id].offset - 3)">{{ t('requirementCalculator.previous') }}</BaseButton>
             <BaseButton variant="secondary" :disabled="estimateDetails[estimate.id].offset + 3 >= estimateDetails[estimate.id].actualCount || store.busy" :disabled-reason="t('requirementCalculator.lastPage')" @click="loadEstimateDetails(estimate.id, estimateDetails[estimate.id].offset + 3)">{{ t('requirementCalculator.next') }}</BaseButton>
@@ -265,7 +297,21 @@ async function saveActual() {
       <form class="space-y-4 rounded-xl border border-border-default p-4" @submit.prevent="saveActual">
         <h2 class="font-semibold text-text-default">{{ t('requirementCalculator.recordActual') }}</h2>
         <label class="block text-sm text-text-default">{{ t('requirementCalculator.estimate') }}<select v-model="actual.estimate_id" data-testid="calculator-actual-estimate_id" required :class="fieldClass"><option value="">{{ t('requirementCalculator.choose') }}</option><option v-for="estimate in store.estimates" :key="estimate.id" :value="estimate.id">#{{ estimate.id }} · {{ estimate.size }}</option></select></label>
-        <div class="grid gap-3 sm:grid-cols-2"><label v-for="field in ['actual_hours', 'hourly_cost_cop']" :key="field" class="block text-sm text-text-default">{{ t(`requirementCalculator.${field}`) }}<input v-model="actual[field]" :data-testid="`calculator-actual-${field}`" type="number" min="0.01" step="0.01" :required="field === 'actual_hours'" :class="fieldClass"></label></div>
+        <div class="grid gap-3 sm:grid-cols-2"><label v-for="field in costLines.length ? ['actual_hours'] : ['actual_hours', 'hourly_cost_cop']" :key="field" class="block text-sm text-text-default">{{ t(`requirementCalculator.${field}`) }}<input v-model="actual[field]" :data-testid="`calculator-actual-${field}`" type="number" min="0.01" step="0.01" :required="field === 'actual_hours'" :class="fieldClass"></label></div>
+        <fieldset v-for="(line, index) in costLines" :key="index" class="space-y-2 rounded-lg border border-border-default p-3">
+          <legend>{{ t('requirementCalculator.costLine', { number: index + 1 }) }}</legend>
+          <label v-for="field in ['participant', 'period']" :key="field" class="block text-sm">{{ t('requirementCalculator.' + field) }}
+            <input v-model="line[field]" required maxlength="160" :class="fieldClass">
+          </label>
+          <label v-for="field in ['hours', 'hourly_cost_cop']" :key="field" class="block text-sm">{{ t('requirementCalculator.' + field) }}
+            <input v-model="line[field]" type="number" step="0.01" min="0.01" required :class="fieldClass">
+          </label>
+          <label class="block text-sm">{{ t('requirementCalculator.costEvidence') }}
+            <input v-model="line.evidence" required maxlength="2000" :class="fieldClass">
+          </label>
+          <BaseButton variant="link" type="button" @click="costLines.splice(index, 1)">{{ t('requirementCalculator.removeCostLine') }}</BaseButton>
+        </fieldset>
+        <BaseButton variant="secondary" type="button" :disabled="costLines.length >= 100" :disabled-reason="t('requirementCalculator.costLineLimit')" @click="costLines.push({ participant: '', period: '', hours: '', hourly_cost_cop: '', evidence: '' })">{{ t('requirementCalculator.addCostLine') }}</BaseButton>
         <label v-for="field in ['evidence', 'cause']" :key="field" class="block text-sm text-text-default">{{ t(`requirementCalculator.${field}`) }}<textarea v-model="actual[field]" :data-testid="`calculator-actual-${field}`" required :class="fieldClass" /></label>
         <p class="text-sm text-text-muted">{{ t('requirementCalculator.correctionHint') }}</p>
         <BaseButton data-testid="calculator-actual-submit" type="submit" :disabled="store.busy" :disabled-reason="t('requirementCalculator.loading')">{{ t('requirementCalculator.recordActual') }}</BaseButton>

@@ -25,7 +25,7 @@ accounts.PackageExampleRevision.author accounts.PackageOrder.recorded_by
 accounts.PackageSizingProposal.author accounts.PackageDecision.actor
 accounts.PackageMovement.actor accounts.PackageOperation.actor
 content.CalculatorRevision.author content.ProjectCalculatorVersion.author content.ProjectCalculatorVersion.approved_by
-content.CalculatorEstimate.author content.CalculatorActual.author content.ProjectCalculatorChange.author
+content.CalculatorEstimate.author content.CalculatorActual.author content.CalculatorCostReview.author content.ProjectCalculatorChange.author
 accounts.CollectionAccountContext.pending_by
 accounts.AppiConversation.actor accounts.AppiTurn.actor
 admin.LogEntry.user

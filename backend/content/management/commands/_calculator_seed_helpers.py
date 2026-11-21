@@ -4,6 +4,7 @@ from accounts.models import Project
 from content.fake_data import ensure_fake_data_allowed
 from content.models import (
     CalculatorActual,
+    CalculatorCostReview,
     CalculatorEstimate,
     Document,
     ProjectCalculatorChange,
@@ -19,6 +20,7 @@ def clear_fake_calculator_data():
     """Preserve the general catalog while dissolving the protected test graph."""
     ensure_fake_data_allowed('delete_fake_data')
     document_ids = list(RequirementCalculator.objects.values_list('document_id', flat=True))
+    CalculatorCostReview.objects.all().delete()
     CalculatorActual.objects.update(supersedes=None)
     CalculatorActual.objects.all().delete()
     CalculatorEstimate.objects.all().delete()

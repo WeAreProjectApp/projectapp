@@ -1,6 +1,6 @@
 export default {
   "title": "Feature flags de Plataforma",
-  "precedence": "La excepción del cliente prevalece sobre el global. Heredar retira la excepción. Los flags no conceden permisos; IA y audio comienzan apagados.",
+  "precedence": "La excepción del cliente prevalece sobre el global. Heredar retira la excepción. Todas las funciones comienzan habilitadas para usuarios autorizados, incluidas IA y audio. El acceso al proveedor requiere sus propias credenciales.",
   "byClient": "Por cliente",
   "enabled": "Habilitada",
   "disabled": "Deshabilitada",

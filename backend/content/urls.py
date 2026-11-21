@@ -414,6 +414,7 @@ urlpatterns = [
     path('requirement-calculator/estimates/<int:estimate_id>/', calculator_views.calculator_estimate_detail, name='calculator-estimate-detail'),
     path('requirement-calculator/estimates/<int:estimate_id>/actuals/', calculator_views.calculator_actual_history, name='calculator-actual-history'),
     path('requirement-calculator/actuals/', calculator_views.calculator_actuals, name='calculator-actuals'),
+    path('requirement-calculator/calibration/reviews/', calculator_views.calculator_cost_review, name='calculator-cost-review'),
     path('requirement-calculator/calibration/', calculator_views.calculator_calibration, name='calculator-calibration'),
 
     path('documents/create-from-pdf/', create_document_from_pdf, name='create-document-from-pdf'),

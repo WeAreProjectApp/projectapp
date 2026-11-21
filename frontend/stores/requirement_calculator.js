@@ -6,7 +6,7 @@ export const REVISION_PAGE_SIZE = 20;
 
 const useRequirementCalculatorStore = defineStore('requirementCalculator', {
   state: () => ({ general: null, project: null, projectVersion: null, revisions: [], revisionCount: 0,
-    estimates: [], estimateCount: 0, calibration: null, busy: false, pending: 0, versionRequest: 0, error: null }),
+    estimates: [], estimateCount: 0, calibration: null, busy: false, pending: 0, versionRequest: 0, calibrationRequest: 0, estimatesRequest: 0, error: null }),
   actions: {
     async perform(operation) {
       this.pending++;
@@ -79,15 +79,25 @@ const useRequirementCalculatorStore = defineStore('requirementCalculator', {
     loadActualHistory(id, offset = 0) {
       return this.perform(async () => (await get_request(`${root}estimates/${id}/actuals/?limit=3&offset=${offset}`)).data);
     },
-    loadCalibration(offset = 0) {
+    acceptCostReview(payload) {
+      return this.perform(async () => (await create_request(`${root}calibration/reviews/`, payload)).data);
+    },
+    loadCalibration(offset = 0, definitionDigest = '') {
+      const request = ++this.calibrationRequest;
       return this.perform(async () => {
-        this.calibration = (await get_request(`${root}calibration/?limit=20&offset=${offset}`)).data;
-        return this.calibration;
+        const filter = definitionDigest ? '&definition_digest=' + encodeURIComponent(definitionDigest) : '';
+        const data = (await get_request(`${root}calibration/?limit=20&offset=${offset}${filter}`)).data;
+        if (request !== this.calibrationRequest) return null;
+        this.calibration = data;
+        return data;
       });
     },
-    loadEstimates(offset = 0) {
+    loadEstimates(offset = 0, definitionDigest = '', size = '') {
+      const request = ++this.estimatesRequest;
       return this.perform(async () => {
-        const data = (await get_request(`${root}estimates/?limit=20&offset=${offset}`)).data;
+        const filter = size ? '&size=' + encodeURIComponent(size) + '&definition_digest=' + encodeURIComponent(definitionDigest) : '';
+        const data = (await get_request(`${root}estimates/?limit=20&offset=${offset}${filter}`)).data;
+        if (request !== this.estimatesRequest) return null;
         this.estimates = data.results;
         this.estimateCount = data.count;
         return data;

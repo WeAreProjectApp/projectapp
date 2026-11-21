@@ -1,6 +1,6 @@
 export default {
   "title": "Platform feature flags",
-  "precedence": "A client override takes precedence over the global value. Inherit removes the override. Flags do not grant permissions; AI and audio start disabled.",
+  "precedence": "A client override takes precedence over the global value. Inherit removes the override. Every feature starts enabled for authorized users, including AI and audio. Provider access also requires valid credentials.",
   "byClient": "By client",
   "enabled": "Enabled",
   "disabled": "Disabled",

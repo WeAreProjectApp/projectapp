@@ -14,12 +14,18 @@ from accounts.services.package_examples import example_catalog
 from content.services import calculator_calibration, requirement_calculator
 
 
+PUBLIC_OFFER_TERMS = ('size', 'scope', 'explanation', 'assumptions', 'delivery_from', 'delivery_until',
+                      'schedule_conditions')
+PUBLIC_OFFER_FIELDS = (*PUBLIC_OFFER_TERMS, 'examples', 'definition_digest', 'revision_id')
+
+
 def proposal_payload(row):
     try:
         decision = row.decision
     except PackageDecision.DoesNotExist:
         decision = None
-    return {'id': row.pk, **row.public_snapshot, 'warranty': row.warranty,
+    public = {key: row.public_snapshot[key] for key in PUBLIC_OFFER_FIELDS if key in row.public_snapshot}
+    return {'id': row.pk, **public, 'warranty': row.warranty,
             'created_at': row.created_at.isoformat(),
             'decision': {'decision': decision.decision, 'message': decision.message,
                          'created_at': decision.created_at.isoformat()} if decision else None}
@@ -101,8 +107,7 @@ def publish_proposal(project_id, actor, request_id, data):
             'requirement': data['scope'], 'size': data['size'], 'signal_ids': data['signal_ids'],
             'explanation': data['explanation'],
         }, actor=actor)
-        snapshot = {key: str(data[key]) for key in ('size', 'scope', 'explanation', 'assumptions',
-                                                   'delivery_from', 'delivery_until', 'schedule_conditions')}
+        snapshot = {key: str(data[key]) for key in PUBLIC_OFFER_TERMS}
         examples = example_catalog(project.pk, language=data['language'])
         snapshot['examples'] = next(item['examples'] for item in examples['sizes'] if item['size'] == data['size'])
         snapshot['definition_digest'] = context['definition_digest']

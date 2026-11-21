@@ -1,4 +1,5 @@
 export default {
+  consultSizes: "Consult requirement sizes",
   title: 'Cells',
   subtitle: 'Review the Building on Demand program, its internal economics and the contract.',
   tabs: { program: 'Program', economics: 'Economics', contract: 'Contract' },

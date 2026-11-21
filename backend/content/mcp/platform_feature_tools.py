@@ -44,7 +44,7 @@ def operation(name, description, route, method='GET', **options):
 
 
 PLATFORM_FEATURE_TOOLS = [
-    operation('get_platform_feature_flags', 'Consulta catálogo, globales y valores iniciales. IA y audio comienzan apagados. No concede permisos.',
+    operation('get_platform_feature_flags', 'Consulta catálogo, globales y valores iniciales. Las claves existentes y nuevas, incluidas IA y audio, comienzan habilitadas para usuarios autorizados.',
               'platform-feature-settings', output_schema=SETTINGS),
     operation('update_platform_feature_flags', 'Configura globales con versión vigente. Las excepciones explícitas del cliente prevalecen.',
               'platform-feature-settings', 'PATCH', risk='sensitive', confirm=True,

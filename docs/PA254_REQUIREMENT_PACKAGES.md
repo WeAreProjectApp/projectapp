@@ -127,11 +127,44 @@ referencia antes de cargar `expected_size`. Los contrastes construidos para
 límites de talla se identifican como ejemplos y no como entregas. Ningún
 generador carga horas reales ni fabrica calibración económica.
 
-Se conserva provisionalmente la regla existente de tres cierres por talla y
-definición y alerta por desvío superior al 30 %. Cambiar parámetros requiere
-evidencia y publicación explícita. Los estimados históricos y fechas de PR no
-demuestran costo real. Células conserva sus planes y contratos horarios;
-Alianza mantiene su beneficio mensual independiente.
+### Calibración interna en Panel y MCP Comercial
+
+El administrador responsable contrasta los doce ejemplos con la entrega y sus
+señales antes de registrar una talla esperada. Para evaluar costos reúne, por
+requerimiento entregado, la versión exacta de la definición, talla, parte de
+horas reales y referencia verificable del costo laboral imputado en COP. Registra
+un tramo por persona o rol y período de tarifa. Las horas de los tramos deben
+sumar las del cierre. El costo comparable es la suma de horas por tarifa de
+cada tramo. Un precio de venta, una tarifa estimada o heredada, un ejemplo y
+la fecha de un PR sirven únicamente como referencias. Un cierre histórico se
+puede respaldar mediante una corrección que preserva el original.
+
+- La alerta de horas usa la mediana de cierres vigentes de la misma definición y
+  talla. La regla inicial exige tres cierres y un desvío **estrictamente mayor
+  que 30 %** respecto del extremo de la banda. Panel usa `propose_hours_review`.
+  `propose_review` continúa informando la sugerencia histórica combinada de
+  horas o déficit y `covers_median_cost` conserva la advertencia sobre costos
+  registrados, incluidos los de referencia.
+- La cobertura económica presenta XS, S y M, aun con cero cierres, con el
+  número de cierres respaldados, su mediana y el valor estándar de la misma
+  versión. Si el valor queda por debajo de esa mediana, se muestra la
+  insuficiencia aunque las horas estén en banda. El porcentaje de horas no
+  define una tolerancia económica.
+- Cada talla queda provisional hasta que un administrador personal identifique
+  el corpus y documente su decisión y su motivo. El equipo debe designar al
+  responsable y contrastar las fuentes. La aceptación registra los cierres
+  exactos. Una corrección o un cierre nuevo vuelve provisional esa talla y
+  conserva la decisión anterior. El informe ofrece el detalle del corpus por
+  talla y definición. En ausencia de un censo real validado, XS, S y M siguen
+  pendientes de acreditación económica. La prueba con datos ficticios y los
+  doce ejemplos no aportan cierres reales.
+- Ajustar parámetros o valores requiere una publicación explícita posterior.
+  El resultado del informe y las decisiones sobre el corpus conservan saldos,
+  ofertas y condiciones pactadas. Desde Células → Programa, **Consultar
+  tallas** abre la calculadora interna. PA-255 y PA-256 conservan su alcance
+  contractual. La propuesta del cliente muestra talla, alcance y fechas.
+  Las estimaciones internas, partes, tarifas, costos y cierres sólo se
+  consultan en la administración.
 
 ## Validación y operación
 

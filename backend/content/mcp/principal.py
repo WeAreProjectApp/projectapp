@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 
 
-def _is_service_actor(actor):
+def is_service_actor(actor):
     return actor.first_name == 'MCP' and not actor.has_usable_password()
 
 
@@ -18,7 +18,7 @@ def service_actor_for_connector(connector):
         .order_by('pk')
         .first()
     )
-    if linked_actor is not None and _is_service_actor(linked_actor):
+    if linked_actor is not None and is_service_actor(linked_actor):
         actor = linked_actor
         created = False
     else:
