@@ -10,7 +10,7 @@
 - **Failure:** Un rechazo de vista previa conserva el formulario. Un conflicto al registrar conserva los datos para volver a revisar. El fallo de correo no deshace el abono.
 - **Display:** Participaciones muestra Carlos, Gustavo y el remanente positivo de ProjectApp incluso contraída; recibido 119 equivale a 59 + 59 + 1. Actualiza el remanente al editar importe o reparto manual, conserva centavos y oculta cero. Un único diálogo con lista, valor recibido, fecha, destino y resumen. Cada ingreso muestra un switch junto a IVA antes de expandir: apagar significa Sin IVA (0 %). La configuración permite capturar base o total incluido y ver base, IVA y total; distingue Sin registrar. Diferencia se abre al faltar dinero. El pie de acciones tiene padding propio. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
 - **Coverage:** Las cuatro clases de resultado tienen recorridos focales; los cinco perfiles de pantalla verifican el modal con IVA expandido. La ruta individual comparte el mismo modal.
-- **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
+- **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js` y `e2e/published/income-precision.spec.js`. Con importe positivo y confirmación seleccionada para el destinatario local habilitado, Liquidar abre la revisión. Volver a editar y Cancelar conservan el original con cero pagos y cero avisos.
 
 El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
 

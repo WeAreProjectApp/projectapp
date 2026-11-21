@@ -38,25 +38,25 @@
         </p>
 
         <template v-else-if="income">
-          <VatBreakdown :total="income.total_amount" :rate="income.vat_rate" />
+          <VatBreakdown :total="income.total_amount" :rate="income.vat_rate" show-cents />
           <!-- Cifras -->
           <section class="grid gap-4 sm:grid-cols-4">
             <div>
               <p class="text-xs uppercase tracking-wider text-text-subtle">Total</p>
               <p class="text-sm text-text-default mt-1 tabular-nums" data-testid="income-detail-total">
-                {{ formatMoney(income.total_amount ?? 0, 'COP', { decimals: 'auto' }) }}
+                {{ incomeAmount(income.total_amount ?? 0) }}
               </p>
             </div>
             <div>
               <p class="text-xs uppercase tracking-wider text-text-subtle">Abonado</p>
-              <p class="text-sm text-text-muted mt-1 tabular-nums">
-                {{ income.paid_amount === null ? '—' : money(income.paid_amount) }}
+              <p class="text-sm text-text-muted mt-1 tabular-nums" data-testid="income-detail-paid">
+                {{ incomeAmount(income.paid_amount) }}
               </p>
             </div>
             <div>
               <p class="text-xs uppercase tracking-wider text-text-subtle">Pendiente</p>
-              <p class="text-sm text-warning-strong mt-1 tabular-nums font-semibold">
-                {{ income.pending_amount === null ? '—' : money(income.pending_amount) }}
+              <p class="text-sm text-warning-strong mt-1 tabular-nums font-semibold" data-testid="income-detail-pending">
+                {{ incomeAmount(income.pending_amount) }}
               </p>
             </div>
             <div>
@@ -266,6 +266,10 @@ const collectionDate = computed(() => formatDate(cuenta.value?.issue_date, {
 const receivableApplies = computed(() => (
   income.value?.kind === 'expected' && income.value?.ledger === 'company'
 ));
+
+function incomeAmount(value) {
+  return formatMoney(value, 'COP', { decimals: 'auto' }) || '—';
+}
 
 function money(value) {
   return formatMoney(Number(value ?? 0), 'COP');
