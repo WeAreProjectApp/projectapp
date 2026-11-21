@@ -30,6 +30,18 @@ export default {
   "undoPreview": "Preview undo",
   "reviews": "Finding decisions",
   "confirmTitle": "Review before confirming",
+  "before": "Before",
+  "after": "After",
+  "noValue": "No value",
+  "records": {
+    "accounts": { "project": "Project" },
+    "content": { "documentfolder": "Document folder", "communicationthread": "Conversation" },
+    "secure_links": { "securelinkfolder": "Secure Links folder" }
+  },
+  "fields": {
+    "name": "Name", "title": "Title", "client_id": "Client",
+    "client_user_id": "Client user", "project_id": "Project"
+  },
   "reason": "Reason",
   "cancel": "Cancel",
   "confirm": "Confirm",

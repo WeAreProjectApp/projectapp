@@ -14,7 +14,7 @@ from rest_framework.exceptions import ValidationError
 from content.models import DataIntegrityOperation
 from content.services.data_integrity import catalog
 from content.services.data_integrity.hashing import digest
-from content.services.data_integrity.snapshots import diff_items, model_for, snapshot_many
+from content.services.data_integrity.snapshots import diff_items, matches_preview, model_for, snapshot_many
 from content.services.data_integrity.types import (
     DOMAIN_LABELS, EXISTING_TOOL, MERGE_CLIENTS, REPORT_ONLY, IntegrityConflict, blocker,
 )
@@ -276,13 +276,17 @@ def apply_fixes(scope, fixes, *, actor, reason, request_id, expected_impact_hash
         before = snapshot_many(closure)
         fixer.apply(plan, actor=actor)
         after = snapshot_many(closure)
+        items = diff_items(before, after)
+        if plan.exact_changes and not matches_preview(step['changes'], items):
+            raise IntegrityConflict('La corrección produjo un impacto distinto del aprobado. Se revirtió el lote.',
+                                    code='impact_mismatch', fingerprint=finding.fingerprint)
         if _still_detected(item, finding, scope):
             raise IntegrityConflict(f'La corrección de {item.id} no resolvió el hallazgo; no se aplicó nada.',
                                     code='fix_ineffective', fingerprint=finding.fingerprint)
         recorded.append({
             'fingerprint': finding.fingerprint, 'rule_id': item.id, 'rule_version': item.version,
             'fix_kind': plan.fix_kind, 'params': plan.params, 'subjects': step['subjects'],
-            'guards': plan.guards, 'dependencies': plan.dependencies, 'items': diff_items(before, after),
+            'guards': plan.guards, 'dependencies': plan.dependencies, 'items': items,
         })
     try:
         with transaction.atomic():
@@ -348,7 +352,8 @@ def preview_undo(operation_id):
         'reason': operation.reason, 'scope': operation.scope,
         'steps': [{'rule_id': step['rule_id'], 'fix_kind': step['fix_kind'], 'subjects': step['subjects'],
                    'items': len([item for item in step['items'] if not item['guard']]),
-                   'changes': [{'label': next((ref['label'] for ref in step['subjects'] if ref['model'] == item['model'] and ref['id'] == item['pk']), 'Registro'),
+                   'changes': [{'model': item['model'], 'id': item['pk'],
+                                'label': next((ref['label'] for ref in step['subjects'] if ref['model'] == item['model'] and ref['id'] == item['pk']), 'Registro'),
                                 'field': item['field'], 'before': item['after'], 'after': item['before']}
                                for item in step['items'] if not item['guard']]}
                   for step in operation.steps],

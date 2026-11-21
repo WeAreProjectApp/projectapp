@@ -4,7 +4,7 @@ import { useDataIntegrityStore } from '~/stores/data_integrity'
 import { integrityDestination, integrityParams } from '~/utils/integrityInputs'
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
-const { t } = useI18n()
+const { t, te } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute(), router = useRouter()
 const focused = ref(typeof route.query.finding === 'string' ? route.query.finding : '')
@@ -24,6 +24,13 @@ const latest = computed(() => store.scans[0])
 const lastCompleted = computed(() => store.lastCompletedScan || store.scans.find((scan) => scan.status === 'completed'))
 const blockers = computed(() => [...(preview.value?.blockers || []), ...(preview.value?.steps || []).flatMap((step) => step.blockers || [])])
 const date = (value) => value ? new Date(value).toLocaleString() : t('integrity.never')
+function changeTerm(group, key) {
+  const path = `integrity.${group}.${key}`
+  return te(path) ? t(path) : key
+}
+function changeValue(value) {
+  return value == null ? t('integrity.noValue') : JSON.stringify(value)
+}
 async function run(action) {
   busy.value = true; error.value = ''; notice.value = ''
   try { await action() }
@@ -179,7 +186,20 @@ onBeforeUnmount(() => { disposed = true; clearTimeout(timer) })
         <p v-if="pending?.title" class="break-words text-sm text-text-default">{{ pending.title }}</p>
         <p v-for="(item, index) in blockers" :key="index" class="text-sm text-danger-strong">{{ item.message }}</p>
         <div v-for="step in preview?.steps || []" :key="step.fingerprint || step.rule_id" class="space-y-2">
-          <p v-for="(change, index) in step.changes || []" :key="index" class="break-words text-sm text-text-default">{{ change.label }}: {{ change.before }} → {{ change.after }}</p>
+          <ul v-if="step.changes?.length" class="space-y-3">
+            <li v-for="(change, index) in step.changes" :key="index" class="min-w-0 break-words text-sm text-text-default">
+              <p v-if="change.model && change.id != null" class="font-medium" data-testid="integrity-change-record">
+                {{ changeTerm('records', change.model) }} #{{ change.id }}<template v-if="change.field"> · {{ changeTerm('fields', change.field) }}</template>
+              </p>
+              <p v-if="change.label" class="text-text-muted">{{ change.label }}</p>
+              <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2">
+                <dt>{{ t('integrity.before') }}</dt>
+                <dd class="whitespace-pre-wrap" data-testid="integrity-before">{{ changeValue(change.before) }}</dd>
+                <dt>{{ t('integrity.after') }}</dt>
+                <dd class="whitespace-pre-wrap" data-testid="integrity-after">{{ changeValue(change.after) }}</dd>
+              </dl>
+            </li>
+          </ul>
           <p v-for="subject in step.subjects || []" :key="`${subject.model}:${subject.id}`" class="break-words text-sm text-text-muted">{{ subject.label }}</p>
         </div>
         <BaseFormField :label="t('integrity.reason')" for="integrity-reason"><BaseTextarea id="integrity-reason" v-model="reason" maxlength="2000" /></BaseFormField>

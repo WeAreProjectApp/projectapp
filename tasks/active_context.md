@@ -1,3 +1,11 @@
+## PA-221 · evidencia de integridad y retiro por destino
+
+El expediente w2 conserva TO DO, el acceso actual y la pausa de DEVQA-000. Se
+revisaron las referencias de reemplazo de 12 gestores y 12 adaptadores y la
+exportación de resultados funcionales. La reprueba de NM1 requiere habilitación de
+Carlos y DEV LISTO. Los consumidores se acreditan en su entorno después del
+despliegue. [Expediente y fichas](../docs/audits/PA-221/README.md)
+
 ## PA-275 a PA-281 — correcciones de Panel y Plataforma
 
 El Gestor aplica el contexto de la URL antes de sincronizar sus filtros.

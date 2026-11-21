@@ -39,7 +39,8 @@ async function openPreview(page) {
   await finding.getByRole('checkbox', { name: 'Incluir en la corrección', exact: true }).check();
   await page.getByTestId('integrity-preview').click();
   const modal = page.getByTestId('integrity-confirm-modal');
-  await expect(modal).toContainText('Carpeta: Sin carpeta → Actas · 51');
+  await expect(modal.getByTestId('integrity-before')).toHaveText('"Sin carpeta"');
+  await expect(modal.getByTestId('integrity-after')).toHaveText('"Actas · 51"');
   await modal.getByLabel('Motivo', { exact: true }).fill('Se verifica el cambio antes de confirmar.');
   const confirm = page.getByTestId('integrity-confirm');
   await expect(confirm).toHaveText('Confirmar');
