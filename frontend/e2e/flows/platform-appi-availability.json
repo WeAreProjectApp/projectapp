@@ -6,7 +6,7 @@
     "platform-client"
   ],
   "priority": "P1",
-  "description": "El lanzador se muestra según el valor efectivo del chatbot, con excepción del cliente sobre global. IA y audio parten apagados; las credenciales y la preparación técnica siguen siendo condiciones adicionales. Cambiar de cuenta descarta estado privado anterior.",
+  "description": "El lanzador se muestra según el valor efectivo del chatbot, con excepción del cliente sobre global. IA y audio parten habilitados. Las credenciales y la preparación técnica siguen siendo condiciones adicionales. Cambiar de cuenta descarta estado privado anterior.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

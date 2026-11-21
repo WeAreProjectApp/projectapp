@@ -8118,7 +8118,7 @@ La edición compartida y sus errores se registran en `admin-program-contract-edi
 - **Role:** admin
 - **Priority:** P1
 - **Route:** `/:locale/panel/cells` (`?tab=program` también abre Programa)
-- **Interaction:** Abrir Comercial → Células, consultar la revisión vigente y el estado del conector; copiar la URL pública, descargar PDF y cambiar el idioma de la vista previa. Si falla el resumen, pulsar Reintentar.
+- **Interaction:** Abrir Comercial → Células, consultar la revisión vigente y el estado del conector; abrir la calculadora interna mediante **Consultar tallas**, copiar la URL pública, descargar PDF y cambiar el idioma de la vista previa. Si falla el resumen, pulsar Reintentar.
 - **Outcomes:** `display`, `success`, `failure`
 - **Result:** Se muestran versión, autor, fecha y nota junto a los enlaces ES/EN y la vista previa. La administración corresponde exclusivamente al conector MCP `building-on-demand`; el panel consulta y distribuye el contenido.
 - **Evidence:** `frontend/config/panelNav.js:57`; `frontend/pages/panel/cells/index.vue:78`; `frontend/components/BuildingOnDemand/admin/DistributionCard.vue:39`; `frontend/components/BuildingOnDemand/admin/McpHint.vue:16`; GET `/api/building-on-demand/admin/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
@@ -8262,7 +8262,7 @@ Borradores bilingües con destinos conocidos, orden de pasos, vista previa, revi
 ### Panel: configuración de IA de Plataforma
 
 Entrada: iniciar sesión como staff, abrir **Plataforma → Configuración de IA**.
-IA y audio parten apagados. Su disponibilidad se configura en Feature flags y la excepción del cliente prevalece sobre el global.
+IA y audio parten habilitados para clientes autorizados. La disponibilidad técnica también requiere credenciales y proveedor operativo. Su disponibilidad se configura en Feature flags y la excepción del cliente prevalece sobre el global.
 
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
@@ -8514,9 +8514,9 @@ Cliente ve el marcador del cupo compartido de IA, su ventana móvil y el próxim
 - **Role:** admin
 - **Priority:** P2
 - **Route:** `/panel/requirement-calculator`
-- **Description:** El administrador consulta cohortes, muestras insuficientes, estimaciones y cierres. Registra horas reales, evidencia y causa; un cierre posterior corrige explícitamente el último cierre. Datos inválidos, una corrección no válida y fallas de servidor quedan visibles.
+- **Description:** El administrador consulta cohortes, muestras insuficientes, estimaciones y cierres. Compara el costo respaldado por participación, documenta la decisión por talla y consulta la alerta independiente de horas. Registra horas reales, evidencia y causa; un cierre posterior corrige explícitamente el último cierre. Datos inválidos, una corrección no válida y fallas de servidor quedan visibles.
 - **Steps:** Abrir Calibración → consultar cohorte → seleccionar estimación → registrar esfuerzo, evidencia y causa → corregir → abrir registro completo → recorrer las páginas de evidencia y verificar ambos eventos.
-- **Branches:** Valores no positivos, campos requeridos o supersedes incorrecto se rechazan. Un fallo conserva el formulario para reintentar.
+- **Branches:** Valores no positivos, campos requeridos o supersedes incorrecto se rechazan. La falta de respaldo mantiene la talla provisional. Una corrección posterior requiere revisar el nuevo corpus. Un fallo conserva el formulario para reintentar.
 - **Coverage:** ✅ Covered — `display`, `success`, `error`, `failure`; ejecución de navegador aprobada en `frontend/e2e/admin/admin-requirement-calculator.spec.js`, incluido acceso al registro completo.
 
 ### FLOW: `admin-managed-calculator-document`

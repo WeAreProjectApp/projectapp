@@ -2,6 +2,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { generalCalculator } from '../helpers/requirement-calculator.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import {
@@ -19,6 +20,7 @@ const unavailable = () => json({ message: 'No disponible', code: 'UNAVAILABLE', 
 async function setupApi(page, scenario) {
   await mockApi(page, ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true, is_superuser: true } });
+    if (apiPath === 'requirement-calculator/' && method === 'GET') return json(generalCalculator());
     if (apiPath === 'proposals/' || apiPath === 'proposals/alerts/') return json([]);
     if (apiPath === 'proposals/dashboard/') return json({ total: 0, by_status: {} });
     scenario.videoSettings ??= {
@@ -100,6 +102,14 @@ test.describe('Admin Building on Demand', () => {
     await expect(page.getByTestId('building-on-demand-admin-download-pdf-es')).toBeVisible();
     await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa y los datos de economía se administran desde el conector MCP Programas (programs), con vista previa y confirmación. El contrato se edita en el Gestor de documentos o por MCP. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-panel-preview')).toContainText(program.hero.title);
+  });
+
+  test('opens the internal size definition from the cell program', {
+    tag: ['@flow:admin-building-on-demand-program', '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    await openFromSidebar(page);
+    await page.getByRole('link', { name: 'Consultar tallas', exact: true }).click();
+    await expect(page.getByTestId('calculator-title')).toHaveValue('Definición comercial vigente');
   });
 
   test('copies the English distribution URL', {

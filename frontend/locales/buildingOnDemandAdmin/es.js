@@ -1,4 +1,5 @@
 export default {
+  consultSizes: "Consultar tallas",
   title: 'Células',
   subtitle: 'Consulta el programa Building on Demand, sus números internos y el contrato.',
   tabs: { program: 'Programa', economics: 'Economía', contract: 'Contrato' },

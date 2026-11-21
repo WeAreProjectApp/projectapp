@@ -220,6 +220,7 @@ def test_canonical_business_tools_list_appear_once_in_catalog_capabilities(
         ('commercial', 'record_requirement_estimate', 'Calculadora de requerimientos'),
         ('commercial', 'record_requirement_actual', 'Calculadora de requerimientos'),
         ('commercial', 'get_requirement_calibration', 'Calculadora de requerimientos'),
+        ('commercial', 'accept_requirement_cost_review', 'Calculadora de requerimientos'),
         ('content', 'get_connection_status', 'LinkedIn'),
     ],
 )

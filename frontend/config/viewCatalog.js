@@ -431,7 +431,7 @@ export const viewCatalogSections = [
         label: 'Calculadora de requerimientos', url: '/panel/requirement-calculator', group: 'Consultoría y asesoría',
         file: 'frontend/pages/panel/requirement-calculator/index.vue',
         reference: 'definición y parámetros versionados de la calculadora, documentos sincronizados y calibración interna',
-        notes: 'Comercial administra la definición, señales y valores por panel/MCP. Versiones muestra las revisiones publicadas con paginación y avisa si todavía no hay publicaciones. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración registra esfuerzo real, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.',
+        notes: 'Comercial administra la definición, señales y valores por panel/MCP. Versiones muestra las revisiones publicadas con paginación y avisa si todavía no hay publicaciones. El modo ?project=ID prepara variantes con parámetros propios en Borrador y Aprobada; conserva el documento y PDF aprobados dentro del proyecto. Calibración muestra por separado alertas de horas, insuficiencia del valor y cobertura económica de XS/S/M. El equipo documenta su decisión sobre los cierres respaldados, abre el detalle de cada estimación y pagina la evidencia de cierres sin mostrar horas ni valores unitarios al cliente.',
         audience: 'admin', viewType: 'config',
       },
       {
@@ -457,7 +457,7 @@ export const viewCatalogSections = [
         group: 'Building on Demand',
         file: 'frontend/pages/panel/cells/index.vue',
         reference: 'consulta y distribución del programa, economía interna, contrato y gestión del video de Building on Demand',
-        notes: 'Programa, Economía y Contrato conservan consulta de contenido; Programa también permite previsualizar, mostrar u ocultar, cargar, sustituir, quitar y restaurar el video por idioma; ?tab=economics y ?tab=contract abren las dos últimas. Copia URLs, descarga PDFs, previsualiza ES/EN y consulta historial paginado. Economía reúne los números internos. Contrato muestra el Markdown y su espejo en ProjectApp/Contratos, con estados sincronizado, desactualizado, sin inicializar o contrato no disponible. El contrato enlaza a su documento exacto en el Gestor para editar contenido y presentación, con versión, historial y PDF sincronizados. Textos y cifras del programa se editan mediante el conector MCP Programas (programs); building-on-demand se conserva en retirada. El video se administra aquí o desde el mismo conector, sin crear versiones del programa. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. La edición vía MCP admite anotaciones de formato.',
+        notes: 'Programa, Economía y Contrato conservan consulta de contenido; Programa enlaza a la calculadora interna para consultar tallas y permite previsualizar, mostrar u ocultar, cargar, sustituir, quitar y restaurar el video por idioma; ?tab=economics y ?tab=contract abren las dos últimas. Copia URLs, descarga PDFs, previsualiza ES/EN y consulta historial paginado. Economía reúne los números internos. Contrato muestra el Markdown y su espejo en ProjectApp/Contratos, con estados sincronizado, desactualizado, sin inicializar o contrato no disponible. El contrato enlaza a su documento exacto en el Gestor para editar contenido y presentación, con versión, historial y PDF sincronizados. Textos y cifras del programa se editan mediante el conector MCP Programas (programs); building-on-demand se conserva en retirada. El video se administra aquí o desde el mismo conector, sin crear versiones del programa. Presenta los formatos declarados en la fuente compartida y conserva el contenido anterior sin anotaciones. La edición vía MCP admite anotaciones de formato.',
         audience: 'admin',
         viewType: 'config',
       },
@@ -921,7 +921,7 @@ export const viewCatalogSections = [
         url: '/panel/platform/feature-flags', group: 'Plataforma',
         file: 'frontend/pages/panel/platform/feature-flags.vue',
         reference: 'disponibilidad global y excepciones por cliente con herencia y auditoría',
-        notes: 'La excepción explícita prevalece sobre el global. Todas comienzan habilitadas salvo IA y audio; no concede permisos. Gestión equivalente por MCP. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación.',
+        notes: 'La excepción explícita prevalece sobre el global. Todas comienzan habilitadas para usuarios autorizados, incluidas IA y audio. Gestión equivalente por MCP. La búsqueda al escribir conserva la consulta vigente con carga, error, reintento y paginación.',
         audience: 'admin', viewType: 'config',
       },
       {

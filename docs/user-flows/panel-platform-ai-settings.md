@@ -1,7 +1,7 @@
 ### Panel: configuración de IA de Plataforma
 
 Entrada: iniciar sesión como staff, abrir **Plataforma → Configuración de IA**.
-IA y audio parten apagados. Su disponibilidad se configura en Feature flags y la excepción del cliente prevalece sobre el global.
+IA y audio parten habilitados para clientes autorizados. La disponibilidad técnica también requiere credenciales y proveedor operativo. Su disponibilidad se configura en Feature flags y la excepción del cliente prevalece sobre el global.
 
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|

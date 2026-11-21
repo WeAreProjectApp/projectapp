@@ -45,7 +45,7 @@ export function projectCalculator({ versions = [], calculatorDocumentId = null }
 
 export const calibration = {
   consistency: { reviewed: 2, disagreements: 0 },
-  cohorts: [{ definition_digest: 'digest-11', size: 'M', revision_id: 11, samples: 1, minimum_samples: 3, median_hours: 24, deviation_percent: 0, status: 'insufficient_data', median_cost_cop: null, standard_value_cop: 360000, cost_samples: 0, covers_median_cost: null, propose_review: false }],
+  cohorts: [{ definition_digest: 'digest-11', size: 'M', revision_id: 11, samples: 1, minimum_samples: 3, median_hours: 24, deviation_percent: 0, status: 'insufficient_data', median_cost_cop: null, standard_value_cop: 360000, cost_samples: 0, covers_median_cost: null, propose_hours_review: false, propose_review: false }],
 };
 
 export const estimates = {

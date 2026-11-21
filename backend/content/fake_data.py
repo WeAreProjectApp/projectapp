@@ -244,7 +244,7 @@ EXEMPT_MODELS = {
     # input. Fabricating these would contaminate the calibration evidence.
     # A confirmed non-production reset removes their protected business graph.
     'content.ProjectCalculatorVersion', 'content.ProjectCalculatorChange',
-    'content.CalculatorEstimate', 'content.CalculatorActual',
+    'content.CalculatorEstimate', 'content.CalculatorActual', 'content.CalculatorCostReview',
     # Private client conversations and expiring replies reflect real requests;
     # demo seeds must not fabricate their content or quota provenance.
     'accounts.AppiConversation', 'accounts.AppiTurn',

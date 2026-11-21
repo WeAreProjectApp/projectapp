@@ -37,6 +37,17 @@ def _tool(name, description, route, *, method='GET', path=(), fields=None, requi
                **({'query_schema': schema} if method == 'GET' else {'payload_schema': schema}))
 
 
+DIGEST = {'type': 'string', 'pattern': '^[0-9a-f]{64}$'}
+PACKAGE_SIZE = {'type': 'string', 'enum': ['XS', 'S', 'M']}
+COST_LINE = closed_object({
+    'participant': {'type': 'string', 'minLength': 1, 'maxLength': 160},
+    'period': {'type': 'string', 'minLength': 1, 'maxLength': 160},
+    'hours': {'type': 'number', 'exclusiveMinimum': 0},
+    'hourly_cost_cop': {'type': 'number', 'exclusiveMinimum': 0},
+    'evidence': {'type': 'string', 'minLength': 1, 'maxLength': 2000},
+}, required=['participant', 'period', 'hours', 'hourly_cost_cop', 'evidence'])
+
+
 CALCULATOR_TOOLS = [
     _tool('get_requirement_calculator_settings', 'Consulta la definición general, sus parámetros internos, documento y versión para editar.', 'calculator-definition'),
     _tool('preview_requirement_calculator', 'Valida parámetros y previsualiza el documento sin guardar cambios.', 'calculator-preview',
@@ -55,7 +66,8 @@ CALCULATOR_TOOLS = [
           'calculator-context', fields={'project_id': IDENTIFIER, 'project_version_id': IDENTIFIER,
                                        'requirement': {'type': 'string', 'maxLength': 30000}}),
     _op('list_requirement_estimates', 'Lista resúmenes paginados y tres cierres recientes por estimación. Usa get_requirement_estimate y list_requirement_actuals para el texto y evidencia completos.',
-        'calculator-estimates', query_schema=PAGE, envelope_aliases=False),
+        'calculator-estimates', query_schema=closed_object({**PAGE['properties'], 'definition_digest': DIGEST,
+            'size': {'type': 'string', 'enum': ['XS', 'S', 'M', 'L', 'XL', 'PROJECT']}}), envelope_aliases=False),
     _tool('get_requirement_estimate', 'Consulta el requerimiento y explicación completos de una estimación interna.',
           'calculator-estimate-detail', path=('estimate_id',)),
     _op('list_requirement_actuals', 'Consulta la evidencia completa de cierres y correcciones, tres por página.',
@@ -74,13 +86,18 @@ CALCULATOR_TOOLS = [
           }, required=('request_id', 'revision_id', 'definition_digest', 'requirement', 'size', 'signal_ids', 'explanation')),
     _tool('record_requirement_actual', 'Registra esfuerzo real con evidencia y costo interno opcional. Para corregir conserva el último evento en supersedes_id.',
           'calculator-actuals', method='POST', fields={
+              'cost_breakdown': {'type': 'array', 'maxItems': 100, 'items': COST_LINE},
               'estimate_id': IDENTIFIER, 'actual_hours': {'type': 'number', 'exclusiveMinimum': 0},
               'hourly_cost_cop': {'type': ['number', 'null'], 'exclusiveMinimum': 0},
               'evidence': {'type': 'string', 'minLength': 1, 'maxLength': 8000},
               'cause': {'type': 'string', 'minLength': 1, 'maxLength': 8000}, 'supersedes_id': IDENTIFIER,
           }, required=('estimate_id', 'actual_hours', 'evidence', 'cause')),
-    _tool('get_requirement_calibration', 'Consulta consistencia, medianas reales y cobertura de costos por talla y definición. Nunca recalibra automáticamente.',
-          'calculator-calibration', fields=PAGE['properties']),
+    _tool('get_requirement_calibration', 'Consulta consistencia y cohortes. propose_review conserva la señal combinada y propose_hours_review informa sólo horas. package_coverage incluye XS/S/M, mediana respaldada y decisión humana de la definición seleccionada.',
+          'calculator-calibration', fields={**PAGE['properties'], 'definition_digest': DIGEST}),
+    _tool('accept_requirement_cost_review', 'Documenta con confirmación la decisión de un administrador personal sobre el corpus exacto de una talla. Las cuentas técnicas sólo consultan. Conserva precios, parámetros y cupos.',
+          'calculator-cost-review', method='POST', fields={'definition_digest': DIGEST, 'size': PACKAGE_SIZE,
+              'corpus_digest': DIGEST, 'note': {'type': 'string', 'minLength': 1, 'maxLength': 2000}},
+          required=('definition_digest', 'size', 'corpus_digest', 'note'), sensitive=True),
 ]
 
 PROJECT_CALCULATOR_TOOLS = [
@@ -122,6 +139,8 @@ _FIELD_DESCRIPTIONS = {
     'actual_hours': 'Horas reales de ejecución sustentadas por la evidencia.',
     'hourly_cost_cop': 'Costo interno por hora en COP; null cuando no se conoce.',
     'evidence': 'Evidencia completa del esfuerzo real registrado.',
+    'cost_breakdown': 'Tramos de trabajo con horas y costo/hora real en COP. La evidencia identifica persona o rol, período y fuente de la tarifa y del parte de trabajo.',
+    'corpus_digest': 'Huella del conjunto vigente de cierres de la talla devuelta por get_requirement_calibration.',
     'cause': 'Explicación de la desviación o corrección registrada.',
     'supersedes_id': 'Id del último cierre que este registro corrige sin borrar su historial.',
 }

@@ -26,7 +26,7 @@ def test_self_evaluation_is_private(client_api, client_user):
 
     assert response.status_code == 200
     assert response.data['user_id'] == client_user.pk
-    assert response.data['features']['platform.ai_chatbot'] is False
+    assert response.data['features']['platform.ai_chatbot'] is True
     assert response['Cache-Control'] == 'no-store'
 
 

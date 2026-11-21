@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Entrar a Células desde Comercial, consultar la revisión y el conector MCP, copiar los enlaces públicos, descargar el PDF y cambiar el idioma de la vista previa; reintentar un fallo del resumen.",
+  "description": "Entrar a Células desde Comercial, consultar la revisión y el conector MCP, consultar tallas en la calculadora interna, copiar los enlaces públicos, descargar el PDF y cambiar el idioma de la vista previa; reintentar un fallo del resumen.",
   "outcomes": [
     "display",
     "success",

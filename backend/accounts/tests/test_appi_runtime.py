@@ -16,6 +16,7 @@ from accounts.models_ai import PlatformAIJob, PlatformAIQuotaReservation
 from accounts.models_appi import AppiConversation, AppiTurn
 from accounts.services import appi, appi_answers, appi_jev, appi_sources
 from accounts.services.platform_ai import AIConflict
+from accounts.tests.feature_flag_helpers import set_client_flags, set_global_flags
 
 from .appi_test_support import conversation, ready_history, ready_turn, select_count
 from .test_appi_jev import ProviderReply, routing_payload
@@ -102,7 +103,6 @@ def test_authenticated_chatbot_detail_disables_intermediary_caching(appi_context
 
 def test_revoked_voice_guide_hides_a_ready_answer_that_has_an_action(appi_context):
     """Fails if a ready dictation guide keeps its actionable link after voice capability is revoked."""
-    from accounts.tests.feature_flag_helpers import set_global_flags, set_client_flags
     set_global_flags({'platform.ai_voice_reports': True})
     appi_context.config.voice_reporting_enabled = True
     appi_context.config.save(update_fields=['voice_reporting_enabled'])
@@ -133,6 +133,7 @@ def test_revoked_voice_guide_hides_a_ready_answer_that_has_an_action(appi_contex
 
 def test_ready_unavailable_voice_guide_without_actions_stays_visible(appi_context):
     """Fails if hiding a revoked guide also erases a newly created clarification with no action link."""
+    set_client_flags(appi_context.actor, {'platform.ai_voice_reports': False})
     item = conversation(appi_context)
     query = {'scenario': 'guide_voice_report', 'topic': 'general', 'explain': False}
     data = appi_sources.snapshot(appi_context.actor, appi_context.project.pk, query, 'es')

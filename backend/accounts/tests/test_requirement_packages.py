@@ -406,3 +406,47 @@ def test_force_delete_preview_names_requirement_package_history_as_a_blocker(
     assert preview['can_delete'] is False
     assert {'key': model_key, 'id': str(model.objects.get().pk),
             'message': 'El historial de paquetes por tallas, compras y consentimiento se conserva y bloquea la eliminación automática.'} in preview['blockers']
+
+
+def test_client_offer_returns_only_public_fields_after_recorded_execution(package_context, api_client):
+    """A recorded closure and an unexpected historical snapshot field stay private on both offers."""
+    from content.services import calculator_calibration
+
+    publish_calculator(package_context)
+    order = paid_order(package_context)
+    row = request_row(package_context)
+    offer_xs(package_context, row)
+    row.refresh_from_db()
+    proposal = row.current_proposal
+    calculator_calibration.record_actual({
+        'estimate_id': proposal.estimate_id, 'actual_hours': Decimal(5),
+        'evidence': 'Parte interno ficticio', 'cause': 'Costo de implementación',
+        'cost_breakdown': [{'participant': 'Desarrollo', 'period': '2026-10', 'hours': 5,
+                            'hourly_cost_cop': 14000, 'evidence': 'Costo nómina ficticio'}],
+    }, actor=package_context.admin)
+    type(proposal).objects.filter(pk=proposal.pk).update(
+        public_snapshot={**proposal.public_snapshot, 'actuals': [{'verified_cost_cop': '70000'}]},
+    )
+    client = _jwt_client(api_client, package_context.client)
+    result = client.get(reverse('package-request-detail', args=[package_context.project.pk, row.pk]))
+
+    assert result.status_code == 200
+    offered = result.data['proposal']
+    assert offered['size'] == 'XS'
+    assert offered['delivery_until'] == '2026-11-14'
+    assert offered == result.data['proposals'][0]
+    fields = {'id', 'size', 'scope', 'explanation', 'assumptions', 'delivery_from', 'delivery_until',
+              'schedule_conditions', 'examples', 'definition_digest', 'revision_id', 'warranty', 'created_at', 'decision'}
+    assert set(offered) == fields
+    assert not PackageMovement.objects.filter(order=order, kind='debit').exists()
+
+
+@pytest.mark.parametrize(('route', 'method'), [
+    ('calculator-calibration', 'get'), ('calculator-actual-history', 'get'), ('calculator-cost-review', 'post'),
+])
+def test_platform_customer_cannot_consult_internal_cost_records(package_context, api_client, route, method):
+    client = _jwt_client(api_client, package_context.client)
+    args = [1] if route == 'calculator-actual-history' else []
+    response = getattr(client, method)(reverse(route, args=args))
+
+    assert response.status_code == 403
