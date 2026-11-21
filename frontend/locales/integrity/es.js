@@ -30,6 +30,18 @@ export default {
   "undoPreview": "Revisar deshacer",
   "reviews": "Decisiones sobre hallazgos",
   "confirmTitle": "Revisa antes de confirmar",
+  "before": "Antes",
+  "after": "Después",
+  "noValue": "Sin valor",
+  "records": {
+    "accounts": { "project": "Proyecto" },
+    "content": { "documentfolder": "Carpeta documental", "communicationthread": "Conversación" },
+    "secure_links": { "securelinkfolder": "Carpeta de Enlaces seguros" }
+  },
+  "fields": {
+    "name": "Nombre", "title": "Título", "client_id": "Cliente",
+    "client_user_id": "Usuario del cliente", "project_id": "Proyecto"
+  },
   "reason": "Motivo",
   "cancel": "Cancelar",
   "confirm": "Confirmar",

@@ -281,7 +281,7 @@ const panelCapabilities = [
     'Reduce trabajo repetitivo sin saltarse permisos ni reglas del producto.',
     [
       feature('panel-data-integrity', 'Revisar integridad de datos',
-        'Revisa datos entre módulos, acepta hallazgos intencionales y corrige lotes con vista previa, motivo, historial y deshacer.',
+        'Revisa datos entre módulos, acepta hallazgos intencionales y corrige lotes con vista previa, motivo, historial y deshacer. Al ajustar el nombre de un proyecto, muestra los registros afectados y los valores de cada campo.',
         'Permite a los administradores atender inconsistencias sin reescribir evidencia emitida.', ['/panel/data-integrity'],
         { icon: 'shield', stage: 'Mantenimiento' }),
       feature('panel-mcp-connectors', 'Administrar conectores MCP',

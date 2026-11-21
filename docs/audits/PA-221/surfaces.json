@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "sources": {
-    "frontend/config/viewCatalog.js": "adc195fcc2ad7c8c00e82b9dada9d8e1cb296687577ffd0fa195a70caa444c23",
-    "frontend/config/viewCapabilityCatalog.js": "aa24ceac8d513e16820b88e78dab48a2e2f1d785bf09f0f901f937d75b91077f"
+    "frontend/config/viewCatalog.js": "2574a11a50c4e8e5fc8d4bb82d3299769cfe556a618a739d49c4bb2165839ff8",
+    "frontend/config/viewCapabilityCatalog.js": "0d39e5b4a3158b649734a3c52c41b70e46983252a2b93e6d824cd7a27c3aa0e9"
   },
   "surfaces": [
     {
@@ -1285,12 +1285,12 @@
       "file": "frontend/pages/panel/data-integrity.vue",
       "audience": "admin",
       "view_type": "list",
-      "description": "Administradores, incluida integridad financiera: revisiones diarias y a demanda, hallazgos pendientes/aceptados/resueltos, vista previa de lotes, motivo, historial y deshacer condicionado. No modifica la autorización del resto de Contabilidad.",
+      "description": "Los administradores revisan hallazgos a diario o a demanda, incluida la integridad financiera. Pueden consultar hallazgos pendientes, aceptados o resueltos. Al corregir el nombre de un proyecto ven cada registro, campo y valor antes y después. Los lotes requieren motivo, quedan en el historial y admiten deshacer si los datos coinciden. El resto de Contabilidad conserva sus permisos propios.",
       "features": [
         {
           "id": "panel-data-integrity",
           "label": "Revisar integridad de datos",
-          "summary": "Revisa datos entre módulos, acepta hallazgos intencionales y corrige lotes con vista previa, motivo, historial y deshacer."
+          "summary": "Revisa datos entre módulos, acepta hallazgos intencionales y corrige lotes con vista previa, motivo, historial y deshacer. Al ajustar el nombre de un proyecto, muestra los registros afectados y los valores de cada campo."
         }
       ]
     },
