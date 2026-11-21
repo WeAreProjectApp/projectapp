@@ -58,6 +58,13 @@ SHARED_VIDEO_REPLACEMENTS = {
     )
     for action in ('get', 'update')
 }
+RENAMED_OPERATIONS = {
+    'list_income': 'list_incomes', 'list_expected_incomes': 'list_incomes',
+    'get_expected_income': 'get_income', 'get_income_detail': 'get_income',
+    'create_expected_income': 'create_income', 'update_expected_income': 'update_income',
+    'duplicate_expected_income': 'duplicate_income',
+    'launch_proposal_to_platform': 'review_proposal_approval',
+}
 
 
 def tool_owner(name, source_slug):
@@ -81,7 +88,9 @@ def replacement_targets(name, source_slug):
     if name in SHARED_VIDEO_REPLACEMENTS:
         return SHARED_VIDEO_REPLACEMENTS[name]
     owner = tool_owner(name, source_slug)
-    return ((owner, canonical_name(name, owner)),)
+    return ((owner, RENAMED_OPERATIONS.get(name) or canonical_name(name, owner)),)
+
+
 INFRASTRUCTURE_TOOLS = frozenset({
     'describe_capabilities', 'confirm_action', 'cancel_action',
     'begin_upload', 'upload_asset_chunk', 'complete_upload', 'abort_upload',

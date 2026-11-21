@@ -182,6 +182,11 @@ def _side_changes(row, validated, field, label):
     return found
 
 
+def _field_changes(row, values, label):
+    return [change(row, name, json_value(getattr(row, name)), json_value(value), label)
+            for name, value in values.items() if getattr(row, name) != value]
+
+
 def _row_plan(kind, row, field, clean, blockers, extra=()):
     label = clean or f'#{row.pk}'
     return {
@@ -198,15 +203,24 @@ def _serializer_plan(kind, row, field, clean, serializer_class):
     serializer = serializer_class(row, data={field: clean}, partial=True)
     if not serializer.is_valid():
         return _row_plan(kind, row, field, clean, [_refused(clean, serializer.errors)])
-    return _row_plan(kind, row, field, clean, [], _side_changes(row, serializer.validated_data, field, clean))
+    # The proposal writer validates the payload but saves only the title.
+    extra = [] if kind == 'proposal' else _side_changes(row, serializer.validated_data, field, clean)
+    return _row_plan(kind, row, field, clean, [], extra)
 
 
 def _client_plan(profile, changes, values, blockers=()):
-    from content.models.web_app_diagnostic import WebAppDiagnostic
-    closure = writers.client_identity_closure(profile)
-    # ``sync_snapshot_for_profile`` rewrites the client's diagnostic copies too.
-    closure += [(DIAGNOSTIC, pk) for pk in WebAppDiagnostic._base_manager.filter(client_id=profile.pk)
-                .values_list('pk', flat=True)]
+    from accounts.services.proposal_client_service import client_snapshot_updates
+    target = copy.copy(profile)
+    target.user = copy.copy(profile.user)
+    for item in changes:
+        owner = target.user if item['model'] == USER else target
+        setattr(owner, item['field'], item['after'])
+    closure = [(PROFILE, profile.pk), (USER, profile.user_id)]
+    label = client_label(profile)
+    for model, expected in client_snapshot_updates(target):
+        for row in model.objects.filter(client_id=profile.pk).only(*expected).order_by('pk'):
+            closure.append((model._meta.label_lower, row.pk))
+            changes.extend(_field_changes(row, expected, label))
     copies = len(closure) - 2
     warnings = [{'code': 'client_copies_resync',
                  'message': 'Al guardar se actualizan también los datos del cliente copiados en sus '
@@ -216,13 +230,13 @@ def _client_plan(profile, changes, values, blockers=()):
             'context': {'kind': 'client', 'profile': profile.pk, 'values': values}}
 
 
-def _plan_company(evidence, clean):
+def _plan_company(evidence, clean, _actor):
     profile = _client(pk=evidence['pk'])
     return _client_plan(profile, [change(profile, 'company_name', profile.company_name, clean,
                                          client_label(profile))], {'company': clean})
 
 
-def _plan_client_name(evidence, clean):
+def _plan_client_name(evidence, clean, _actor):
     """``update_client_profile`` takes one full name and splits it at the first space."""
     from accounts.services.proposal_client_service import _split_name
     profile = _client(user_id=evidence['pk'])
@@ -241,7 +255,13 @@ def _plan_client_name(evidence, clean):
     return _client_plan(profile, changes, {'name': name}, blockers)
 
 
-def _plan_project(evidence, clean):
+def _misaligned_subfolders(project, roots):
+    from content.models import DocumentFolder
+    return [folder for root in roots for folder in DocumentFolder._base_manager.filter(
+        pk__in=root.get_descendant_ids(), project_id=project.pk).exclude(client_user_id=project.client_id)]
+
+
+def _plan_project(evidence, clean, _actor):
     """Preview the same root targets that the project's post-save writers use."""
     from accounts.models import Project
     from content.models import CommunicationThread, DocumentFolder
@@ -264,15 +284,12 @@ def _plan_project(evidence, clean):
     targets += [(row, project_thread_values(target, profile)) for row in threads] if profile else []
     targets += [(row, secure_root_values(target)) for row in secure_roots]
     for row, values in targets:
-        for field, value in values.items():
-            if getattr(row, field) != value:
-                plan['changes'].append(change(row, field, json_value(getattr(row, field)), json_value(value), clean))
+        plan['changes'].extend(_field_changes(row, values, clean))
     if not secure_roots:
         plan['blockers'].append(blocker(
             'managed_root_missing', 'Falta la carpeta gestionada de Enlaces seguros. Revisa su estructura antes de '
             'renombrar el proyecto; esta corrección no crea registros sin una vista previa.'))
-    stale = [folder for root in folders for folder in DocumentFolder._base_manager.filter(
-        pk__in=root.get_descendant_ids(), project_id=project.pk).exclude(client_user_id=project.client_id)]
+    stale = _misaligned_subfolders(project, folders)
     plan['changes'] += [change(folder, 'client_user_id', folder.client_user_id, project.client_id, folder.name)
                         for folder in stale]
     plan['closure'] += [*roots, *((FOLDER, folder.pk) for folder in stale)]
@@ -281,21 +298,30 @@ def _plan_project(evidence, clean):
     return plan
 
 
-def _plan_folder(evidence, clean):
+def _plan_folder(evidence, clean, _actor):
     from content.models import DocumentFolder
     from content.serializers.document_folder import DocumentFolderSerializer
     folder = DocumentFolder._base_manager.get(pk=evidence['pk'])
-    return _serializer_plan('folder', folder, 'name', clean, DocumentFolderSerializer)
+    plan = _serializer_plan('folder', folder, 'name', clean, DocumentFolderSerializer)
+    if not folder.slug and not plan['blockers']:
+        plan['changes'].extend(_field_changes(folder, {'slug': folder.slug_for_name(clean)}, clean))
+    return plan
 
 
-def _plan_document(evidence, clean):
+def _plan_document(evidence, clean, actor):
     from content.models import Document
     from content.serializers.document import DocumentCreateUpdateSerializer
+    from content.utils import safe_slug
     document = Document._base_manager.get(pk=evidence['pk'])
-    return _serializer_plan('document', document, 'title', clean, DocumentCreateUpdateSerializer)
+    plan = _serializer_plan('document', document, 'title', clean, DocumentCreateUpdateSerializer)
+    values = {'updated_by_id': getattr(actor, 'pk', None)}
+    if not document.slug:
+        values['slug'] = safe_slug(clean)
+    plan['changes'].extend(_field_changes(document, values, clean))
+    return plan
 
 
-def _plan_proposal(evidence, clean):
+def _plan_proposal(evidence, clean, _actor):
     from content.models import BusinessProposal
     from content.serializers.proposal import ProposalCreateUpdateSerializer
     proposal = BusinessProposal._base_manager.get(pk=evidence['pk'])
@@ -314,13 +340,13 @@ def _rename_proposal(context, actor):
     proposal.save(update_fields=['title', 'updated_at'])
 
 
-def _plan_communication_folder(evidence, clean):
+def _plan_communication_folder(evidence, clean, _actor):
     from content.models import CommunicationFolder
     folder = CommunicationFolder._base_manager.get(pk=evidence['pk'])
     return _row_plan('communication_folder', folder, 'name', clean, _model_blockers(folder, 'name', clean))
 
 
-def _plan_thread(evidence, clean):
+def _plan_thread(evidence, clean, actor):
     """``update_thread`` refuses closed threads and re-validates the thread's folder."""
     from content.models import CommunicationThread
     from content.services.communication_folder_service import validate_thread_folder
@@ -329,7 +355,8 @@ def _plan_thread(evidence, clean):
         blockers = [blocker('thread_closed', 'La comunicación está cerrada: reábrela para poder corregir su título.')]
     else:
         blockers = _model_blockers(thread, 'title', clean, validate_thread_folder)
-    return _row_plan('thread', thread, 'title', clean, blockers)
+    extra = _field_changes(thread, {'updated_by_id': getattr(actor, 'pk', None)}, clean)
+    return _row_plan('thread', thread, 'title', clean, blockers, extra)
 
 
 PLANNERS = {
@@ -351,6 +378,7 @@ WRITERS = {
 
 class ExtraSpacesFixer(Fixer):
     kind = RENAME
+    exact_changes = True
     # Besides the name fields ``writers`` registers: who last edited a document
     # or thread, the client a document's validation fills from its project, and
     # the client copies ``sync_snapshot_for_profile`` keeps on diagnostics.
@@ -364,14 +392,21 @@ class ExtraSpacesFixer(Fixer):
 
     def plan(self, finding, params, *, actor):
         evidence = finding.evidence
-        return self.new_plan(params, **PLANNERS[evidence['model']](evidence, clean_spaces(evidence['value'])))
+        details = PLANNERS[evidence['model']](evidence, clean_spaces(evidence['value']), actor)
+        return self.new_plan(params, **details)
 
     def guards_changed(self, step):
-        from accounts.models import UserProfile
+        from accounts.models import Project, UserProfile
+        from content.models import DocumentFolder
         from content.models.web_app_diagnostic import WebAppDiagnostic
         guards = step.get('guards', {})
         if 'project_roots' in guards:
-            return [list(key) for key in sorted(writers.project_root_closure(guards['project']))] != guards['project_roots']
+            roots = writers.project_root_closure(guards['project'])
+            if [list(key) for key in sorted(roots)] != guards['project_roots']:
+                return True
+            project = Project._base_manager.filter(pk=guards['project']).first()
+            folders = DocumentFolder._base_manager.filter(pk__in=[pk for label, pk in roots if label == FOLDER])
+            return project is None or bool(_misaligned_subfolders(project, folders))
         if 'profile' not in guards:
             return False
         profile = UserProfile._base_manager.filter(pk=guards['profile']).first()

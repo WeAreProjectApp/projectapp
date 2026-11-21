@@ -177,17 +177,20 @@ class DocumentFolder(RetainedProjectModel, models.Model):
     def is_system_managed(self):
         return bool(self.system_key)
 
+    def slug_for_name(self, name):
+        base = safe_slug(name, 'folder')
+        slug = base
+        index = 2
+        while DocumentFolder.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            slug = f'{base}-{index}'
+            index += 1
+        return slug
+
     def save(self, *args, **kwargs):
         if self._state.adding and not self.creation_operation:
             self.creation_operation = 'orm.create'
         if not self.slug:
-            base = safe_slug(self.name, 'folder')
-            slug = base
-            index = 2
-            while DocumentFolder.objects.filter(slug=slug).exclude(pk=self.pk).exists():
-                slug = f'{base}-{index}'
-                index += 1
-            self.slug = slug
+            self.slug = self.slug_for_name(self.name)
         super().save(*args, **kwargs)
 
     def get_ancestors(self):
