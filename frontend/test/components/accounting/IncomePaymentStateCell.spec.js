@@ -30,11 +30,11 @@ describe('IncomePaymentStateCell', () => {
     const wrapper = mountCell({
       payment_status: 'partial',
       payment_status_label: 'Parcial',
+      pending_amount: '68.78',
     });
 
     expect(wrapper.text()).toContain('Parcial');
-    expect(wrapper.text()).toContain('faltan');
-    expect(wrapper.text()).toContain('600.000');
+    expect(wrapper.text()).toContain('faltan $68,78');
   });
 
   it('marks an indefinitely muted income', () => {

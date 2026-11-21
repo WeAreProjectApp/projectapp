@@ -18,4 +18,4 @@
   - [Branch C — Navigation failure] A successful submission stays locked if the router rejects the destination. The user action produces one POST.
   - [Branch D — Locale display] The form and confirmation use the active locale in the visible copy and document language.
 - **Coverage:** `success`, `error`, `failure`, `display` in the browser spec.
-- **E2E Spec:** `e2e/public/public-contact.spec.js`
+- **E2E Spec:** `e2e/public/public-contact.spec.js` and `e2e/published/contact-confirmation.spec.js`. On the Django build, a single accepted POST removes the form and displays the confirmation heading in the submitting tab. The disposable mailbox receives three local deliveries for one contact.

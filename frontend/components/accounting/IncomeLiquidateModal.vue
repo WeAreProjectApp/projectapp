@@ -57,7 +57,7 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
         <p class="font-medium text-text-default">{{ row.concept }}</p>
         <p class="text-xs text-text-muted">Cliente: {{ row.confirmation.client_name || 'Sin cliente' }} · Proyecto: {{ row.confirmation.project_name || 'Sin proyecto' }}</p>
         <p class="text-text-muted">Recibido {{ money(row.amount) }} · Deducciones {{ money(row.deducted) }} · Reprogramado {{ money(row.reexpected) }} · Pendiente {{ money(row.pending_after) }}</p>
-        <VatBreakdown :total="row.amount" :rate="row.vat_rate ?? null" />
+        <VatBreakdown :total="row.amount" :rate="row.vat_rate ?? null" show-cents />
         <p v-if="sendConfirmations[row.income_id] && row.confirmation.can_send && Number(row.amount) > 0" class="text-text-default" data-testid="income-liquidate-review-recipient">Confirmación a {{ row.confirmation.recipient }} · {{ row.confirmation.collection_account_number || 'Sin número de cuenta' }}</p>
         <p v-else class="text-xs text-text-subtle">Sin correo: {{ row.confirmation.blocked_reason || 'no solicitado o sin dinero recibido para este ingreso' }}.</p>
       </div>
