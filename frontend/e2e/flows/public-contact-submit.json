@@ -7,7 +7,7 @@
   ],
   "priority": "P1",
   "description": "Submit the localized contact form and reach the confirmation in the same locale. A rejected submission keeps the form editable. An accepted submission stays locked if navigation fails.",
-  "expectedSpecs": 1,
+  "expectedSpecs": 2,
   "outcomes": [
     "success",
     "error",
