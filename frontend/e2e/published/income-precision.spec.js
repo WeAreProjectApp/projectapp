@@ -1,7 +1,22 @@
 import { test, expect } from './fixtures.js'
+import { execFileSync } from 'node:child_process'
+import { unlinkSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { ADMIN_ACCOUNTING_INCOME_CRUD, ADMIN_ACCOUNTING_INCOME_BULK_SETTLE } from '../helpers/flow-tags.js'
 
-test.use({ storageState: process.env.PUBLISHED_PANEL_STATE })
+const loginScript = fileURLToPath(new URL('../../../backend/content/tests/browser/panel_session.py', import.meta.url))
+test.use({
+  storageState: async ({ baseURL }, use) => {
+    // Each browser gets its own session from Django at this origin. Only the
+    // private filename crosses the process boundary or appears in diagnostics.
+    const state = execFileSync('python', [loginScript, baseURL, process.env.PUBLISHED_PANEL_ACTOR], { encoding: 'utf8' }).trim()
+    try {
+      await use(state)
+    } finally {
+      unlinkSync(state)
+    }
+  },
+})
 
 const incomesPath = '/es-co/panel/accounting/incomes'
 const apiPath = '/api/accounting/incomes/'
@@ -17,6 +32,9 @@ function responseFor(page, method, path) {
 }
 
 async function visitIncomes(page) {
+  const access = await page.request.get('/api/auth/check/')
+  expect(access.status(), 'Django must recognize this browser as a signed-in panel user').toBe(200)
+  expect((await access.json()).user.is_superuser).toBe(true)
   // quality: allow-deep-link (start at the panel list URL from the reported case)
   const list = responseFor(page, 'GET', apiPath)
   await page.goto(incomesPath, { waitUntil: 'domcontentloaded' })
@@ -26,7 +44,7 @@ async function visitIncomes(page) {
 }
 
 async function filterNovember(page) {
-  await page.getByTestId('filter-tabs-tab-all').click()
+  await page.getByTestId('filter-tabs-all').click()
   await page.getByRole('button', { name: /^Filtros\b/ }).click()
   const panel = page.getByTestId('accounting-filter-panel')
   await panel.getByRole('button', { name: 'Mes', exact: true }).click()
@@ -50,7 +68,7 @@ const detailCases = [
   { key: 'unpaid', total: '999999999999.99', paid: '0.00', pending: '999999999999.99',
     totalText: '$999.999.999.999,99 COP', paidText: '$0 COP', pendingText: '$999.999.999.999,99 COP' },
   { key: 'partial', total: '119.03', paid: '50.25', pending: '68.78',
-    totalText: '$119,03 COP', paidText: '$50,25 COP', pendingText: '$68,78 COP' },
+    totalText: '$119,03 COP', paidText: '$50,25 COP', pendingText: '$68,78 COP', partialBalance: 'faltan $68,78' },
 ]
 
 async function checkDetail(page, id, values, action) {
@@ -68,6 +86,11 @@ async function checkDetail(page, id, values, action) {
   await expect(detail.getByTestId('vat-total').filter({ visible: true })).toHaveText(values.totalText)
   await expect(detail.getByTestId('income-detail-paid').filter({ visible: true })).toHaveText(values.paidText)
   await expect(detail.getByTestId('income-detail-pending').filter({ visible: true })).toHaveText(values.pendingText)
+  if (values.partialBalance) {
+    await expect(detail.getByTestId('income-detail-status')).toContainText(values.partialBalance)
+    const payment = detail.getByTestId('income-detail-settlement-row').filter({ hasText: 'Abono ficticio' })
+    await expect(payment.getByRole('cell', { name: values.paidText, exact: true })).toBeVisible()
+  }
   return income
 }
 
@@ -107,7 +130,7 @@ for (const item of detailCases) {
 test('keeps inapplicable balances empty on a liquid income', { tag: detailTags }, async ({ page }) => {
   const { payment } = fixtures()
   await visitIncomes(page)
-  await page.getByTestId('filter-tabs-tab-all').click()
+  await page.getByTestId('filter-tabs-all').click()
   const item = { total: '50.25', paid: null, pending: null, totalText: '$50,25 COP', paidText: '—', pendingText: '—' }
   await checkDetail(page, payment, item, () => page.getByTestId('income-open-' + payment).filter({ visible: true }).click())
   await checkDetail(page, payment, item, () => page.reload({ waitUntil: 'domcontentloaded' }))
@@ -153,7 +176,7 @@ async function checkVat(scope, amounts) {
   await expect(scope.getByTestId('vat-total').filter({ visible: true })).toHaveText(amounts.total)
 }
 
-async function reviewThenCancel(page, id, draft, amounts, recipient) {
+async function reviewThenCancel(page, id, draft, amounts, recipient, split) {
   const row = draft.initial.rows.find(item => item.income_id === id)
   expect(row.confirmation).toMatchObject({ can_send: true, recipient })
   expect(Number(row.amount)).toBeGreaterThan(0)
@@ -171,7 +194,8 @@ async function reviewThenCancel(page, id, draft, amounts, recipient) {
   const response = await reviewing
   expect(response.status()).toBe(200)
   expect(response.request().postDataJSON()).toMatchObject({
-    total_amount: Number(amounts.input.replace(',', '.')), send_payment_confirmation: true, confirmation_income_ids: [id],
+    total_amount: Number(amounts.input.replace(',', '.')), carlos_amount: split.carlos, gustavo_amount: split.gustavo,
+    send_payment_confirmation: true, confirmation_income_ids: [id],
   })
   await expect(page.getByRole('heading', { name: 'Revisar y liquidar' })).toBeVisible()
   const review = page.getByTestId('income-liquidate-review')
@@ -184,8 +208,10 @@ async function reviewThenCancel(page, id, draft, amounts, recipient) {
 }
 
 const amounts = {
-  '119.03': { total: '$119,03 COP', base: '$100,03 COP', tax: '$19 COP', input: '119,03', remainder: '$1,03 COP' },
-  '119.06': { total: '$119,06 COP', base: '$100,05 COP', tax: '$19,01 COP', input: '119,06', remainder: '$1,06 COP' },
+  '119.03': { total: '$119,03 COP', base: '$100,03 COP', tax: '$19 COP', input: '119,03',
+    remainder: '$1,03 COP', manualRemainder: '$8,28 COP', shortfall: '$0,03 COP' },
+  '119.06': { total: '$119,06 COP', base: '$100,05 COP', tax: '$19,01 COP', input: '119,06',
+    remainder: '$1,06 COP', manualRemainder: '$8,31 COP', shortfall: '$0,06 COP' },
 }
 const screens = [
   { name: 'dark desktop', dark: true, viewport: { width: 1536, height: 639 } },
@@ -208,30 +234,36 @@ for (const screen of screens) {
         await checkRemainder(page, '$59 COP', '$59 COP', detail.remainder)
         await page.getByTestId('income-liquidate-vat-toggle-' + id).click()
         await checkVat(page.getByTestId('income-liquidate-vat-' + id), detail)
-        await reviewThenCancel(page, id, draft, detail, recipient)
+        await reviewThenCancel(page, id, draft, detail, recipient, { carlos: 59, gustavo: 59 })
+      })
+      test('keeps the manual remainder on ' + amount + ' through review', { tag: settlementTags }, async ({ page }) => {
+        const { review, recipient } = fixtures()
+        const id = review[amount]
+        const draft = await openSettlement(page, id, detail.total)
+        await page.getByTestId('income-liquidate-participations-toggle').click()
+        await page.getByTestId('partner-split-auto').click()
+        await page.getByTestId('partner-split-carlos').fill('50,25')
+        await page.getByTestId('partner-split-gustavo').fill('60,50')
+        await checkRemainder(page, '$50,25 COP', '$60,50 COP', detail.manualRemainder)
+
+        const received = page.getByTestId('income-liquidate-paid')
+        await received.fill('119')
+        await checkRemainder(page, '$50,25 COP', '$60,50 COP', '$8,25 COP')
+        await expect(page.getByTestId('income-liquidate-summary')).toContainText('Falta: ' + detail.shortfall)
+        await received.fill(detail.input)
+        await checkRemainder(page, '$50,25 COP', '$60,50 COP', detail.manualRemainder)
+        await reviewThenCancel(page, id, draft, detail, recipient, { carlos: 50.25, gustavo: 60.50 })
       })
     }
-    test('keeps the manual remainder when editing the received amount', { tag: settlementTags }, async ({ page }) => {
-      const { review } = fixtures()
-      const draft = await openSettlement(page, review['119.03'], amounts['119.03'].total)
-      await page.getByTestId('income-liquidate-participations-toggle').click()
-      await page.getByTestId('partner-split-auto').click()
-      await page.getByTestId('partner-split-carlos').fill('50,25')
-      await page.getByTestId('partner-split-gustavo').fill('60,50')
-      await checkRemainder(page, '$50,25 COP', '$60,50 COP', '$8,28 COP')
-      await page.getByTestId('income-liquidate-paid').fill('119')
-      await checkRemainder(page, '$50,25 COP', '$60,50 COP', '$8,25 COP')
-      await expect(page.getByTestId('income-liquidate-summary')).toContainText('Falta: $0,03 COP')
-      await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
-      await expect(page.getByTestId('income-liquidate-form')).toHaveCount(0)
-      expect(draft.writes).toEqual([previewPath])
-    })
   })
 }
 
 test('leaves no remainder for an even whole amount', { tag: settlementTags }, async ({ page }) => {
+  const { review, recipient } = fixtures()
+  const id = review['120.00']
+  const detail = { total: '$120 COP', base: '$100,84 COP', tax: '$19,16 COP', input: '120' }
   await visitIncomes(page)
-  const draft = await openSettlement(page, fixtures().review['120.00'], '$120 COP')
+  const draft = await openSettlement(page, id, detail.total)
   const header = page.getByTestId('income-liquidate-participations-toggle')
   await expect(header).toContainText('Carlos $60 COP')
   await expect(header).toContainText('Gustavo $60 COP')
@@ -240,7 +272,5 @@ test('leaves no remainder for an even whole amount', { tag: settlementTags }, as
   await expect(page.getByTestId('partner-split-gustavo')).toHaveValue('60')
   await expect(page.getByTestId('income-liquidate-projectapp-remainder')).toHaveCount(0)
   await expect(page.getByTestId('partner-split-remainder')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
-  await expect(page.getByTestId('income-liquidate-form')).toHaveCount(0)
-  expect(draft.writes).toEqual([previewPath])
+  await reviewThenCancel(page, id, draft, detail, recipient, { carlos: 60, gustavo: 60 })
 })

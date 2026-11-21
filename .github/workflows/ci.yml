@@ -634,7 +634,7 @@ jobs:
           retention-days: 1
       - name: Exercise income precision and contact confirmation on the Django build
         working-directory: backend
-        run: pytest --no-migrations --no-cov content/tests/browser/published_build.py -v -s
+        run: pytest --no-migrations --no-cov --liveserver=127.0.0.1:0 content/tests/browser/published_build.py -v -s
       - name: Upload published contact report
         if: always()
         uses: actions/upload-artifact@v4

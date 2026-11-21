@@ -3,14 +3,14 @@ explicitly after build:django and collectstatic, outside the backend unit shards
 """
 import json
 import os
+import secrets
 import subprocess
 from datetime import date
 from decimal import Decimal
-from urllib.parse import urlsplit
 
 import pytest
 from django.conf import settings as django_settings
-from django.db import transaction
+from django.db import connections, transaction
 
 from content.email_copy_families import TASKS_OPERATIONS
 from content.models import (
@@ -21,6 +21,13 @@ from content.models import (
 
 pytestmark = pytest.mark.django_db(transaction=True)
 FRONTEND = django_settings.BASE_DIR.parent / 'frontend'
+
+
+@pytest.fixture(scope='session')
+def django_db_modify_db_settings(tmp_path_factory):
+    # Independent live-server request threads need independent SQLite connections.
+    database = tmp_path_factory.mktemp('published-django') / 'test.sqlite3'
+    connections['default'].settings_dict['TEST']['NAME'] = str(database)
 
 
 def run_browser(live_server, spec, **environment):
@@ -50,20 +57,13 @@ def test_contact_confirmation_uses_one_delivery(live_server, settings, mailoutbo
     )
 
 
-def panel_session(client, superuser, origin, tmp_path):
-    """Transfer the test session and its real CSRF cookie in private temporary storage."""
-    client.force_login(superuser)
-    assert client.get('/api/auth/config/').status_code == 200
-    cookies = [
-        {'name': name, 'value': client.cookies[name].value,
-         'domain': urlsplit(origin).hostname, 'path': '/', 'expires': -1,
-         'secure': False, 'httpOnly': name == django_settings.SESSION_COOKIE_NAME,
-         'sameSite': 'Lax'}
-        for name in (django_settings.SESSION_COOKIE_NAME, django_settings.CSRF_COOKIE_NAME)
-    ]
-    path = tmp_path / 'panel-session.json'
+def disposable_panel_login(superuser, tmp_path):
+    password = secrets.token_urlsafe(32)
+    superuser.set_password(password)
+    superuser.save(update_fields=['password'])
+    path = tmp_path / 'panel-actor.json'
     path.touch(mode=0o600)
-    path.write_text(json.dumps({'cookies': cookies, 'origins': []}))
+    path.write_text(json.dumps({'username': superuser.get_username(), 'password': password}))
     return str(path)
 
 
@@ -95,7 +95,7 @@ def stored_amounts():
 
 
 def test_income_previews_preserve_the_book(
-    live_server, client, superuser, make_income, make_client_profile, mailoutbox, tmp_path,
+    live_server, superuser, make_income, make_client_profile, mailoutbox, tmp_path,
 ):
     # The user signal fills in a missing profile on commit. Create the explicit
     # profile in the same transaction as its user, as onboarding does.
@@ -110,7 +110,7 @@ def test_income_previews_preserve_the_book(
                           total_amount=Decimal('50.25'), gustavo_amount=25, carlos_amount=25)
     review = {amount: reviewable_income(make_income, owner, amount).pk
               for amount in ('119.03', '119.06', '120.00')}
-    session_path = panel_session(client, superuser, live_server.url, tmp_path)
+    actor_path = disposable_panel_login(superuser, tmp_path)
     before = stored_amounts()
     totals = dict(IncomeRecord.objects.values_list('pk', 'total_amount'))
     assert totals[unpaid.pk] == Decimal('999999999999.99')
@@ -121,7 +121,7 @@ def test_income_previews_preserve_the_book(
     log_count = EmailLog.objects.count()
     mailbox_count = len(mailoutbox)
 
-    run_browser(live_server, 'income-precision', PUBLISHED_PANEL_STATE=session_path,
+    run_browser(live_server, 'income-precision', PUBLISHED_PANEL_ACTOR=actor_path,
                 PUBLISHED_INCOMES=json.dumps({
                     'unpaid': unpaid.pk, 'partial': partial.pk, 'payment': payment.pk,
                     'review': review, 'recipient': owner.user.email,

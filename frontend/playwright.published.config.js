@@ -8,6 +8,7 @@ export default defineConfig({
   testMatch: ['published/*.spec.js'],
   workers: 1,
   retries: 0,
+  maxFailures: 1,
   outputDir: `test-results-published/${suite}`,
   timeout: 60_000,
   expect: { timeout: 15_000 },

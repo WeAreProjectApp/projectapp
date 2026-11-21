@@ -182,7 +182,7 @@
                       <span v-else class="text-text-subtle" title="No pasó por el bolsillo">—</span>
                     </td>
                     <td class="px-3 py-2 text-right tabular-nums text-text-default">
-                      {{ money(row.amount) }}
+                      {{ incomeAmount(row.amount) }}
                     </td>
                   </tr>
                 </tbody>
