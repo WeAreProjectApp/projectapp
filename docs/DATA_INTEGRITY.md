@@ -10,11 +10,15 @@ sin un impacto revisado. Deshacer también verifica la composición de las raíc
 Los cambios en fechas técnicas de guarda y las nuevas entradas de auditoría son
 trazabilidad de la operación, no ediciones de negocio adicionales.
 
-Al aplicar NM1 sobre un proyecto se comparan en la misma transacción el
-detalle aprobado y los cambios de negocio registrados en sus filas bloqueadas.
+Al aplicar NM1 se comparan en la misma transacción el detalle aprobado y los
+cambios de negocio registrados en sus filas bloqueadas. La vista previa incluye
+los datos de cliente que se sincronizan con propuestas y diagnósticos, el último
+editor de documentos o conversaciones y el identificador de URL cuando falta.
 Una diferencia revierte el lote con `impact_mismatch`. La vista previa de
 deshacer incluye modelo, ID y campo para poder cotejar cada valor histórico
-en el sentido de restauración.
+en el sentido de restauración. Las nuevas operaciones guardan una huella de
+los campos observados en cada registro. Si uno cambia después, se bloquea el
+lote completo, incluso cuando era una relación ya correcta en la aplicación.
 
 El dueño actual es el **Gestor de integridad de datos** (`data-integrity`);
 Proyectos conserva sólo su compatibilidad temporal. La skill descubre las herramientas

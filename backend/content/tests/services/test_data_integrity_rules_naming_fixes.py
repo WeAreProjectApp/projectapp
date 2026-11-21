@@ -40,7 +40,8 @@ def nm1_finding(model, pk, field=None):
 
 
 def fix(actor, finding):
-    _, result = apply(actor, [selection(finding)])
+    preview, result = apply(actor, [selection(finding)])
+    assert planned_changes(preview) == recorded_changes(result['operation_id'])
     return result['operation_id']
 
 
@@ -149,6 +150,18 @@ def test_a_name_the_writer_would_split_differently_is_blocked(make_client_profil
     assert User.objects.get(pk=profile.user_id).last_name == ' Pérez'
 
 
+def test_company_undo_preserves_a_proposal_that_already_had_the_clean_name(make_client_profile, superuser):
+    """The inverse writer must leave an already-correct copy as the operator saw it."""
+    profile = make_client_profile(company=' Kore  SAS', first_name='', last_name='')
+    proposal = make_proposal(profile, client_name='Kore SAS')
+    operation_id = fix(superuser, nm1_finding('accounts.userprofile', profile.pk))
+
+    undo(superuser, operation_id)
+
+    assert UserProfile.objects.get(pk=profile.pk).company_name == ' Kore  SAS'
+    assert BusinessProposal.objects.get(pk=proposal.pk).client_name == 'Kore SAS'
+
+
 # ── Projects ─────────────────────────────────────────────────────────────────
 
 def _project_names(project, root, thread):
@@ -228,6 +241,23 @@ def test_project_name_rejected_undo_preserves_every_field(project_rename, superu
 
     assert rejected.value.detail['code'] == 'undo_blocked'
     assert _project_rename_state(project) == before_attempt
+    assert not DataIntegrityOperation.objects.filter(reverts_id=operation_id).exists()
+
+
+def test_project_undo_blocks_a_later_edit_to_an_originally_correct_link(make_client_profile, superuser):
+    """A bulk update of an unmodified relation must survive the attempted inverse writer."""
+    project = make_project(make_client_profile(), ' Kore  App')
+    operation_id = fix(superuser, nm1_finding('accounts.project', project.pk))
+    SecureLinkFolder.objects.filter(managed_project=project).update(client_id=None)
+    state = _project_rename_state(project)
+    preview = engine.preview_undo(operation_id)
+
+    with pytest.raises(IntegrityConflict) as rejected:
+        engine.undo_operation(operation_id, actor=superuser, reason='Conservar el nuevo vínculo.',
+                              request_id='nm1-later-link', expected_impact_hash=preview['impact_hash'])
+
+    assert rejected.value.detail['code'] == 'undo_blocked'
+    assert _project_rename_state(project) == state
     assert not DataIntegrityOperation.objects.filter(reverts_id=operation_id).exists()
 
 
@@ -355,6 +385,21 @@ def test_folder_fix_and_undo_round_trip(superuser):
 
     undo(superuser, operation_id)
     assert DocumentFolder.objects.get(pk=folder.pk).name == 'Actas  2026'
+
+
+def test_folder_preview_announces_the_available_legacy_slug(superuser):
+    """A missing slug receives the first free suffix, and undo must restore the empty value."""
+    DocumentFolder.objects.create(name='Actas 2026')
+    parent = DocumentFolder.objects.create(name='Archivo')
+    folder = DocumentFolder.objects.create(name='Actas  2026', parent=parent)
+    DocumentFolder.objects.filter(pk=folder.pk).update(slug='')
+
+    preview, result = apply(superuser, [selection(nm1_finding('content.documentfolder', folder.pk))])
+
+    assert ('content.documentfolder', folder.pk, 'slug', '', 'actas-2026-2') in planned_changes(preview)
+    assert DocumentFolder.objects.get(pk=folder.pk).slug == 'actas-2026-2'
+    undo(superuser, result['operation_id'])
+    assert DocumentFolder.objects.get(pk=folder.pk).slug == ''
 
 
 def test_a_folder_whose_clean_name_exists_beside_it_is_blocked(superuser):

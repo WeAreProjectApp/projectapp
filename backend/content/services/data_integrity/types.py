@@ -87,8 +87,6 @@ class FixPlan:
     guards: dict = field(default_factory=dict)
     warnings: list = field(default_factory=list)
     context: dict = field(default_factory=dict)
-    # These plans enumerate every business field the writer may change in its closure.
-    exact_changes: bool = False
 
 
 def blocker(code, message, records=None):

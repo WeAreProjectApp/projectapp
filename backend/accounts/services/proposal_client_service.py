@@ -351,6 +351,19 @@ def update_client_profile(profile, *, name=None, email=None, phone=None,
     return profile
 
 
+def client_snapshot_updates(profile):
+    """Business values a client's linked proposal and diagnostic copies receive."""
+    from content.models import BusinessProposal
+    from content.models.web_app_diagnostic import WebAppDiagnostic
+
+    user = profile.user
+    common = {'client_name': build_client_display_name(profile), 'client_phone': profile.phone}
+    if user.email and not user.email.endswith(UserProfile.PLACEHOLDER_EMAIL_DOMAIN):
+        common['client_email'] = user.email
+    return ((BusinessProposal, common),
+            (WebAppDiagnostic, {**common, 'client_company': profile.company_name or ''}))
+
+
 def sync_snapshot_for_profile(profile):
     """Mirror the client identity onto every linked BusinessProposal /
     WebAppDiagnostic snapshot in a single bulk UPDATE per model.
@@ -365,33 +378,9 @@ def sync_snapshot_for_profile(profile):
     """
     from django.utils import timezone
 
-    from content.models import BusinessProposal
-    from content.models.web_app_diagnostic import WebAppDiagnostic
-
-    user = profile.user
     now = timezone.now()
-    display_name = build_client_display_name(profile)
-    email_is_real = bool(user.email) and not user.email.endswith(
-        UserProfile.PLACEHOLDER_EMAIL_DOMAIN
-    )
-
-    proposal_update = {
-        'client_name': display_name,
-        'client_phone': profile.phone,
-        'updated_at': now,
-    }
-    diagnostic_update = {
-        'client_name': display_name,
-        'client_phone': profile.phone,
-        'client_company': profile.company_name or '',
-        'updated_at': now,
-    }
-    if email_is_real:
-        proposal_update['client_email'] = user.email
-        diagnostic_update['client_email'] = user.email
-
-    BusinessProposal.objects.filter(client=profile).update(**proposal_update)
-    WebAppDiagnostic.objects.filter(client=profile).update(**diagnostic_update)
+    for model, values in client_snapshot_updates(profile):
+        model.objects.filter(client=profile).update(**values, updated_at=now)
 
 
 def sync_snapshot(proposal):

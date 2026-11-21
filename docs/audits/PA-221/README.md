@@ -41,8 +41,11 @@ conjunto completo. En casos independientes con una edición posterior,
 comparar el conjunto justo antes y después del rechazo, incluida la edición
 posterior. La vista previa de deshacer identifica cada campo registrado por
 modelo e ID y presenta sus valores en sentido de restauración.
-Al aplicar, el motor coteja los cambios de negocio del conjunto bloqueado con
-el detalle aprobado. Si difieren, revierte el lote con `impact_mismatch`.
+En todos los tipos de registro de NM1 el motor coteja los cambios de negocio
+del conjunto bloqueado con el detalle aprobado. Si difieren, revierte el lote
+con `impact_mismatch`. En documentos y conversaciones se incluye el último
+editor y en los clientes se muestran las copias afectadas. Estos casos de
+implementación complementan la regresión focal del proyecto en DEV.
 
 La skill, los siete dominios y sus alcances, las fusiones, las reasignaciones
 DC9–DC11, los emitidos y las reglas de informe o derivación llevan evidencia
