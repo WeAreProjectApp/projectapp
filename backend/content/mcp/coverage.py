@@ -185,7 +185,8 @@ def validate_report(report):
     return current
 
 
-def load_verified_report(path):
+def read_verified_report(path):
+    """Return the validated document and the digest of the exact bytes read."""
     source = Path(path)
     if source.is_symlink() or not source.is_file() or source.stat().st_size > 16 * 1024 * 1024:
         raise CoverageError('Indica un archivo JSON regular de evidencia de hasta 16 MiB.')
@@ -197,8 +198,14 @@ def load_verified_report(path):
         validate_report(report)
     except (OSError, ValueError, KeyError, TypeError):
         raise CoverageError('La evidencia está incompleta, desactualizada o no acredita las comprobaciones requeridas.') from None
-    return {'schema': 1, 'report_sha256': hashlib.sha256(raw).hexdigest(),
-            'report_path': str(source.resolve()),
+    return report, hashlib.sha256(raw).hexdigest()
+
+
+def load_verified_report(path):
+    """Small receipt stored on retirement; the functional report stays in its artifact."""
+    report, checksum = read_verified_report(path)
+    return {'schema': 1, 'report_sha256': checksum,
+            'report_path': str(Path(path).resolve()),
             'revision': report['revision'], 'matrix_fingerprint': report['matrix_fingerprint'],
             'contracts': report['contracts'], 'operations': len(report['rows']), 'surfaces': len(report['surfaces'])}
 

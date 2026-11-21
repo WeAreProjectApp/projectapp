@@ -278,6 +278,7 @@ def _plan_project(evidence, clean):
     plan['closure'] += [*roots, *((FOLDER, folder.pk) for folder in stale)]
     plan['blockers'] += retained_blockers([*folders, *threads, *secure_roots, *stale])
     plan['guards'] = {'project': project.pk, 'project_roots': [list(key) for key in sorted(roots)]}
+    plan['exact_changes'] = True
     return plan
 
 

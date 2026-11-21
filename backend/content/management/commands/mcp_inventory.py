@@ -10,6 +10,7 @@ from content.mcp.module_catalog import CANONICAL_FOR, INFRASTRUCTURE_TOOLS, cata
 
 
 def inventory(*, include_usage=False):
+    published_names = {slug: {tool['name'] for tool in tools} for slug, tools in TOOLS_BY_SLUG.items()}
     by_name = defaultdict(list)
     for slug, tools in LEGACY_TOOLS_BY_SLUG.items():
         for tool in tools:
@@ -22,17 +23,7 @@ def inventory(*, include_usage=False):
             name = tool['name']
             targets = replacement_targets(name, slug)
             owner, replacement = targets[0]
-            replacement = {
-                'list_expected_incomes': 'list_incomes', 'get_expected_income': 'get_income',
-                'get_income_detail': 'get_income', 'create_expected_income': 'create_income',
-                'update_expected_income': 'update_income', 'duplicate_expected_income': 'duplicate_income',
-                'launch_proposal_to_platform': 'review_proposal_approval',
-            }.get(name, replacement)
-            registered = all(
-                (replacement if len(targets) == 1 else target_name) in
-                {item['name'] for item in TOOLS_BY_SLUG[target_owner]}
-                for target_owner, target_name in targets
-            )
+            registered = all(target_name in published_names[target_owner] for target_owner, target_name in targets)
             rows.append({
                 'name': name, 'operation_id': operation_id(tool),
                 'owner': owner, 'replacement': replacement,
