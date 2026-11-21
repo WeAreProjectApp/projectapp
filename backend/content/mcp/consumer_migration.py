@@ -3,14 +3,6 @@ from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG, PRE_SPLIT_TOOLS_BY_SLUG
 from content.mcp.module_catalog import INFRASTRUCTURE_TOOLS, MODULE_CONNECTORS, replacement_targets
 from content.mcp.protocol import ToolError
 
-INCOME_REPLACEMENTS = {
-    'list_income': 'list_incomes', 'list_expected_incomes': 'list_incomes',
-    'get_expected_income': 'get_income', 'get_income_detail': 'get_income',
-    'create_expected_income': 'create_income', 'update_expected_income': 'update_income',
-    'duplicate_expected_income': 'duplicate_income',
-    'launch_proposal_to_platform': 'review_proposal_approval',
-}
-
 
 def source_tools(source):
     catalogs = {'legacy': LEGACY_TOOLS_BY_SLUG, 'pre_split': PRE_SPLIT_TOOLS_BY_SLUG,
@@ -35,7 +27,7 @@ def translated_grants(source, target_slug):
             continue
         for owner, replacement in replacement_targets(name, source.connector.slug):
             if owner == target_slug:
-                translated.add(INCOME_REPLACEMENTS.get(name, replacement))
+                translated.add(replacement)
     available = {tool['name'] for tool in TOOLS_BY_SLUG[target_slug]}
     missing = translated - available
     if missing:

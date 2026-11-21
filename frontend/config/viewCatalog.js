@@ -1100,7 +1100,7 @@ export const viewCatalogSections = [
       file: 'frontend/pages/panel/data-integrity.vue',
       reference: 'revisión transversal de inconsistencias y correcciones auditadas',
       audience: 'admin', viewType: 'list',
-      notes: 'Administradores, incluida integridad financiera: revisiones diarias y a demanda, hallazgos pendientes/aceptados/resueltos, vista previa de lotes, motivo, historial y deshacer condicionado. No modifica la autorización del resto de Contabilidad.',
+      notes: 'Los administradores revisan hallazgos a diario o a demanda, incluida la integridad financiera. Pueden consultar hallazgos pendientes, aceptados o resueltos. Al corregir el nombre de un proyecto ven cada registro, campo y valor antes y después. Los lotes requieren motivo, quedan en el historial y admiten deshacer si los datos coinciden. El resto de Contabilidad conserva sus permisos propios.',
     }],
   },
   {

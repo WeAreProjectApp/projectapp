@@ -30,6 +30,26 @@ export default {
   "undoPreview": "Revisar deshacer",
   "reviews": "Decisiones sobre hallazgos",
   "confirmTitle": "Revisa antes de confirmar",
+  "before": "Antes",
+  "after": "Después",
+  "noValue": "Sin valor",
+  "records": {
+    "accounts": { "project": "Proyecto", "userprofile": "Perfil del cliente" },
+    "auth": { "user": "Usuario" },
+    "content": {
+      "documentfolder": "Carpeta documental", "document": "Documento", "businessproposal": "Propuesta",
+      "communicationthread": "Conversación", "communicationfolder": "Carpeta de comunicaciones",
+      "webappdiagnostic": "Diagnóstico"
+    },
+    "secure_links": { "securelinkfolder": "Carpeta de Enlaces seguros" }
+  },
+  "fields": {
+    "name": "Nombre", "title": "Título", "client_id": "Cliente",
+    "client_user_id": "Usuario del cliente", "project_id": "Proyecto", "updated_by_id": "Último editor",
+    "slug": "Identificador de URL", "company_name": "Empresa", "first_name": "Nombre", "last_name": "Apellido",
+    "client_name": "Nombre del cliente", "client_company": "Empresa del cliente",
+    "client_email": "Correo del cliente", "client_phone": "Teléfono del cliente"
+  },
   "reason": "Motivo",
   "cancel": "Cancelar",
   "confirm": "Confirmar",

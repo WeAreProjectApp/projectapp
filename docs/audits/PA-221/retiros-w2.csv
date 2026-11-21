@@ -1,0 +1,18 @@
+origen,catalogo,gestor_destino,referencia_local_observada,entorno_destino,sha_publicado,fecha_publicacion,autorizacion_operativa,consumidor_real,actor_permisos_vencimiento,evidencia_equivalencia,evidencia_consumidor_posdespliegue,migracion_o_revocacion,inicio_observacion_continua,ultimo_uso_antiguo,confirmaciones_pendientes,resultado_previo_en_destino,recibo_y_comprobacion_posterior,estado
+accounting-billing,legacy,accounting,,,,,,,,,,,,,,,,pendiente
+accounting-cards,legacy,accounting,,,,,,,,,,,,,,,,pendiente
+accounting-ledger,legacy,accounting,,,,,,,,,,,,,,,,pendiente
+additional-modules,legacy,offerings,,,,,,,,,,,,,,,,pendiente
+blog,legacy,content,Codex local,,,,,,,,,,,,,,,pendiente
+building-on-demand,legacy,programs,,,,,,,,,,,,,,,,pendiente
+building-with-us,legacy,programs,,,,,,,,,,,,,,,,pendiente
+clients,legacy,commercial,Codex local,,,,,,,,,,,,,,,pendiente
+commercial,pre_split,commercial,,,,,,,,,,,,,,,,pendiente
+commercial,pre_split,offerings,,,,,,,,,,,,,,,,pendiente
+commercial,pre_split,programs,,,,,,,,,,,,,,,,pendiente
+diagnostics,legacy,commercial,,,,,,,,,,,,,,,,pendiente
+linkedin-personal,legacy,content,Codex local,,,,,,,,,,,,,,,pendiente
+partnership-program,legacy,programs,,,,,,,,,,,,,,,,pendiente
+projects,pre_split,data-integrity,,,,,,,,,,,,,,,,pendiente
+projects,pre_split,projects,,,,,,,,,,,,,,,,pendiente
+proposals,legacy,commercial,Codex local,,,,,,,,,,,,,,,pendiente

@@ -161,6 +161,10 @@ def test_undo_goes_through_its_own_preview_and_confirmation(api_client, token, g
     _call(api_client, token, 'confirm_action', {'confirmation_id': pending['confirmation_id']})
     operation = DataIntegrityOperation.objects.get()
     preview = _call(api_client, token, 'preview_integrity_operation_undo', {'operation_id': operation.pk})
+    phase = ProjectPhase.objects.get(project=gap['project'], order=2)
+    [change] = preview['steps'][0]['changes']
+    assert (change['model'], change['id'], change['field'], change['before'], change['after']) == (
+        'accounts.projectphase', phase.pk, 'order', 2, 4)
 
     undo = _call(api_client, token, 'undo_integrity_operation', {
         'operation_id': operation.pk, 'reason': 'Volver', 'request_id': 'mcp-undo',

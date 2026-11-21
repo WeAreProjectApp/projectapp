@@ -172,6 +172,12 @@ en la conversación.
 7. `STALE_VERSION` o `CONFLICT`: previsualizar una sola vez más y volver a preguntar.
    `CONFIRMATION_EXPIRED` (10 minutos): repetir desde el paso 4.
 8. Anotar el `operation_id` del resultado.
+   Para cotejar un renombre de proyecto NM1, conservar el detalle aprobado y
+   consultar `preview_integrity_operation_undo` con ese ID. Cada cambio
+   identifica modelo, registro y campo. Su valor de partida es el que quedó
+   aplicado y su valor de destino es el anterior. Comparar todos los campos,
+   incluidos los vínculos, y enlazar el motivo y el actor de
+   `list_integrity_operations`. La consulta de vista previa es de lectura.
 
 **Fusiones** (una por pregunta): mostrar los clientes o carpetas del grupo, pedir cuál
 se conserva y cuál se fusiona (ofrecer `suggestion` como Recommended), previsualizar

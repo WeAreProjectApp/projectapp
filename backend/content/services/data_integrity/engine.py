@@ -14,7 +14,9 @@ from rest_framework.exceptions import ValidationError
 from content.models import DataIntegrityOperation
 from content.services.data_integrity import catalog
 from content.services.data_integrity.hashing import digest
-from content.services.data_integrity.snapshots import diff_items, model_for, snapshot_many
+from content.services.data_integrity.snapshots import (
+    diff_items, matches_preview, model_for, record_changed, record_guards, snapshot_many,
+)
 from content.services.data_integrity.types import (
     DOMAIN_LABELS, EXISTING_TOOL, MERGE_CLIENTS, REPORT_ONLY, IntegrityConflict, blocker,
 )
@@ -276,13 +278,18 @@ def apply_fixes(scope, fixes, *, actor, reason, request_id, expected_impact_hash
         before = snapshot_many(closure)
         fixer.apply(plan, actor=actor)
         after = snapshot_many(closure)
+        items = diff_items(before, after)
+        if fixer.exact_changes and not matches_preview(step['changes'], items):
+            raise IntegrityConflict('La corrección produjo un impacto distinto del aprobado. Se revirtió el lote.',
+                                    code='impact_mismatch', fingerprint=finding.fingerprint)
         if _still_detected(item, finding, scope):
             raise IntegrityConflict(f'La corrección de {item.id} no resolvió el hallazgo; no se aplicó nada.',
                                     code='fix_ineffective', fingerprint=finding.fingerprint)
         recorded.append({
             'fingerprint': finding.fingerprint, 'rule_id': item.id, 'rule_version': item.version,
             'fix_kind': plan.fix_kind, 'params': plan.params, 'subjects': step['subjects'],
-            'guards': plan.guards, 'dependencies': plan.dependencies, 'items': diff_items(before, after),
+            'guards': plan.guards, 'dependencies': plan.dependencies, 'items': items,
+            **({'record_guards': record_guards(after)} if fixer.exact_changes else {}),
         })
     try:
         with transaction.atomic():
@@ -304,8 +311,13 @@ def apply_fixes(scope, fixes, *, actor, reason, request_id, expected_impact_hash
 
 # ── Undo ─────────────────────────────────────────────────────────────────────
 
+def _step_keys(step):
+    return ({(item['model'], item['pk']) for item in step['items']}
+            | {(guard['model'], guard['id']) for guard in step.get('record_guards', [])})
+
+
 def _item_keys(operation):
-    return sorted({(item['model'], item['pk']) for step in operation.steps for item in step['items']}
+    return sorted({key for step in operation.steps for key in _step_keys(step)}
                   | {tuple(key) for step in operation.steps for key in step.get('dependencies', [])})
 
 
@@ -339,6 +351,10 @@ def preview_undo(operation_id):
             row = current[(item['model'], item['pk'])]
             if row is None or row.get(item['field']) != item['after']:
                 changed.append({'model': item['model'], 'id': item['pk'], 'field': item['field']})
+        identified = {(item['model'], item['id']) for item in changed}
+        for guard in step.get('record_guards', []):
+            if (guard['model'], guard['id']) not in identified and record_changed(guard, current):
+                changed.append({'model': guard['model'], 'id': guard['id']})
     if changed:
         blockers.append({**blocker('changed_since', 'Algunos registros cambiaron después de la corrección; '
                                    'deshacerla pisaría esos cambios.'), 'records': changed})
@@ -348,7 +364,8 @@ def preview_undo(operation_id):
         'reason': operation.reason, 'scope': operation.scope,
         'steps': [{'rule_id': step['rule_id'], 'fix_kind': step['fix_kind'], 'subjects': step['subjects'],
                    'items': len([item for item in step['items'] if not item['guard']]),
-                   'changes': [{'label': next((ref['label'] for ref in step['subjects'] if ref['model'] == item['model'] and ref['id'] == item['pk']), 'Registro'),
+                   'changes': [{'model': item['model'], 'id': item['pk'],
+                                'label': next((ref['label'] for ref in step['subjects'] if ref['model'] == item['model'] and ref['id'] == item['pk']), 'Registro'),
                                 'field': item['field'], 'before': item['after'], 'after': item['before']}
                                for item in step['items'] if not item['guard']]}
                   for step in operation.steps],
@@ -375,6 +392,24 @@ def _restore_exact(step):
         model._base_manager.filter(pk=pk).update(**values)
 
 
+def _revert_with_writer(fixer, step, before, actor):
+    if fixer is None or fixer.revert is None:
+        return
+    try:
+        with transaction.atomic():
+            fixer.revert(step, actor=actor)
+            if fixer.exact_changes and step.get('record_guards'):
+                # A copy can already have had the clean value before the original fix.
+                # If the inverse writer would change it, discard the cascade and let
+                # the field-level restore below apply only the approved reversal.
+                allowed = {(item['model'], item['pk'], item['field']) for item in step['items'] if not item['guard']}
+                written = diff_items(before, snapshot_many(before))
+                if any((item['model'], item['pk'], item['field']) not in allowed for item in written if not item['guard']):
+                    transaction.set_rollback(True)
+    except (ValidationError, DjangoValidationError, IntegrityError, ValueError):
+        pass  # The writer's savepoint was rolled back; the recorded values can still be restored.
+
+
 @historical_write
 @transaction.atomic
 def undo_operation(operation_id, *, actor, reason, request_id, expected_impact_hash, source='service'):
@@ -393,26 +428,22 @@ def undo_operation(operation_id, *, actor, reason, request_id, expected_impact_h
         raise IntegrityConflict('No se puede deshacer esta corrección.', code='undo_blocked',
                                 blockers=impact['blockers'])
     recorded = []
-    for step in reversed(operation.steps):
-        keys = sorted({(item['model'], item['pk']) for item in step['items']})
+    for step, reversal in zip(reversed(operation.steps), reversed(impact['steps'])):
+        keys = sorted(_step_keys(step))
         before = snapshot_many(keys)
         fixer = catalog.get_fixer(step['rule_id'], step['fix_kind'])
-        if fixer is not None and fixer.revert is not None:
-            try:
-                with transaction.atomic():
-                    fixer.revert(step, actor=actor)
-            except (ValidationError, DjangoValidationError, IntegrityError, ValueError):
-                pass  # The savepoint is gone; the exact restore below takes over.
+        _revert_with_writer(fixer, step, before, actor)
         _restore_exact(step)
         after = snapshot_many(keys)
         mismatched = [item for item in step['items'] if not item['guard']
                       and (after[(item['model'], item['pk'])] or {}).get(item['field']) != item['before']]
-        if mismatched:
+        items = diff_items(before, after)
+        if mismatched or (fixer and fixer.exact_changes and not matches_preview(reversal['changes'], items)):
             raise IntegrityConflict('No se pudo restaurar exactamente el estado anterior; no se cambió nada.',
                                     code='undo_not_exact')
         recorded.append({**{key: step[key] for key in ('fingerprint', 'rule_id', 'rule_version', 'fix_kind',
                                                         'params', 'subjects', 'guards')},
-                         'items': diff_items(before, after)})
+                         'items': items})
     undo = DataIntegrityOperation.objects.create(
         kind=DataIntegrityOperation.Kind.UNDO, source=current_source(source),
         catalog_version=catalog.CATALOG_VERSION, scope=operation.scope, request_id=request_id,
