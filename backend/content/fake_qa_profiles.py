@@ -256,8 +256,8 @@ def profile_baseline(profile, actors, context, mail_path):
             for email, actor in actors.items()
         ],
         'project': {
-            'id': project.pk, 'key': project.name, 'client_user_id': project.client_id,
-            'client_profile_id': project.client.profile.pk,
+            'id': project.pk, 'key': project.name, 'status': project.status,
+            'client_user_id': project.client_id, 'client_profile_id': project.client.profile.pk,
         },
         **scenario,
     }

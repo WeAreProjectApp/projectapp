@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -152,7 +153,7 @@ def test_consumed_b04_baseline_requires_another_copy(b04):
     pending = generated['baseline']['tickets']['pending']
     ChangeRequest.objects.filter(pk=pending['id']).update(status=ChangeRequest.STATUS_EVALUATING)
 
-    with pytest.raises(CommandError, match=pending['key']):
+    with pytest.raises(CommandError, match=re.escape(pending['key'])):
         prepare()
 
     assert ChangeRequest.objects.get(pk=pending['id']).status == ChangeRequest.STATUS_EVALUATING
@@ -164,7 +165,7 @@ def test_missing_actor_reports_its_locator(b04):
     admin = generated['baseline']['actors'][0]
     get_user_model().objects.filter(pk=admin['id']).update(is_active=False)
 
-    with pytest.raises(CommandError, match=admin['key']):
+    with pytest.raises(CommandError, match=re.escape(admin['key'])):
         prepare()
 
 
