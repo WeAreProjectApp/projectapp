@@ -6,7 +6,7 @@ export const secureLinkTypes = [
   {
     key: 'custom', label_es: 'Personalizado', label_en: 'Custom',
     fields: [
-      { key: 'custom_name', label_es: 'Nombre del tipo', label_en: 'Type name', kind: 'text', required: true, max_length: 200 },
+      { key: 'custom_name', label_es: 'Nombre del tipo', label_en: 'Type name', kind: 'text', required: true, panel_required: false, max_length: 200 },
       { key: 'content', label_es: 'Contenido', label_en: 'Content', kind: 'textarea', required: true, max_length: 15000 },
     ],
   },
@@ -15,7 +15,8 @@ export const secureLinkTypes = [
     label_es: 'Credenciales de acceso',
     label_en: 'Access credentials',
     fields: [
-      { key: 'service', label_es: 'Servicio o sitio', label_en: 'Service or site', kind: 'text', required: false, max_length: 200 },
+      { key: 'service', label_es: 'Nombre del sistema', label_en: 'System name', kind: 'text', required: false, panel_create_hidden: true, max_length: 200 },
+      { key: 'url', label_es: 'Dirección del sistema', label_en: 'System address', kind: 'url', required: false, panel_create_hidden: true, max_length: 500 },
       { key: 'username', label_es: 'Usuario o correo', label_en: 'Username or email', kind: 'text', required: false, max_length: 200 },
       { key: 'password', label_es: 'Contraseña', label_en: 'Password', kind: 'secret', required: true, max_length: 2000 },
       { key: 'note', label_es: 'Nota', label_en: 'Note', kind: 'textarea', required: false, max_length: 2000 },

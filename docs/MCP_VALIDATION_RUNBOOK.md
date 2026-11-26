@@ -3116,6 +3116,12 @@ clasifica por proyecto, y `null` elige raíz. Omitir al actualizar conserva.
 ámbito de archivo; comparte resultados y conteos con el panel. Las listas y
 los detalles ordinarios nunca exponen token, URL o contenido.
 
+Para PA-304, comprobar que las herramientas de Comunicaciones siguen validando
+los campos marcados `required` por `list_secure_link_types`. Por ejemplo,
+Personalizado exige nombre y contenido por MCP. El Panel usa `panel_required`
+y permite omitir el nombre. Un cambio de título por MCP en uno de esos enlaces
+conserva su contenido. Los permisos para revelarlo siguen siendo independientes.
+
 Validar: crear subcarpeta → crear enlace dentro → mover entre proyectos sin
 cambiar su asociación → archivar manteniendo el enlace vigente → restaurar.
 Intentar ciclo y modificación de raíz automática debe fallar. La eliminación

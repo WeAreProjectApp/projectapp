@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "sources": {
-    "frontend/config/viewCatalog.js": "c4bd84bf4b24de60b91baa91b978b0cea6775bd7910ccbdb6af377eadfdc97d6",
-    "frontend/config/viewCapabilityCatalog.js": "cffb7912e1d1d3ed98e79f7fc97df318b6e077e1ebfa606a0e6972d2b71d0c40"
+    "frontend/config/viewCatalog.js": "f541c9157a3ab2c6cc02f96f7c2ed3544ac3991c2f9f45f0315d755fa14294fb",
+    "frontend/config/viewCapabilityCatalog.js": "d9d3516a08dcffa4a384bf5f889c9eadcc48b4a27f18c4e70cf9cb5e0d7b9d14"
   },
   "surfaces": [
     {
@@ -763,12 +763,12 @@
       "file": "frontend/pages/panel/secure-links/index.vue",
       "audience": "admin",
       "view_type": "list",
-      "description": "Formulario inicial de Mensaje confidencial, dropdown con nombre condicional para Personalizado, campos opcionales y configuración visibles desde el inicio, sin Asunto; URL automática sin exigir cliente ni proyecto. Estados Listo para compartir, Enviado (marca manual), Abierto, Vencido y Revocado, con conteos e historial. Los tres puntos al inicio de cada fila abren un modal con detalle, editar contenido, copiar, marcar enviado, revocar o reactivar y eliminar con confirmación; el detalle renombra el título en línea, permite copiar su valor completo vigente sin revelar contenido y tiene una sola opción de editar; reactivar limpia la marca de envío y conserva el historial. Actualizar datos recarga la tabla. Recibidos reúne lo que envían los clientes; ?link=<id> abre el detalle. Carpetas propias y subcarpetas separadas de raíces automáticas de proyecto; navegación por proyecto o cliente, búsqueda y estados dentro del subárbol, movimiento sin reasignación y archivo reversible sin revocar enlaces.",
+      "description": "Formulario inicial de Mensaje confidencial, selector de tipo con nombre opcional para Personalizado y configuración visible desde el inicio. Credenciales permite compartir sólo la contraseña y conserva los datos del sistema al editar enlaces anteriores; URL automática sin exigir cliente ni proyecto. Estados Listo para compartir, Enviado (marca manual), Abierto, Vencido y Revocado, con conteos e historial. Los tres puntos al inicio de cada fila abren un modal con detalle, editar contenido, copiar, marcar enviado, revocar o reactivar y eliminar con confirmación; el detalle renombra el título en línea, permite copiar su valor completo vigente sin revelar contenido y tiene una sola opción de editar; reactivar ofrece elegir la vigencia y conservar o sustituir la URL antes de confirmar en una fila propia. La reactivación limpia la marca de envío y conserva el historial. Actualizar datos recarga la tabla. Recibidos reúne lo que envían los clientes; ?link=<id> abre el detalle. Carpetas propias y subcarpetas separadas de raíces automáticas de proyecto; navegación por proyecto o cliente, búsqueda y estados dentro del subárbol, movimiento sin reasignación y archivo reversible sin revocar enlaces.",
       "features": [
         {
           "id": "panel-secure-links",
           "label": "Compartir información sensible",
-          "summary": "Genera la URL con un formulario de campos esenciales, dropdown de tipos y opciones visibles desde el inicio, sin Asunto. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; renombra el título en línea y copia su valor completo con una acción independiente de Copiar enlace, edita el contenido desde el detalle o desde los tres puntos de la fila y conserva eliminación confirmada, reactivación e historial. Organiza por carpetas automáticas de proyecto, carpetas propias y subcarpetas; navega por cliente, filtra estados dentro de la carpeta y mueve o archiva sin cambiar permisos ni revocar enlaces."
+          "summary": "Genera la URL con un título y el contenido esencial del tipo elegido, como una contraseña, un token o un mensaje. Las opciones y la configuración están a la vista. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; renombra el título en línea y copia su valor completo con una acción independiente de Copiar enlace, edita el contenido desde el detalle o desde los tres puntos de la fila y conserva eliminación confirmada, reactivación e historial. Organiza por carpetas automáticas de proyecto, carpetas propias y subcarpetas; navega por cliente, filtra estados dentro de la carpeta y mueve o archiva sin cambiar permisos ni revocar enlaces."
         }
       ]
     },

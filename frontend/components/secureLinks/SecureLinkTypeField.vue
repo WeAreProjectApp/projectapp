@@ -28,6 +28,8 @@ const choices = computed(() => props.types.map(type => ({
   value: type.key, label: props.language === 'en' ? type.label_en : type.label_es,
 })));
 const selectedLabel = computed(() => choices.value.find(choice => choice.value === props.modelValue)?.label || '');
+const customNameRequired = computed(() => props.types.find(type => type.key === 'custom')
+  ?.fields?.find(field => field.key === 'custom_name')?.required ?? true);
 
 function close(restoreFocus = true) {
   open.value = false;
@@ -106,8 +108,8 @@ function onKeydown(event) {
         <BaseActionIcon v-if="modelValue === choice.value" action="complete" class="shrink-0" />
       </button>
     </BaseFloatingListbox>
-    <BaseFormField v-if="modelValue === 'custom'" v-slot="{ invalid, errorId }" :label="t('secureLinks.customName')" :for="`${id}-custom`" required :error="customError">
-      <BaseInput :id="`${id}-custom`" :model-value="customName" :disabled="disabled" :disabled-reason="disabledReason" :error="invalid" :aria-describedby="errorId" maxlength="200" autocomplete="off" data-testid="secure-link-field-custom_name" @update:model-value="emit('update:customName', $event)" />
+    <BaseFormField v-if="modelValue === 'custom'" v-slot="{ invalid, errorId }" :label="t('secureLinks.customName')" :for="`${id}-custom`" :required="customNameRequired" :error="customError">
+      <BaseInput :id="`${id}-custom`" :model-value="customName" :required="customNameRequired" :disabled="disabled" :disabled-reason="disabledReason" :error="invalid" :aria-describedby="errorId" maxlength="200" autocomplete="off" data-testid="secure-link-field-custom_name" @update:model-value="emit('update:customName', $event)" />
     </BaseFormField>
   </div>
 </template>

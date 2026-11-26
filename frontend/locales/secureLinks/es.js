@@ -47,12 +47,17 @@ export default {
   typesError: 'No pudimos cargar los tipos de información.',
   typesPending: 'Espera a que se carguen los tipos de información.',
   validation: {
+    text: 'Debe ser texto.',
     required: 'Este campo es obligatorio.',
     maxLength: 'Máximo {max} caracteres.',
     totalLength: 'El contenido supera el máximo de 20 000 caracteres.',
     email: 'Escribe un correo válido.',
   },
   panel: {
+    reactivateTitle: 'Reactivar enlace',
+    reactivateHint: 'El mismo enlace se podrá abrir una vez más. Si sospechas que otra persona lo abrió, genera uno nuevo y el anterior dejará de funcionar.',
+    rotateLink: 'Generar un enlace nuevo e invalidar el anterior',
+    reactivate: 'Reactivar',
     publicLink: 'Enlace para clientes',
     publicLinkCopied: 'Copiado',
     publicLinkCopyFailed: 'No se pudo copiar',
