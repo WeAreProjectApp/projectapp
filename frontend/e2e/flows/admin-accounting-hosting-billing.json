@@ -6,8 +6,8 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Superuser sends a client the cuenta de cobro from a hosting row at /panel/accounting/hostings: the row menu's 'Enviar cuenta de cobro' entry (disabled with its reason without client email) opens a ConfirmModal previewing amount/recipient, POSTs /api/accounting/hostings/:id/send-collection-account/ which issues the Document (public number, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the PDF attached and stamps billing_requested_at (pauses the expiry notices; a 'Cobro enviado' badge appears). Partial failure (email down) keeps the document issued and warns to re-send from Cobros. La confirmación exige origen operativo explícitamente asociado al único hosting del proyecto y, si existe suscripción, una obligación existente seleccionada. Los orígenes pendientes bloquean emitir; permite navegar a conciliación administrativa antes de enviar.",
-  "expectedSpecs": 3,
+  "description": "El superusuario abre Enviar cuenta de cobro desde la fila de Hostings. Ve su proyecto, cliente, servicio, destinatario y el mismo resumen de período que en Ingresos. Si los vínculos discrepan o falta un período elegible, el diálogo indica cómo continuar. Cancelar conserva la fila. Enviar al cliente revalida la referencia y la versión, emite el saldo revisado y envía el PDF. Tras emitir se pausan los avisos de vencimiento. Si falla el correo, el documento queda disponible para reenvío.",
+  "expectedSpecs": 7,
   "outcomes": [
     "display",
     "success",

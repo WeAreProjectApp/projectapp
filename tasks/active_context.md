@@ -10,6 +10,10 @@ despliegue. [Expediente y fichas](../docs/audits/PA-221/README.md)
 
 Secop conserva su destino bajo Contratación estatal. Los accesos de Plataforma y Sistema se distinguen por su dibujo en los dos tamaños del menú. La navegación local en Chromium cubrió ambos permisos y los cinco perfiles de pantalla. [Resultados y capturas](../docs/qa/PA-303.md)
 
+## W3 · PA-297 · Cuenta de cobro desde Hostings
+
+La fila identifica el servicio. El diálogo comprueba cliente, proyecto y origen operativo antes de mostrar el resumen compartido de PA-296. Confirmar entrega al escritor de W2 la referencia y la versión revisadas. Ingresos conserva el selector y los controles documentales de W1. Las pruebas cruzadas usan datos ficticios, SQLite y correo en memoria.
+
 ## w1 · PA-289, PA-251 y PA-286
 
 La navegación existente de Contacto mostró el encabezado y retiró el formulario tras un envío en la misma pestaña. Django registró un contacto y el buzón de prueba recibió tres entregas. Frontend y backend sirvieron `f62befdc9499efb1336b639eec62f687456b63e8` en [CI](https://github.com/WeAreProjectApp/projectapp/actions/runs/44939845811/job/136954421520).

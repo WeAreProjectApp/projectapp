@@ -988,7 +988,7 @@ export const viewCatalogSections = [
         reference: 'vista de hostings activos por cliente del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'El cobro de hosting permite reconocer y confirmar un registro existente; crear hosting conserva cliente y proyecto, y volver de conciliación recupera el formulario. IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa. Los filtros y el histórico de ciclos se recuperan desde la dirección de la vista.',
+        notes: 'Enviar cuenta de cobro abre el proyecto, cliente, servicio y correo de la fila. Comparte el resumen de período con Ingresos, que conserva el selector de servicio. El saldo revisado y el PDF se confirman antes del envío. Una discrepancia indica cómo corregir el vínculo o revisar el período. Volver de conciliación recupera la fila y actualiza el resumen. Crear hosting conserva cliente y proyecto. IVA configurable por hosting, heredado en nuevas cuentas sin aumentar automáticamente la tarifa. Los filtros y el histórico de ciclos se recuperan desde la dirección de la vista.',
       },
       {
         label: 'Contabilidad — Bolsillo',
