@@ -1,5 +1,6 @@
 import { expect } from './test.js';
 import { chooseRowAction, openRowMenu } from './row-actions.js';
+import { waitForNuxtApp } from './navigation.js';
 
 export function hostingRows({ billingSent }) {
   return [
@@ -182,7 +183,9 @@ export function buildHandler({
 }
 
 export async function gotoHostings(page) {
-  await page.goto('/panel/accounting/hostings', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
+  await page.getByTestId('panel-sidebar').getByRole('link', { name: 'Hostings', exact: true }).first().click();
   await expect(
     page.getByRole('heading', { name: 'Hostings', exact: true }),
   ).toBeVisible({ timeout: 25_000 });

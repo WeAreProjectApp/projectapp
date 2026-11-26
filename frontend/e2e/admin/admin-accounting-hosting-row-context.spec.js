@@ -1,9 +1,8 @@
 import { expect, test } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
-import { chooseHostingAction, hostingRows } from '../helpers/accounting-hosting-cycles.js';
+import { chooseHostingAction, gotoHostings, hostingRows } from '../helpers/accounting-hosting-cycles.js';
 import { ADMIN_ACCOUNTING_HOSTING_BILLING } from '../helpers/flow-tags.js';
-import { waitForNuxtApp } from '../helpers/navigation.js';
 
 test.setTimeout(60_000);
 
@@ -61,9 +60,7 @@ async function openList(page, { conflict = false, wrongClient = false } = {}) {
     }
     return null;
   });
-  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
-  await waitForNuxtApp(page);
-  await page.getByTestId('panel-sidebar').getByRole('link', { name: 'Hostings', exact: true }).first().click();
+  await gotoHostings(page);
   await expect(page.getByTestId('accounting-row-2')).toBeVisible();
   return writes;
 }
@@ -91,6 +88,7 @@ async function reviewRow(page, service) {
 test('each hosting row previews only its own account before cancellation', {
   tag: [...ADMIN_ACCOUNTING_HOSTING_BILLING, '@role:admin', '@outcome:display'],
 }, async ({ page }, testInfo) => {
+  // quality: allow-deep-link (the starting URL is the Spanish Panel home; the operator reaches Hostings through its sidebar link)
   const writes = await openList(page);
   const alfa = await reviewRow(page, services[0]);
   await alfa.screenshot({ path: testInfo.outputPath('fila-alfa.png') });
