@@ -44,6 +44,15 @@ const validationMessage = computed(() => {
   }
   if (context.billing_nature === 'hosting') {
     if (hostingData.value?.selection?.blockers?.length) return hostingData.value.selection.blockers[0].message
+    if (props.incomeEntry && context.project_hosting_id && hostingData.value?.billing_period) {
+      const period = hostingData.value.billing_period
+      if (period.blocker) return period.blocker
+      if (Number(period.project_hosting_id) !== Number(context.project_hosting_id)
+          || Number(period.project_id) !== Number(props.projectId)
+          || (props.client?.id && Number(period.client_id) !== Number(props.client.id))) {
+        return 'Actualiza el hosting. El período consultado pertenece a otro servicio, cliente o proyecto.'
+      }
+    }
     if (hostingValidation.value) return hostingValidation.value
     if (!options.value?.hosting_id) return 'Asocia el hosting al proyecto desde «Conciliar hosting del proyecto» antes de emitir esta cuenta.'
     if (Number(context.project_hosting_id) !== Number(options.value.hosting_id)) return 'Selecciona el hosting del proyecto para esta cuenta de cobro.'
@@ -58,7 +67,7 @@ const missingPeriod = computed(() => {
   const data = hostingData.value
   if (!props.incomeEntry || context.document_pending || context.billing_nature !== 'hosting'
       || context.project_hosting_id || !data) return ''
-  if (data.billing_period?.blocker) return data.billing_period.blocker
+  if (data.billing_period?.blocker) return data.billing_period.blocker === validationMessage.value ? '' : data.billing_period.blocker
   if (data.overview?.subscription || data.billing_period) return 'Falta resolver el período que se facturará al confirmar el hosting.'
   return ''
 })
