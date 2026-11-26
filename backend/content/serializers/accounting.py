@@ -1327,13 +1327,14 @@ class HostingRecordCreateUpdateSerializer(VatWriteMixin, serializers.ModelSerial
 
 
 class HostingCycleSerializer(serializers.ModelSerializer):
+    receipt_allocation_id = serializers.IntegerField(source='receipt_allocation.pk', read_only=True, default=None)
     modality_label = serializers.SerializerMethodField()
     is_backfill = serializers.SerializerMethodField()
 
     class Meta:
         model = HostingCycle
         fields = (
-            'id', 'modality', 'modality_label', 'amount', 'paid_at',
+            'id', 'modality', 'modality_label', 'amount', 'paid_at', 'receipt_allocation_id',
             'period_from', 'period_to', 'cycles_represented',
             'is_backfill', 'notes', 'created_at',
         )

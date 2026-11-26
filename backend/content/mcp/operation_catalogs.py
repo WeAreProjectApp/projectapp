@@ -402,7 +402,24 @@ LEDGER_PARITY_TOOLS = [
 
 
 CYCLE_RECEIPT_SCHEMA = json.loads(json.dumps(writable_schema(CycleReceiptInput), default=float))
+for field, description in {
+    'advance_validity': 'Ampliar la vigencia al registrar un ciclo nuevo. También se admite un abono parcial.',
+    'amount': 'Importe de dinero acreditado en COP.',
+    'destination': 'Destino contable del dinero recibido.',
+    'hosting_receipt': 'Emisor y folio de la acreditación o identificadores de sus asientos previos.',
+    'income_id': 'Ingreso esperado del mismo cliente, proyecto y servicio.',
+    'modality': 'Periodicidad que se registra en el histórico del pago.',
+    'notes': 'Observaciones del pago de ciclo.',
+    'paid_at': 'Fecha de recepción del dinero.',
+    'period_from': 'Comienzo explícito para el cálculo de vigencia del ciclo.',
+    'period_to': 'Destino contractual explícito de la vigencia.',
+    'preview_hash': 'Versión devuelta por la revisión de este pago.',
+    'request_id': 'UUID del intento, reutilizado si se reintenta.',
+}.items():
+    CYCLE_RECEIPT_SCHEMA['properties'][field]['description'] = description
 FORECAST_CONFIRMATION_SCHEMA = {**writable_schema(NextIncomeInput), 'required': ['version']}
+FORECAST_CONFIRMATION_SCHEMA['properties']['version']['description'] = 'Versión de la propuesta revisada.'
+FORECAST_CONFIRMATION_SCHEMA['properties']['reference_income_id']['description'] = 'Ingreso del período de referencia.'
 
 BILLING_PARITY_TOOLS = [
     _op('send_hosting_collection_account', 'Emite y envía el período revisado del servicio o documenta un pago acreditado.',

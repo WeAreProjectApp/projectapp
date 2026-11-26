@@ -62,6 +62,8 @@
                     label="Eliminar ciclo"
                     variant="danger-ghost"
                     size="sm"
+                    :disabled="Boolean(cycle.receipt_allocation_id)"
+                    :disabled-reason="cycle.receipt_allocation_id ? $t('hostingBilling.correctReceipt') : ''"
                     @click="askDelete(cycle)"
                   />
                 </td>
@@ -128,7 +130,7 @@ async function loadCycles() {
 }
 
 watch(
-  () => [props.open, props.record?.id],
+  [() => props.open, () => props.record?.id],
   () => {
     sequence += 1;
     cycles.value = [];
@@ -152,6 +154,7 @@ const deleteMessage = computed(() => {
 });
 
 function askDelete(cycle) {
+  if (cycle.receipt_allocation_id) return;
   cycleToDelete.value = cycle;
   deleteConfirmOpen.value = true;
 }

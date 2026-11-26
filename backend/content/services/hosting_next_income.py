@@ -25,10 +25,6 @@ def next_income_plan(record, *, reference_income_id=None):
     # Preserve the contractual day after a clamped short month (e.g. Jan 31).
     anchor = book.hosting.subscription.start_date if book.hosting.subscription_id else (record.valid_from or current.start)
     month_offset = (start.year - anchor.year) * 12 + start.month - anchor.month
-    if month_offset < 0 or add_months(anchor, month_offset) != start:
-        anchor = current.start
-        month_offset = months
-    end = add_months(anchor, month_offset + months) - timedelta(days=1)
     documented = next((w for w in book.windows.values() if w.start == start), None)
     if documented:
         if documented.conflict:
@@ -36,8 +32,12 @@ def next_income_plan(record, *, reference_income_id=None):
         if not documented.income and (documented.state in ('paid', 'processing', 'failed') or documented.documents):
             raise PeriodConflict('El siguiente período ya tiene un pago o documento. Concilia antes de crear el ingreso.')
         end = documented.end
-    elif add_months(anchor, month_offset) != start:
-        raise PeriodConflict('Concilia el fin del período actual con el calendario contractual.')
+    else:
+        subscription = book.hosting.subscription
+        cadence_disagrees = subscription and HostingRecord.MODALITY_MONTHS.get(subscription.plan) != months
+        if cadence_disagrees or month_offset < 0 or month_offset % months or add_months(anchor, month_offset) != start:
+            raise PeriodConflict('Concilia el fin del período actual con el calendario contractual.')
+        end = add_months(anchor, month_offset + months) - timedelta(days=1)
     overlaps = [w for w in book.windows.values() if w.start <= end and w.end >= start and w is not documented]
     if overlaps or any(i.period_start <= end and i.period_end >= start for i in book.unlinked_incomes):
         raise PeriodConflict('Ya existe una ventana que se solapa. Concilia el ingreso antes de crear otro.')

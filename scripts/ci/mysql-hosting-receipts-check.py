@@ -146,7 +146,7 @@ def check_invoice(actor):
     context = {'hosting_payment_id': payment.pk, 'period_version': reviewed['version']}
     from_income = {**context, 'client_profile_id': income.client_id, 'income_record_id': income.pk,
                    'billing_nature': 'hosting', 'project_hosting_id': reviewed['project_hosting_id'],
-                   'items': [{'description': 'Servicio DEV', 'quantity': 1, 'amount': '233280.00'}]}
+                   'items': [{'description': 'Servicio DEV', 'quantity': 1, 'unit_price': '233280.00'}]}
     sent_before = len(getattr(mail, 'outbox', []))
     results = compete(actor, (f'/api/accounting/hostings/{record.pk}/send-collection-account/', context),
                       ('/api/accounting/collection-accounts/create/', from_income))

@@ -44,7 +44,7 @@ function reset() {
 }
 async function load() {
   const current = ++sequence
-  loading.value = true; error.value = ''; incomes.value = []; incomeId.value = ''; reset()
+  loading.value = true; busy.value = false; error.value = ''; incomes.value = []; incomeId.value = ''; reset()
   try {
     const { data } = await get_request(url.value)
     if (current !== sequence) return
@@ -54,7 +54,7 @@ async function load() {
   } catch (e) { if (current === sequence) error.value = normalizeApiError(e).message }
   finally { if (current === sequence) loading.value = false }
 }
-watch(() => [props.record.id, props.fixedIncomeId], () => { saved.value = null; sending.value = false; sendMessage.value = ''; load() }, { immediate: true })
+watch([() => props.record.id, () => props.fixedIncomeId], () => { saved.value = null; sending.value = false; sendMessage.value = ''; load() }, { immediate: true })
 watch(incomeId, () => { reset(); amount.value = selected.value ? Number(selected.value.balance) || null : null })
 watch(() => receipt.value.entries, entries => {
   const evidence = entries.find(row => row.income_id === selected.value?.income_id)
@@ -90,12 +90,22 @@ async function submit() {
 async function documentPayment() {
   if (busy.value || !saved.value) return
   busy.value = true
+  const current = sequence
   const result = await store.sendHostingCollectionAccount(props.record.id, {
     receipt_allocation_id: saved.value.allocation_id, period_version: saved.value.period.version,
     hosting_payment_id: saved.value.period.hosting_payment_id,
   })
+  if (current !== sequence) return
   busy.value = false; sending.value = false
-  if (!result.success) { error.value = result.message; return }
+  if (!result.success) {
+    error.value = result.message
+    try {
+      const { data } = await get_request(url.value)
+      const period = data.incomes.find(row => row.income_id === saved.value?.period.income_id)
+      if (current === sequence && period?.documents?.length) saved.value.period = period
+    } catch { /* The durable issue error remains visible when refresh is unavailable. */ }
+    return
+  }
   const doc = result.data.document
   saved.value.period.documents = [{ id: doc.id, number: doc.public_number, state: doc.commercial_status }]
   sendMessage.value = result.data.email_sent ? t('hostingBilling.sent') : t('hostingBilling.sendFailed')
@@ -124,7 +134,7 @@ async function documentPayment() {
     <form v-else-if="!loading && incomes.length" class="space-y-3" @submit.prevent="submit">
       <template v-if="!review">
         <BaseFormField :label="t('hostingBilling.incomeField')">
-          <BaseSelect v-model="incomeId" :options="options" :placeholder="t('hostingBilling.chooseIncome')" :disabled="Boolean(fixedIncomeId)" data-testid="cycle-income" />
+          <BaseSelect v-model="incomeId" :options="options" :placeholder="t('hostingBilling.chooseIncome')" :disabled="Boolean(fixedIncomeId)" :disabled-reason="fixedIncomeId ? t('hostingBilling.incomeFixed') : ''" data-testid="cycle-income" />
         </BaseFormField>
         <HostingReceiptFields v-if="selected" v-model="receipt" :periods="[selected]" />
         <BaseFormRow :cols="2">

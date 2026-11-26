@@ -185,7 +185,7 @@ def _prepare_hosting_collection_account(hosting, *, reviewed=False):
             'El hosting no tiene a quién enviarle la cuenta: vincula un '
             'cliente con correo o escribe un email de facturación.',
         )
-    if not hosting.payment_per_cycle or hosting.payment_per_cycle <= 0:
+    if not reviewed and (not hosting.payment_per_cycle or hosting.payment_per_cycle <= 0):
         raise HostingBillingError(
             'El hosting no tiene un pago por ciclo configurado.',
         )

@@ -42,13 +42,14 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
 <template>
   <BaseModal :model-value="open" kind="form" :title-id="sectionId('title')" :close-on-esc="!saving && !preparing" :close-on-backdrop="!saving && !preparing" @close="emit('close')">
     <div class="px-6 pt-6 pb-2">
-      <h3 :id="sectionId('title')" class="text-lg font-bold text-text-default">{{ review ? 'Revisar y liquidar' : 'Liquidar ingresos' }}</h3>
+      <h3 :id="sectionId('title')" class="text-lg font-bold text-text-default">{{ review?.already_registered ? $t('hostingBilling.linkRecorded') : review ? 'Revisar y liquidar' : 'Liquidar ingresos' }}</h3>
       <p class="mt-1 text-sm text-text-muted">{{ selected.length }} {{ selected.length === 1 ? 'ingreso seleccionado' : 'ingresos seleccionados' }} · Pendiente {{ money(proposal.pending) }}</p>
       <p v-if="excludedCount" class="mt-1 text-xs text-text-subtle" data-testid="income-bulk-settle-excluded">Se excluyeron {{ excludedCount }} seleccionados que no aplican: solo entran esperados con saldo pendiente de empresa.</p>
     </div>
 
     <div v-if="review" class="px-6 py-4 space-y-4" data-testid="income-liquidate-review">
-      <p class="text-sm text-text-muted">Revisa el pago y los destinatarios. Todavía no se ha registrado la liquidación ni enviado ningún correo.</p>
+      <p v-if="review.already_registered" class="text-sm text-text-muted">{{ $t('hostingBilling.alreadyRecorded') }}</p>
+      <p v-else class="text-sm text-text-muted">Revisa el pago y los destinatarios. Todavía no se ha registrado la liquidación ni enviado ningún correo.</p>
       <dl class="grid grid-cols-1 gap-3 text-sm panel-portrait:grid-cols-2">
         <div><dt class="text-text-muted">Valor recibido</dt><dd class="font-semibold text-text-default">{{ money(review.total_amount) }}</dd></div>
         <div><dt class="text-text-muted">Fecha de pago</dt><dd class="text-text-default">{{ formatPaymentDate(form.period_date, exactDate) }}</dd></div>
@@ -165,7 +166,7 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
         <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:justify-end">
           <BaseButton v-if="review" type="button" variant="secondary" :disabled="saving" disabled-reason="Espera a que termine el registro de la liquidación." data-testid="income-liquidate-review-back" @click="back">Volver a editar</BaseButton>
           <BaseButton v-else type="button" variant="secondary" :disabled="saving || preparing" disabled-reason="Espera a que termine la liquidación." @click="emit('close')">Cancelar</BaseButton>
-          <BaseButton v-if="review" type="button" :loading="saving" :disabled="saving" disabled-reason="La liquidación se está registrando." data-testid="income-liquidate-confirm" @click="confirm">Confirmar y liquidar</BaseButton>
+          <BaseButton v-if="review" type="button" :loading="saving" :disabled="saving" disabled-reason="La liquidación se está registrando." data-testid="income-liquidate-confirm" @click="confirm">{{ review.already_registered ? $t('hostingBilling.linkRecorded') : 'Confirmar y liquidar' }}</BaseButton>
           <BaseButton v-else type="submit" :form="formId" :loading="saving || preparing" :disabled="Boolean(blockReason) || saving || preparing" :disabled-reason="blockReason || 'Espera a que termine la liquidación.'" :aria-describedby="sectionId('submit-reason')" data-testid="income-liquidate-submit">Liquidar</BaseButton>
         </div>
       </div>

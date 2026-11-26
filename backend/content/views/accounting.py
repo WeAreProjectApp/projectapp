@@ -1514,7 +1514,7 @@ def delete_hosting_record(request, record_id):
 @permission_classes([IsSuperUser])
 def list_hosting_cycles(request, record_id):
     hosting = get_object_or_404(HostingRecord, pk=record_id)
-    serializer = HostingCycleSerializer(hosting.cycles.all(), many=True)
+    serializer = HostingCycleSerializer(hosting.cycles.select_related('receipt_allocation'), many=True)
     return Response({'results': serializer.data})
 
 

@@ -30,7 +30,7 @@ class ReceiptEntry:
                 return {}
             receipt = allocation.receipt
             return {'receipt_id': receipt.pk, 'issuer': receipt.issuer, 'reference': receipt.reference,
-                    'allocation_id': allocation.pk}
+                    'allocation_id': allocation.pk, 'destination': allocation.liquid.destination}
 
         p = self.window
         return {
@@ -234,22 +234,32 @@ def attach_effects(receipt, entries, result, data, user):
             **options, 'amount': liquid.total_amount, 'paid_at': liquid.period_date,
             'period_from': w.start, 'period_to': w.end,
             'notes': data.get('notes', ''), 'advance_validity': options.get('advance_validity', False) and not result.get('replayed'),
-        }, user=user, validity_target=renewal_target(entry.book.record, data))
+        }, user=user, validity_target=renewal_target(entry.book.record, data), notify=False)
         HostingReceiptAllocation.objects.create(receipt=receipt, period=period, liquid=liquid, cycle=cycle,
                                                existing_cycle=bool(entry.cycle))
     remember_attempt(data, receipt)
 
 
 def existing_preview(result, entries, data):
+    from content.serializers.accounting import paid_total_for_income
+    from content.services.income_payment_confirmation_service import confirmation_contexts
+
+    parents = result['incomes']
+    contexts = confirmation_contexts(parents)
     rows = []
-    for liquid in result['liquids']:
-        entry = entries.get(liquid.expected_income_id)
-        if not entry:
-            continue
-        p = entry.window
-        rows.append({'income_id': p.income.pk, 'concept': p.income.concept, 'amount': str(liquid.total_amount),
-                     'hosting_period': entry.describe(), 'deducted': '0', 'reexpected': '0',
-                     'pending_after': str(p.balance), 'confirmation': {'can_send': False, 'blocked_reason': 'Pago acreditado.'}})
+    for parent in parents:
+        entry = entries.get(parent.pk)
+        cash = sum((i.total_amount for i in result['liquids'] if i.expected_income_id == parent.pk), Decimal('0'))
+        deducted = sum((e.total_amount for e in result['expenses'] if e.source_income_id == parent.pk), Decimal('0'))
+        follow_ups = sum((i.total_amount for i in result['expected_incomes']
+                          if i.source_ref == f'income:{parent.pk}:settlement'), Decimal('0'))
+        balance = entry.window.balance if entry else parent.total_amount - paid_total_for_income(parent)
+        rows.append({
+            'income_id': parent.pk, 'concept': parent.concept, 'amount': str(cash), 'vat_rate': parent.vat_rate,
+            'hosting_period': entry.describe() if entry else None, 'deducted': str(deducted),
+            'reexpected': str(follow_ups), 'pending_after': str(balance),
+            'confirmation': {**contexts[parent.pk], 'can_send': False, 'blocked_reason': 'Pago acreditado.'},
+        })
     return {'rows': rows, 'already_registered': True, 'total_amount': str(data['total_amount']),
             'pending_after': str(sum((Decimal(row['pending_after']) for row in rows), Decimal('0'))),
             'preview_hash': fingerprint([result['settlement_id'], rows])}
@@ -268,4 +278,4 @@ def undo_allocations(operation, user):
             raise PeriodConflict('El ciclo tiene una conciliación posterior. Revísala antes de corregirlo.')
         allocation.delete()
         if not allocation.existing_cycle:
-            delete_cycle(cycle.hosting_record, cycle, user=user)
+            delete_cycle(cycle.hosting_record, cycle, user=user, notify=False)

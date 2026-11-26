@@ -1,4 +1,6 @@
 export default {
+  correctReceipt: "Corrige o revierte la liquidación para modificar este pago vinculado.",
+  documentStates: {"draft":"Borrador","issued":"Emitida","paid":"Pagada","cancelled":"Anulada"},
   reviewReceipt: "Revisar pago de hosting",
   blocked: "Por conciliar",
   selectIncome: "Selecciona el ingreso esperado del servicio.",
@@ -15,6 +17,7 @@ export default {
   backPayments: "Volver a los pagos",
   documentPrompt: "Se emitirá una cuenta pagada y se enviará con el PDF a {email}.",
   confirmSend: "Confirmar envío",
+  incomeFixed: "El ingreso corresponde a la fila que seleccionaste en Ingresos.",
   incomeField: "Ingreso esperado del servicio",
   chooseIncome: "Selecciona el ingreso",
   amountPaid: "Monto pagado",
@@ -49,6 +52,7 @@ export default {
   issuer: 'Fuente o cuenta emisora', reference: 'Folio del recibo o transacción', noneSelected: 'Elegir un asiento existente…',
   existingCycle: 'Vincular pago de ciclo registrado', existingLiquid: 'Vincular ingreso líquido registrado',
   receiptHelp: 'Para registrar otro abono, indica su fuente y folio. Para vincular dinero ya registrado, selecciona su asiento.',
+  deductions: 'Deducciones', rescheduled: 'Saldo trasladado a otro ingreso',
   expected_income: 'Ingreso esperado', price: 'Valor del período', received: 'Recibido', balance: 'Saldo',
   states: { pending: 'Pendiente', overdue: 'Vencido', paid: 'Pagado', partial: 'Pago parcial',
     processing: 'En proceso', failed: 'Fallido', conflict: 'Por conciliar' },

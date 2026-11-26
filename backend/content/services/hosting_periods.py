@@ -9,7 +9,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 
 from accounts.models import HostingEvidence, HostingSubscription, Payment, ProjectHosting
-from content.models import Document, HostingCycle, HostingIncomePeriod, HostingRecord, IncomeRecord
+from content.models import Document, HostingCycle, HostingIncomePeriod, HostingRecord, IncomeRecord, IncomeSettlement
 from content.utils import today_bogota
 
 
@@ -38,12 +38,13 @@ class Window:
     cycles: list = field(default_factory=list)
     documents: list = field(default_factory=list)
     conflict: str = ''
+    rescheduled: Decimal = Decimal('0')
 
     @property
     def total(self):
         if self.payment:
             return self.payment.amount
-        return self.income.total_amount if self.income else Decimal('0')
+        return self.income.total_amount + self.rescheduled if self.income else Decimal('0')
 
     @property
     def liquids(self):
@@ -64,7 +65,7 @@ class Window:
 
     @property
     def balance(self):
-        return max(Decimal('0'), self.total - self.received - self.deductions)
+        return max(Decimal('0'), self.total - self.received - self.deductions - self.rescheduled)
 
     @property
     def state(self):
@@ -96,7 +97,8 @@ class Window:
             'cycle_ids': [cycle.pk for cycle in self.cycles],
             'period_start': self.start.isoformat(), 'period_end': self.end.isoformat(),
             'currency': 'COP', 'amount': str(self.total), 'received': str(self.received),
-            'balance': str(self.balance), 'state': self.state,
+            'balance': str(self.balance), 'deductions': str(self.deductions),
+            'rescheduled': str(self.rescheduled), 'state': self.state,
             'documents': [{'id': doc.pk, 'number': doc.public_number or '', 'state': doc.commercial_status}
                           for doc in documents],
             'blocker': self.conflict,
@@ -146,6 +148,7 @@ class HostingPeriods:
         if records.exclude(billing_source__hosting=self.hosting).exists() or (not source and records.exists()):
             raise PeriodConflict('Hay orígenes contables pendientes de asociar. Concilia el hosting operativo.')
         self.unassigned_cash = False
+        self.rescheduled = {}
         self.windows = {}
         self.unlinked_incomes = []
         self._read_obligations()
@@ -173,6 +176,14 @@ class HostingPeriods:
             billing_context__hosting=self.hosting, income_record_id__isnull=False,
         ).values_list('income_record_id', flat=True))
         sole_service = self.record and not self.hosting.accounting_sources.exclude(hosting_record=self.record).exists()
+        # The settlement writer reduces the original income when it creates a
+        # follow-up. Its committed distribution preserves the original contract value.
+        followups = IncomeRecord.objects.filter(project_id=self.hosting.project_id, origin='hosting', kind='expected',
+                                                settlement__isnull=False, period_start__isnull=True)
+        for snapshot in IncomeSettlement.objects.filter(pk__in=followups.values('settlement_id'), status='active').values_list('input_snapshot', flat=True):
+            for item in snapshot.get('expected_incomes', []):
+                parent_id = item['income_id']
+                self.rescheduled[parent_id] = self.rescheduled.get(parent_id, Decimal('0')) + Decimal(str(item['amount']))
         for income in incomes:
             link = getattr(income, 'hosting_period', None)
             if link and (link.hosting_id != self.hosting.pk or income.project_id != self.hosting.project_id
@@ -180,7 +191,7 @@ class HostingPeriods:
                          or (link.start, link.end) != (income.period_start, income.period_end)):
                 raise PeriodConflict('El esperado vinculado cambió de servicio, estado o fechas. Revisa la conciliación.')
             if not income.period_start or not income.period_end:
-                if any(row.kind == 'liquid' for row in income.liquid_records.all()):
+                if not income.settlement_id and any(row.kind == 'liquid' for row in income.liquid_records.all()):
                     self.unassigned_cash = True
                 continue
             key = income.period_start, income.period_end
@@ -188,22 +199,24 @@ class HostingPeriods:
                 self.unlinked_incomes.append(income)
                 continue
             window = self._window(*key)
-            if window.income or (window.payment and window.payment.amount != income.total_amount):
+            window.rescheduled = self.rescheduled.get(income.pk, Decimal('0'))
+            if window.income or (window.payment and window.payment.amount != income.total_amount + window.rescheduled):
                 window.conflict = AMBIGUOUS
             window.income = income
 
     def _read_evidence(self):
         # An administrative group may explicitly reconcile differing historical dates.
         group_dates = {}
-        for pair in HostingEvidence.objects.filter(group__hosting=self.hosting, payment__isnull=False).values_list(
-            'group_id', 'payment__billing_period_start', 'payment__billing_period_end',
-        ):
-            group, start, end = pair
+        for group, subscription_id, start, end in HostingEvidence.objects.filter(
+            group__hosting=self.hosting, payment__isnull=False,
+        ).values_list('group_id', 'payment__subscription_id', 'payment__billing_period_start', 'payment__billing_period_end'):
+            if subscription_id != self.hosting.subscription_id:
+                raise PeriodConflict('El grupo contiene un pago de otra suscripción. Concilia su origen.')
             if group in group_dates and group_dates[group] != (start, end):
                 raise PeriodConflict('Un grupo de evidencias comprende varias obligaciones. Revisa la conciliación.')
             group_dates[group] = (start, end)
         cycles = HostingCycle.objects.filter(hosting_record__billing_source__hosting=self.hosting).select_related(
-            'receipt_allocation__period', 'receipt_allocation__receipt', 'billing_evidence',
+            'receipt_allocation__period', 'receipt_allocation__receipt', 'receipt_allocation__liquid', 'billing_evidence',
         ).order_by('pk')
         self.cycles = list(cycles)
         for cycle in self.cycles:
@@ -231,11 +244,16 @@ class HostingPeriods:
             document_type__code='collection_account',
         ).exclude(pk=self.exclude_document_id).exclude(commercial_status='cancelled').select_related('hosting_evidence', 'income_record__hosting_allocation').prefetch_related('items').order_by('pk')
         for doc in documents:
+            if (doc.project_id and doc.project_id != self.hosting.project_id
+                    or doc.client_user_id and doc.client_user_id != self.hosting.project.client_id):
+                raise PeriodConflict('Una cuenta vinculada pertenece a otro cliente o proyecto. Concilia su origen.')
             evidence = getattr(doc, 'hosting_evidence', None)
             key = group_dates.get(evidence.group_id) if evidence else None
             dates = {(item.period_start, item.period_end) for item in doc.items.all() if item.period_start and item.period_end}
             if key:
-                dates.add(key)
+                # An explicit reconciliation determines the obligation of this legacy document.
+                # Its printed dates remain immutable.
+                dates = {key}
             if not dates:
                 dates = {k for k, w in self.windows.items() if w.income and doc.income_record_id in {w.income.pk, *(i.pk for i in w.liquids)}}
             if not dates:
@@ -251,27 +269,32 @@ class HostingPeriods:
 
     def _check_overlaps(self):
         ordered = sorted(self.windows.values(), key=lambda w: w.start)
-        for previous, current in zip(ordered, ordered[1:]):
-            if previous.end >= current.start:
-                previous.conflict = current.conflict = AMBIGUOUS
+        latest_end = None
+        for current in ordered:
+            if latest_end and latest_end.end >= current.start:
+                latest_end.conflict = current.conflict = AMBIGUOUS
+            if latest_end is None or current.end > latest_end.end:
+                latest_end = current
         for w in ordered:
             if self.unassigned_cash:
                 w.conflict = AMBIGUOUS
             if w.income and w.cycles and any(not hasattr(c, 'receipt_allocation') for c in w.cycles) and w.liquids:
                 w.conflict = w.conflict or UNLINKED_CASH
             if w.payment and w.payment.status == 'paid' and w.income and w.liquids:
-                if sum((row.total_amount for row in w.liquids), Decimal('0')) + w.deductions != w.total:
+                if sum((row.total_amount for row in w.liquids), Decimal('0')) + w.deductions + w.rescheduled != w.total:
                     w.conflict = AMBIGUOUS
-            if w.total <= 0 or w.received + w.deductions > w.total:
+            if w.total <= 0 or w.received + w.deductions + w.rescheduled > w.total:
                 w.conflict = w.conflict or AMBIGUOUS
             if any(i.period_start <= w.end and i.period_end >= w.start for i in self.unlinked_incomes):
                 w.conflict = AMBIGUOUS
 
     def require_active_service(self):
+        if not self.record:
+            raise PeriodConflict(MISSING_OWNER)
         subscription = self.hosting.subscription
         if subscription and (subscription.is_archived or subscription.status == 'cancelled'):
             raise PeriodConflict('La suscripción está archivada o cancelada. Revisa el servicio antes de continuar.')
-        if self.record and not self.record.is_active:
+        if not self.record.is_active:
             raise PeriodConflict('El servicio de hosting está inactivo. Revisa su estado antes de emitir.')
 
     def current(self):
@@ -283,6 +306,9 @@ class HostingPeriods:
         for w in windows:
             if w.start <= today_bogota() and w.state != 'paid':
                 return w
+        covered = next((w for w in windows if w.start <= today_bogota()), None)
+        if covered:
+            return covered   # The summary exposes its existing account and blocks ordinary emission.
         raise PeriodConflict(EMPTY_PERIOD)
 
     def for_income(self, income):
@@ -303,7 +329,8 @@ class HostingPeriods:
             others = [i for i in self.unlinked_incomes if i.pk != income.pk and i.period_start <= end and i.period_end >= start]
             if others or any(w.start <= end and w.end >= start for w in self.windows.values()):
                 raise PeriodConflict(AMBIGUOUS)
-            window = Window(start, end, income=next(i for i in self.unlinked_incomes if i.pk == income.pk))
+            window = Window(start, end, income=next(i for i in self.unlinked_incomes if i.pk == income.pk),
+                            rescheduled=self.rescheduled.get(income.pk, Decimal('0')))
             for cycle in self.cycles:
                 if (cycle.period_from, cycle.period_to) == (start, end) and cycle.cycles_represented == 1:
                     window.cycles.append(cycle)

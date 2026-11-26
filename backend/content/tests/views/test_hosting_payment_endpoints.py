@@ -113,11 +113,11 @@ def test_superuser_gets_the_same_period_from_each_hosting_payment_entry(
     )
 
     assert receipt.status_code == 200, receipt.data
-    assert receipt.data['incomes'][0]['start'] == '2026-01-01'
-    assert receipt.data['incomes'][0]['end'] == '2026-01-31'
+    assert receipt.data['incomes'][0]['period_start'] == '2026-01-01'
+    assert receipt.data['incomes'][0]['period_end'] == '2026-01-31'
     assert next_income.status_code == 200, next_income.data
-    assert next_income.data['fields']['period_start'] == '2026-02-01'
-    assert next_income.data['fields']['period_end'] == '2026-02-28'
+    assert next_income.data['fields']['period_start'] == date(2026, 2, 1)
+    assert next_income.data['fields']['period_end'] == date(2026, 2, 28)
 
 
 def test_cycle_receipt_requires_stable_identity_before_creating_cash(
@@ -151,11 +151,7 @@ def test_paid_document_uses_reconciled_period_in_its_line_and_multipart_email(
 ):
     """Falla si documentar un pago acreditado cambia su período o pierde el detalle del correo."""
     record, income = hosted_period
-    issuer = IssuerProfile.objects.create(
-        name='ProjectApp pruebas', legal_name='ProjectApp pruebas SAS',
-        identification_number='900123456', email='issuer@example.test',
-        public_number_prefix='PA',
-    )
+    issuer = IssuerProfile.objects.order_by('pk').first()
     recorded = record_receipt(
         super_client, record, receipt_payload(record, income, issuer='Banco de prueba', reference='FOLIO-1'),
     )
@@ -215,6 +211,7 @@ def test_legacy_liquid_can_supply_the_receipt_identity_without_a_new_liquid(
         concept='Abono legacy', kind=IncomeRecord.Kind.LIQUID,
         origin=IncomeRecord.Origin.HOSTING, project=income.project, client=income.client,
         expected_income=income, period_date=date(2026, 1, 31), total_amount='50000.00',
+        destination=IncomeRecord.Destination.POCKET,
     )
     payload = receipt_payload(record, income)
     payload['hosting_receipt']['entries'][0]['liquid_id'] = liquid.pk
@@ -243,6 +240,7 @@ def test_unproven_legacy_cycle_and_liquid_are_not_linked_by_amount_or_dates(
         concept='Abono legacy independiente', kind=IncomeRecord.Kind.LIQUID,
         origin=IncomeRecord.Origin.HOSTING, project=income.project, client=income.client,
         expected_income=income, period_date=date(2026, 1, 31), total_amount='50000.00',
+        destination=IncomeRecord.Destination.POCKET,
     )
     payload = receipt_payload(record, income)
     payload['hosting_receipt']['entries'][0].update(cycle_id=cycle.pk, liquid_id=liquid.pk)

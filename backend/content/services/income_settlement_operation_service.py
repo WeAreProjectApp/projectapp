@@ -175,7 +175,7 @@ def _create_movement(parents, data, user, existing=None):
     return PocketMovement.objects.create(**values, created_by=user if getattr(user, 'is_authenticated', False) else None)
 
 
-def _record_effects(operation, parents, plan, data, user, existing_movement=None, old_movement_values=None):
+def _record_effects(operation, parents, plan, data, user, existing_movement=None, old_movement_values=None, *, notify=True):
     from content.services import accounting_settlement_service as helpers
 
     before = {parent.pk: _financial_snapshot(parent) for parent in parents}
@@ -241,13 +241,13 @@ def _record_effects(operation, parents, plan, data, user, existing_movement=None
     operation.parents.set(parents)
     _finish(parents, user)
     if movement:
-        _log_movement(movement, user, old_movement_values)
-    elif liquids:
+        _log_movement(movement, user, old_movement_values, notify=notify, after_commit=bool(data.get('hosting_receipt')))
+    elif liquids and notify:
         # create_record already recorded the facts; send one accounting notice
         # for the money event, including the personal-ledger path.
         log = AccountingChangeLog.objects.filter(entity_type=EntityType.INCOME, object_id=liquids[0].pk).order_by('-pk').first()
         if log:
-            accounting_service._notify(log)
+            _notify_change(log, after_commit=bool(data.get('hosting_receipt')))
     return _result(operation)
 
 
@@ -261,7 +261,14 @@ def _finish(parents, user):
         schedule_completion_notice(parent, was_paid=False)
 
 
-def _log_movement(movement, user, old_values=None):
+def _notify_change(log, *, after_commit):
+    if after_commit:
+        transaction.on_commit(lambda: accounting_service._notify(log))
+    else:
+        accounting_service._notify(log)
+
+
+def _log_movement(movement, user, old_values=None, *, notify=True, after_commit=False):
     changes = accounting_service.compute_changes(EntityType.POCKET, old_values or {}, accounting_service.snapshot_values(movement, EntityType.POCKET))
     if old_values and 'allocations' in old_values:
         current = sorted((row.expected_income_id or 0, str(row.total_amount)) for row in movement.income_records.all())
@@ -272,7 +279,8 @@ def _log_movement(movement, user, old_values=None):
         action=AccountingChangeLog.Action.UPDATED if old_values else AccountingChangeLog.Action.CREATED,
         changes=changes, actor=user, movement_direction=movement.direction,
     )
-    accounting_service._notify(log)
+    if notify:
+        _notify_change(log, after_commit=after_commit)
 
 
 def _result(operation):
@@ -348,7 +356,10 @@ def settle_incomes(data, user):
         if not request_id:
             raise
         return _replay(IncomeSettlement.objects.select_for_update().get(pk=request_id), data)
-    result = _record_effects(operation, parents, plan, data, user)
+    adopting = bool(entries) and all(entry.cycle for entry in entries.values())
+    result = _record_effects(operation, parents, plan, data, user, notify=not adopting)
+    if adopting:
+        result['linked_existing_cash'] = True
     if receipt:
         hosting_receipts.attach_effects(receipt, entries, result, data, user)
     return result

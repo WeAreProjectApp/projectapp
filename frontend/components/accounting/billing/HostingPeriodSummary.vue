@@ -14,8 +14,10 @@ const money = value => formatMoney(value, 'COP', { decimals: 'auto' })
         · {{ t('hostingBilling.states.' + period.state) }}</p>
       <p>{{ t('hostingBilling.price') }} {{ money(period.amount) }} · {{ t('hostingBilling.received') }} {{ money(period.received) }}
         · {{ t('hostingBilling.balance') }} {{ money(period.balance) }}</p>
+      <p v-if="Number(period.deductions) > 0">{{ t('hostingBilling.deductions') }} {{ money(period.deductions) }}</p>
+      <p v-if="Number(period.rescheduled) > 0">{{ t('hostingBilling.rescheduled') }} {{ money(period.rescheduled) }}</p>
       <p v-for="document in period.documents" :key="document.id">
-        {{ t('hostingBilling.account', { id: document.number || document.id }) }} · {{ document.state }}
+        {{ t('hostingBilling.account', { id: document.number || document.id }) }} · {{ t('hostingBilling.documentStates.' + document.state) }}
       </p>
     </template>
     <p v-if="showBlocker && period.blocker" role="alert" class="text-warning-strong">{{ period.blocker }}</p>

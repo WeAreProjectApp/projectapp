@@ -318,7 +318,7 @@ export function buildHandler({
 }
 
 export async function gotoHostings(page) {
-  await page.goto('/es/panel', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('panel-sidebar').getByRole('link', { name: 'Hostings', exact: true }).first().click();
   await expect(
     page.getByRole('heading', { name: 'Hostings', exact: true }),

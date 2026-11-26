@@ -1,4 +1,6 @@
 export default {
+  correctReceipt: "Correct or reverse the settlement to change this linked payment.",
+  documentStates: {"draft":"Draft","issued":"Issued","paid":"Paid","cancelled":"Cancelled"},
   reviewReceipt: "Review hosting payment",
   blocked: "Needs reconciliation",
   selectIncome: "Select the expected income for this service.",
@@ -15,6 +17,7 @@ export default {
   backPayments: "Back to payments",
   documentPrompt: "A paid collection account and its PDF will be sent to {email}.",
   confirmSend: "Confirm delivery",
+  incomeFixed: "This is the income you selected on the Incomes screen.",
   incomeField: "Expected income for the service",
   chooseIncome: "Select the income",
   amountPaid: "Amount paid",
@@ -49,6 +52,7 @@ export default {
   issuer: 'Receipt issuer or account', reference: 'Transaction or receipt number', noneSelected: 'Choose an existing entry…',
   existingCycle: 'Link a recorded cycle payment', existingLiquid: 'Link received income',
   receiptHelp: 'For another payment, enter its issuer and receipt number. To link money already recorded, choose its entry.',
+  deductions: 'Deductions', rescheduled: 'Balance rescheduled to another income',
   expected_income: 'Expected income', price: 'Period amount', received: 'Received', balance: 'Outstanding',
   states: { pending: 'Pending', overdue: 'Overdue', paid: 'Paid', partial: 'Partially paid',
     processing: 'Processing', failed: 'Failed', conflict: 'Reconciliation required' },

@@ -9,7 +9,7 @@ const props = defineProps({ record: { type: Object, default: null }, referenceIn
 const emit = defineEmits(['close', 'created'])
 const plan = ref(null), error = ref(''), busy = ref(false), loading = ref(false)
 let sequence = 0
-watch(() => [props.record?.id, props.referenceIncomeId], async ([id, reference]) => {
+watch([() => props.record?.id, () => props.referenceIncomeId], async ([id, reference]) => {
   const current = ++sequence
   plan.value = null; error.value = ''; busy.value = false; loading.value = false
   if (!id) return

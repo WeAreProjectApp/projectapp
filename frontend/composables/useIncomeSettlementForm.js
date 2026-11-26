@@ -46,6 +46,19 @@ export function useIncomeSettlementForm(props, emit) {
   const hostingRecords = computed(() => records.value.filter((row) => row.origin === 'hosting' && !row.period_start));
   const vat = useSettlementVat(records, { form, proposal, manual, credit });
 
+  watch(() => receipt.value.entries, entries => {
+    if (records.value.length !== 1) return;
+    const period = hostingPeriods.value.find(row => row.income_id === records.value[0].id);
+    const selected = entries.find(row => row.income_id === period?.income_id);
+    const existing = selected && (period.liquids?.find(row => row.id === selected.liquid_id)
+      || period.cycles?.find(row => row.id === selected.cycle_id));
+    if (existing) {
+      form.value.total_amount = Number(existing.amount);
+      form.value.period_date = existing.date;
+      if (existing.destination) form.value.destination = existing.destination;
+    }
+  });
+
   watch(shortfall, (value) => {
     if (value > 0 && !autoExpanded) {
       autoExpanded = true;
