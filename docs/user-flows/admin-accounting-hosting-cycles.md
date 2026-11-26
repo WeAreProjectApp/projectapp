@@ -4,6 +4,5 @@
 - **Role:** superuser admin
 - **Priority:** P2
 - **Routes:** `/panel/accounting/hostings`
-- **Description:** Cycle payment history per hosting (row menu «Ciclos de pago» → `HostingCyclesModal`): historical modality/amount snapshots remain immutable, while the register form offers quarterly, semiannual and every-9-month cycles and prefills the current contract amount/modality. "Extender vigencia" advances one current modality period. `total_paid`/`cycles_count` recompute from history; deleting a cycle recalculates but never rolls back `valid_to`. La dirección recupera el hosting elegido y conserva el filtro de modalidad al cerrar los ciclos.
-- **Coverage:** ✅ Covered (backfill badge history, register payment with advance_validity, delete with confirm)
+- **Description:** Desde Ciclos de pago, el operador revisa un ingreso del mismo servicio, elige el asiento ya acreditado o indica emisor y folio. Revisa importe, fecha, destino y vigencia antes de confirmar. El mismo pago vuelve a mostrar su imputación. Un segundo folio permite otro abono del mismo valor. Un ciclo nuevo puede extender la vigencia incluso con pago parcial. El histórico mantiene sus importes y modalidades. Después de confirmar se ofrecen las acciones de documentar el pago y de preparar el siguiente ingreso.
 - **E2E Spec:** `e2e/admin/admin-accounting-hosting-billing-cycles.spec.js`

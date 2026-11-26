@@ -92,6 +92,7 @@ from .income_record import IncomeRecord
 from .expense_record import ExpenseRecord
 from .hosting_record import HostingRecord
 from .hosting_cycle import HostingCycle
+from .hosting_receipt import HostingIncomePeriod, HostingReceipt, HostingReceiptAllocation, HostingReceiptAttempt
 from .recurring_category import RecurringCategory
 from .recurring_payment import RecurringPayment
 from .ads_spend_record import AdsSpendRecord

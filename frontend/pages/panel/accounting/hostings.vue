@@ -284,7 +284,7 @@
           <AccountingRowActionsButton
             :label="`Acciones de ${hostingLabel(row)}`"
             :test-id="`hosting-actions-${row.id}`"
-            :busy="billingId === row.id"
+            :busy="pendingBillingIds.has(row.id)"
             busy-label="Enviando cuenta de cobro"
             @open="hostingActionsRow = row"
           />
@@ -330,11 +330,12 @@
     <HostingActionsModal
       :open="hostingActionsRow !== null"
       :record="hostingActionsRow"
-      :billing-busy="billingId === hostingActionsRow?.id"
+      :billing-busy="pendingBillingIds.has(hostingActionsRow?.id)"
       @close="hostingActionsRow = null"
       @history="historyRow = $event"
       @notes="noteRow = $event"
       @cycles="openCyclesModal"
+      @next-income="openNextIncome($event)"
       @send-billing="askSendBilling"
       @emails="goToHostingEmails"
       @edit="openEditModal"
@@ -379,7 +380,9 @@
       :record="cyclesRecord"
       @close="closeCyclesModal"
       @changed="onCyclesChanged"
+      @next-income="openNextIncome(cyclesRecord, $event)"
     />
+    <HostingNextIncomeModal :record="nextIncomeRecord" :reference-income-id="nextReferenceId" @close="nextIncomeRecord = null" />
 
     <EntityHistoryRecordModal
       :open="historyRow !== null"
@@ -397,11 +400,9 @@
     />
 
     <HostingAccountEmissionModal
-      :resume-draft="billingReturn.resumeDraft.value"
       @reconcile="billingReturn.reconcile"
       v-model="billingConfirmOpen"
       :record="billingRow"
-      :message="billingConfirmMessage"
       @confirm="sendBilling"
       @cancel="billingReturn.clear(); billingRow = null"
     />
@@ -426,6 +427,7 @@ import AccountingIndicatorGroup from '~/components/accounting/AccountingIndicato
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
 import AccountingStatusSelect from '~/components/accounting/AccountingStatusSelect.vue';
 import AccountingInlineCell from '~/components/accounting/AccountingInlineCell.vue';
+import HostingNextIncomeModal from '~/components/accounting/HostingNextIncomeModal.vue';
 import HostingCyclesModal from '~/components/accounting/HostingCyclesModal.vue';
 import HostingActionsModal from '~/components/accounting/HostingActionsModal.vue';
 import HostingAccountEmissionModal from '~/components/accounting/billing/HostingAccountEmissionModal.vue';
@@ -948,6 +950,15 @@ function openCyclesModal(row) {
   openCyclesById(row.id);
 }
 
+const nextIncomeRecord = ref(null);
+const nextReferenceId = ref(null);
+function openNextIncome(row, reference = null) {
+  if (!row) return;
+  nextIncomeRecord.value = row;
+  nextReferenceId.value = reference;
+  if (cyclesModalOpen.value) closeCyclesModal();
+}
+
 function goToHostingEmails(row) {
   navigateTo(historySendsLink('hosting', row.id));
 }
@@ -965,17 +976,7 @@ async function onCyclesChanged() {
 const billingConfirmOpen = ref(false);
 const billingRow = ref(null);
 const billingReturn = useBillingDraftReturn({ kind: 'hosting-emission', open: billingConfirmOpen, record: billingRow });
-const billingId = ref(null);
-
-const billingConfirmMessage = computed(() => {
-  const row = billingRow.value;
-  if (!row) return '';
-  return (
-    `Se emitirá la cuenta de cobro por ${formatMoney(row.payment_per_cycle, 'COP')} ` +
-    `y se enviará con el PDF adjunto a ${row.billing_email}. ` +
-    'Los avisos de vencimiento de este hosting se pausan hasta la próxima renovación.'
-  );
-});
+const pendingBillingIds = ref(new Set());
 
 function askSendBilling(row) {
   billingReturn.clear();
@@ -984,13 +985,17 @@ function askSendBilling(row) {
 }
 
 async function sendBilling(context = {}) {
-  billingReturn.clear();
   const row = billingRow.value;
+  if (!row || pendingBillingIds.value.has(row.id)) return;
+  billingReturn.clear();
   billingRow.value = null;
-  if (!row) return;
-  billingId.value = row.id;
-  const result = await store.sendHostingCollectionAccount(row.id, context);
-  billingId.value = null;
+  pendingBillingIds.value.add(row.id);
+  let result;
+  try {
+    result = await store.sendHostingCollectionAccount(row.id, context);
+  } finally {
+    pendingBillingIds.value.delete(row.id);
+  }
   if (result.success) {
     const number = result.data?.document?.public_number || '';
     if (result.data?.email_sent) {

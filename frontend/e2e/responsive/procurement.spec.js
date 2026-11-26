@@ -14,11 +14,11 @@ const listScenario = getResponsiveScenario('frontend/pages/panel/procurement/ind
 const detailScenario = getResponsiveScenario('frontend/pages/panel/procurement/[id].vue')
 
 const procurementNavigationByProfile = Object.freeze({
-  compact: async (page) => { await page.getByRole('button', { name: 'Abrir menú' }).click(); await page.getByRole('link', { name: 'Oportunidades SECOP', exact: true }).click() },
-  portrait: async (page) => { await page.getByRole('button', { name: 'Abrir menú' }).click(); await page.getByRole('link', { name: 'Oportunidades SECOP', exact: true }).click() },
-  landscape: (page) => page.getByRole('link', { name: 'Oportunidades SECOP', exact: true }).click(),
-  desktop: (page) => page.getByRole('link', { name: 'Oportunidades SECOP', exact: true }).click(),
-  wide: (page) => page.getByRole('link', { name: 'Oportunidades SECOP', exact: true }).click(),
+  compact: async (page) => { await page.getByRole('button', { name: 'Abrir menú' }).click(); await page.getByRole('link', { name: 'Secop', exact: true }).click() },
+  portrait: async (page) => { await page.getByRole('button', { name: 'Abrir menú' }).click(); await page.getByRole('link', { name: 'Secop', exact: true }).click() },
+  landscape: (page) => page.getByRole('link', { name: 'Secop', exact: true }).click(),
+  desktop: (page) => page.getByRole('link', { name: 'Secop', exact: true }).click(),
+  wide: (page) => page.getByRole('link', { name: 'Secop', exact: true }).click(),
 })
 
 async function enterProcurement(page, profile) {

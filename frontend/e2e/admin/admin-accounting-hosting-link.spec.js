@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-06 — app not running)
 /**
  * PA-230 — linking a hosting while preparing a collection account.
  *
@@ -32,6 +31,8 @@ const income = {
   period: '2026-11',
   period_label: 'Noviembre 2026',
   period_date: '2026-11-01',
+  period_start: '2026-11-01',
+  period_end: '2027-01-31',
   destination: 'company',
   destination_label: 'Empresa',
   ledger: 'company',
@@ -93,6 +94,42 @@ function unlinkedCandidate() {
   };
 }
 
+const monthlySubscription = {
+  source: 'subscription',
+  hosting_payment_id: 902,
+  period_end: '2026-11-30',
+  version: 'ae03d1e9e0fb2c27c916e4b99b52470e3f25e1f6ebf747c517028c5eff8545bd',
+};
+
+function reviewedPeriod(state, blockers) {
+  if (state.mode !== 'linked') {
+    return { state: 'blocked', blocker: blockers[0]?.message || 'Asocia el origen contable operativo antes de revisar el período.' };
+  }
+  return {
+    project_id: income.project,
+    client_id: income.client,
+    hosting_record_id: 31,
+    income_id: income.id,
+    project_hosting_id: state.hostingId,
+    hosting_payment_id: null,
+    source: 'expected_income',
+    period_start: income.period_start,
+    period_end: income.period_end,
+    state: 'pending',
+    currency: 'COP',
+    amount: income.total_amount,
+    received: '0.00',
+    deductions: '0.00',
+    rescheduled: '0.00',
+    balance: income.total_amount,
+    documents: [],
+    cycle_ids: [],
+    version: `expected-income-${income.id}-v${state.version}`,
+    blocker: '',
+    ...state.periodOverride,
+  };
+}
+
 function hostingResponse(state) {
   const linked = state.mode === 'linked';
   const candidates = state.mode === 'unlinked' ? [unlinkedCandidate()]
@@ -124,11 +161,12 @@ function hostingResponse(state) {
       can_create: state.mode === 'empty',
       requires_reconciliation: state.mode === 'contradictory',
     },
+    billing_period: reviewedPeriod(state, blockers),
   };
 }
 
-async function arrange(page, { mode = 'linked', failReview = false } = {}) {
-  const state = { mode, hostingId: 70, domain: 'aurora.test', version: 4, failedReview: false };
+async function arrange(page, { mode = 'linked', failReview = false, periodOverride = {} } = {}) {
+  const state = { mode, hostingId: 70, domain: 'aurora.test', version: 4, failedReview: false, periodOverride };
   const calls = [];
   await setAuthLocalStorage(page, {
     token: 'e2e-panel-token',
@@ -222,7 +260,7 @@ test.describe('PA-230 hosting link from a collection account', () => {
   });
 
   test('confirming an eligible hosting record unlocks the collection preview', {
-    tag: ['@flow:admin-accounting-hosting-link', '@outcome:success'],
+    tag: ['@flow:admin-accounting-hosting-link', '@flow:admin-accounting-collection-create', '@outcome:success'],
   }, async ({ page }) => {
     // Catches the bug where a reviewed existing record never becomes the selected project hosting for the account.
     const { calls } = await arrange(page, { mode: 'unlinked' });
@@ -231,6 +269,8 @@ test.describe('PA-230 hosting link from a collection account', () => {
     await expect(page.getByTestId('billing-hosting-link-preview')).toContainText('pendiente.aurora.test · Semestral · Activo');
     await page.getByTestId('billing-hosting-confirm').click();
     await expect(page.getByTestId('billing-hosting-confirmed')).toHaveText('Hosting confirmado para esta cuenta.');
+    await expect(page.getByTestId('hosting-period-summary')).toContainText('2026-11-01 — 2027-01-31');
+    await expect(page.getByTestId('hosting-period-summary')).toContainText('$120.000 COP');
     await page.getByTestId('collection-form-preview').click();
     await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-AUR-001');
     expect(calls.filter((call) => call.apiPath === 'admin/billing-context/projects/10/hosting/'))
@@ -239,8 +279,59 @@ test.describe('PA-230 hosting link from a collection account', () => {
         expect.objectContaining({ preview: null, body: expect.objectContaining({ hosting_record_ids: [31], operational_record_id: 31, expected_version: 4 }) }),
       ]));
     expect(calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/').body)
-      .toMatchObject({ billing_nature: 'hosting', project_hosting_id: 70, income_record_id: 1 });
+      .toMatchObject({
+        billing_nature: 'hosting', project_hosting_id: 70, income_record_id: 1,
+        period_version: 'expected-income-1-v4', hosting_payment_id: null,
+      });
   });
+
+  test('a pending hosting keeps preview disabled with linked Spanish reasons until confirmed', {
+    tag: ['@flow:admin-accounting-hosting-link', '@flow:admin-accounting-collection-create', '@outcome:error'],
+  }, async ({ page }) => {
+    // Catches the bug where an income-origin account sent a preview request
+    // before its hosting was confirmed, leaving the operator with no way to
+    // find the required field or recover the typed draft.
+    const { calls } = await arrange(page, { mode: 'unlinked', periodOverride: monthlySubscription });
+    await openIncomeAccount(page);
+    await page.getByTestId('collection-form-concept').fill('Hosting Aurora noviembre verificado');
+    await page.getByTestId('collection-form-description').fill('Cobro del período canónico de noviembre');
+
+    const preview = page.getByTestId('collection-form-preview');
+    const issues = page.getByTestId('collection-preview-issues');
+    await expect(preview).toBeDisabled();
+    await expect(issues).toContainText('Elige y confirma el hosting del proyecto para continuar.');
+    await expect(preview).toHaveAttribute('aria-describedby', await issues.getAttribute('id'));
+
+    const hostingIssue = issues.getByRole('link', { name: 'Elige y confirma el hosting del proyecto para continuar.' });
+    await hostingIssue.click();
+    await expect(page.getByTestId('billing-hosting-choice')).toBeFocused();
+    expect(calls.filter((call) => call.apiPath === 'accounting/collection-accounts/preview/')).toHaveLength(0);
+
+    await chooseHosting(page, 'record:31');
+    await page.getByTestId('billing-hosting-confirm').click();
+    await expect(preview).toBeEnabled();
+    await expect(page.getByTestId('collection-form-concept')).toHaveValue('Hosting Aurora noviembre verificado');
+    await expect(page.getByTestId('collection-form-description')).toHaveValue('Cobro del período canónico de noviembre');
+  });
+
+  for (const { scenario, periodOverride, message } of [
+    { scenario: 'paid period', periodOverride: { state: 'paid', balance: '0.00', blocker: 'El período ya está cubierto.' }, message: 'El período ya está cubierto.' },
+    { scenario: 'period for another client', periodOverride: { client_id: 42 }, message: 'El período consultado pertenece a otro servicio, cliente o proyecto.' },
+  ]) {
+    test(`a confirmed hosting keeps preview blocked for a ${scenario}`, {
+      tag: ['@flow:admin-accounting-hosting-link', '@flow:admin-accounting-collection-create', '@outcome:error'],
+    }, async ({ page }) => {
+      // A valid service can still carry a paid or mismatched period.
+      const { calls } = await arrange(page, { periodOverride: { ...monthlySubscription, ...periodOverride } });
+      await openIncomeAccount(page);
+      await chooseHosting(page, 'hosting:70');
+      await expect(page.getByTestId('billing-hosting-confirmed')).toBeVisible();
+      await expect(page.getByTestId('collection-form-preview')).toBeDisabled();
+      await expect(page.getByTestId('collection-form-project-context-error')).toContainText(message);
+      await expect(page.getByTestId('collection-preview-issues')).toContainText(message);
+      expect(calls.filter(call => call.apiPath === 'accounting/collection-accounts/preview/')).toHaveLength(0);
+    });
+  }
 
   test('creating a missing hosting preserves the account draft for selection', {
     tag: ['@flow:admin-accounting-hosting-link', '@outcome:success'],

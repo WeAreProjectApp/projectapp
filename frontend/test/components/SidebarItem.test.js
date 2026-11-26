@@ -49,6 +49,13 @@ describe('SidebarItem', () => {
     expect(wrapper.text()).not.toContain('Dashboard');
   });
 
+  it.each([internalItem, externalItem])('keeps an explicit link name for the compact $label icon', (item) => {
+    const wrapper = mountItem({ item, isCollapsed: true });
+
+    expect(wrapper.get('a').attributes('aria-label')).toBe(item.label);
+    expect(wrapper.get('a').attributes('title')).toBe(item.label);
+  });
+
   it('sets aria-current to page when isActive is true', () => {
     const wrapper = mountItem({ item: internalItem, isActive: true });
 

@@ -3,6 +3,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from content.permissions import IsSuperUser
+from content.services.hosting_periods import current_summary
 from accounts.serializers_billing_context import (
     BillingContextAssignmentSerializer, BillingContractLinkSerializer, HostingEvidenceSerializer, HostingReconciliationSerializer,
 )
@@ -49,7 +50,7 @@ def reconciliation(request, project_id):
         inventory = hosting_inventory(project_id, request.user)
         return Response({'inventory': inventory,
                          'overview': project_hosting_read(project_id, request.user),
-                         'selection': hosting_selection(inventory)})
+                         'selection': hosting_selection(inventory), 'billing_period': current_summary(project_id)})
     serializer = HostingReconciliationSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     return Response(reconcile_hosting(project_id, request.user, serializer.validated_data,

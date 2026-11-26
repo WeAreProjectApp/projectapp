@@ -790,6 +790,9 @@ class SettlementVatSerializer(serializers.Serializer):
         return data
 
 
+from .hosting_receipts import HostingReceiptSerializer
+
+
 class IncomeSettlementSerializer(serializers.Serializer):
     """Liquidating an expected income plus how its shortfall is resolved.
 
@@ -822,6 +825,7 @@ class IncomeSettlementSerializer(serializers.Serializer):
     # without it. Resolving the gap where it shows up beats sending the
     # operator to another screen, and the money is never held for it.
     period = SettlementPeriodSerializer(required=False, allow_null=True)
+    hosting_receipt = HostingReceiptSerializer(required=False)
     # Opt-in client email, sent by the settle view after the commit. Off by
     # default: MCP and `resolve_income_residual` share this serializer.
     send_payment_confirmation = serializers.BooleanField(
@@ -884,6 +888,7 @@ class IncomeBulkSettlementSerializer(serializers.Serializer):
     deductions = SettlementDeductionSerializer(many=True, required=False)
     expected_incomes = SettlementLinkedFollowUpSerializer(many=True, required=False)
     periods = SettlementLinkedPeriodSerializer(many=True, required=False)
+    hosting_receipt = HostingReceiptSerializer(required=False)
     send_payment_confirmation = serializers.BooleanField(required=False, default=False)
     confirmation_income_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False)
     preview_hash = serializers.CharField(required=False, max_length=64)
@@ -1322,13 +1327,14 @@ class HostingRecordCreateUpdateSerializer(VatWriteMixin, serializers.ModelSerial
 
 
 class HostingCycleSerializer(serializers.ModelSerializer):
+    receipt_allocation_id = serializers.IntegerField(source='receipt_allocation.pk', read_only=True, default=None)
     modality_label = serializers.SerializerMethodField()
     is_backfill = serializers.SerializerMethodField()
 
     class Meta:
         model = HostingCycle
         fields = (
-            'id', 'modality', 'modality_label', 'amount', 'paid_at',
+            'id', 'modality', 'modality_label', 'amount', 'paid_at', 'receipt_allocation_id',
             'period_from', 'period_to', 'cycles_represented',
             'is_backfill', 'notes', 'created_at',
         )

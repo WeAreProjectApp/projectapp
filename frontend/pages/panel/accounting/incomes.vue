@@ -550,6 +550,7 @@
       @edit="openEditModal"
       @duplicate="duplicateIncome"
       @liquidate="openLiquidateModal"
+      @review-hosting-receipt="hostingReceiptIncome = $event"
       @generate-collection="openCollectionModal"
       @view-collection="goToCollectionAccount"
       @view-emails="goToIncomeEmails"
@@ -595,6 +596,12 @@
       @duplicate="duplicateIncome"
     />
 
+    <IncomeHostingReceiptModal
+      :income="hostingReceiptIncome"
+      @close="hostingReceiptIncome = null"
+      @changed="loadRecords"
+    />
+
     <!-- A single form owns individual and grouped settlements. -->
     <IncomeLiquidateModal
       :open="bulkSettleOpen"
@@ -623,6 +630,7 @@
 
     <!-- Generar cuenta de cobro desde el ingreso (preseleccionado) -->
     <CollectionAccountFormModal
+      income-entry
       :open="collectionModalOpen"
       :resume-draft="billingReturn.resumeDraft.value"
       @reconcile="billingReturn.reconcile"
@@ -672,6 +680,7 @@ import IncomeFormModal from '~/components/accounting/IncomeFormModal.vue';
 import IncomeClientTotalsModal from '~/components/accounting/IncomeClientTotalsModal.vue';
 import IncomeGroupedTable from '~/components/accounting/IncomeGroupedTable.vue';
 import BulkAssignBar from '~/components/accounting/BulkAssignBar.vue';
+import IncomeHostingReceiptModal from '~/components/accounting/billing/IncomeHostingReceiptModal.vue';
 import IncomeLiquidateModal from '~/components/accounting/IncomeLiquidateModal.vue';
 import ProjectAssignUnlinkedModal from '~/components/panel/projects/ProjectAssignUnlinkedModal.vue';
 import ProjectSpaceLink from '~/components/panel/projects/ProjectSpaceLink.vue';
@@ -1617,6 +1626,7 @@ async function handleBulkSettleSubmit(payload) {
 
 const collectionModalOpen = ref(false);
 const collectionIncome = ref(null);
+const hostingReceiptIncome = ref(null);
 const billingReturn = useBillingDraftReturn({ kind: 'income-account', open: collectionModalOpen, record: collectionIncome });
 
 function openCollectionModal(row) {

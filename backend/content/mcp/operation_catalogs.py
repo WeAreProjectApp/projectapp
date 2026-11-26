@@ -39,6 +39,8 @@ from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.mcp.schemas.documents_bridge import DOCUMENTS_BRIDGE_SCHEMAS
 from content.mcp.schemas.projects_bridge import PROJECTS_BRIDGE_SCHEMAS
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
+from accounts.serializers_billing_context import HostingAccountEmissionSerializer
+from content.serializers.hosting_payments import CycleReceiptInput, NextIncomeInput
 from content.serializers.collection_accounts_panel import CollectionAccountCreateSerializer
 
 # DRF emits Decimal bounds; the published JSON Schema needs JSON numbers.
@@ -47,6 +49,7 @@ COLLECTION_ACCOUNT_CREATE_SCHEMA = json.loads(json.dumps(
 ))
 COLLECTION_ACCOUNT_CREATE_SCHEMA['description'] = 'Cuenta de cobro validada por el mismo serializer del panel.'
 _COLLECTION_FIELD_DESCRIPTIONS = {
+    'period_version': 'Versión del período de hosting revisado antes de emitir la cuenta.',
     'document_pending': 'Decisión explícita de completar el documento después; no admite vínculos parciales.',
     'billing_nature': 'Tipo de cobro contract u hosting; puede omitirse o ser null si document_pending es true.',
     'contract_id': 'Contrato del proyecto seleccionado; omitir al dejar el documento pendiente.',
@@ -56,6 +59,8 @@ _COLLECTION_FIELD_DESCRIPTIONS = {
     'client_profile_id': 'Id del perfil cliente del ingreso que se cobra.',
     'income_record_id': 'Id del ingreso vinculado a la cuenta.',
     'vat_rate': 'Porcentaje de IVA de la cuenta, entre 0 y 100.',
+    'show_vat': 'Mostrar el desglose de IVA en el documento y correo. Por defecto true; no cambia los importes.',
+    'due_date_mode': 'dated calcula el vencimiento, incluso con cero días; none omite fecha y plazo; legacy conserva la regla histórica.',
     'public_number': 'Consecutivo elegido; vacío deja que el servidor asigne el siguiente.',
     'billing_concept': 'Concepto cobrado; vacío reutiliza el concepto del ingreso.',
     'items': 'Conceptos e importes del documento, con cantidad y precio o importe con modalidad de IVA.',
@@ -398,8 +403,43 @@ LEDGER_PARITY_TOOLS = [
 ]
 
 
+CYCLE_RECEIPT_SCHEMA = json.loads(json.dumps(writable_schema(CycleReceiptInput), default=float))
+for field, description in {
+    'advance_validity': 'Ampliar la vigencia al registrar un ciclo nuevo. También se admite un abono parcial.',
+    'amount': 'Importe de dinero acreditado en COP.',
+    'destination': 'Destino contable del dinero recibido.',
+    'hosting_receipt': 'Emisor y folio de la acreditación o identificadores de sus asientos previos.',
+    'income_id': 'Ingreso esperado del mismo cliente, proyecto y servicio.',
+    'modality': 'Periodicidad que se registra en el histórico del pago.',
+    'notes': 'Observaciones del pago de ciclo.',
+    'paid_at': 'Fecha de recepción del dinero.',
+    'period_from': 'Comienzo explícito para el cálculo de vigencia del ciclo.',
+    'period_to': 'Destino contractual explícito de la vigencia.',
+    'preview_hash': 'Versión devuelta por la revisión de este pago.',
+    'request_id': 'UUID del intento, reutilizado si se reintenta.',
+}.items():
+    CYCLE_RECEIPT_SCHEMA['properties'][field]['description'] = description
+FORECAST_CONFIRMATION_SCHEMA = {**writable_schema(NextIncomeInput), 'required': ['version']}
+FORECAST_CONFIRMATION_SCHEMA['properties']['version']['description'] = 'Versión de la propuesta revisada.'
+FORECAST_CONFIRMATION_SCHEMA['properties']['reference_income_id']['description'] = 'Ingreso del período de referencia.'
+
 BILLING_PARITY_TOOLS = [
-    _op('send_hosting_collection_account', 'Emite el cobro del hosting con su contexto explícito y conserva el PDF.', 'send-hosting-collection-account', 'POST', ('record_id',), 'sensitive', True, payload_schema={'type': 'object', 'additionalProperties': False, 'properties': {'hosting_payment_id': {'type': ['integer', 'null'], 'minimum': 1}}}),
+    _op('send_hosting_collection_account', 'Emite y envía el período revisado del servicio o documenta un pago acreditado.',
+        'send-hosting-collection-account', 'POST', ('record_id',), 'sensitive', True,
+        payload_schema=writable_schema(HostingAccountEmissionSerializer)),
+    _op('get_hosting_receipt_options', 'Consulta los períodos, asientos y ciclos del hosting antes de acreditar un pago.',
+        'hosting-cycle-receipt', path=('record_id',), query_schema=closed_object({}), envelope_aliases=False),
+    _op('record_hosting_receipt', 'Revisa el comprobante con preview=1. Confirma con el preview_hash obtenido.',
+        'hosting-cycle-receipt', 'POST', ('record_id',), 'sensitive', True, payload_schema=CYCLE_RECEIPT_SCHEMA,
+        query_schema=closed_object({'preview': {'type': 'string', 'enum': ['1'], 'description': 'Solo revisar el pago.'}}),
+        envelope_aliases=False),
+    _op('preview_next_hosting_income', 'Consulta el siguiente ingreso esperado del calendario del servicio.',
+        'hosting-next-income', path=('record_id',), query_schema=closed_object({
+            'reference_income_id': {'type': 'integer', 'minimum': 1, 'description': 'Ingreso del período de referencia.'},
+        }), envelope_aliases=False),
+    _op('create_next_hosting_income', 'Confirma la versión revisada del próximo ingreso esperado.',
+        'hosting-next-income', 'POST', ('record_id',), 'sensitive', True,
+        payload_schema=FORECAST_CONFIRMATION_SCHEMA, query_schema=closed_object({}), envelope_aliases=False),
     _op('bulk_assign_hosting_client', 'Asigna cliente a una selección de hostings.', 'bulk-assign-hosting-client', 'POST', risk='sensitive', confirm=True),
     _op('bulk_assign_hosting_project', 'Asigna proyecto a una selección de hostings.', 'bulk-assign-hosting-project', 'POST', risk='sensitive', confirm=True),
     _op('list_hosting_cycles', 'Lista ciclos facturados de un hosting.', 'list-hosting-cycles', path=('record_id',)),

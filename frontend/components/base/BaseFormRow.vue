@@ -58,6 +58,7 @@ const props = defineProps({
   },
   /** Short explanation for the complete group, rendered below every column. */
   help: { type: String, default: '' },
+  helpId: { type: String, default: '' },
   helpTestid: { type: String, default: '' },
 })
 
@@ -84,6 +85,7 @@ const rowClass = computed(() => [
     <p
       v-if="help || $slots.help"
       class="col-span-full -mt-2 text-xs text-text-muted"
+      :id="helpId || undefined"
       :data-testid="helpTestid || undefined"
     >
       <slot name="help">{{ help }}</slot>

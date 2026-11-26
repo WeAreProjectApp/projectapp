@@ -1,3 +1,11 @@
+## W1 · PA-295, PA-301 y PA-302
+
+Desde Ingresos, la cuenta explica las correcciones que habilitan la vista previa, distingue el cálculo del IVA de su presentación y permite emitir con o sin fecha. El plazo explícito de cero días vence al emitir en Bogotá. Los consumidores anteriores conservan el contrato histórico. PA-296 aporta el período canónico y PA-297 abre la emisión desde la fila de Hostings. [Reglas documentales](../docs/accounting-pending-document.md#cuenta-preparada-desde-ingresos)
+
+## W2 · PA-296, PA-298 y PA-299
+
+Contabilidad comparte el período de hosting entre Ingresos y Hostings. El mismo recibo puede llegar por ambas entradas y el siguiente esperado se prepara desde el calendario contractual. El [contrato de liquidación](../docs/accounting-settlement.md) recoge la decisión pendiente sobre recibos manuales sin referencia.
+
 ## W4 · PA-304 · Enlaces seguros
 
 En el Panel cada uno de los nueve tipos admite su contenido esencial y un
@@ -13,6 +21,14 @@ revisaron las referencias de reemplazo de 12 gestores y 12 adaptadores y la
 exportación de resultados funcionales. La reprueba de NM1 requiere habilitación de
 Carlos y DEV LISTO. Los consumidores se acreditan en su entorno después del
 despliegue. [Expediente y fichas](../docs/audits/PA-221/README.md)
+
+## W3 · PA-303 · Menú del Panel
+
+Secop conserva su destino bajo Contratación estatal. Los accesos de Plataforma y Sistema se distinguen por su dibujo en los dos tamaños del menú. La navegación local en Chromium cubrió ambos permisos y los cinco perfiles de pantalla. [Resultados y capturas](../docs/qa/PA-303.md)
+
+## W3 · PA-297 · Cuenta de cobro desde Hostings
+
+La fila identifica el servicio. El diálogo comprueba cliente, proyecto y origen operativo antes de mostrar el resumen compartido de PA-296. Confirmar entrega al escritor de W2 la referencia y la versión revisadas. Ingresos conserva el selector y los controles documentales de W1. Las pruebas cruzadas usan datos ficticios, SQLite y correo en memoria.
 
 ## w1 · PA-289, PA-251 y PA-286
 

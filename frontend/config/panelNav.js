@@ -123,7 +123,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       ],
     },
     { id: 'procurement', label: 'Contratación estatal', items: [
-      { label: 'Oportunidades SECOP', href: lp('/panel/procurement'), icon: 'search' },
+      { label: 'Secop', href: lp('/panel/procurement'), icon: 'landmark' },
     ] },
     {
       // After `accounting` on purpose: the Hostings entry below points at
@@ -136,9 +136,9 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Solicitudes por tallas', href: lp('/panel/requirement-packages'), icon: 'package' },
         { label: 'Accesos', href: lp('/panel/access'), icon: 'shield' },
         { label: 'Monitoreo', href: lp('/panel/monitoring'), icon: 'search' },
-        { label: 'Ayuda de la plataforma', href: lp('/panel/platform/help'), icon: 'settings' },
-        { label: 'Feature flags', href: lp('/panel/platform/feature-flags'), icon: 'settings' },
-        { label: 'Configuración de IA', href: lp('/panel/platform/ai'), icon: 'settings' },
+        { label: 'Ayuda de la plataforma', href: lp('/panel/platform/help'), icon: 'help-circle' },
+        { label: 'Feature flags', href: lp('/panel/platform/feature-flags'), icon: 'flag' },
+        { label: 'Configuración de IA', href: lp('/panel/platform/ai'), icon: 'cpu' },
         // The same accounting view, doubled here deliberately: hostings are
         // also part of the delivered product. Item-level gate because the
         // target page is superuser-only while Proyectos is open to admins.
@@ -171,7 +171,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       muted: true,
       items: [
         { label: 'Integridad de datos', href: lp('/panel/data-integrity'), icon: 'shield' },
-        { label: 'Admins del panel', href: lp('/panel/admins'), icon: 'shield', superuserOnly: true },
+        { label: 'Admins del panel', href: lp('/panel/admins'), icon: 'users', superuserOnly: true },
         {
           label: 'Django Admin',
           href: '/admin/',

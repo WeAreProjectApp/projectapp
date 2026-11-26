@@ -4,6 +4,6 @@
   "module": "admin",
   "roles": ["superuser"],
   "priority": "P1",
-  "description": "Desde una cuenta de cobro de un ingreso de hosting permite reconocer el registro por dominio y periodicidad, revisar y confirmar una asociación explícita, crear hosting sin perder cliente/proyecto/formulario, explicar conflictos y volver de conciliación con el borrador recuperado. No deduce equivalencias ni modifica cobros, pagos, ciclos o PDF anteriores.",
+  "description": "Desde una cuenta de cobro de un ingreso de hosting permite reconocer el registro por dominio y periodicidad, revisar y confirmar una asociación explícita, crear hosting sin perder cliente/proyecto/formulario, explicar los requisitos de servicio y período antes de habilitar la vista previa y volver de conciliación con el borrador recuperado. No deduce equivalencias ni modifica cobros, pagos, ciclos o PDF anteriores.",
   "outcomes": ["display", "success", "error", "failure"]
 }

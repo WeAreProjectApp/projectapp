@@ -2,14 +2,11 @@ import { computed, ref, watch } from 'vue';
 import { useAccountingStore } from '~/stores/accounting';
 import { settlementBlockedReason } from '~/utils/incomeSettlement';
 import { settlementProposal } from '~/utils/incomeSettlementAllocation';
+import { emptyReceipt, receiptPayload, requestUuid } from '~/utils/hostingReceipt';
 import { todayISO } from '~/utils/periodDates';
 import { useSettlementVat } from './useSettlementVat';
 
-const requestUuid = () => globalThis.crypto?.randomUUID?.()
-  ?? 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const value = Math.floor(Math.random() * 16);
-    return (c === 'x' ? value : (value & 3) | 8).toString(16);
-  });
+
 
 export function useIncomeSettlementForm(props, emit) {
   const store = useAccountingStore();
@@ -25,6 +22,8 @@ export function useIncomeSettlementForm(props, emit) {
   const differenceOpen = ref(false);
   const manual = ref(null);
   const contexts = ref({});
+  const hostingPeriods = ref([]);
+  const receipt = ref(emptyReceipt());
   const sendConfirmations = ref({});
   const contextLoading = ref(false);
   const preparing = ref(false);
@@ -47,6 +46,19 @@ export function useIncomeSettlementForm(props, emit) {
   const hostingRecords = computed(() => records.value.filter((row) => row.origin === 'hosting' && !row.period_start));
   const vat = useSettlementVat(records, { form, proposal, manual, credit });
 
+  watch(() => receipt.value.entries, entries => {
+    if (records.value.length !== 1) return;
+    const period = hostingPeriods.value.find(row => row.income_id === records.value[0].id);
+    const selected = entries.find(row => row.income_id === period?.income_id);
+    const existing = selected && (period.liquids?.find(row => row.id === selected.liquid_id)
+      || period.cycles?.find(row => row.id === selected.cycle_id));
+    if (existing) {
+      form.value.total_amount = Number(existing.amount);
+      form.value.period_date = existing.date;
+      if (existing.destination) form.value.destination = existing.destination;
+    }
+  });
+
   watch(shortfall, (value) => {
     if (value > 0 && !autoExpanded) {
       autoExpanded = true;
@@ -67,6 +79,8 @@ export function useIncomeSettlementForm(props, emit) {
       send_payment_confirmation: confirmationIds.length > 0 && Number(form.value.total_amount) > 0,
       confirmation_income_ids: confirmationIds,
     };
+    const identity = receiptPayload(receipt.value, hostingPeriods.value.filter(p => receivedById.value[p.income_id] > 0));
+    if (identity) payload.hosting_receipt = identity;
     if (manual.value) payload.allocations = proposal.value.rows.map((row) => ({ income_id: row.income_id, amount: row.amount }));
     if (vat.updates.value.length) payload.vat_updates = vat.updates.value;
     if (!personal.value && form.value.gustavo_amount !== '' && form.value.carlos_amount !== '') {
@@ -81,6 +95,8 @@ export function useIncomeSettlementForm(props, emit) {
     if (contextLoading.value && records.value.some((row) => row.client)) return 'Verificando los destinatarios de la confirmación…';
     const blocked = records.value.find((row) => settlementBlockedReason(row));
     if (blocked) return settlementBlockedReason(blocked);
+    const paidPeriods = hostingPeriods.value.filter(p => receivedById.value[p.income_id] > 0);
+    if (paidPeriods.length && !receiptPayload(receipt.value, paidPeriods)) return 'Indica la fuente y el folio del abono o selecciona su asiento existente.';
     if (vat.blockReason.value) return vat.blockReason.value;
     if (Number(form.value.total_amount) < 0) return 'El valor recibido no puede ser negativo.';
     if (!(Number(form.value.total_amount) > 0) && !activeDeductions.value.length && !activeFollowUps.value.length) return 'Ingresa un valor recibido o resuelve la diferencia.';
@@ -111,6 +127,7 @@ export function useIncomeSettlementForm(props, emit) {
       vat.setLocks(records.value.map((row) => ({ income_id: row.id, vat_blocked_reason: 'No se pudo verificar si el IVA admite cambios. Cierra y vuelve a abrir el modal para reintentar.' })));
       return;
     }
+    hostingPeriods.value = result.data.rows.map(row => row.hosting_period).filter(Boolean);
     contexts.value = Object.fromEntries(result.data.rows.map((row) => [row.income_id, row.confirmation]));
     vat.setLocks(result.data.rows);
   }
@@ -122,7 +139,7 @@ export function useIncomeSettlementForm(props, emit) {
     deductions.value = []; followUps.value = []; periods.value = {}; manual.value = null;
     participantsOpen.value = false; differenceOpen.value = false;
     autoExpanded = false; error.value = ''; review.value = null; pendingPayload.value = null; dispatched.value = false;
-    contexts.value = {};
+    contexts.value = {}; hostingPeriods.value = []; receipt.value = emptyReceipt();
     sendConfirmations.value = Object.fromEntries(records.value.map((row) => [row.id, true]));
     const initialTotal = records.value.reduce((sum, row) => sum + Number(row.pending_amount ?? row.total_amount ?? 0), 0);
     const half = Math.floor(initialTotal / 2);
@@ -156,7 +173,7 @@ export function useIncomeSettlementForm(props, emit) {
     }
     if (!result.success) { error.value = result.message || result.error || 'No se pudo revisar la liquidación. Inténtalo de nuevo.'; return; }
     pendingPayload.value = { ...payload, preview_hash: result.data.preview_hash };
-    if (payload.send_payment_confirmation) review.value = result.data;
+    if (payload.send_payment_confirmation || payload.hosting_receipt) review.value = result.data;
     else { dispatched.value = true; emit('submit', pendingPayload.value); }
   }
   function confirm() {
@@ -171,7 +188,7 @@ export function useIncomeSettlementForm(props, emit) {
     participantsOpen, differenceOpen, vatDrafts: vat.drafts, vatLocks: vat.locks,
     setVatRate: vat.setRate, toggleVat: vat.toggle, captureVat: vat.capture, manual, contexts,
     sendConfirmations, contextLoading, preparing, error, review, proposal,
-    shortfall, remaining, credit, hostingRecords, blockReason, receivedById,
+    shortfall, remaining, credit, hostingRecords, hostingPeriods, receipt, blockReason, receivedById,
     addDeduction, addFollowUp, editAllocation, recalculate, submit, confirm, back,
   };
 }

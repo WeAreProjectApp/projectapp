@@ -188,11 +188,31 @@
       <path d="M13 12.5a2.5 2.5 0 010 5" />
     </template>
 
-    <!-- Search / Monitoring -->
     <template v-else-if="name === 'conversation'">
       <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h4M21 12a8 8 0 01-8 8H5l-4 3V12a10 10 0 0120 0z" />
     </template>
 
+    <template v-else-if="name === 'landmark'">
+      <path d="M2 8l10-5 10 5H2zM5 11v7m5-7v7m4-7v7m5-7v7M3 21h18" />
+    </template>
+
+    <template v-else-if="name === 'help-circle'">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9 9a3 3 0 1 1 4.5 2.6C12.5 12.2 12 12.8 12 14" />
+      <circle cx="12" cy="17" r=".8" fill="currentColor" stroke="none" />
+    </template>
+
+    <template v-else-if="name === 'flag'">
+      <path d="M5 21V4m0 1c5-4 9 3 15-1v10c-6 4-10-3-15 1" />
+    </template>
+
+    <template v-else-if="name === 'cpu'">
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <rect x="9" y="9" width="6" height="6" rx="1" />
+      <path d="M10 3v3m4-3v3m-4 12v3m4-3v3M3 10h3m-3 4h3m12-4h3m-3 4h3" />
+    </template>
+
+    <!-- Search / Monitoring -->
     <template v-else-if="name === 'search'">
       <circle cx="11" cy="11" r="8" />
       <path d="m16.65 16.65 4.35 4.35" />

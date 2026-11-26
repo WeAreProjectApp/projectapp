@@ -5,7 +5,7 @@ from rest_framework import serializers
 from accounts.services.billing_context import context_data
 from accounts.serializers_billing_context import BillingContextFields
 
-from content.models import Document, DocumentItem, DocumentPaymentMethod
+from content.models import Document, DocumentCollectionAccount, DocumentItem, DocumentPaymentMethod
 from content.services.collection_account_service import (
     collection_account_was_delivered,
     commercial_is_overdue,
@@ -21,6 +21,8 @@ STATUS_LABELS = {
 
 class CollectionAccountPanelListSerializer(serializers.ModelSerializer):
     context = serializers.SerializerMethodField()
+    show_vat = serializers.BooleanField(source='collection_account.show_vat', read_only=True, default=True)
+    due_date_mode = serializers.CharField(source='collection_account.due_date_mode', read_only=True, default='legacy')
     vat_rate = serializers.DecimalField(source='collection_account.vat_rate', max_digits=5, decimal_places=2, read_only=True, allow_null=True)
 
     def get_context(self, obj):
@@ -66,7 +68,7 @@ class CollectionAccountPanelListSerializer(serializers.ModelSerializer):
             'origin', 'origin_label', 'hosting_record_id', 'project_id',
             'income_record_id', 'income_kind',
             'subtotal', 'tax_total', 'vat_rate', 'total', 'currency',
-            'issue_date', 'due_date',
+            'issue_date', 'due_date', 'due_date_mode', 'show_vat',
             'commercial_status', 'commercial_status_label', 'is_overdue',
             # The delete rule, resolved server-side: the panel must not have to
             # re-derive "did this ever reach the client" from data it cannot see.
@@ -249,6 +251,11 @@ class _CustomerOverrideSerializer(serializers.Serializer):
 class CollectionAccountCreateSerializer(BillingContextFields):
     """Shared payload of the panel create and preview endpoints."""
 
+    show_vat = serializers.BooleanField(required=False, default=True)
+    due_date_mode = serializers.ChoiceField(
+        choices=DocumentCollectionAccount.DueDateMode.choices, required=False,
+        default=DocumentCollectionAccount.DueDateMode.LEGACY,
+    )
     vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0'), max_value=Decimal('100'), required=False, allow_null=True)
     # UserProfile pk — what ClientAutocomplete / the clients module handle.
     client_profile_id = serializers.IntegerField()
@@ -262,8 +269,7 @@ class CollectionAccountCreateSerializer(BillingContextFields):
         max_length=512, required=False, allow_blank=True, default='',
     )
     items = _CreateItemSerializer(many=True, allow_empty=False)
-    # 0 is a legitimate term: immediate payment against presentation, which
-    # issues the cuenta with no due date at all. Negative days stay rejected.
+    # Zero is meaningful for both legacy and explicitly dated documents.
     payment_term_days = serializers.IntegerField(
         min_value=0, max_value=120, required=False, allow_null=True,
     )
@@ -279,3 +285,16 @@ class CollectionAccountCreateSerializer(BillingContextFields):
         required=False, allow_blank=True, default='',
     )
     notes = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        mode = attrs['due_date_mode']
+        has_date = attrs.get('due_date') is not None
+        has_days = attrs.get('payment_term_days') is not None
+        if mode == DocumentCollectionAccount.DueDateMode.NONE and (has_date or has_days):
+            raise serializers.ValidationError({
+                'due_date_mode': 'Una cuenta sin vencimiento no admite fecha fija ni plazo.',
+            })
+        if mode == DocumentCollectionAccount.DueDateMode.DATED and has_date and has_days:
+            raise serializers.ValidationError({'due_date': 'Elige una fecha fija o un plazo en días.'})
+        return attrs
