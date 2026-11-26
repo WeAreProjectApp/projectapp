@@ -160,11 +160,13 @@ def _dependency_inventory(project, *, lock=False):
         if model not in special_models:
             query = Q(**{relation.field.name: project.pk})
             relations[model] = relations.get(model, Q()) | query
+    from content.services.project_deletion_catalog import CATEGORIES
+
     for model, query in relations.items():
-        key, label = DEPENDENCY_LABELS.get(
-            model._meta.label_lower,
-            (model._meta.label_lower, str(model._meta.verbose_name_plural)),
-        )
+        model_key = model._meta.label_lower
+        key, label = DEPENDENCY_LABELS.get(model_key, (
+            model_key, CATEGORIES.get(model_key, {}).get('label', 'Otros datos relacionados'),
+        ))
         rows = model._base_manager.filter(query)
         if model is SecureLinkFolder:
             rows = rows.exclude(managed_project=project, children__isnull=True, links__isnull=True)

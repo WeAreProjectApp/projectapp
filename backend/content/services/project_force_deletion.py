@@ -190,8 +190,8 @@ class ProjectDeletionPlan:
                             next_frontier[child].add(row.pk)
             frontier = next_frontier
 
-    def _conflict(self, row, message):
-        value = {'key': row._meta.label_lower, 'id': str(row.pk), 'message': message}
+    def _conflict(self, row, message, **details):
+        value = {'key': row._meta.label_lower, 'id': str(row.pk), 'message': message, **details}
         if value not in self.conflicts:
             self.conflicts.append(value)
 
@@ -285,7 +285,11 @@ class ProjectDeletionPlan:
         child_category = CATEGORIES.get(child._meta.label_lower)
         if parent_category and child_category:
             self.requires[parent_category['key']].add(child_category['key'])
-            self._conflict(child, f"Para eliminar «{parent_category['label']}» también debes elegir «{child_category['label']}», porque no se puede conservar sin ese dato.")
+            self._conflict(
+                child,
+                f"Para eliminar «{parent_category['label']}» también debes elegir «{child_category['label']}», porque no se puede conservar sin ese dato.",
+                required_by=parent_category['key'], required_category=child_category['key'],
+            )
         else:
             self._conflict(child, 'Una dependencia protegida impide eliminar los datos seleccionados.')
 

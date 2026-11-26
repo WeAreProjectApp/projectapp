@@ -120,3 +120,59 @@ class Command(BaseCommand):
                         ])
         self.stdout.write('QA cases ready: qa-<role>@example.test; [QA] Proyecto vacío; '
                           '[QA] Recurso PDF con tres versiones; [QA] Ingreso grande pendiente.')
+
+
+B04_PROJECT = '[QA B04] Solicitudes'
+B04_ACTORS = ('qa-b04-admin@example.test', 'qa-b04-client@example.test')
+B04_GUIDE_KEY = 'qa-b04-published-guide'
+B04_REQUESTS = {
+    'pending': '[QA B04] Solicitud pendiente',
+    'approved': '[QA B04] Solicitud aprobada',
+}
+
+
+def seed_b04(context):
+    """Create the owned change-request scenario after the common platform seed."""
+    from accounts.management.commands._seed_helpers import ensure_delivery_stage, refresh_seed_publication
+    from accounts.models import ChangeRequest, Requirement
+    from accounts.services.issue_context import capture_context, save_context
+
+    ensure_fake_data_allowed('seed_b04')
+    admin, client = [
+        get_user_model().objects.create_user(username=email, email=email, first_name=name)
+        for email, name in zip(B04_ACTORS, ('QA B04 Equipo', 'QA B04 Cliente'), strict=True)
+    ]
+    for actor, role in ((admin, UserProfile.ROLE_ADMIN), (client, UserProfile.ROLE_CLIENT)):
+        UserProfile.objects.create(
+            user=actor, role=role, is_onboarded=True, email_verified=True,
+            email_verified_at=context.anchor_now, profile_completed=True,
+            company_name='QA B04',
+        )
+
+    project = Project.objects.create(
+        client=client, name=B04_PROJECT, description='Proyecto ficticio para revisar solicitudes.',
+    )
+    ensure_initial_project_state(project, actor=admin)
+    stage = ensure_delivery_stage(project, context=context, actor=admin)
+    requirement = Requirement.objects.create(
+        stage=stage, key=B04_GUIDE_KEY, title='Consultar el resumen de solicitudes',
+        description='El cliente puede consultar sus solicitudes en el proyecto.',
+        guide={
+            'role': 'Cliente propietario',
+            'steps': ['Abrir Solicitudes en el proyecto ficticio.'],
+            'expected_result': 'La lista muestra las solicitudes del cliente.',
+        },
+        review_status='in_review',
+    )
+    refresh_seed_publication(stage, actor=admin)
+    publication, snapshot = capture_context(project, client, {'source_requirement_id': requirement.pk})
+
+    # Build the initial review states without sending ticket notifications.
+    for status, title in B04_REQUESTS.items():
+        ticket = ChangeRequest.objects.create(
+            project=project, created_by=client, source_requirement=requirement,
+            title=title, description='Solicitud ficticia sobre una guía publicada.',
+            status=status,
+            admin_response='Lista para preparar una ampliación.' if status == ChangeRequest.STATUS_APPROVED else '',
+        )
+        save_context(ticket, 'change', publication, snapshot)

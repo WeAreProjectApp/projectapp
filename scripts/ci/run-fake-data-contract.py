@@ -7,6 +7,7 @@ import sys
 FILES = [
     'content/tests/management/test_fake_data_contract.py',
     'content/tests/management/test_fake_data_qa_cases.py',
+    'content/tests/management/test_prepare_fake_qa.py',
     'content/tests/management/test_fake_data_operations.py',
     'content/tests/management/test_create_fake_financing.py',
     'secure_links/tests/test_folder_seed.py',

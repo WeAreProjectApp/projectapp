@@ -146,7 +146,7 @@ test('retries a failed dependency preview', { tag: ['@flow:admin-project-delete'
   await setup(page, { failPreview: true });
   await enter(page, 'desktop');
   await openProjectAction(page, 41, 'delete');
-  await expect(page.getByTestId('project-delete-error')).toHaveText('Dependencias temporalmente no disponibles');
+  await expect(page.getByTestId('project-delete-error')).toHaveText('No se pudieron comprobar las dependencias del proyecto.');
 
   await page.getByTestId('project-delete-retry').click();
 
@@ -159,7 +159,7 @@ test('retries a failed deletion while retaining the project', { tag: ['@flow:adm
   await enter(page, 'desktop');
   await openProjectAction(page, 41, 'delete');
   await page.getByTestId('project-delete-confirm').click();
-  await expect(page.getByTestId('project-delete-error')).toHaveText('Eliminación temporalmente no disponible');
+  await expect(page.getByTestId('project-delete-error')).toHaveText('No se pudo eliminar el proyecto.');
 
   await page.getByTestId('project-delete-confirm').click();
 

@@ -69,7 +69,8 @@ const forcedDependencies = () => [
 
 const forcedPreview = (deleteKeys = [], overrides = {}) => {
   const blockers = deleteKeys.includes('documents') && !deleteKeys.includes('document_files')
-    ? [{ message: 'Para eliminar Documentos, también debes seleccionar Archivos de documentos.' }]
+    ? [{ required_by: 'documents', required_category: 'document_files',
+      message: 'To delete Documents, also select Document files.' }]
     : [];
   return {
     project: { id: 41, name: projectFixture().name },
@@ -126,7 +127,9 @@ async function setup(page, options = {}) {
         if (options.failForcePreview && forcedPreviewAttempts === 1) {
           return json({ error: 'No se pudo revisar las dependencias forzadas' }, 503);
         }
-        return json(forcedPreview(deleteKeys, options.forcePreview));
+        return options.previewResponse
+          ? options.previewResponse(deleteKeys)
+          : json(forcedPreview(deleteKeys, options.forcePreview));
     }
     if (apiPath === 'projects/41/delete-preview/' && method === 'GET') {
       return json(regularPreview());
@@ -287,7 +290,7 @@ test('requires manual selection of dependent data before deleting exactly the re
   await expect(documents).toHaveAttribute('aria-checked', 'true');
   await expect(files).toHaveAttribute('aria-checked', 'false');
   await expect(page.getByTestId('project-force-delete-blockers')).toContainText(
-    'también debes seleccionar Archivos de documentos',
+    'también debes seleccionar «Archivos de documentos»',
   );
   await page.getByTestId('project-force-delete-confirmation').fill('DELETE');
   await expect(page.getByTestId('project-force-delete-confirm')).toBeDisabled();
@@ -321,7 +324,7 @@ test('clears confirmation and keeps the project visible when the force preview b
   await page.getByTestId('project-force-delete-confirm').click();
 
   await expect(page.getByTestId('project-force-delete-error')).toHaveText(
-    'La vista previa cambió; revisa las dependencias de nuevo.',
+    'Las dependencias cambiaron. Revisa el alcance y escribe DELETE de nuevo.',
   );
   await expect(confirmation).toHaveValue('');
   await expect(page.getByTestId('project-force-delete-blockers')).toContainText('Se agregaron datos compartidos');
@@ -338,7 +341,7 @@ test('retries a failed forced preview without deleting the project', {
   await openBlockedDeletion(page);
   await page.getByTestId('project-force-delete-toggle').click();
 
-  await expect(page.getByTestId('project-force-delete-error')).toHaveText('No se pudo revisar las dependencias forzadas');
+  await expect(page.getByTestId('project-force-delete-error')).toHaveText('No se pudieron comprobar las dependencias del proyecto.');
   await page.getByTestId('project-force-delete-retry').click();
 
   await expect(page.getByTestId('project-force-delete-dependencies')).toContainText('Documentos');
@@ -361,4 +364,87 @@ test('cancels forced deletion without issuing a destructive request', {
   await expect(page.getByTestId('project-state-transition-modal')).toBeHidden();
   await expect(page.getByTestId('project-actions-41')).toBeVisible();
   expect(calls.deletes).toEqual([]);
+});
+
+
+test('keeps the focused category while an older impact is pending', {
+  tag: ['@flow:admin-project-delete', '@outcome:error'],
+}, async ({ page }) => {
+  let releaseFirst;
+  const firstResponse = new Promise((resolve) => { releaseFirst = resolve; });
+  const dependencies = [
+    ...Array.from({ length: 16 }, (_, index) => ({
+      key: `category-${index}`, label: `Categoría ficticia ${index}`,
+      description: 'Datos protegidos del proyecto.', count: 1, selectable: false,
+    })),
+    ...forcedDependencies(),
+  ];
+  const preview = (keys) => json(forcedPreview(keys, { dependencies }));
+  const calls = await setup(page, {
+    previewResponse: (keys) => keys.length ? firstResponse : preview(keys),
+  });
+  await enterProjects(page, 'desktop');
+  await openForcedDeletion(page);
+
+  const documents = page.getByRole('switch', { name: 'Eliminar Documentos', exact: true });
+  const confirmation = page.getByTestId('project-force-delete-confirmation');
+  const panel = page.getByRole('dialog', { name: 'Eliminar proyecto', exact: true }).locator('[data-modal-kind="form"]');
+  const impactStatus = page.getByTestId('project-force-delete-impact-status');
+  await confirmation.fill('DELETE');
+  await documents.scrollIntoViewIfNeeded();
+  const scrollTop = await panel.evaluate((element) => element.scrollTop);
+  expect(scrollTop).toBeGreaterThan(0);
+  await documents.click();
+
+  await expect(documents).toBeFocused();
+  await expect.poll(() => panel.evaluate((element) => element.scrollTop)).toBe(scrollTop);
+  await expect(documents).toHaveAttribute('aria-checked', 'true');
+  await expect(impactStatus).toHaveText('Actualizando el impacto…');
+  await expect(confirmation).toHaveValue('');
+  await expect(page.getByTestId('project-force-delete-confirm')).toBeDisabled();
+
+  await documents.click();
+  await expect(impactStatus).toBeEmpty();
+  const olderResponse = page.waitForResponse((response) =>
+    response.url().endsWith('/delete-preview/') &&
+    response.request().postDataJSON()?.delete_keys?.includes('documents'),
+  );
+  releaseFirst(preview(['documents']));
+  await olderResponse;
+
+  await expect(documents).toBeFocused();
+  await expect(documents).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByTestId('project-force-delete-blockers')).toHaveCount(0);
+  await confirmation.fill('DELETE');
+  await expect(page.getByTestId('project-force-delete-confirm')).toBeEnabled();
+  expect(calls.deletes).toEqual([]);
+});
+
+test('retries the current category selection after a background failure', {
+  tag: ['@flow:admin-project-delete', '@outcome:failure'],
+}, async ({ page }) => {
+  let rejectNext = true;
+  const calls = await setup(page, {
+    previewResponse: (keys) => {
+      if (keys.length && rejectNext) {
+        rejectNext = false;
+        return json({ detail: 'Upstream connection failed.' }, 503);
+      }
+      return json(forcedPreview(keys));
+    },
+  });
+  await enterProjects(page, 'desktop');
+  await openForcedDeletion(page);
+
+  const files = page.getByRole('switch', { name: 'Eliminar Archivos de documentos', exact: true });
+  await files.click();
+  await expect(page.getByTestId('project-force-delete-error')).toHaveText('No se pudieron comprobar las dependencias del proyecto.');
+  await expect(files).toBeFocused();
+  await expect(files).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('project-force-delete-confirm')).toBeDisabled();
+
+  await page.getByTestId('project-force-delete-retry').click();
+  await expect(page.getByTestId('project-force-delete-error')).toHaveCount(0);
+  await expect(files).toHaveAttribute('aria-checked', 'true');
+  expect(calls.forcePreviews).toEqual([[], ['document_files'], ['document_files']]);
 });

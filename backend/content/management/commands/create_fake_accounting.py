@@ -645,3 +645,28 @@ class Command(BaseCommand):
             f'Created {created} fake accounting rows (source_ref={FAKE_REF}, '
             f'seed={context.seed}, anchor={context.anchor_date}).',
         ))
+
+
+QA_INCOME_CASES = {
+    'large': ('[QA PA-289] Ingreso extremo pendiente', '999999999999.99'),
+    'automatic': ('[QA PA-251] Reparto automático', '119.03'),
+    'manual': ('[QA PA-251] Reparto manual', '119.03'),
+    'whole': ('[QA PA-251] Control entero', '120.00'),
+}
+
+
+def seed_qa_income_cases(context, *, project, actor):
+    """Create independent expected incomes before any settlement or reminder."""
+    ensure_fake_data_allowed('seed_qa_income_cases')
+    for concept, amount in QA_INCOME_CASES.values():
+        total = Decimal(amount)
+        gustavo, carlos = split_half(total)
+        IncomeRecord.objects.create(
+            concept=concept, source_ref=FAKE_REF, created_by=actor,
+            client=project.client.profile, project=project,
+            kind=IncomeRecord.Kind.EXPECTED, ledger=Ledger.COMPANY,
+            origin=IncomeRecord.Origin.OTHER, destination=IncomeRecord.Destination.PARTNERS,
+            period_date=context.anchor_date.replace(day=1),
+            vat_rate=Decimal('0'), total_amount=total,
+            gustavo_amount=gustavo, carlos_amount=carlos,
+        )

@@ -4,10 +4,17 @@ import ProjectDeleteModal from '../../../components/panel/projects/ProjectDelete
 import { usePanelProjectsStore } from '../../../stores/panel_projects';
 import translations from '../../../locales/projectAccess/es';
 
+jest.mock('#imports', () => ({
+  useI18n: () => ({ locale: { value: 'es-co' }, t: (key, params) => mockTranslate(key, params) }),
+}));
+
 const project = { id: 7, name: 'Proyecto de prueba', client_name: 'Cliente de prueba' };
 const empty = { can_delete: true, blockers: [] };
 const blocked = { can_delete: false, blockers: [{ key: 'incomes', label: 'Ingresos', count: 3 }, { key: 'documents', label: 'Documentos', count: 2 }] };
-const t = (key) => key.split('.').slice(1).reduce((value, part) => value?.[part], translations) || key;
+const mockTranslate = (key, params = {}) => {
+  const message = key.split('.').slice(1).reduce((value, part) => value?.[part], translations) || key;
+  return message.replace(/\{(\w+)\}/g, (_, name) => params[name]);
+};
 
 async function openModal(preview = empty) {
   const store = usePanelProjectsStore();
@@ -17,7 +24,7 @@ async function openModal(preview = empty) {
     props: { project },
     global: {
       stubs: { NuxtLink: { template: '<a><slot /></a>' }, BaseModal: { template: '<div role="dialog"><slot /></div>' } },
-      mocks: { $t: t, $te: (key) => t(key) !== key },
+      mocks: { $t: mockTranslate, $te: (key) => mockTranslate(key) !== key },
     },
   });
   await flushPromises();
@@ -89,7 +96,7 @@ describe('ProjectDeleteModal', () => {
 
     await wrapper.get('[data-testid="project-delete-confirm"]').trigger('click');
     await flushPromises();
-    expect(wrapper.get('[role="alert"]').text()).toBe('Servicio no disponible');
+    expect(wrapper.get('[role="alert"]').text()).toBe('No se pudo eliminar el proyecto.');
     await wrapper.get('[data-testid="project-delete-confirm"]').trigger('click');
     await flushPromises();
 
