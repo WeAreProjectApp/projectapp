@@ -265,6 +265,7 @@ def _create_income_collection_account(
     from accounts.services.billing_context import associate_account
     if document.project_id or data.get('document_pending'):
         associate_account(document.pk, acting_user, data, creating=True)
+    due_date_mode = data.get('due_date_mode', DocumentCollectionAccount.DueDateMode.LEGACY)
     due_date = data.get('due_date')
     if due_date:
         term_type = DocumentCollectionAccount.PaymentTermType.FIXED_DATE
@@ -277,11 +278,13 @@ def _create_income_collection_account(
         # silently bill it at the 8-day default, so the term has to be tested
         # against None instead.
         term_days = data.get('payment_term_days')
-        if term_days is None:
+        if term_days is None and due_date_mode != DocumentCollectionAccount.DueDateMode.NONE:
             term_days = PAYMENT_TERM_DAYS
     DocumentCollectionAccount.objects.create(
         document=document,
         vat_rate=rate,
+        show_vat=data.get('show_vat', True),
+        due_date_mode=due_date_mode,
         billing_concept=billing_concept,
         payment_term_type=term_type,
         payment_term_days=term_days,

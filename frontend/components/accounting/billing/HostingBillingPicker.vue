@@ -13,6 +13,7 @@ const props = defineProps({
   client: { type: Object, default: null },
   modelValue: { type: Object, required: true },
   data: { type: Object, default: null },
+  errorId: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue', 'refreshed', 'reconcile', 'validation-message', 'nested-open'])
 const { t } = useI18n()
@@ -25,9 +26,14 @@ const keyFor = row => row.hosting_record_id ? `record:${row.hosting_record_id}` 
 const selected = computed(() => candidates.value.find(row => keyFor(row) === choice.value))
 const period = computed(() => props.data?.billing_period)
 const blockers = computed(() => selection.value?.blockers || [])
-const confirmed = computed(() => candidates.value.some(row => row.selectable && !row.requires_association
+const confirmedRow = computed(() => candidates.value.find(row => row.selectable && !row.requires_association
+  && row.project_hosting_id != null && props.modelValue.project_hosting_id != null
   && Number(row.project_hosting_id) === Number(props.modelValue.project_hosting_id)))
+const confirmed = computed(() => Boolean(confirmedRow.value))
+const visibleChoice = computed(() => confirmed.value ? keyFor(confirmedRow.value) : choice.value)
 const validation = computed(() => {
+  if (busy.value || !props.data) return t('hostingBilling.loading')
+  if (error.value) return error.value
   if (blockers.value.length) return blockers.value[0].message
   if (!confirmed.value) return t('hostingBilling.chooseRequired')
   return period.value?.blocker || (period.value?.version ? '' : t('hostingBilling.paymentEmpty'))
@@ -52,6 +58,7 @@ function label(row) {
     row.historical ? t('hostingBilling.historical') : ''].filter(Boolean).join(' · ')
 }
 function choose(value) {
+  sequence += 1
   choice.value = value; preview.value = null; error.value = ''
   emit('update:modelValue', { ...props.modelValue, project_hosting_id: null, hosting_payment_id: null })
 }
@@ -117,11 +124,13 @@ async function createHosting(payload) {
 }
 </script>
 <template>
-  <section class="space-y-3" data-testid="billing-hosting-picker">
+  <section class="space-y-3" role="group" tabindex="-1" data-hosting-period-group :aria-label="t('hostingBilling.title')" :aria-describedby="errorId || undefined" data-testid="billing-hosting-picker">
     <p v-if="!data" role="status" class="text-sm text-text-muted">{{ t('hostingBilling.loading') }}</p>
     <template v-else>
       <label v-if="candidates.length" class="block text-sm text-text-default">{{ t('hostingBilling.title') }}
-        <select :value="choice" :class="fieldClass" :disabled="busy" data-testid="billing-hosting-choice" @change="choose($event.target.value)">
+        <select name="hostingService" :value="visibleChoice" :class="fieldClass" :disabled="busy"
+          :aria-invalid="errorId && !confirmed ? 'true' : undefined" :aria-describedby="errorId || undefined"
+          data-testid="billing-hosting-choice" @change="choose($event.target.value)">
           <option value="">{{ t('hostingBilling.choose') }}</option>
           <option v-for="row in candidates" :key="keyFor(row)" :value="keyFor(row)" :disabled="!row.selectable">{{ label(row) }}</option>
         </select>
@@ -131,7 +140,7 @@ async function createHosting(payload) {
       <ul v-if="blockers.length" class="space-y-1 text-sm text-warning-strong" data-testid="billing-hosting-blockers">
         <li v-for="(blocker, index) in blockers" :key="index">{{ blocker.message }}</li>
       </ul>
-      <BaseButton v-if="selected?.selectable && !preview" size="sm" :loading="busy" data-testid="billing-hosting-review" @click="review">{{ t(selected.requires_association ? 'hostingBilling.review' : 'hostingBilling.use') }}</BaseButton>
+      <BaseButton v-if="selected?.selectable && !confirmed && !preview" size="sm" :loading="busy" data-testid="billing-hosting-review" @click="review">{{ t(selected.requires_association ? 'hostingBilling.review' : 'hostingBilling.use') }}</BaseButton>
       <section v-if="preview" class="space-y-2 rounded-xl border border-border-default p-3" data-testid="billing-hosting-link-preview">
         <h5 class="font-semibold text-text-default">{{ t('hostingBilling.reviewTitle') }}</h5>
         <p class="break-words text-sm text-text-default">{{ preview.label }}</p>

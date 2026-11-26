@@ -1767,6 +1767,14 @@ ventana. Duplicar conserva el desfase de cobro. Comprobar en el formulario
 automáticamente el inicio. Inicio, fin y periodicidad se auditan en
 `TRACKED_FIELDS`, además de la fecha de cobro.
 
+### Cuenta de cobro preparada desde Ingresos
+
+El conector `accounting` 3.1.0 y el adaptador `accounting-billing` 4.1.0 publican las preferencias de IVA y vencimiento en las herramientas de previsualización y creación. [Historial del contrato](changelog/2026-11-26-collection-account-presentation.md)
+
+1. En DEV, previsualizar una cuenta ficticia con `preview_collection_account`, base COP 100.000 y tasa del 19 %. Repetir con `show_vat` en ambas posiciones. El total debe ser COP 119.000 en ambos casos. Con el desglose oculto, el PDF y las dos versiones del correo omiten las filas fiscales.
+2. Con emisión el 26/11/2026, comparar `due_date_mode=dated` con cero días (26/11) y ocho días (04/12). Para `none`, omitir plazo y fecha y comprobar que `due_date` es nulo. Enviar plazo o fecha junto con `none` debe dar un error de validación. Omitir el modo y usar cero días reproduce el resultado histórico sin fecha.
+3. En una prueba aislada con buzón local, emitir la combinación revisada y reabrirla con `get_collection_account`. Comparar los importes, el vencimiento, las dos versiones del correo y el PDF archivado con lo previsualizado. El reenvío debe adjuntar exactamente los mismos bytes.
+
 ### Libro contable: confirmación de pago al liquidar (2026-10-09)
 
 1. Elegir un ingreso esperado con cliente y cuenta de cobro emitida e invocar

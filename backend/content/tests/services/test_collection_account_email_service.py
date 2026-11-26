@@ -196,6 +196,42 @@ class TestBuildCollectionAccountEmail:
         assert 'Fecha límite' not in email['html_body']
         assert 'Fecha límite' not in email['text_body']
 
+    def test_paid_explicitly_dated_account_keeps_its_deadline_in_the_notice(
+        self, super_client,
+    ):
+        """A paid account created under the new dated mode still tells the
+        client which deadline governed it; suppressing it hides the record."""
+        document = create_document(
+            super_client,
+            due_date_mode='dated',
+            due_date='2026-08-21',
+        )
+        document.commercial_status = Document.CommercialStatus.PAID
+        document.save(update_fields=['commercial_status'])
+
+        email = build_collection_account_email(document)
+
+        assert 'Fecha límite de pago: Vie, 21 ago 2026.' in email['sections']
+        assert 'Fecha límite de pago' in email['html_body']
+        assert 'Fecha límite de pago' in email['text_body']
+
+    def test_paid_historical_account_keeps_its_deadline_hidden(self, super_client):
+        """A paid legacy row keeps the historical client-facing notice shape
+        even when an old fixed due date remains stored on the document."""
+        document = create_document(
+            super_client,
+            due_date_mode='legacy',
+            due_date='2026-08-21',
+        )
+        document.commercial_status = Document.CommercialStatus.PAID
+        document.save(update_fields=['commercial_status'])
+
+        email = build_collection_account_email(document)
+
+        assert not any('Fecha límite de pago' in section for section in email['sections'])
+        assert 'Fecha límite de pago' not in email['html_body']
+        assert 'Fecha límite de pago' not in email['text_body']
+
     def test_text_alternative_carries_no_markdown_markers(self, super_client):
         """Fails if the plain-text part ships raw ** and ### to whoever reads without HTML."""
         document = create_document(super_client, items=PERIOD_ITEMS)

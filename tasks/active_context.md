@@ -1,3 +1,7 @@
+## W1 · PA-295, PA-301 y PA-302
+
+Desde Ingresos, la cuenta explica las correcciones que habilitan la vista previa, distingue el cálculo del IVA de su presentación y permite emitir con o sin fecha. El plazo explícito de cero días vence al emitir en Bogotá. Los consumidores anteriores conservan el contrato histórico. PA-296 aporta el período canónico y PA-297 abre la emisión desde la fila de Hostings. [Reglas documentales](../docs/accounting-pending-document.md#cuenta-preparada-desde-ingresos)
+
 ## W2 · PA-296, PA-298 y PA-299
 
 Contabilidad comparte el período de hosting entre Ingresos y Hostings. El mismo recibo puede llegar por ambas entradas y el siguiente esperado se prepara desde el calendario contractual. El [contrato de liquidación](../docs/accounting-settlement.md) recoge la decisión pendiente sobre recibos manuales sin referencia.

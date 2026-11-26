@@ -630,6 +630,7 @@
 
     <!-- Generar cuenta de cobro desde el ingreso (preseleccionado) -->
     <CollectionAccountFormModal
+      income-entry
       :open="collectionModalOpen"
       :resume-draft="billingReturn.resumeDraft.value"
       @reconcile="billingReturn.reconcile"

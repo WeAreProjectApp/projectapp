@@ -36,6 +36,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Recorrer los doce tabs sin perder la navegación.',
     'Filtrar, ordenar y abrir una fila representativa.',
     'Abrir los modales largos y completar sus pasos.',
+    'Desde Ingresos, seguir por teclado los errores de la cuenta y revisar los interruptores de IVA y vencimiento a 360 px.',
   ]),
   documents: module('documents', [
     'frontend/components/panel/documents/',

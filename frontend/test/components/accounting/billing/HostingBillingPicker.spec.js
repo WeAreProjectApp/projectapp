@@ -307,4 +307,41 @@ describe('HostingBillingPicker', () => {
     expect(wrapper.emitted('reconcile')).toEqual([[]])
     wrapper.unmount()
   })
+
+  it('keeps an unassigned record unconfirmed when the account has no hosting id', () => {
+    // A missing row id and a missing account id do not identify the same service.
+    const wrapper = mountPicker({
+      data: pickerData({
+        selection: { candidates: [candidate({ project_hosting_id: null, hosting_record_id: 31 })] },
+      }),
+    })
+
+    expect(wrapper.get('[data-testid="billing-hosting-choice"]').element.value).toBe('')
+    expect(wrapper.emitted('validation-message').at(-1)[0])
+      .toBe('Elige y confirma el hosting del proyecto para continuar.')
+    expect(wrapper.text()).not.toContain('Hosting confirmado para esta cuenta.')
+    wrapper.unmount()
+  })
+
+  it('retains A after reload only while it remains selectable and matches the account, then invalidates it when B replaces it', async () => {
+    // Fails if a refreshed candidate list displays a removed hosting as confirmed for this account.
+    const selectedA = candidate({ project_hosting_id: 91 })
+    const replacementB = candidate({ project_hosting_id: 92, domain_url: 'boreal.co' })
+    const wrapper = mountPicker({
+      modelValue: { ...model, project_hosting_id: 91 },
+      data: pickerData({ selection: { candidates: [selectedA] } }),
+    })
+
+    await wrapper.setProps({ data: pickerData({ selection: { candidates: [{ ...selectedA }] } }) })
+    expect(wrapper.get('[data-testid="billing-hosting-choice"]').element.value).toBe('hosting:91')
+    expect(wrapper.get('[data-testid="billing-hosting-confirmed"]').text())
+      .toBe('Hosting confirmado para esta cuenta.')
+
+    await wrapper.setProps({ data: pickerData({ selection: { candidates: [replacementB] } }) })
+    expect(wrapper.get('[data-testid="billing-hosting-choice"]').element.value).toBe('')
+    expect(wrapper.emitted('validation-message').at(-1)[0])
+      .toBe('Elige y confirma el hosting del proyecto para continuar.')
+    expect(wrapper.text()).not.toContain('Hosting confirmado para esta cuenta.')
+    wrapper.unmount()
+  })
 })

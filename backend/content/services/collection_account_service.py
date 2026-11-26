@@ -283,13 +283,13 @@ def issue_collection_account(
     )
 
     ptt = ext.payment_term_type
-    if ptt == DocumentCollectionAccount.PaymentTermType.DAYS_AFTER_ISSUE:
-        # A zero-day term is immediate payment against presentation, so there is
-        # no deadline to state. Storing the issue date as the due date printed
-        # the same date twice on the PDF and, worse, turned the cuenta overdue
-        # the very next day. No date is what "no plazo" actually means.
+    if ext.due_date_mode == DocumentCollectionAccount.DueDateMode.NONE:
+        document.due_date = None
+    elif ptt == DocumentCollectionAccount.PaymentTermType.DAYS_AFTER_ISSUE:
+        # Only an explicitly dated zero-day term becomes overdue the next day.
         days = ext.payment_term_days or 0
-        document.due_date = today + timedelta(days=days) if days else None
+        dated = ext.due_date_mode == DocumentCollectionAccount.DueDateMode.DATED
+        document.due_date = today + timedelta(days=days) if days or dated else None
     elif ptt == DocumentCollectionAccount.PaymentTermType.FIXED_DATE:
         if not document.due_date:
             raise CollectionAccountError('due_date is required for fixed_date payment term.')
