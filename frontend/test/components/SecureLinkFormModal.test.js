@@ -32,11 +32,15 @@ const types = [{
   fields: [{ key: 'message', label_es: 'Mensaje', label_en: 'Message', kind: 'textarea', required: true, max_length: 15000 }],
 }, {
   key: 'credentials', label_es: 'Credenciales', label_en: 'Credentials',
-  fields: [{ key: 'password', label_es: 'Contraseña', label_en: 'Password', kind: 'secret', required: true, max_length: 2000 }],
+  fields: [
+    { key: 'service', label_es: 'Nombre del sistema', label_en: 'System name', kind: 'text', panel_create_hidden: true, max_length: 200 },
+    { key: 'url', label_es: 'Dirección del sistema', label_en: 'System address', kind: 'url', panel_create_hidden: true, max_length: 500 },
+    { key: 'password', label_es: 'Contraseña', label_en: 'Password', kind: 'secret', required: true, max_length: 2000 },
+  ],
 }, {
   key: 'custom', label_es: 'Personalizado', label_en: 'Custom',
   fields: [
-    { key: 'custom_name', label_es: 'Nombre del tipo', label_en: 'Type name', kind: 'text', required: true, max_length: 200 },
+    { key: 'custom_name', label_es: 'Nombre del tipo', label_en: 'Type name', kind: 'text', required: true, panel_required: false, max_length: 200 },
     { key: 'content', label_es: 'Contenido', label_en: 'Content', kind: 'textarea', required: true, max_length: 15000 },
   ],
 }];
@@ -120,7 +124,8 @@ describe('SecureLinkFormModal', () => {
 
   it('saves the loaded content with the title and associations of the edited link', async () => {
     const link = { id: 7, title: 'Viejo', secret_type: 'credentials', client: null, project: null, language: 'es' };
-    const wrapper = await mountForm({ link, initialFields: { password: 'old-secret' } });
+    const historical = { service: 'Sistema de prueba', url: 'https://sistema.example' };
+    const wrapper = await mountForm({ link, initialFields: { ...historical, password: 'old-secret' } });
     patch_request.mockResolvedValueOnce({ data: { ...link, title: 'Nuevo' } });
 
     expect(wrapper.get('[data-testid="secure-link-field-password"]').element.value).toBe('old-secret');
@@ -131,7 +136,7 @@ describe('SecureLinkFormModal', () => {
 
     // Fails if editing drops the content again: the title alone is renamed from the detail.
     expect(patch_request).toHaveBeenCalledWith('secure-links/7/', {
-      secret_type: 'credentials', title: 'Nuevo', fields: { password: 'new-secret' }, client: null, project: null,
+      secret_type: 'credentials', title: 'Nuevo', fields: { ...historical, password: 'new-secret' }, client: null, project: null,
     });
   });
 
@@ -157,19 +162,19 @@ describe('SecureLinkFormModal', () => {
     expect(create_request).not.toHaveBeenCalled();
   });
 
-  it('creates custom content without associations', async () => {
+  it('creates custom content with an empty type name', async () => {
     const wrapper = await mountForm();
     create_request.mockResolvedValueOnce({ data: { id: 10, url: 'https://example.test/#token' } });
     await selectType(wrapper, 'custom');
     await wrapper.get('[data-testid="secure-link-title"]').setValue('Referencia');
-    await wrapper.get('[data-testid="secure-link-field-custom_name"]').setValue('Instrucciones');
+    expect(wrapper.get('[data-testid="secure-link-field-custom_name"]').element.required).toBe(false);
     await wrapper.get('[data-testid="secure-link-field-content"]').setValue('  Texto\ncon espacios  ');
 
     await wrapper.get('form').trigger('submit');
     await flushPromises();
 
     expect(create_request).toHaveBeenCalledWith('secure-links/create/', expect.objectContaining({
-      secret_type: 'custom', fields: { custom_name: 'Instrucciones', content: '  Texto\ncon espacios  ' },
+      secret_type: 'custom', fields: { content: '  Texto\ncon espacios  ' },
       client: null, project: null,
     }));
     expect(wrapper.emitted('saved')[0][0].id).toBe(10);

@@ -47,12 +47,17 @@ export default {
   typesError: 'We could not load the information types.',
   typesPending: 'Wait for the information types to load.',
   validation: {
+    text: 'Enter a text value.',
     required: 'This field is required.',
     maxLength: 'Maximum {max} characters.',
     totalLength: 'The content exceeds the limit of 20,000 characters.',
     email: 'Enter a valid email address.',
   },
   panel: {
+    reactivateTitle: 'Reactivate link',
+    reactivateHint: 'The same link can be opened one more time. If you think someone else opened it, generate a new one to invalidate the previous link.',
+    rotateLink: 'Generate a new link and invalidate the previous one',
+    reactivate: 'Reactivate',
     publicLink: 'Client link',
     publicLinkCopied: 'Copied',
     publicLinkCopyFailed: 'Could not copy',

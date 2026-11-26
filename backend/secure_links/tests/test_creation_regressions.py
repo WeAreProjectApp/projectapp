@@ -79,7 +79,7 @@ def test_custom_content_is_encrypted_until_explicit_reveal(staff_client):
 
 
 @pytest.mark.parametrize('field,value', [
-    ('custom_name', ''), ('content', '   '),
+    ('content', '   '),
     ('custom_name', 'x' * 201), ('content', 'x' * 15001),
 ])
 def test_custom_content_reports_invalid_field(staff_client, field, value):
@@ -106,6 +106,16 @@ def test_public_custom_link_remains_team_only(staff_client):
 
     assert denied.status_code == 403
     assert revealed.json()['fields'][1]['value'] == CUSTOM_FIELDS['content']
+
+
+def test_public_custom_link_still_requires_a_name():
+    response = APIClient().post(BASE + 'public/create/', {
+        'secret_type': 'custom', 'fields': {'content': 'Contenido ficticio'}, 'creator_name': 'Ana',
+    }, format='json')
+
+    assert response.status_code == 400
+    assert response.json()['custom_name']
+    assert not SecureLink.objects.exists()
 
 
 def test_edit_replaces_custom_content(staff_client, make_link):

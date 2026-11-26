@@ -130,7 +130,9 @@ function firstString(value) {
  */
 function collectFieldErrors(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
-  const reserved = new Set(['error', 'detail', 'message', 'code', 'hint']);
+  const reserved = new Set(['error', 'detail', 'code', 'hint']);
+  // DRF field errors are lists, including errors for a field named "message".
+  if (!Array.isArray(data.message)) reserved.add('message');
   const result = {};
   for (const [key, value] of Object.entries(data)) {
     if (reserved.has(key)) continue;

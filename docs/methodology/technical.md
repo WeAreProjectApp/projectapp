@@ -306,6 +306,12 @@ PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 > `secure_links.0001` y `content.0259` (descripción del conector). Tests en
 > `backend/secure_links/tests/`.
 
+En el catálogo de enlaces seguros, `panel_required` define los campos exigidos
+en el Panel y `panel_create_hidden` los que se omiten en el alta. La edición
+y la lectura etiquetada admiten los campos históricos de credenciales.
+`required` mantiene la regla del formulario público, Plataforma y MCP.
+El Panel localiza los errores de contenido mediante `field_codes`.
+
 > **2026-09-25 — producción audiovisual v2:** el pipeline de `explainers/`
 > acepta `--edition brag-v2` y mantiene v1 como default. La narración Kokoro
 > usa cache por contenido y rechaza desbordes; un fingerprint liga voz, guion

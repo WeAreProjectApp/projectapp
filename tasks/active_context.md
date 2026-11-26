@@ -1,3 +1,11 @@
+## W4 · PA-304 · Enlaces seguros
+
+En el Panel cada uno de los nueve tipos admite su contenido esencial y un
+título interno. Los enlaces antiguos de credenciales conservan nombre y
+dirección del sistema al editarse. La vigencia, la rotación y el botón de
+reactivación ocupan filas separadas. La matriz del Panel y las diferencias
+con los demás canales están en [Enlaces seguros](../docs/secure-links.md).
+
 ## PA-221 · evidencia de integridad y retiro por destino
 
 El expediente w2 conserva TO DO, el acceso actual y la pausa de DEVQA-000. Se

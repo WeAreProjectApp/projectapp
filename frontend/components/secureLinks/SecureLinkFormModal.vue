@@ -12,7 +12,7 @@
 
         <SecureLinkTypeField
           v-model="form.secretType" v-model:custom-name="form.fields.custom_name"
-          :types="store.types" :language="uiLanguage" :disabled="!catalogReady || store.isUpdating"
+          :types="panelTypes" :language="uiLanguage" :disabled="!catalogReady || store.isUpdating"
           :disabled-reason="t('secureLinks.typesPending')" :error="errors.secret_type" :custom-error="errors.custom_name"
         />
 
@@ -143,7 +143,15 @@ const form = reactive({
   project: null, language: 'es', validityDays: 7,
 });
 
-const selectedType = computed(() => store.typeByKey(form.secretType));
+// Project the shared catalog once for rendering, validation and submission.
+// Editing uses the full set of keys so a save round-trips historical values.
+const panelTypes = computed(() => store.types.map(type => ({
+  ...type,
+  fields: type.fields
+    .filter(field => props.link || !field.panel_create_hidden)
+    .map(field => ({ ...field, required: field.panel_required ?? field.required })),
+})));
+const selectedType = computed(() => panelTypes.value.find(type => type.key === form.secretType));
 const validityOptions = computed(() => [1, 3, 7, 30].map((days) => ({ value: days, label: t('secureLinks.days', days) })));
 const { errors, generalError, loadingTypes, typesError, catalogReady, loadTypes, resetErrors, validateFields, mapErrors, focusError } = useSecureLinkForm(formElement, selectedType, t);
 

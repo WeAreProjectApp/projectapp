@@ -36,6 +36,16 @@ def test_create_encrypts_the_payload(platform_client, project, client_profile):
     assert CREDENTIALS['password'] not in str(SecureLink.objects.values().get(pk=link.pk))
 
 
+def test_platform_keeps_its_required_server_fields(platform_client, project):
+    response = platform_client.post(base(project), payload(
+        secret_type='server_access', fields={'credential': 'Ficticio'},
+    ), format='json')
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'invalid_content'
+    assert not SecureLink.objects.exists()
+
+
 def test_list_returns_the_chosen_validity_and_language(platform_client, project):
     created = platform_client.post(base(project), payload(validity_days=1, language='es'), format='json')
 
