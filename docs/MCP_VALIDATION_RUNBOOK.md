@@ -2887,6 +2887,12 @@ secretos ni aceptan una entidad arbitraria al consultar historial.
 | `projects` | `list_project_history`, `get_project_history_version`, `compare_project_history` | Historial del proyecto, con credenciales protegidas |
 | `projects` y `accounting-billing` | `link_project_billing_contract` | Fuente del mismo proyecto/cliente, versión vigente, permiso contable y confirmación; no emite ni altera dinero |
 
+Para una propuesta vinculada a un proyecto existente del mismo cliente, probar
+la reasignación hacia un destino Suspendido. Después de confirmar, comprobar
+los mismos IDs de fase, entregables y archivos aprobados, el estado Suspendido
+y los importes del destino. Los destinos Completado y Dado de baja devuelven
+`archived_target`.
+
 `list_projects` admite `client_profile_id` plano para solicitar únicamente los
 proyectos del cliente elegido. La ficha y la raíz documental existentes son la
 fuente de la relación; el título de un contrato nunca asigna su proyecto.
