@@ -1320,8 +1320,8 @@ BILLING_CATALOG_CONTRACTS = (
         'content.DocumentCollectionAccount',
         read_only='document created_at updated_at',
         read_write=(
-            'vat_rate billing_concept payment_term_type payment_term_days payer_name '
-            'payer_identification payer_identification_type payer_address payer_phone '
+            'vat_rate show_vat billing_concept due_date_mode payment_term_type payment_term_days '
+            'payer_name payer_identification payer_identification_type payer_address payer_phone '
             'payer_email customer_name customer_identification '
             'customer_identification_type customer_contact_name customer_email '
             'customer_address customer_project_name observations support_reference'
