@@ -92,18 +92,18 @@
         <SecureLinkContent v-if="content" :fields="content.fields" />
 
         <fieldset :disabled="Boolean(busy)" v-if="detail.status !== 'active'" class="space-y-3 rounded-xl border border-border-default p-4" data-testid="secure-link-reactivate">
-          <h4 class="text-sm font-semibold text-text-default">Reactivar enlace</h4>
-          <p class="text-sm text-text-muted">
-            El mismo enlace se podrá abrir una vez más. Si sospechas que otra persona lo abrió, genera uno nuevo y el anterior dejará de funcionar.
-          </p>
-          <BaseSegmented v-model="reactivation.validityDays" :options="validityOptions" size="sm" data-testid="secure-link-reactivate-validity" />
-          <BaseCheckbox v-model="reactivation.rotate" data-testid="secure-link-reactivate-rotate">
-            Generar un enlace nuevo e invalidar el anterior
-          </BaseCheckbox>
-          <BaseButton variant="primary" size="sm" :loading="busy === 'reactivate'" data-testid="secure-link-reactivate-submit" @click="reactivate">
-            <BaseActionIcon action="activate" />
-            Reactivar
-          </BaseButton>
+          <h4 class="text-sm font-semibold text-text-default">{{ t('secureLinks.panel.reactivateTitle') }}</h4>
+          <p class="text-sm text-text-muted">{{ t('secureLinks.panel.reactivateHint') }}</p>
+          <div class="grid min-w-0 grid-cols-1 justify-items-start gap-3">
+            <BaseSegmented v-model="reactivation.validityDays" :options="validityOptions" size="sm" data-testid="secure-link-reactivate-validity" />
+            <BaseCheckbox v-model="reactivation.rotate" data-testid="secure-link-reactivate-rotate">
+              {{ t('secureLinks.panel.rotateLink') }}
+            </BaseCheckbox>
+            <BaseButton variant="primary" size="sm" :loading="busy === 'reactivate'" data-testid="secure-link-reactivate-submit" @click="reactivate">
+              <BaseActionIcon action="activate" />
+              {{ t('secureLinks.panel.reactivate') }}
+            </BaseButton>
+          </div>
         </fieldset>
 
         <section>
@@ -161,7 +161,7 @@ const content = ref(null);
 const busy = ref('');
 const error = ref('');
 const reactivation = reactive({ validityDays: 7, rotate: false });
-const validityOptions = [1, 3, 7, 30].map((days) => ({ value: days, label: days === 1 ? '1 día' : `${days} días` }));
+const validityOptions = computed(() => [1, 3, 7, 30].map(days => ({ value: days, label: t('secureLinks.days', days) })));
 const urlFeedback = computed(() => clipboard.feedbackFor('secure-link-url'));
 const titleFeedback = computed(() => clipboard.feedbackFor('secure-link-title'));
 const association = computed(() => [detail.value?.client_name, detail.value?.project_name].filter(Boolean).join(' · '));

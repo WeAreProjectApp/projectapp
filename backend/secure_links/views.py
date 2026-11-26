@@ -61,7 +61,14 @@ def _service_error(exc):
 
 
 def _invalid(errors):
-    return error_response('Revisa los datos del formulario.', code='invalid', errors=errors)
+    response = error_response('Revisa los datos del formulario.', code='invalid', errors=errors)
+    field_codes = {
+        key: messages[0].code for key, messages in errors.items()
+        if isinstance(messages, list) and messages and getattr(messages[0], 'code', None)
+    }
+    if field_codes:
+        response.data['field_codes'] = field_codes
+    return response
 
 
 def _validated(serializer_class, data):
@@ -142,7 +149,7 @@ def link_detail(request, pk):
             return _invalid(serializer.errors)
         try:
             link = services.update_link(
-                link, actor=request.user, meta=services.RequestMeta.from_request(request),
+                link, actor=request.user, meta=services.RequestMeta.from_request(request), panel=True,
                 **serializer.validated_data,
             )
         except CatalogError as exc:

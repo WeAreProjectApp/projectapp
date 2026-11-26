@@ -16,9 +16,10 @@ revoca o se reactiva.
 
 - **Abrir:** el destinatario ve tipo, remitente y vencimiento; el contenido sale
   sólo al pulsar **Ver contenido**. Recargar después muestra "ya fue utilizado".
-- **Reactivar:** desde el detalle del enlace, con nueva vigencia. Por defecto se
-  reactiva el **mismo** enlace; si otra persona pudo abrirlo, marca "generar un
-  enlace nuevo" y el anterior deja de funcionar.
+- **Reactivar:** en el detalle, elige la nueva vigencia y pulsa **Reactivar**
+  en su propia fila. Un enlace saliente del Panel conserva su URL y vuelve a
+  admitir una apertura. Si marcas **Generar un enlace nuevo e invalidar el
+  anterior**, sólo funcionará la nueva URL.
 - **Editar:** el título se renombra en línea desde el detalle (lápiz junto al título) sin descifrar el secreto; **Editar contenido**, la única opción de edición, está en el detalle y en el menú de tres puntos de la fila, carga los campos de forma explícita (queda en el historial como consulta) y permite cambiar tipo, contenido, título, cliente y proyecto. Guardar no cambia la URL, vigencia ni estado del enlace.
 - **Listado:** cada fila empieza con un botón de tres puntos que abre un modal con sus acciones; el botón «Actualizar datos» del panel recarga la tabla y los conteos.
 - **Eliminar:** borra permanentemente el enlace, contenido cifrado e historial; requiere confirmar en el panel o MCP. Revocar permite conservarlos.
@@ -57,17 +58,31 @@ Los contenidos antiguos pueden leerse sin esa clave; no se reescriben en bloque
 ni se cambian tokens, cifrado, permisos o consumo único.
 La página pública conserva nombre del remitente y CAPTCHA cuando está habilitado.
 
-La URL del enlace seguro se genera automáticamente. En la plantilla Credenciales,
-**Dirección del sistema** es una URL opcional del sitio al que pertenece la
-cuenta; **Usuario de la cuenta** y **Contraseña que quieres compartir** son los
-datos confidenciales de esa cuenta, no el destinatario ni una contraseña extra
-para abrir el enlace. Para compartir texto sin contraseña, usa Mensaje confidencial.
+Para crear un enlace en el Panel, escribe el título interno y el contenido
+indicado en la tabla. Puedes dejar vacíos los demás campos del tipo.
 
-**Personalizado** pide `fields.custom_name` (nombre, hasta 200 caracteres) y
-`fields.content` (texto libre, hasta 15 000). Ambos se cifran; las listas, MCP y
-el estado público previo a revelar sólo muestran «Personalizado». El nombre no
-se agrega a un catálogo global. API y MCP mantienen los endpoints y argumentos
-existentes.
+| Tipo | Contenido obligatorio en el Panel |
+|---|---|
+| Credenciales de acceso | Contraseña de la cuenta |
+| API key o token | Clave secreta o token |
+| Acceso a servidor (SSH/SFTP) | Contraseña o llave privada |
+| Base de datos | Contraseña |
+| Variables de entorno | Contenido |
+| Datos bancarios | Número de cuenta |
+| Códigos de recuperación | Códigos |
+| Mensaje confidencial | Mensaje |
+| Personalizado | Contenido |
+
+En **Credenciales de acceso** puedes añadir el usuario de la cuenta y una nota.
+La URL para compartir se genera al guardar. Si un enlace anterior contiene
+nombre o dirección del sistema, ambos datos siguen disponibles al consultar
+y editar su contenido. El cambio de título desde el detalle conserva el
+contenido cifrado.
+
+En **Personalizado**, el Panel permite omitir el nombre del tipo. Si se
+proporciona, se cifra junto con el contenido. Las listas y la consulta previa
+a la apertura muestran «Personalizado». El formulario público, Plataforma y
+MCP siguen exigiendo el nombre y el contenido de este tipo.
 
 Los formularios validan antes de enviar, muestran errores junto al campo y
 conservan el contenido mientras se reintenta. Si el catálogo falla, ofrecen

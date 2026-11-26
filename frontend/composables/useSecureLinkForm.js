@@ -68,12 +68,23 @@ export function useSecureLinkForm(formElement, selectedType, t) {
     )?.focus();
   }
 
+  function fieldErrorMessage(key, code, fallback) {
+    if (code === 'required' || code === 'blank') return t('secureLinks.validation.required');
+    if (code === 'invalid_text') return t('secureLinks.validation.text');
+    if (code === 'total_length') return t('secureLinks.validation.totalLength');
+    if (code === 'max_length') {
+      const field = selectedType.value?.fields.find(field => field.key === key);
+      if (field) return t('secureLinks.validation.maxLength', { max: field.max_length });
+    }
+    return fallback;
+  }
+
   function mapErrors(error, visibleKeys) {
     const visible = new Set(visibleKeys);
     const unhandled = [];
     errors.value = {};
     for (const [key, value] of Object.entries(error?.fieldErrors || {})) {
-      const message = Array.isArray(value) ? value[0] : value;
+      const message = fieldErrorMessage(key, error.fieldCodes?.[key], Array.isArray(value) ? value[0] : value);
       if (typeof message !== 'string' || !message) continue;
       if (visible.has(key)) errors.value[key] = message;
       else unhandled.push(message);

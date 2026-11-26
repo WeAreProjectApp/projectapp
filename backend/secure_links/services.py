@@ -179,7 +179,7 @@ def create_link(*, secret_type, title, fields, origin, actor=None, client=UNSET,
     client_origin = origin in (SecureLink.Origin.PUBLIC, SecureLink.Origin.PLATFORM)
     allowed = PUBLIC_VALIDITY_CHOICES if client_origin else VALIDITY_CHOICES
     days = _validity(validity_days, allowed=allowed)
-    payload = clean_fields(secret_type, fields)
+    payload = clean_fields(secret_type, fields, panel=origin == SecureLink.Origin.PANEL)
     title = _title(title)
     from .folder_services import initial_location, lock_tree
     lock_tree()
@@ -390,7 +390,7 @@ def revoke(link, *, actor, meta=None):
 
 
 @transaction.atomic
-def update_link(link, *, actor, meta=None, **changes):
+def update_link(link, *, actor, meta=None, panel=False, **changes):
     """Edit title, association and/or content. Never changes the link state."""
     link = _locked_link(link)
     changed = []
@@ -412,7 +412,7 @@ def update_link(link, *, actor, meta=None, **changes):
         changed += ['client', 'project']
     if 'fields' in changes:
         secret_type = changes.get('secret_type', link.secret_type)
-        link.payload_encrypted = _encrypt_payload(clean_fields(secret_type, changes['fields']))
+        link.payload_encrypted = _encrypt_payload(clean_fields(secret_type, changes['fields'], panel=panel))
         link.secret_type = secret_type
         changed += ['secret_type', 'content']
     if changed:

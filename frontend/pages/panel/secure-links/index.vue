@@ -37,7 +37,7 @@
         </BaseTooltip>
         <span class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="secure-links-copy-status">{{ publicFeedback.label }}</span>
         <BaseButton variant="primary" size="sm" data-testid="secure-links-new" @click="openCreate">
-          Nuevo enlace
+          {{ t('secureLinks.panel.newTitle') }}
         </BaseButton>
       </div>
     </div>

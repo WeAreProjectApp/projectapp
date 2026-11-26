@@ -6,6 +6,8 @@ Adding a type means adding one entry here. Payment cards are deliberately
 absent — card data must never be stored by ProjectApp.
 """
 
+from rest_framework.exceptions import ErrorDetail
+
 TEXT = 'text'
 SECRET = 'secret'
 TEXTAREA = 'textarea'
@@ -14,7 +16,8 @@ URL = 'url'
 MAX_PAYLOAD_CHARS = 20_000
 
 
-def _field(key, label_es, label_en, kind=TEXT, *, required=False, max_length=None):
+def _field(key, label_es, label_en, kind=TEXT, *, required=False, max_length=None,
+           panel_optional=False, panel_create_hidden=False):
     default_length = {TEXT: 200, SECRET: 2_000, TEXTAREA: 5_000, URL: 500}[kind]
     return {
         'key': key,
@@ -22,6 +25,8 @@ def _field(key, label_es, label_en, kind=TEXT, *, required=False, max_length=Non
         'label_en': label_en,
         'kind': kind,
         'required': required,
+        'panel_required': required and not panel_optional,
+        'panel_create_hidden': panel_create_hidden,
         'max_length': max_length or default_length,
     }
 
@@ -33,8 +38,8 @@ SECRET_TYPES = {
         'label_es': 'Credenciales de acceso',
         'label_en': 'Access credentials',
         'fields': [
-            _field('service', 'Nombre del sistema', 'System name'),
-            _field('url', 'Dirección del sistema', 'System address', URL),
+            _field('service', 'Nombre del sistema', 'System name', panel_create_hidden=True),
+            _field('url', 'Dirección del sistema', 'System address', URL, panel_create_hidden=True),
             _field('username', 'Usuario de la cuenta', 'Account username'),
             _field('password', 'Contraseña que quieres compartir', 'Password to share', SECRET, required=True),
             NOTE,
@@ -55,9 +60,9 @@ SECRET_TYPES = {
         'label_es': 'Acceso a servidor (SSH/SFTP)',
         'label_en': 'Server access (SSH/SFTP)',
         'fields': [
-            _field('host', 'Host o IP', 'Host or IP', required=True),
+            _field('host', 'Host o IP', 'Host or IP', required=True, panel_optional=True),
             _field('port', 'Puerto', 'Port', max_length=10),
-            _field('username', 'Usuario', 'Username', required=True),
+            _field('username', 'Usuario', 'Username', required=True, panel_optional=True),
             _field('credential', 'Contraseña o llave privada', 'Password or private key', SECRET, required=True, max_length=10_000),
             NOTE,
         ],
@@ -67,10 +72,10 @@ SECRET_TYPES = {
         'label_en': 'Database',
         'fields': [
             _field('engine', 'Motor', 'Engine'),
-            _field('host', 'Host', 'Host', required=True),
+            _field('host', 'Host', 'Host', required=True, panel_optional=True),
             _field('port', 'Puerto', 'Port', max_length=10),
             _field('name', 'Nombre de la base', 'Database name'),
-            _field('username', 'Usuario', 'Username', required=True),
+            _field('username', 'Usuario', 'Username', required=True, panel_optional=True),
             _field('password', 'Contraseña', 'Password', SECRET, required=True),
             NOTE,
         ],
@@ -87,10 +92,10 @@ SECRET_TYPES = {
         'label_es': 'Datos bancarios',
         'label_en': 'Bank details',
         'fields': [
-            _field('bank', 'Banco', 'Bank', required=True),
+            _field('bank', 'Banco', 'Bank', required=True, panel_optional=True),
             _field('account_type', 'Tipo de cuenta', 'Account type'),
             _field('account_number', 'Número de cuenta', 'Account number', SECRET, required=True, max_length=60),
-            _field('holder', 'Titular', 'Account holder', required=True),
+            _field('holder', 'Titular', 'Account holder', required=True, panel_optional=True),
             _field('holder_document', 'Documento del titular', 'Holder ID number', max_length=60),
             NOTE,
         ],
@@ -99,7 +104,7 @@ SECRET_TYPES = {
         'label_es': 'Códigos de recuperación (2FA)',
         'label_en': 'Recovery codes (2FA)',
         'fields': [
-            _field('service', 'Servicio', 'Service', required=True),
+            _field('service', 'Servicio', 'Service', required=True, panel_optional=True),
             _field('codes', 'Códigos', 'Codes', SECRET, required=True, max_length=5_000),
             NOTE,
         ],
@@ -115,7 +120,7 @@ SECRET_TYPES = {
         'label_es': 'Personalizado',
         'label_en': 'Custom',
         'fields': [
-            _field('custom_name', 'Nombre del tipo', 'Type name', required=True),
+            _field('custom_name', 'Nombre del tipo', 'Type name', required=True, panel_optional=True),
             _field('content', 'Contenido', 'Content', TEXTAREA, required=True, max_length=15_000),
         ],
     },
@@ -141,7 +146,7 @@ def catalog_payload():
     return [{'key': key, **definition} for key, definition in SECRET_TYPES.items()]
 
 
-def clean_fields(secret_type, fields):
+def clean_fields(secret_type, fields, *, panel=False):
     """Validate ``fields`` for ``secret_type`` and return the stored payload.
 
     Unknown keys are rejected, every required field must be present, empty
@@ -154,6 +159,7 @@ def clean_fields(secret_type, fields):
     if not isinstance(fields, dict):
         raise CatalogError({'fields': ['El contenido debe ser un objeto con los campos del tipo.']})
     allowed = {field['key']: field for field in definition['fields']}
+    required_flag = 'panel_required' if panel else 'required'
     errors = {}
     unknown = sorted(set(fields) - set(allowed))
     if unknown:
@@ -164,21 +170,21 @@ def clean_fields(secret_type, fields):
         if value is None:
             value = ''
         if not isinstance(value, (str, int)) or isinstance(value, bool):
-            errors[key] = ['Debe ser texto.']
+            errors[key] = [ErrorDetail('Debe ser texto.', code='invalid_text')]
             continue
         value = str(value)
         if field['kind'] not in (SECRET, TEXTAREA):
             value = value.strip()
         if not value.strip():
-            if field['required']:
-                errors[key] = ['Este campo es obligatorio.']
+            if field[required_flag]:
+                errors[key] = [ErrorDetail('Este campo es obligatorio.', code='required')]
             continue
         if len(value) > field['max_length']:
-            errors[key] = [f'Máximo {field["max_length"]} caracteres.']
+            errors[key] = [ErrorDetail(f'Máximo {field["max_length"]} caracteres.', code='max_length')]
             continue
         cleaned[key] = value
     if not errors and sum(len(value) for value in cleaned.values()) > MAX_PAYLOAD_CHARS:
-        errors['fields'] = [f'El contenido supera el máximo de {MAX_PAYLOAD_CHARS} caracteres.']
+        errors['fields'] = [ErrorDetail(f'El contenido supera el máximo de {MAX_PAYLOAD_CHARS} caracteres.', code='total_length')]
     if errors:
         raise CatalogError(errors)
     return cleaned

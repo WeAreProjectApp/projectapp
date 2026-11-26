@@ -10,6 +10,7 @@ import { waitForNuxtApp } from '../helpers/navigation.js';
 import { ADMIN_SECURE_LINK_CREATE, ADMIN_SECURE_LINK_MANAGE } from '../helpers/flow-tags.js';
 import { chooseRowAction, openRowMenu } from '../helpers/row-actions.js';
 import { expectNoBlankBand } from '../helpers/table-geometry.js';
+import { viewportUse } from '../helpers/viewports.js';
 import {
   SECURE_LINK_TOKEN, chooseSecureLinkType, json, revealedContent, secureLinkRow, secureLinkTypes,
 } from '../helpers/secure-links.js';
@@ -116,6 +117,89 @@ test.describe('Admin secure links', () => {
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 8901, role: 'admin', is_staff: true } });
   });
+
+  for (const [locale, typeName, required] of [
+    ['es-co', 'Credenciales de acceso', 'Este campo es obligatorio.'],
+    ['en-us', 'Access credentials', 'This field is required.'],
+  ]) {
+    test(`creates password-only credentials in ${locale}`, {
+      tag: [...ADMIN_SECURE_LINK_CREATE, '@role:admin', '@outcome:success', '@outcome:error'],
+    }, async ({ page }) => {
+      const calls = await setupPanel(page, { rows: [] });
+      await page.goto(`/${locale}/panel/secure-links`, { waitUntil: 'domcontentloaded' });
+      await page.getByTestId('secure-links-new').click();
+      await chooseSecureLinkType(page, { name: typeName });
+      const form = page.getByTestId('secure-link-form');
+      const password = form.getByTestId('secure-link-field-password');
+      await expect(form.getByTestId('secure-link-field-service')).toHaveCount(0);
+      await expect(form.getByTestId('secure-link-field-url')).toHaveCount(0);
+      await form.getByTestId('secure-link-title').fill('Demo');
+      await page.getByTestId('secure-link-save').click();
+      await expect(password).toHaveAccessibleDescription(required);
+      await expect(password).toBeFocused();
+      await expect(form.getByTestId('secure-link-title')).toHaveValue('Demo');
+
+      await password.fill('fixture-value');
+      await page.getByTestId('secure-link-save').click();
+
+      await expect(form).toBeHidden();
+      expect(calls.create.map(body => body.fields)).toEqual([{ password: 'fixture-value' }]);
+    });
+  }
+
+  test('keeps the English message draft beside a localized API error', {
+    tag: [...ADMIN_SECURE_LINK_CREATE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const responses = [
+      json({ error: 'Revisa los datos.', message: ['Este campo es obligatorio.'], field_codes: { message: 'required' } }, 400),
+      json({ ...secureLinkRow(), url: CREATED_URL }, 201),
+    ];
+    await setupPanel(page, { rows: [], create: () => responses.shift() });
+    await page.goto('/en-us/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-links-new').click();
+    const message = page.getByTestId('secure-link-field-message');
+    await page.getByTestId('secure-link-title').fill('Demo');
+    await message.fill('Draft for the test');
+    await page.getByTestId('secure-link-save').click();
+
+    await expect(message).toHaveAccessibleDescription('This field is required.');
+    await expect(message).toBeFocused();
+    await expect(message).toHaveValue('Draft for the test');
+    await page.getByTestId('secure-link-save').click();
+    await expect(page.getByTestId('secure-link-form')).toBeHidden();
+  });
+
+  for (const profile of ['compact', 'desktop']) {
+    test.describe(`expired link on ${profile}`, () => {
+      test.use(viewportUse(profile));
+      test('reactivates from a separate action row', {
+        tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success', `@viewport:${profile}`],
+      }, async ({ page }, testInfo) => {
+        const calls = await setupPanel(page, {
+          rows: [secureLinkRow({ status: 'expired', lifecycle_status: 'expired', title: 'Enlace de prueba' })],
+        });
+        await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+        await page.getByText('Enlace de prueba', { exact: true }).filter({ visible: true }).click();
+        const section = page.getByTestId('secure-link-reactivate');
+        const validity = section.getByRole('tablist');
+        const label = section.getByTestId('secure-link-reactivate-rotate');
+        const submit = section.getByRole('button', { name: 'Reactivar', exact: true });
+        await expect(validity.getByRole('tab')).toHaveText(['1 día', '3 días', '7 días', '30 días']);
+        await validity.getByRole('tab', { name: '30 días' }).click();
+        await label.getByRole('checkbox').press('Space');
+        await expect(label.getByRole('checkbox')).toBeChecked();
+        await submit.scrollIntoViewIfNeeded();
+        const [daysBox, labelBox, actionBox] = await Promise.all([validity.boundingBox(), label.boundingBox(), submit.boundingBox()]);
+        expect(labelBox.y).toBeGreaterThan(daysBox.y + daysBox.height);
+        expect(actionBox.y).toBeGreaterThan(labelBox.y + labelBox.height);
+        await testInfo.attach(`reactivacion-${profile}`, { body: await section.screenshot(), contentType: 'image/png' });
+        await submit.click();
+
+        await expect(section).toBeHidden();
+        expect(calls.reactivate).toEqual([{ validity_days: 30, rotate: true }]);
+      });
+    });
+  }
 
   // Bug caught: the new form could silently retain Credentials instead of its confidential-message default.
   test('creates a confidential message by default and shows the one-time URL with copy actions', {
