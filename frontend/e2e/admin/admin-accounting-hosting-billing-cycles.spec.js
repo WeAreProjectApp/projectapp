@@ -2,10 +2,9 @@
  * E2E tests for the hosting row actions on /panel/accounting/hostings.
  *
  * FLOWS: admin-accounting-hosting-billing, admin-accounting-hosting-cycles
- * Covers: the row menu's cuenta de cobro send (email gate, confirm preview,
- *         success + email-failure toasts, "Cobro enviado" badge) and the
- *         cycles modal (history with backfill badge, register payment,
- *         delete cycle with confirm).
+ * Covers: the row menu's cuenta de cobro send (email gate, reviewed period,
+ *         success + email-failure toasts, "Cobro enviado" badge), a receipt
+ *         registration with its review, and the next expected income.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -32,7 +31,7 @@ test.describe('Admin Accounting Hosting Billing', () => {
     });
   });
 
-  test('the send action requires a resolvable recipient and previews it', {
+  test('the send action shows the reviewed period before emission', {
     tag: [...ADMIN_ACCOUNTING_HOSTING_BILLING, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
     // quality: allow-deep-link (the tab is a subnav entry; the flow under
@@ -51,10 +50,12 @@ test.describe('Admin Accounting Hosting Billing', () => {
 
     await chooseHostingAction(page, 1, 'send-billing');
 
-    // The confirm previews exactly where it is going before anything is sent.
+    // Bug this catches: emitting a hosting account without showing the same
+    // reviewed service period used by both accounting entry points.
     await expect(
       page.getByRole('dialog').getByText('german@korehealths.com', { exact: false }),
     ).toBeVisible();
+    await expect(page.getByTestId('hosting-period-summary')).toContainText('2026-09-03 — 2027-03-02');
     await page.getByRole('dialog').getByRole('button', { name: /^(Cancelar|Cancel)$/ }).click();
     await expect(
       page.getByRole('heading', { name: 'Enviar cuenta de cobro' }),
@@ -106,7 +107,7 @@ test.describe('Admin Accounting Hosting Cycles', () => {
     });
   });
 
-  test('opens the history with the consolidated backfill badge', {
+  test('opens the history with the reconciled period summary', {
     tag: [...ADMIN_ACCOUNTING_HOSTING_CYCLES, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
     await mockApi(
@@ -123,9 +124,10 @@ test.describe('Admin Accounting Hosting Cycles', () => {
     ).toBeVisible();
     await expect(page.getByText('histórico × 3')).toBeVisible();
     await expect(page.getByText('Extender vigencia')).toBeVisible();
+    await expect(page.getByTestId('hosting-period-summary')).toContainText('2026-09-03 — 2027-03-02');
   });
 
-  test('registers a cycle payment from the prefilled form', {
+  test('registers an evidenced cycle payment after review', {
     tag: [...ADMIN_ACCOUNTING_HOSTING_CYCLES, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = [];
@@ -133,19 +135,62 @@ test.describe('Admin Accounting Hosting Cycles', () => {
     await gotoHostings(page);
 
     await chooseHostingAction(page, 1, 'cycles');
-    await expect(page.getByTestId('cycle-modality')).toHaveValue('semiannual');
-    await expect(page.getByTestId('cycle-modality').locator('option')).toHaveText([
-      'Trimestral', 'Semestral', 'Cada 9 meses',
-    ]);
+    // Bug this catches: creating an economic effect before the operator reviews
+    // the selected expected income and its stable receipt reference.
+    await page.getByTestId('cycle-income').selectOption('301');
     await page.getByTestId('cycle-amount').fill('600000');
+    await page.getByTestId('hosting-receipt-issuer').fill('Banco de prueba');
+    await page.getByTestId('hosting-receipt-reference').fill('TRX-600000');
     await page.getByTestId('cycle-submit').click();
 
+    await expect(page.getByTestId('cycle-receipt-review')).toContainText('Confirmar registro del pago');
+    await expect(page.getByTestId('cycle-submit')).toHaveText('Confirmar pago');
+    await page.getByTestId('cycle-submit').click();
     await expect(page.getByText('Pago de ciclo registrado')).toBeVisible();
     await expect(page.getByText('$600.000')).toBeVisible();
-    const createCall = calls.find(
-      (call) => call.apiPath === 'accounting/hostings/1/cycles/create/',
-    );
-    expect(createCall.body.advance_validity).toBe(true);
+    const receiptCalls = calls.filter((call) => call.apiPath === 'accounting/hostings/1/cycle-receipt/');
+    expect(receiptCalls).toHaveLength(2);
+    expect(receiptCalls[1].body).toEqual(expect.objectContaining({
+      amount: '600000', advance_validity: true, preview_hash: 'receipt-preview-v1',
+      hosting_receipt: expect.objectContaining({ issuer: 'Banco de prueba', reference: 'TRX-600000' }),
+    }));
+  });
+
+  test('cancels the receipt review without registering a payment', {
+    tag: [...ADMIN_ACCOUNTING_HOSTING_CYCLES, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ calls }));
+    await gotoHostings(page);
+
+    await chooseHostingAction(page, 1, 'cycles');
+    await page.getByTestId('cycle-income').selectOption('301');
+    await page.getByTestId('hosting-receipt-issuer').fill('Banco de prueba');
+    await page.getByTestId('hosting-receipt-reference').fill('TRX-cancelado');
+    await page.getByTestId('cycle-submit').click();
+    await page.getByRole('button', { name: 'Cancelar revisión' }).click();
+
+    await expect(page.getByTestId('cycle-submit')).toHaveText('Revisar pago de ciclo');
+    expect(calls.filter((call) => call.apiPath === 'accounting/hostings/1/cycle-receipt/')).toHaveLength(1);
+  });
+
+  test('creates the next expected income from the hosting menu', {
+    tag: ['@flow:admin-accounting-hosting-next-income', '@module:admin', '@priority:P2', '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ calls }));
+    await gotoHostings(page);
+
+    // Bug this catches: using the calendar day or a second click to create a
+    // duplicate instead of the next contractual period shown for this service.
+    await chooseHostingAction(page, 1, 'next-income');
+    await expect(page.getByTestId('hosting-next-income')).toContainText('2027-03-03 — 2027-09-02');
+    await page.getByTestId('hosting-next-confirm').click();
+
+    await expect(page.getByRole('status')).toContainText('Ingreso esperado registrado #302.');
+    expect(calls).toContainEqual({
+      apiPath: 'accounting/hostings/1/next-income/', method: 'POST', body: { version: 'next-income-v1' },
+    });
   });
 
   test('deletes a cycle after the confirm warns about recalculation', {

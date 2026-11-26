@@ -83,3 +83,5 @@ no cambian. La búsqueda MCP usa las mismas fuentes y comprobaciones de enlace.
 ## Documento vinculado pendiente
 
 La preparación permite activar «Dejar documento pendiente»: conserva sólo el tipo o deja también el tipo pendiente, sin IDs de vínculo. La elección persiste al volver de preview y no bloquea emitir/enviar por este vínculo; la validación conserva los demás requisitos.
+
+Para una cuenta de hosting, el formulario toma las fechas y el saldo del período revisado en el proyecto. Tanto la previsualización como la emisión comprueban su versión.

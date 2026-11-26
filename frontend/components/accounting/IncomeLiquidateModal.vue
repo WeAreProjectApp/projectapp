@@ -2,6 +2,8 @@
 import { computed, useId } from 'vue';
 import PartnerSplitInput from './PartnerSplitInput.vue';
 import PeriodDateField from './PeriodDateField.vue';
+import HostingPeriodSummary from './billing/HostingPeriodSummary.vue';
+import HostingReceiptFields from './billing/HostingReceiptFields.vue';
 import SettlementHostingPeriod from './SettlementHostingPeriod.vue';
 import VatBreakdown from './VatBreakdown.vue';
 import SettlementVatInput from './SettlementVatInput.vue';
@@ -22,7 +24,7 @@ const {
   records: selected, personal, form, exactDate, requestId, deductions, followUps, periods,
   participantsOpen, differenceOpen, vatDrafts, vatLocks, setVatRate, toggleVat, captureVat, manual, contexts, sendConfirmations,
   contextLoading, preparing, error, review, proposal, shortfall, remaining, credit,
-  hostingRecords, blockReason, receivedById, addDeduction, addFollowUp, editAllocation, recalculate,
+  hostingRecords, hostingPeriods, receipt, blockReason, receivedById, addDeduction, addFollowUp, editAllocation, recalculate,
   submit, confirm, back,
 } = useIncomeSettlementForm(props, emit);
 const formId = useId();
@@ -57,6 +59,7 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
         <p class="font-medium text-text-default">{{ row.concept }}</p>
         <p class="text-xs text-text-muted">Cliente: {{ row.confirmation.client_name || 'Sin cliente' }} · Proyecto: {{ row.confirmation.project_name || 'Sin proyecto' }}</p>
         <p class="text-text-muted">Recibido {{ money(row.amount) }} · Deducciones {{ money(row.deducted) }} · Reprogramado {{ money(row.reexpected) }} · Pendiente {{ money(row.pending_after) }}</p>
+        <HostingPeriodSummary v-if="row.hosting_period" :period="row.hosting_period" :show-blocker="false" />
         <VatBreakdown :total="row.amount" :rate="row.vat_rate ?? null" show-cents />
         <p v-if="sendConfirmations[row.income_id] && row.confirmation.can_send && Number(row.amount) > 0" class="text-text-default" data-testid="income-liquidate-review-recipient">Confirmación a {{ row.confirmation.recipient }} · {{ row.confirmation.collection_account_number || 'Sin número de cuenta' }}</p>
         <p v-else class="text-xs text-text-subtle">Sin correo: {{ row.confirmation.blocked_reason || 'no solicitado o sin dinero recibido para este ingreso' }}.</p>
@@ -141,6 +144,7 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
 
       <SettlementVatInput v-for="row in proposal.rows" :key="`${requestId}-vat-${row.income_id}`" :record="row.record" :amount="row.amount" :draft="vatDrafts[row.income_id]" :blocked-reason="vatLocks[row.income_id] || ''" :multiple="selected.length > 1" @rate="setVatRate(row.income_id, $event)" @toggle="toggleVat(row.income_id, $event)" @capture="captureVat(row.income_id, $event)" />
 
+      <HostingReceiptFields v-if="hostingPeriods.length" v-model="receipt" :periods="hostingPeriods" />
       <SettlementHostingPeriod v-for="record in hostingRecords" :key="`${requestId}-${record.id}`" :record="record" @change="periods[record.id] = $event" />
 
       <section class="space-y-2" data-testid="income-liquidate-confirmations">

@@ -12,6 +12,7 @@ class BillingContractLinkSerializer(StrictSerializer):
 
 
 class BillingContextFields(serializers.Serializer):
+    period_version = serializers.CharField(max_length=64, required=False)
     document_pending = serializers.BooleanField(required=False, default=False)
     billing_nature = serializers.ChoiceField(choices=('contract', 'hosting'), required=False, allow_null=True)
     contract_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
@@ -50,4 +51,6 @@ class HostingEvidenceSerializer(serializers.Serializer):
 
 
 class HostingAccountEmissionSerializer(serializers.Serializer):
+    period_version = serializers.CharField(max_length=64, required=True)
+    receipt_allocation_id = serializers.IntegerField(min_value=1, required=False)
     hosting_payment_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)

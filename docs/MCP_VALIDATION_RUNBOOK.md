@@ -3192,3 +3192,11 @@ de precio y los movimientos del paquete tienen sus propios procedimientos.
 ## PA-263 · Feature flags (Proyectos 7.0.0)
 
 Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento de las seis herramientas, consulta global y por cliente, actualización confirmada, retirada con null, persistencia, 409 con versión superada y denegación de una credencial/actor sin acceso administrativo. Contrastar con el mismo caso en Panel y una cuenta cliente; REST no acredita MCP. Cada clave parte habilitada, incluidas IA/audio. Probar una instalación limpia, una clave nueva y la conservación de globales y excepciones previos. Las excepciones prevalecen. Los adaptadores anteriores de IA/Ayuda usan la fuente nueva. Automatizadas sólo en CI; DevQA cotejará herramientas, operaciones, rol, resultado y límites sobre el mismo SHA/entorno al levantarse la pausa.
+
+### Contabilidad de hosting (PA-296, PA-298 y PA-299)
+
+Con una fixture administrativa en DEV, consultar `get_project_hosting_inventory` y verificar el objeto `billing_period` contra el resumen de Ingresos y Hostings. Para la cuenta, enviar la obligación y la `period_version` devueltas por esa lectura. Un período cubierto o cambiado debe producir bloqueo. Verificar que sus fechas y el saldo coincidan en línea, PDF y correo simulado.
+
+En la liquidación individual o múltiple, `hosting_receipt.entries` identifica cada ingreso y su origen contable. Los campos opcionales `cycle_id` y `liquid_id` seleccionan evidencias previas. Para un pago nuevo, `issuer` y `reference` identifican el cobro real. Repetir con un segundo UUID desde la otra pantalla y cotejar la liquidación, la imputación y el movimiento de bolsillo. Probar luego dos folios distintos de igual importe.
+
+El guion `scripts/ci/mysql-hosting-receipts-check.py --socket <directorio-privado>/mysql.sock` usa un MySQL 8 desechable que escucha únicamente en ese socket, con su directorio `data` bajo el mismo directorio privado. Usa una base de prueba nueva, dos conexiones por carrera y correo en memoria. Verifica el pago con dos UUID, la emisión concurrente y la creación del siguiente esperado. El directorio completo pertenece a la fixture de DEV.

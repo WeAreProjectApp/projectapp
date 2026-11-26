@@ -82,6 +82,15 @@ let clientRequestId = 0;
 // ── Income ──
 const selectedIncome = ref(null);
 const billingContext = ref({});
+const hostingPeriod = ref(null);
+function applyHostingPeriod(period) {
+  hostingPeriod.value = period;
+  if (period?.version && Number(period.income_id) === Number(selectedIncome.value?.id)) {
+    form.value.unit_price = Number(period.balance);
+    form.value.vat_rate = selectedIncome.value.vat_rate ?? null;
+    form.value.vat_capture = null;
+  }
+}
 const billingContextValid = ref(false);
 const billingContextMessage = ref('');
 const incomeQuery = ref('');
@@ -189,6 +198,7 @@ watch(
     inlineClientErrors.value = {};
     selectedIncome.value = null;
     billingContext.value = {};
+    hostingPeriod.value = null;
     billingContextValid.value = false;
     billingContextMessage.value = '';
     incomeQuery.value = '';
@@ -927,8 +937,8 @@ function buildPayload() {
       quantity: '1',
       amount: String(form.value.vat_capture?.amount ?? form.value.unit_price),
       amount_mode: form.value.vat_capture?.amount_mode ?? 'vat_included',
-      period_start: form.value.period_start || null,
-      period_end: form.value.period_end || null,
+      period_start: hostingPeriod.value?.period_start || form.value.period_start || null,
+      period_end: hostingPeriod.value?.period_end || form.value.period_end || null,
     }],
     city: form.value.city,
     customer: { ...form.value.customer },
@@ -1436,6 +1446,8 @@ const modalFormId = useId();
       <CollectionAccountProjectContext
         v-if="open"
         v-model="billingContext"
+        :income-id="selectedIncome?.id"
+        @period="applyHostingPeriod"
         :project-id="selectedIncome?.project || selectedIncome?.project_id || null"
         :client="selectedClient || (clientId ? { id: clientId, name: form.customer.name, email: form.customer.email, company: form.customer.name } : null)"
         :validation-error="billingContextValidationError"
@@ -1483,7 +1495,7 @@ const modalFormId = useId();
         />
       </BaseFormField>
 
-      <BaseFormRow :cols="2" :gap="4">
+      <BaseFormRow v-if="billingContext.billing_nature !== 'hosting' || billingContext.document_pending" :cols="2" :gap="4">
         <BaseFormField label="Inicio del período facturado">
           <BaseInput v-model="form.period_start" type="date" data-testid="collection-form-period-start" />
         </BaseFormField>

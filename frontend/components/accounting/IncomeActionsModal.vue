@@ -63,6 +63,7 @@ import { computed } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import { HISTORY_ROW_ACTION, NOTE_ROW_ACTION, hasNote } from '~/utils/accountingRowActions';
 import { formatMoney } from '~/utils/formatMoney';
+import { useI18n } from 'vue-i18n';
 import { settlementBlockedReason } from '~/utils/incomeSettlement';
 
 /**
@@ -80,9 +81,10 @@ const props = defineProps({
   record: { type: Object, default: null },
 });
 
+const { t } = useI18n();
 const emit = defineEmits([
   'close', 'detail', 'notes', 'edit', 'duplicate', 'liquidate', 'generate-collection',
-  'view-collection', 'view-emails', 'toggle-mute', 'write-off', 'delete',
+  'view-collection', 'view-emails', 'toggle-mute', 'write-off', 'delete', 'review-hosting-receipt',
 ]);
 
 function money(value) {
@@ -110,6 +112,10 @@ const actions = computed(() => {
       id: 'liquidate', action: 'settle', label: 'Liquidar', event: 'liquidate',
       disabledReason: settlementBlockedReason(row),
     });
+  }
+  if (row.kind === 'expected' && row.origin === 'hosting' && row.period_start && (row.project_id || row.project)
+      && (row.payment_status === 'paid' || Number(row.paid_amount) > 0 || row.payment_status === 'partial')) {
+    list.push({ id: 'review-hosting-receipt', action: 'settle', label: t('hostingBilling.reviewReceipt'), event: 'review-hosting-receipt' });
   }
   if (row.kind !== 'lost') {
     list.push(row.has_collection_account

@@ -6072,11 +6072,12 @@ El éxito del nuevo delta consiste en abrir el detalle técnico desde el enlace 
 | `admin-accounting-history` | admin | P2 | display,success | 6 |
 | `admin-accounting-history-diagnosis` | admin | P2 | display,success,error,failure | 4 |
 | `admin-accounting-history-filters` | admin | P2 | display,success | 7 |
-| `admin-accounting-hosting-billing` | admin | P1 | display,success,error,failure | 3 |
+| `admin-accounting-hosting-billing` | admin | P1 | display,success,error,failure | 4 |
 | `admin-accounting-hosting-client` | admin | P1 | display,success,failure | 4 |
-| `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
+| `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 4 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
 | `admin-accounting-hosting-link` | admin | P1 | display,success,error,failure | — |
+| `admin-accounting-hosting-next-income` | admin | P2 | display,success,error,failure | 4 |
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 21 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
@@ -6760,6 +6761,8 @@ Cambiar únicamente entre base y total incluido conserva los centavos recibidos 
 
 Cada ingreso seleccionado con destinatario válido genera su confirmación después de completar la liquidación y deja un envío principal en Historial de Emails. Un fallo conserva el dinero liquidado y puede reintentarse desde Historial cuando su evidencia permite reconstruir el mensaje original.
 
+Para un cobro de hosting, la vista previa muestra el período, los documentos y los asientos acreditados. Dos intentos pueden enlazar un solo pago. Dos folios distintos pueden registrar abonos iguales. Los casos sin prueba suficiente requieren conciliación.
+
 ### FLOW: `admin-accounting-filters`
 
 - **Module:** admin
@@ -6981,16 +6984,8 @@ El aviso interno de ingreso completo conserva cuerpo, objetivo y fallo en Histor
 - **Role:** superuser admin
 - **Priority:** P1
 - **Routes:** `/panel/accounting/hostings`
-- **Description:** Send a client the cuenta de cobro from a hosting row. The row menu's "Enviar cuenta de cobro" entry (disabled without client email, its reason shown under the label) opens the hosting emission modal previewing amount and recipient with explicit project context; confirm POSTs `/api/accounting/hostings/:id/send-collection-account/`, which issues the Document (public number PA-YYYY-NNNN, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the Spanish PDF attached and stamps `billing_requested_at` (pauses the expiry notices; a "Cobro enviado" badge appears on the row). If the email fails the document stays issued and a warning toast points to Cuentas de cobro for re-send. Since PA-25 the recipient and the numbering come from the linked client (see `admin-accounting-hosting-client`): the action gates on `billing_email` (hosting override, else the client's address), and a linked hosting issues on that client's series.
-- **Steps:**
-  1. Superuser opens `/panel/accounting/hostings` and opens the row's three-dots menu and chooses "Enviar cuenta de cobro" on a hosting with client email.
-  2. The emission modal previews `payment_per_cycle` and the recipient. For a project hosting it requires the mapped operational accounting source and an existing subscription obligation when applicable; confirm fires the POST with its explicit payment reference.
-  3. Success toast (with "Ver en Cuentas de cobro" action) and the row shows the "Cobro enviado" badge.
-- **Coverage:** ✅ Covered (email gate, confirm + POST + badge, email-failure warning)
+- **Description:** Desde la fila de Hostings, el operador revisa el servicio, el período inclusivo, el valor, lo recibido, el saldo y el documento existente. Ingresos consulta la misma versión. Confirmar emite la cuenta y envía el PDF. Un conflicto o una versión desactualizada exige volver a revisar. Si falla el correo, la cuenta emitida se puede reenviar.
 - **E2E Spec:** `e2e/admin/admin-accounting-hosting-billing-cycles.spec.js`
-
-
-**Contexto de cobros de proyecto (P2):** La modal requiere origen operativo asociado al hosting único y obligación existente de suscripción cuando corresponda. Los orígenes pendientes permiten abrir la conciliación del proyecto; la asociación no registra pagos ni cambia automatismos.
 
 ### FLOW: `admin-accounting-collections`
 
@@ -7138,14 +7133,15 @@ no cambian. La búsqueda MCP usa las mismas fuentes y comprobaciones de enlace.
 
 La preparación permite activar «Dejar documento pendiente»: conserva sólo el tipo o deja también el tipo pendiente, sin IDs de vínculo. La elección persiste al volver de preview y no bloquea emitir/enviar por este vínculo; la validación conserva los demás requisitos.
 
+Para una cuenta de hosting, el formulario toma las fechas y el saldo del período revisado en el proyecto. Tanto la previsualización como la emisión comprueban su versión.
+
 ### FLOW: `admin-accounting-hosting-cycles`
 
 - **Module:** admin
 - **Role:** superuser admin
 - **Priority:** P2
 - **Routes:** `/panel/accounting/hostings`
-- **Description:** Cycle payment history per hosting (row menu «Ciclos de pago» → `HostingCyclesModal`): historical modality/amount snapshots remain immutable, while the register form offers quarterly, semiannual and every-9-month cycles and prefills the current contract amount/modality. "Extender vigencia" advances one current modality period. `total_paid`/`cycles_count` recompute from history; deleting a cycle recalculates but never rolls back `valid_to`. La dirección recupera el hosting elegido y conserva el filtro de modalidad al cerrar los ciclos.
-- **Coverage:** ✅ Covered (backfill badge history, register payment with advance_validity, delete with confirm)
+- **Description:** Desde Ciclos de pago, el operador revisa un ingreso del mismo servicio, elige el asiento ya acreditado o indica emisor y folio. Revisa importe, fecha, destino y vigencia antes de confirmar. El mismo pago vuelve a mostrar su imputación. Un segundo folio permite otro abono del mismo valor. Un ciclo nuevo puede extender la vigencia incluso con pago parcial. El histórico mantiene sus importes y modalidades. Después de confirmar se ofrecen las acciones de documentar el pago y de preparar el siguiente ingreso.
 - **E2E Spec:** `e2e/admin/admin-accounting-hosting-billing-cycles.spec.js`
 
 ### FLOW: `admin-accounting-hosting-inline-edit`
@@ -8663,6 +8659,15 @@ Una cuenta explícitamente pendiente se completa con tipo, vínculo válido, mot
 - **Permisos:** superusuario con sesión y CSRF. La lectura de opciones no escribe asociaciones ni concede acceso adicional.
 - **Invariantes:** el vínculo es explícito, conserva pagos, cobros, ciclos y PDF históricos; la obligación de suscripción sigue seleccionándose explícitamente. Los cambios concurrentes exigen volver a revisar.
 - **Validación:** automatizadas exclusivamente en CI, con URL y SHA; Chrome y cotejo técnico en el turno acordado con DevQA.
+
+### FLOW: `admin-accounting-hosting-next-income`
+
+- **Module:** admin
+- **Role:** superuser admin
+- **Priority:** P2
+- **Routes:** `/panel/accounting/hostings`
+- **Description:** La fila de Hostings y el resultado de un pago abren el mismo formulario. Muestra cliente, proyecto, servicio, concepto, tarifa y fechas del siguiente período. El calendario parte del período contractual revisado. Confirmar crea un esperado y al reabrir aparece su referencia. Cancelar conserva el pago. Ante una ventana ambigua, datos faltantes o una versión antigua, el formulario muestra la razón del bloqueo.
+- **E2E Spec:** `e2e/admin/admin-accounting-hosting-billing-cycles.spec.js`
 
 ### FLOW: `admin-accounting-income-reminder-mute`
 

@@ -12,7 +12,7 @@ from content.models import AccountingChangeLog, ExpenseRecord, IncomeRecord, Inc
 from content.serializers.accounting import (
     IncomeRecordCreateUpdateSerializer, validate_project_client_match,
 )
-from content.services import accounting_service
+from content.services import accounting_service, hosting_receipts
 from content.services.entity_history import historical_write
 from content.services.income_settlement_allocation import allocation_plan, money
 from content.services.accounting_vat import vat_breakdown
@@ -41,7 +41,9 @@ def _parents(data):
     ids = selected_ids(data)
     if not ids or len(ids) != len(set(ids)):
         raise ValueError('Selecciona ingresos distintos para liquidar.')
-    locked = lock_billing_rows(income_ids=ids, include_income_children=True, include_origin_documents=True)
+    hosting_ids = [entry['hosting_record_id'] for entry in data.get('hosting_receipt', {}).get('entries', [])]
+    locked = lock_billing_rows(income_ids=ids, hosting_ids=hosting_ids,
+                               include_income_children=True, include_origin_documents=True)
     parents = sorted((locked.incomes[pk] for pk in ids), key=lambda row: (row.period_date, row.pk))
     # Hydrate clients once after locking; accessing income.client during the
     # ownership check must not issue one query for every selected project.
@@ -72,7 +74,7 @@ def _financial_snapshot(instance):
     return json_safe({name: getattr(instance, name) for name in names if hasattr(instance, name)})
 
 
-def _prepare(parents, data):
+def _prepare(parents, data, hosting_entries=None):
     from content.services.income_payment_confirmation_service import confirmation_contexts
 
     paid = dict.fromkeys([parent.pk for parent in parents], Decimal('0'))
@@ -101,6 +103,11 @@ def _prepare(parents, data):
             vat_blocked_reason=vat_reasons[parent.pk],
             total_amount=total, confirmation=contexts[parent.pk],
         )
+    for row in plan['rows']:
+        entry = (hosting_entries or {}).get(row['income_id'])
+        if entry:
+            row['hosting_period'] = entry.describe()
+            row['validity_target'] = hosting_receipts.renewal_target(entry.book.record, data)
     facts = {
         'parents': {parent.pk: _financial_snapshot(parent) for parent in parents},
         'plan': plan,
@@ -113,7 +120,17 @@ def _prepare(parents, data):
 @transaction.atomic
 def preview_settlement(data):
     """Read current, consistent balances without creating any bookkeeping."""
-    return json_safe(_prepare(_parents(data), data))
+    parents = _parents(data)
+    entries = hosting_receipts.settlement_entries(parents, data)
+    if data.get('hosting_receipt'):
+        receipt, _, _ = hosting_receipts.receipt_identity(data, entries)
+        result = hosting_receipts.existing_result(receipt, entries, parents, data)
+        if result:
+            return hosting_receipts.existing_preview(result, entries, data)
+    plan = _prepare(parents, data, entries)
+    if data.get('hosting_receipt'):
+        _validate_hosting_cash(plan, entries, data)
+    return json_safe(plan)
 
 
 def single_input(income, data):
@@ -277,16 +294,49 @@ def _result(operation):
     }
 
 
+def _validate_hosting_cash(plan, entries, data):
+    submitted = {e['income_id'] for e in data.get('hosting_receipt', {}).get('entries', [])}
+    for row in plan['rows']:
+        entry = entries.get(row['income_id'])
+        if entry and row['amount'] > 0:
+            if row['income_id'] not in submitted:
+                raise ValueError(hosting_receipts.NEEDS_REFERENCE)
+            hosting_receipts.check_entry(entry, row['amount'], data)
+        elif row['income_id'] in submitted:
+            raise ValueError('El comprobante requiere una imputación positiva a este ingreso.')
+
+
 @historical_write
 @transaction.atomic
 def settle_incomes(data, user):
     parents = _parents(data)
     request_id = data.get('request_id')
     if request_id:
+        from content.models import HostingReceiptAttempt
+        previous_attempt = HostingReceiptAttempt.objects.filter(pk=request_id).first()
+        if previous_attempt and previous_attempt.payload_hash != hosting_receipts.attempt_hash(data):
+            raise SettlementConflict('Este intento ya se utilizó con otros datos.')
+    if request_id:
         existing = IncomeSettlement.objects.select_for_update().filter(pk=request_id).first()
         if existing:
             return _replay(existing, data)
-    plan = _prepare(parents, data)
+    entries = hosting_receipts.settlement_entries(parents, data)
+    receipt = None
+    if data.get('hosting_receipt'):
+        from content.models import HostingReceipt
+        receipt, issuer, reference = hosting_receipts.receipt_identity(data, entries)
+        if receipt is None:
+            receipt, _ = HostingReceipt.objects.select_for_update().get_or_create(issuer=issuer, reference=reference)
+        result = hosting_receipts.existing_result(receipt, entries, parents, data)
+        if result:
+            missing_link = any(liquid.expected_income_id in entries and not hasattr(liquid, 'hosting_allocation')
+                               for liquid in result['liquids'])
+            if missing_link and data.get('preview_hash') and data['preview_hash'] != hosting_receipts.existing_preview(result, entries, data)['preview_hash']:
+                raise SettlementConflict('Las evidencias del pago cambiaron. Revísalas antes de vincularlo.')
+            hosting_receipts.attach_effects(receipt, entries, result, data, user)
+            return result
+    plan = _prepare(parents, data, entries)
+    _validate_hosting_cash(plan, entries, data)
     if data.get('preview_hash') and data['preview_hash'] != plan['preview_hash']:
         raise SettlementConflict('Los saldos o los datos del correo cambiaron. Revisa la liquidación de nuevo.')
     try:
@@ -298,7 +348,10 @@ def settle_incomes(data, user):
         if not request_id:
             raise
         return _replay(IncomeSettlement.objects.select_for_update().get(pk=request_id), data)
-    return _record_effects(operation, parents, plan, data, user)
+    result = _record_effects(operation, parents, plan, data, user)
+    if receipt:
+        hosting_receipts.attach_effects(receipt, entries, result, data, user)
+    return result
 
 
 def _replay(operation, data):
@@ -379,6 +432,7 @@ def _assert_reversible(operation, revision=None):
 
 def _undo_effects(operation, user, keep_movement=False):
     parents = list(IncomeRecord.objects.filter(pk__in=operation.effects['parent_ids']).order_by('period_date', 'pk'))
+    hosting_receipts.undo_allocations(operation, user)
     for record in [*operation.expenses.all(), *operation.incomes.all()]:
         entity_type = EntityType.EXPENSE if isinstance(record, ExpenseRecord) else EntityType.INCOME
         accounting_service.log_entity_removal(entity_type, record, user)
@@ -411,13 +465,33 @@ def update_settlement(settlement_id, data, user, revision=None):
         old_values['allocations'] = sorted((row.expected_income_id or 0, str(row.total_amount)) for row in operation.incomes.filter(kind='liquid'))
     old_parent_ids = operation.effects['parent_ids']
     operation.revisions.append({'revision': operation.revision, 'input': operation.input_snapshot, 'effects': operation.effects, 'action': 'updated'})
+    receipt = getattr(operation, 'hosting_receipt', None)
+    if receipt:
+        data = dict(data)
+        retained = [{'income_id': a.period.income_id, 'hosting_record_id': a.cycle.hosting_record_id,
+                     **({'cycle_id': a.cycle_id} if a.existing_cycle else {})}
+                    for a in receipt.allocations.select_related('period', 'cycle')]
+        data.setdefault('hosting_receipt', {'entries': retained})
+        # A correction never extends service validity a second time.
+        entries_payload = [{k: v for k, v in row.items() if k != 'liquid_id'}
+                           for row in data['hosting_receipt']['entries']]
+        data['hosting_receipt'] = {**data['hosting_receipt'], 'entries': entries_payload}
+        if data['hosting_receipt'].get('issuer') and (receipt.issuer, receipt.reference) != (
+                data['hosting_receipt']['issuer'].casefold(), data['hosting_receipt']['reference'].strip()):
+            raise SettlementConflict('La corrección debe conservar la identidad del comprobante.')
     _undo_effects(operation, user, keep_movement)
     parents = _parents(data)
-    plan = _prepare(parents, data)
+    entries = hosting_receipts.settlement_entries(parents, data)
+    plan = _prepare(parents, data, entries)
+    _validate_hosting_cash(plan, entries, data)
+    if data.get('hosting_receipt') and not receipt:
+        raise SettlementConflict('Vincula el pago existente desde Conciliar antes de corregirlo.')
     if data.get('preview_hash') and data['preview_hash'] != plan['preview_hash']:
         raise SettlementConflict('La propuesta de corrección cambió. Revísala antes de guardar.')
     operation.revision += 1
     result = _record_effects(operation, parents, plan, data, user, movement if keep_movement else None, old_values)
+    if receipt:
+        hosting_receipts.attach_effects(receipt, entries, result, {k: v for k, v in data.items() if k != 'request_id'}, user)
     _finish(list(IncomeRecord.objects.filter(pk__in=set(old_parent_ids) - set(selected_ids(data)))), user)
     return result
 

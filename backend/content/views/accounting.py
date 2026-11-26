@@ -1527,6 +1527,8 @@ def create_hosting_cycle(request, record_id):
     serializer = HostingCycleCreateSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if hosting.project_id and hasattr(hosting, 'billing_source'):
+        return Response({'detail': 'Selecciona el ingreso y el comprobante en Registrar pago de ciclo.'}, status=409)
     cycle = hosting_cycle_service.register_cycle_payment(
         hosting, data=serializer.validated_data, user=request.user,
     )
@@ -1546,6 +1548,8 @@ def delete_hosting_cycle(request, record_id, cycle_id):
 
     hosting = get_object_or_404(HostingRecord, pk=record_id)
     cycle = get_object_or_404(hosting.cycles, pk=cycle_id)
+    if hasattr(cycle, 'receipt_allocation'):
+        return Response({'detail': 'El ciclo tiene un pago vinculado. Usa la corrección de la liquidación.'}, status=409)
     hosting_cycle_service.delete_cycle(hosting, cycle, user=request.user)
     return Response(status=status.HTTP_204_NO_CONTENT)
 

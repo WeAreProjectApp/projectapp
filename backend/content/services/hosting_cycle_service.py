@@ -43,7 +43,7 @@ def recalculate_hosting_totals(hosting):
 
 
 @historical_write
-def register_cycle_payment(hosting, *, data, user=None):
+def register_cycle_payment(hosting, *, data, user=None, validity_target=None):
     """Append a paid cycle, recalc totals and (optionally) extend valid_to.
 
     ``data`` (already validated by the serializer): amount, modality?,
@@ -71,7 +71,7 @@ def register_cycle_payment(hosting, *, data, user=None):
         created_by=user if getattr(user, 'is_authenticated', False) else None,
     )
     if advance_validity:
-        HostingRecord.objects.filter(pk=hosting.pk).update(valid_to=period_to)
+        HostingRecord.objects.filter(pk=hosting.pk).update(valid_to=validity_target or period_to)
     recalculate_hosting_totals(hosting)
     hosting.refresh_from_db()
 

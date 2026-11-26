@@ -1,0 +1,17 @@
+{
+  "id": "admin-accounting-hosting-next-income",
+  "name": "Admin Accounting Hosting — Next Expected Income",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "From a Hostings row or a confirmed cycle, review the client, project, service, amount and next inclusive contractual period. Confirm creates one expected income. Reopening shows its reference. Ambiguous dates, missing prerequisites and stale proposals block creation.",
+  "expectedSpecs": 4,
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}
