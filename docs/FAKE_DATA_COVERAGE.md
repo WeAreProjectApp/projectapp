@@ -348,6 +348,70 @@ usa SQLite y storage propios, captura correo y no conecta Redis. Rechaza un
 `DJANGO_ENV=production` exportado. Los nombres de archivo y las claves privadas
 no forman parte del contrato de replay; el SHA, la semilla y la fecha sí.
 
+## Perfiles DevQA y reuso · PA-306 a PA-308
+
+El bootstrap autorizado usa una copia Git propia y limpia, en el SHA del
+encargo, sin `backend/.env`. Prepara su esquema y las claves privadas con la
+receta aislada anterior. Para el acceso local en esa copia configura
+`RECAPTCHA_ENABLED=false` en la API y `NUXT_PUBLIC_RECAPTCHA_ENABLED=false` en
+Nuxt. Comprueba la pertenencia de servicios y puertos antes del arranque.
+Desde el backend de la copia, con `FAKE_DATA_ROOT` ya fijado, llama al comando:
+
+```bash
+python manage.py prepare_fake_qa --settings=projectapp.settings_fake_data \
+  --profile b04 --expected-sha "$QA_SHA" --count 60 --seed 20260826 --anchor-date 2026-11-06
+```
+
+Usa `staff` para Gestor Documental y `su` para Contabilidad en sus respectivas
+copias. El comando conserva las guardas de `create_fake_data` y genera la base
+común una vez. Las cuentas requeridas por el perfil usan el login ordinario.
+DevQA entrega sus referencias de acceso por la vía privada autorizada, a partir
+del archivo `private/<perfil>-access.json` de modo `0600`.
+
+`qa-manifest.json` se guarda en la raíz aislada. Su campo `mode` dice
+`generado` o `reutilizado`. Incluye receta, ruta de la copia, identidad del
+archivo SQLite, actores, claves de negocio, identificadores locales, estados,
+permisos y líneas base. El manifiesto excluye las contraseñas y las referencias
+privadas de acceso. El reuso verifica sólo la misma receta y copia, con el
+mismo acceso vigente y corpus. Si falta el manifiesto, cambió la receta o se
+consumió la línea base, conserva la copia y retoma desde otra copia aislada
+autorizada. El comando no activa un reemplazo ni una rotación.
+
+### Preflight desde el host de frontend
+
+1. DevQA enlaza el manifiesto con `DEV LISTO` y documenta los procesos que
+   escuchan en los puertos asignados, sus directorios de trabajo y el SHA de la
+   copia. Coteja el proxy efectivo de Nuxt (`DJANGO_DEV_TARGET`) con el puerto de
+   esa API y la raíz efectiva de esa API con la base SQLite del manifiesto
+   (ruta, dispositivo e inodo). Usa las identidades servidas cuando estén
+   disponibles y el registro de arranque de ambos procesos para el runtime de
+   desarrollo.
+2. Frontend abre el origen reservado, inicia sesión por la vía habitual y lee el
+   proyecto y los registros del manifiesto desde la interfaz. DevQA coteja **la
+   misma lectura** por método, ruta, código y hora en el log de esa API, y sus
+   localizadores en la base del manifiesto. Así se acredita la cadena navegador,
+   frontend, API y SQLite de la misma copia. Registrar el resultado y las
+   discrepancias antes del caso funcional.
+3. Cotejar permisos con los actores del manifiesto. En B04, ambos leen las
+   Solicitudes del proyecto. El administrador prepara evaluación y conversión y
+   el cliente recibe denegación para evaluar. En staff, abrir el historial en
+   ambos órdenes, comparar el par localizado y leer o descargar el PDF con
+   respuestas `200/403/401` para staff, cliente y anónimo. Usar el documento
+   separado para edición reversible. En SU, cotejar también el control de staff
+   restringido. Aplicar los contratos MCP existentes donde corresponda.
+
+### PA-251 y PA-289
+
+Abrir el ingreso extremo pendiente con los filtros del manifiesto. Cotejar
+listado, detalle, recarga y cierre del detalle con el mismo importe exacto y los
+mismos filtros. Abrir las tres previsualizaciones, con envío desactivado, y
+cancelarlas antes de confirmar. En el caso manual introducir 119,00 COP
+recibidos y participaciones de 50,25 y 60,50 COP. Las referencias de reparto
+están en `baseline.previews`. Tras cancelar, DevQA coteja saldos, ingresos
+derivados, liquidaciones, movimientos, auditoría y avisos, incluido el buzón
+capturado localmente. La verificación funcional requiere su propia ventana.
+Las pruebas automatizadas se ejecutan en CI sobre el SHA de la entrega.
+
 ## Contratación estatal
 
 `create_fake_procurement` integra oportunidades ficticias, cuatro estados de seguimiento, una búsqueda y una alerta inactiva en la actualización general. Sin red ni envíos. Comparte `FAKE_DATA_ALLOWED` y reloj reproducible; `delete_fake_data --confirm` limpia su grafo antes de retirar dueños, preservando configuración y conector.

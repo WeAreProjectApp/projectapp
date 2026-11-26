@@ -779,3 +779,62 @@ class Command(BaseCommand):
             ))
         else:
             self.stdout.write('  Signable documents already present — skipped.')
+
+
+QA_DOCUMENT_FOLDER = '[QA] Historial y PDF privado'
+QA_DOCUMENT_TITLES = {
+    'history': '[QA] Historial de 21 revisiones',
+    'pdf': '[QA] PDF privado del Gestor Documental',
+    'editable': '[QA] Documento para edición reversible',
+}
+
+
+def seed_qa_document_history(context, *, project, actor):
+    """Seed the staff corpus once, apart from the volume-oriented documents."""
+    from content.fake_data_files import sample_pdf
+    from content.serializers.document import DocumentCreateUpdateSerializer
+    from content.services.entity_history import history_operation
+    from content.services.uploaded_pdf_service import create_pdf_document
+
+    ensure_fake_data_allowed('seed_qa_document_history')
+    folder = DocumentFolder.objects.create(
+        name=QA_DOCUMENT_FOLDER, slug='qa-historial-y-pdf-privado',
+        project=project, client_user=project.client, created_by=actor,
+    )
+    markdown_type = _doc_type(MARKDOWN, 'Documento markdown')
+    with history_operation(actor=actor, source='fake-data'):
+        history = Document(
+            title=QA_DOCUMENT_TITLES['history'], uuid=context.uuid('history'),
+            document_type=markdown_type, project=project, client_user=project.client,
+            folder=folder, is_client_visible=False, language=Document.Language.ES,
+            content_markdown='# Historial ficticio\n\nRevisión de referencia 01.',
+            created_by=actor, updated_by=actor,
+        )
+        history.content_json = build_content_json(history)
+        history.save()
+
+    # Each real history operation records one visible revision.
+    for revision in range(2, 22):
+        with history_operation(actor=actor, source='fake-data'):
+            history.content_markdown = f'# Historial ficticio\n\nRevisión de referencia {revision:02d}.'
+            history.content_json = build_content_json(history)
+            history.save(update_fields=['content_markdown', 'content_json', 'updated_at'])
+
+    editable = Document(
+        title=QA_DOCUMENT_TITLES['editable'], uuid=context.uuid('editable'),
+        document_type=markdown_type, project=project, client_user=project.client,
+        folder=folder, is_client_visible=False, language=Document.Language.ES,
+        content_markdown='# Borrador ficticio\n\nTexto inicial para editar y restaurar.',
+        created_by=actor, updated_by=actor,
+    )
+    editable.content_json = build_content_json(editable)
+    editable.save()
+
+    metadata = DocumentCreateUpdateSerializer(data={
+        'title': QA_DOCUMENT_TITLES['pdf'], 'folder_id': folder.pk,
+        'client': project.client.profile.pk, 'project': project.pk,
+        'is_client_visible': False, 'language': Document.Language.ES,
+    })
+    metadata.is_valid(raise_exception=True)
+    metadata.validated_data['uuid'] = context.uuid('private-pdf')
+    create_pdf_document(metadata, sample_pdf('qa-gestor-privado.pdf'), actor=actor)

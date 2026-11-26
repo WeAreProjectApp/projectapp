@@ -1,3 +1,11 @@
+## X1 · PA-305 a PA-308
+
+La eliminación forzada conserva la selección mientras actualiza el impacto y
+exige la revisión vigente para confirmar. DevQA prepara Solicitudes, Gestor
+Documental e Ingresos por rol en copias aisladas. El contrato de generación,
+reuso y preflight está en [Cobertura de datos de prueba](../docs/FAKE_DATA_COVERAGE.md).
+La prueba funcional se realiza en la ventana autorizada del corte entregado.
+
 ## W1 · PA-295, PA-301 y PA-302
 
 Desde Ingresos, la cuenta explica las correcciones que habilitan la vista previa, distingue el cálculo del IVA de su presentación y permite emitir con o sin fecha. El plazo explícito de cero días vence al emitir en Bogotá. Los consumidores anteriores conservan el contrato histórico. PA-296 aporta el período canónico y PA-297 abre la emisión desde la fila de Hostings. [Reglas documentales](../docs/accounting-pending-document.md#cuenta-preparada-desde-ingresos)
