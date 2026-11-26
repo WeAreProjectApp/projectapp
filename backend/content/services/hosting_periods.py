@@ -383,7 +383,7 @@ def reviewed_period(book, data, *, paid_allocation=None):
 
 def validate_reviewed_document(document, review):
     """Re-read the original obligation before issuing an editable/reviewed draft."""
-    from content.models import HostingReceiptAllocation
+    from content.models import DocumentItem, HostingReceiptAllocation
 
     book = HostingPeriods(document.project_id, record_id=document.hosting_record_id, exclude_document_id=document.pk)
     allocation = None
@@ -396,7 +396,13 @@ def validate_reviewed_document(document, review):
     window = reviewed_period(book, review, paid_allocation=allocation)
     lines = list(document.items.all())
     amount = allocation.liquid.total_amount if allocation else window.balance
-    if (not lines or document.currency != 'COP' or any(
-            (item.period_start, item.period_end) != (window.start, window.end) for item in lines)
-            or sum((item.line_total for item in lines), Decimal('0')) != amount):
+    source = allocation.liquid if allocation else (window.income or book.record)
+    extension = getattr(document, 'collection_account', None)
+    if not source or not extension or document.currency != 'COP' or extension.vat_rate != source.vat_rate:
         raise PeriodConflict(STALE)
+    if not lines or sum((item.line_total for item in lines), Decimal('0')) != amount:
+        raise PeriodConflict(STALE)
+    for item in lines:
+        matches_period = (item.period_start, item.period_end) == (window.start, window.end)
+        if item.item_type != DocumentItem.ItemType.HOSTING or not matches_period:
+            raise PeriodConflict(STALE)
