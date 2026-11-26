@@ -1,11 +1,27 @@
 import { mount } from '@vue/test-utils';
 import SidebarIcon from '../../components/platform/SidebarIcon.vue';
+import { getPanelNavSections } from '../../config/panelNav';
 
 function mountIcon(name) {
   return mount(SidebarIcon, { props: { name } });
 }
 
 describe('SidebarIcon', () => {
+  it.each(['procurement', 'platform', 'system'])('gives every link in %s a distinct drawing', (sectionId) => {
+    // Two different icon names can still render the same drawing or the unknown-icon fallback.
+    const section = getPanelNavSections(path => path).find(item => item.id === sectionId);
+    const names = section.items.filter(item => !item.divider).map(item => item.icon);
+    const wrapper = mount({
+      components: { SidebarIcon },
+      setup: () => ({ names: [...names, 'unknown'] }),
+      template: '<div><SidebarIcon v-for="(name, index) in names" :key="index" :name="name" /></div>',
+    });
+
+    const drawings = wrapper.findAll('svg').map(svg =>
+      Array.from(svg.element.children, shape => shape.outerHTML).join(''));
+    expect(new Set(drawings).size).toBe(names.length + 1);
+  });
+
   it('renders rect elements for the dashboard icon', () => {
     const wrapper = mountIcon('dashboard');
 

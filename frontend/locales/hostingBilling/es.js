@@ -107,4 +107,15 @@ export default {
   advanced: 'Conciliación histórica y equivalencias',
   advancedHelp: 'Abre este paso solo para asociar cuentas anteriores o confirmar que varias evidencias corresponden a la misma obligación.',
   history: 'Trazabilidad administrativa',
+  rowEmission: {
+    project: 'Proyecto', client: 'Cliente', recipient: 'Destinatario',
+    linkProject: 'Vincula el proyecto en la ficha del hosting y vuelve a abrir esta fila.',
+    linkClient: 'Vincula al cliente del proyecto en la ficha del hosting y vuelve a abrir esta fila.',
+    addRecipient: 'Agrega un correo de facturación al hosting o al cliente vinculado y vuelve a abrir esta fila.',
+    identityConflict: 'Los datos del período no coinciden con el proyecto, cliente o servicio de esta fila. Revisa la conciliación antes de enviar.',
+    historical: 'Esta fila no es el registro que se usa para cobrar el servicio. Revisa el origen operativo en la conciliación del hosting.',
+    noPeriod: 'Falta el período revisado de este servicio. Consulta sus obligaciones en la conciliación del hosting.',
+    readFailed: 'No se pudo consultar el período. Cierra el diálogo y vuelve a abrir la fila para reintentar.',
+    delivery: 'Se enviará la cuenta por {amount} con el PDF adjunto. Los avisos de vencimiento se pausarán hasta la próxima renovación.',
+  },
 }

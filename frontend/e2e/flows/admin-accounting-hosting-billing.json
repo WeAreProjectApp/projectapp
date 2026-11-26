@@ -6,8 +6,8 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Hostings shows the reviewed service, inclusive dates, amount, received cash, balance and existing document before sending a collection account. Ingresos uses the same versioned period. Contradictory or stale evidence blocks issuance. Confirmation issues one document and sends its PDF.",
-  "expectedSpecs": 4,
+  "description": "El superusuario abre Enviar cuenta de cobro desde la fila de Hostings. Ve su proyecto, cliente, servicio, destinatario y el mismo resumen de período que en Ingresos, con fechas inclusivas, valor, cobros recibidos, saldo y documentos existentes. Si los vínculos discrepan o falta un período elegible, el diálogo indica cómo continuar. Cancelar conserva la fila. Enviar al cliente revalida la referencia y la versión, emite el saldo revisado y envía el PDF. Tras emitir se pausan los avisos de vencimiento. Si falla el correo, el documento queda disponible para reenvío.",
+  "expectedSpecs": 7,
   "outcomes": [
     "display",
     "success",

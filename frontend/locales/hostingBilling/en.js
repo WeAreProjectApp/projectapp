@@ -83,4 +83,15 @@ export default {
   applied: 'Link saved. You can return to the collection account.', advanced: 'Historical reconciliation and equivalence',
   advancedHelp: 'Open this step only to associate previous accounts or confirm that existing evidence represents the same obligation.',
   history: 'Administrative history',
+  rowEmission: {
+    project: 'Project', client: 'Client', recipient: 'Recipient',
+    linkProject: 'Link the project in the hosting record and reopen this row.',
+    linkClient: 'Link the project’s client in the hosting record and reopen this row.',
+    addRecipient: 'Add a billing email to the hosting record or its linked client, then reopen this row.',
+    identityConflict: 'The period does not match this row’s project, client or service. Review the hosting reconciliation before sending.',
+    historical: 'This row is not the billing source for this service. Review the operational source in the hosting reconciliation.',
+    noPeriod: 'This service has no reviewed period. Check its obligations in the hosting reconciliation.',
+    readFailed: 'The period could not be loaded. Close the dialog and reopen the row to try again.',
+    delivery: 'The account for {amount} will be sent with the PDF attached. Expiry reminders will pause until the next renewal.',
+  },
 }
