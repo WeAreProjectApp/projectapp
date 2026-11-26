@@ -56,6 +56,8 @@ _COLLECTION_FIELD_DESCRIPTIONS = {
     'client_profile_id': 'Id del perfil cliente del ingreso que se cobra.',
     'income_record_id': 'Id del ingreso vinculado a la cuenta.',
     'vat_rate': 'Porcentaje de IVA de la cuenta, entre 0 y 100.',
+    'show_vat': 'Mostrar el desglose de IVA en el documento y correo. Por defecto true; no cambia los importes.',
+    'due_date_mode': 'dated calcula el vencimiento, incluso con cero días; none omite fecha y plazo; legacy conserva la regla histórica.',
     'public_number': 'Consecutivo elegido; vacío deja que el servidor asigne el siguiente.',
     'billing_concept': 'Concepto cobrado; vacío reutiliza el concepto del ingreso.',
     'items': 'Conceptos e importes del documento, con cantidad y precio o importe con modalidad de IVA.',

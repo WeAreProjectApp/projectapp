@@ -13,6 +13,11 @@ class DocumentCollectionAccount(HistoryTrackedModel):
         FIXED_DATE = 'fixed_date', 'Fixed date'
         DAYS_AFTER_ISSUE = 'days_after_issue', 'Days after issue'
 
+    class DueDateMode(models.TextChoices):
+        LEGACY = 'legacy', 'Regla histórica'
+        DATED = 'dated', 'Con vencimiento'
+        NONE = 'none', 'Sin fecha de vencimiento'
+
     document = models.OneToOneField(
         'content.Document',
         on_delete=models.CASCADE,
@@ -24,6 +29,10 @@ class DocumentCollectionAccount(HistoryTrackedModel):
         validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
     )
     billing_concept = models.CharField(max_length=512, blank=True, default='')
+    show_vat = models.BooleanField(default=True)
+    due_date_mode = models.CharField(
+        max_length=8, choices=DueDateMode.choices, default=DueDateMode.LEGACY,
+    )
     payment_term_type = models.CharField(
         max_length=32,
         choices=PaymentTermType.choices,
@@ -61,3 +70,6 @@ class DocumentCollectionAccount(HistoryTrackedModel):
 
     def __str__(self):
         return f'CollectionAccount doc={self.document_id}'
+
+    def shows_vat_breakdown(self, tax_total):
+        return self.show_vat and (self.vat_rate is not None or bool(tax_total))

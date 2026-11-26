@@ -6,6 +6,7 @@ import ContractSourcePicker from './ContractSourcePicker.vue'
 import HostingBillingPicker from './HostingBillingPicker.vue'
 import { get_request, create_request } from '~/stores/services/request_http'
 const props = defineProps({
+  incomeEntry: Boolean,
   projectId: { type: [String, Number], default: null },
   modelValue: { type: Object, required: true },
   validationError: { type: String, default: '' },
@@ -22,6 +23,7 @@ const sourceValue = ref('')
 const linking = ref(false)
 const showLinkForm = ref(false)
 const linkFormId = useId()
+const contextErrorId = useId()
 const linkError = ref('')
 const sourceOptions = computed(() => options.value?.contract_sources || [])
 let sequence = 0
@@ -51,8 +53,19 @@ const validationMessage = computed(() => {
   return 'Elige un tipo de cobro válido: contrato o hosting.'
 })
 const valid = computed(() => !validationMessage.value)
+const missingPeriod = computed(() => {
+  const context = props.modelValue
+  const data = hostingData.value
+  if (!props.incomeEntry || context.document_pending || context.billing_nature !== 'hosting'
+      || context.project_hosting_id || !data) return ''
+  if (data.billing_period?.blocker) return data.billing_period.blocker
+  if (data.overview?.subscription || data.billing_period) return 'Falta resolver el período que se facturará al confirmar el hosting.'
+  return ''
+})
 watch(valid, value => emit('valid', value), { immediate: true })
-watch(validationMessage, value => emit('validation-message', value), { immediate: true })
+watch([validationMessage, missingPeriod], ([message, periodMessage]) => {
+  emit('validation-message', message, periodMessage)
+}, { immediate: true })
 async function load(id, previousId) {
   const request = ++sequence
   options.value = null; payments.value = []; error.value = ''; loading.value = true
@@ -116,10 +129,12 @@ watch(() => props.projectId, load, { immediate: true, flush: 'sync' })
     <h4 class="text-sm font-semibold text-text-default">Cobro del proyecto</h4>
     <p class="text-xs text-text-muted">Selecciona el tipo y el vínculo del cobro, o deja explícitamente el documento pendiente para completarlo después.</p>
     <p v-if="loading" role="status" class="text-sm text-text-muted">Consultando vínculos del proyecto…</p>
-    <div v-else-if="error" role="alert" class="text-sm text-danger-strong"><p>{{ error }}</p><button type="button" @click="load(projectId)">Reintentar</button></div>
-    <BillingContextFields :model-value="modelValue" :options="options" :payments="payments" @update:model-value="emit('update:modelValue', $event)">
+    <div v-else-if="error" :id="contextErrorId" role="alert" class="text-sm text-danger-strong"><p>{{ error }}</p><button type="button" @click="load(projectId)">Reintentar</button></div>
+    <BillingContextFields :model-value="modelValue" :options="options" :payments="payments"
+      :error-id="validationError ? contextErrorId : ''" @update:model-value="emit('update:modelValue', $event)">
       <template #hosting>
         <HostingBillingPicker :project-id="projectId" :client="client" :model-value="modelValue" :data="hostingData"
+          :error-id="validationError ? contextErrorId : ''"
           @update:model-value="emit('update:modelValue', $event)" @refreshed="refreshHosting"
           @validation-message="hostingValidation = $event" @reconcile="emit('reconcile')" @nested-open="emit('nested-open', $event)" />
       </template>
@@ -139,6 +154,6 @@ watch(() => props.projectId, load, { immediate: true, flush: 'sync' })
         <BaseButton variant="secondary" size="sm" @click="load(projectId)">Actualizar opciones</BaseButton>
       </section>
     </div>
-    <p v-if="validationError && !error" role="alert" class="text-sm text-danger-strong" data-testid="collection-form-project-context-error">{{ validationError }}</p>
+    <p v-if="validationError && !error" :id="contextErrorId" role="alert" class="text-sm text-danger-strong" data-testid="collection-form-project-context-error">{{ validationError }} {{ missingPeriod }}</p>
   </section>
 </template>

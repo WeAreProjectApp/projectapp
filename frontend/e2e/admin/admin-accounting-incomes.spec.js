@@ -2321,7 +2321,9 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
     await page.getByTestId('income-action-generate-collection-1').click();
     await expect(page.getByTestId('collection-form-project-context')).toContainText('Cobro del proyecto');
 
-    await page.getByTestId('collection-form-preview').click();
+    // PA-295 makes invalid Ingresos accounts visibly blocked before a preview
+    // request; clicking a disabled control would no longer exercise a flow.
+    await expect(page.getByTestId('collection-form-preview')).toBeDisabled();
     await expect(page.getByTestId('collection-form-project-context-error')).toHaveText(
       'En «Cobro del proyecto», elige si cobras un contrato o el hosting.',
     );
@@ -2459,7 +2461,7 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
 
     await expect(page.getByTestId('billing-link-contract-error'))
       .toHaveText('El documento ya no se puede vincular a este proyecto.');
-    await page.getByTestId('collection-form-preview').click();
+    await expect(page.getByTestId('collection-form-preview')).toBeDisabled();
     await expect(page.getByTestId('collection-form-project-context-error'))
       .toContainText('Este proyecto no tiene contratos registrados.');
     expect(calls.filter((call) => call.apiPath === 'accounting/collection-accounts/preview/'))

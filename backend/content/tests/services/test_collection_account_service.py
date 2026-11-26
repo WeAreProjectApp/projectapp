@@ -352,6 +352,49 @@ def test_zero_day_collection_account_never_turns_overdue(
         assert commercial_is_overdue(doc) is False
 
 
+@freeze_time('2026-04-01 12:00:00')
+def test_explicit_dated_zero_day_collection_account_turns_overdue_the_following_day(
+    issuer, project, client_user,
+):
+    """A dated zero has a deliberate same-day deadline, so the next Bogotá
+    business day is overdue; legacy zero keeps the opposite historical rule."""
+    doc = _ca_document(project=project, client_user=client_user)
+    DocumentCollectionAccount.objects.create(
+        document=doc,
+        due_date_mode=DocumentCollectionAccount.DueDateMode.DATED,
+        payment_term_type=DocumentCollectionAccount.PaymentTermType.DAYS_AFTER_ISSUE,
+        payment_term_days=0,
+    )
+
+    issue_collection_account(doc, issuer=issuer)
+    doc.refresh_from_db()
+
+    assert doc.due_date == date(2026, 4, 1)
+    with freeze_time('2026-04-02 12:00:00'):
+        assert commercial_is_overdue(doc) is True
+
+
+@freeze_time('2026-04-01 12:00:00')
+def test_explicit_no_deadline_collection_account_never_turns_overdue(
+    issuer, project, client_user,
+):
+    """The no-date mode remains distinct from dated zero even after the
+    issue day, so monitoring must never report an invented late payment."""
+    doc = _ca_document(project=project, client_user=client_user)
+    DocumentCollectionAccount.objects.create(
+        document=doc,
+        due_date_mode=DocumentCollectionAccount.DueDateMode.NONE,
+        payment_term_type=DocumentCollectionAccount.PaymentTermType.AGAINST_DELIVERY,
+    )
+
+    issue_collection_account(doc, issuer=issuer)
+    doc.refresh_from_db()
+
+    assert doc.due_date is None
+    with freeze_time('2026-06-01 12:00:00'):
+        assert commercial_is_overdue(doc) is False
+
+
 @freeze_time('2026-05-10 12:00:00')
 def test_issue_collection_account_leaves_no_due_date_for_against_delivery_term(
     issuer, project, client_user,

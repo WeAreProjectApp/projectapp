@@ -95,10 +95,17 @@ cinco columnas de resultado.
 - Desde un ingreso esperado, abrir Nueva cuenta de cobro y elegir Trabajo de
   un contrato / otrosí. **Vincular contrato existente** debe verse como botón
   junto a los selectores y abrir el buscador de documentos del proyecto.
-- Junto a **IVA (%)**, pulsar **Sin IVA** y comprobar `0` y **IVA (0 %)**.
-  Vaciar el porcentaje debe mostrar **IVA sin registrar**. Un ingreso con pagos
-  conserva sus restricciones de edición. Revisar ambos botones en los cinco
-  perfiles y mediante teclado.
+- En la cuenta que se prepara desde **Ingresos**, usar teclado a 360 px para
+  seguir cada corrección de **Previsualizar**. Comprobar el foco en el campo,
+  el anuncio del error y que se conserva el concepto ya escrito.
+- Con base COP 100.000 y tasa del 19 %, activar **Sin IVA** junto al importe
+  y volver a desactivarlo. El total pasa a COP 100.000 y vuelve a COP 119.000.
+  Alternar **Mostrar IVA** y comparar el total y el desglose del correo y del
+  PDF. Un ingreso con pagos conserva el bloqueo fiscal y permite elegir la
+  presentación. Revisar los interruptores en los cinco perfiles y con teclado.
+- Alternar **Sin fecha de vencimiento** con cero días escritos. Con fecha, la
+  última confirmación muestra el día de emisión. Sin fecha, el renglón se
+  omite. Volver a editar recupera el cero. Repetir con fecha fija.
 
 ## Recorrido de modales largos
 

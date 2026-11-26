@@ -1,3 +1,7 @@
+## W1 · PA-295, PA-301 y PA-302
+
+Desde Ingresos, la cuenta explica las correcciones que habilitan la vista previa, distingue el cálculo del IVA de su presentación y permite emitir con o sin fecha. El plazo explícito de cero días vence al emitir en Bogotá. Los consumidores anteriores conservan el contrato histórico. PA-296 aporta el período canónico y PA-297 abre la emisión desde la fila de Hostings. [Reglas documentales](../docs/accounting-pending-document.md#cuenta-preparada-desde-ingresos)
+
 ## PA-221 · evidencia de integridad y retiro por destino
 
 El expediente w2 conserva TO DO, el acceso actual y la pausa de DEVQA-000. Se

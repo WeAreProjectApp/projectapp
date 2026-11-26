@@ -416,7 +416,7 @@ class CollectionAccountPdfService:
                 y -= 11
             y -= 3
 
-        if ext.vat_rate is not None or document.tax_total:
+        if ext.shows_vat_breakdown(document.tax_total):
             rate_label = f' ({ext.vat_rate.normalize():f} %)' if ext.vat_rate is not None else ''
             ensure_space(64)
             c.setFont(_font('regular'), 9)

@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-06 — app not running)
 /**
  * PA-230 — linking a hosting while preparing a collection account.
  *
@@ -124,6 +123,31 @@ function hostingResponse(state) {
       can_create: state.mode === 'empty',
       requires_reconciliation: state.mode === 'contradictory',
     },
+    // PA-295's canonical W2 period is deliberately part of the same context
+    // response as the hosting candidate.  W2 owns selecting/serializing its
+    // version; this fixture keeps the dates stable for the W1 form gate.
+    billing_period: {
+      project_id: 10,
+      client_id: client.id,
+      project_hosting_id: linked ? state.hostingId : null,
+      hosting_record_id: linked ? 31 : null,
+      income_id: income.id,
+      period_start: '2026-11-01',
+      period_end: '2026-11-30',
+      hosting_payment_id: 902,
+      source: 'hosting_payment',
+      cycle_ids: [902],
+      currency: 'COP',
+      amount: '120000.00',
+      received: '0.00',
+      balance: '120000.00',
+      documents: [],
+      // W2's optimistic-lock version is a SHA-256 digest, not the legacy
+      // numeric delivery revision used by the hosting-link writer.
+      version: 'ae03d1e9e0fb2c27c916e4b99b52470e3f25e1f6ebf747c517028c5eff8545bd',
+      state: linked ? 'pending' : 'blocked',
+      blocker: linked ? '' : 'Confirma un hosting antes de facturar el período.',
+    },
   };
 }
 
@@ -222,7 +246,7 @@ test.describe('PA-230 hosting link from a collection account', () => {
   });
 
   test('confirming an eligible hosting record unlocks the collection preview', {
-    tag: ['@flow:admin-accounting-hosting-link', '@outcome:success'],
+    tag: ['@flow:admin-accounting-hosting-link', '@flow:admin-accounting-collection-create', '@outcome:success'],
   }, async ({ page }) => {
     // Catches the bug where a reviewed existing record never becomes the selected project hosting for the account.
     const { calls } = await arrange(page, { mode: 'unlinked' });
@@ -240,6 +264,35 @@ test.describe('PA-230 hosting link from a collection account', () => {
       ]));
     expect(calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/').body)
       .toMatchObject({ billing_nature: 'hosting', project_hosting_id: 70, income_record_id: 1 });
+  });
+
+  test('a pending hosting keeps preview disabled with linked Spanish reasons until confirmed', {
+    tag: ['@flow:admin-accounting-hosting-link', '@flow:admin-accounting-collection-create', '@outcome:error'],
+  }, async ({ page }) => {
+    // Catches the bug where an income-origin account sent a preview request
+    // before its hosting was confirmed, leaving the operator with no way to
+    // find the required field or recover the typed draft.
+    const { calls } = await arrange(page, { mode: 'unlinked' });
+    await openIncomeAccount(page);
+    await page.getByTestId('collection-form-concept').fill('Hosting Aurora noviembre verificado');
+    await page.getByTestId('collection-form-description').fill('Cobro del período canónico de noviembre');
+
+    const preview = page.getByTestId('collection-form-preview');
+    const issues = page.getByTestId('collection-preview-issues');
+    await expect(preview).toBeDisabled();
+    await expect(issues).toContainText('Elige y confirma el hosting del proyecto para continuar.');
+    await expect(preview).toHaveAttribute('aria-describedby', await issues.getAttribute('id'));
+
+    const hostingIssue = issues.getByRole('link', { name: 'Elige y confirma el hosting del proyecto para continuar.' });
+    await hostingIssue.click();
+    await expect(page.getByTestId('billing-hosting-choice')).toBeFocused();
+    expect(calls.filter((call) => call.apiPath === 'accounting/collection-accounts/preview/')).toHaveLength(0);
+
+    await chooseHosting(page, 'record:31');
+    await page.getByTestId('billing-hosting-confirm').click();
+    await expect(preview).toBeEnabled();
+    await expect(page.getByTestId('collection-form-concept')).toHaveValue('Hosting Aurora noviembre verificado');
+    await expect(page.getByTestId('collection-form-description')).toHaveValue('Cobro del período canónico de noviembre');
   });
 
   test('creating a missing hosting preserves the account draft for selection', {

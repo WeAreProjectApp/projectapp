@@ -706,6 +706,8 @@ seguridad y activación manual: `docs/monitoring.md`.
 > acción. El estado y la URL sólo se confirman después de una respuesta exitosa,
 > de modo que un fallo conserva filas, dirección y navegación previas.
 
+La cuenta preparada desde Ingresos guarda la presentación del IVA y el modo de vencimiento en la extensión documental. La previsualización y la emisión usan el mismo servicio. Vista previa, detalle, PDF y correo leen la preferencia guardada. Una cuenta fechada con cero días vence al emitirla en Bogotá y puede entrar en mora al día siguiente. Las cuentas sin fecha y las cuentas históricas mantienen su propia semántica. [Reglas de la cuenta preparada desde Ingresos](../accounting-pending-document.md#cuenta-preparada-desde-ingresos)
+
 > **Cuenta de cobro como artefacto documental 2026-09-02:** la emisión cruza el
 > límite editable y llama a `collection_account_snapshot_service`, que renderiza
 > una vez, valida los bytes, guarda `Document.generated_file` y registra SHA-256

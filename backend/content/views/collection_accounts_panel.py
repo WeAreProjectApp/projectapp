@@ -201,6 +201,8 @@ def preview_collection_account_view(request):
                 'total': str(document.total),
                 'subtotal': str(document.total - document.tax_total),
                 'tax_total': str(document.tax_total),
+                'show_vat': document.collection_account.show_vat,
+                'due_date_mode': document.collection_account.due_date_mode,
                 'vat_rate': str(document.collection_account.vat_rate) if document.collection_account.vat_rate is not None else None,
                 'income_total': str(document.income_record.total_amount),
                 'due_date': (

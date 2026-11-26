@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import BaseToggle from '~/components/base/BaseToggle.vue'
 import { INPUT_FIELD_BASE, INPUT_FIELD_SIZE } from '~/components/base/inputClasses'
-const props = defineProps({ modelValue: { type: Object, required: true }, options: { type: Object, default: null }, payments: { type: Array, default: () => [] }, allowPending: { type: Boolean, default: true } })
+const props = defineProps({ modelValue: { type: Object, required: true }, options: { type: Object, default: null }, payments: { type: Array, default: () => [] }, allowPending: { type: Boolean, default: true }, errorId: { type: String, default: '' } })
 const emit = defineEmits(['update:modelValue'])
 const fieldClass = `${INPUT_FIELD_BASE} ${INPUT_FIELD_SIZE.md || ''}`
 const amendments = computed(() => props.options?.contracts?.find(row => row.id === props.modelValue.contract_id)?.amendments || [])
@@ -27,14 +27,16 @@ function change(key, value) {
     </div>
     <p v-if="modelValue.document_pending" class="text-sm text-warning-strong" data-testid="billing-document-pending-help">Puedes completar el documento después. Se registrará quién lo dejó pendiente y cuándo. El tipo de cobro también puede quedar pendiente.</p>
     <label class="block text-sm text-text-default">¿Qué estás cobrando?
-      <select data-testid="billing-nature" :value="modelValue.billing_nature || ''" :class="fieldClass" @change="nature($event.target.value)">
+      <select data-testid="billing-nature" :value="modelValue.billing_nature || ''" :class="fieldClass"
+        :aria-invalid="errorId && !modelValue.billing_nature ? 'true' : undefined" :aria-describedby="errorId || undefined" @change="nature($event.target.value)">
         <option value="">Elige el tipo de cobro…</option><option value="contract">Trabajo de un contrato / otrosí</option><option value="hosting">Hosting del proyecto</option>
       </select>
     </label>
     <template v-if="!modelValue.document_pending && modelValue.billing_nature === 'contract'">
       <div class="grid grid-cols-1 gap-3 panel-portrait:grid-cols-2">
       <label class="block min-w-0 text-sm text-text-default">Contrato
-        <select data-testid="billing-contract" :value="modelValue.contract_id || ''" :class="fieldClass" @change="change('contract_id', $event.target.value)"><option value="">Seleccionar…</option><option v-for="contract in options?.contracts || []" :key="contract.id" :value="contract.id">{{ contract.title }}</option></select>
+        <select data-testid="billing-contract" :value="modelValue.contract_id || ''" :class="fieldClass"
+          :aria-invalid="errorId ? 'true' : undefined" :aria-describedby="errorId || undefined" @change="change('contract_id', $event.target.value)"><option value="">Seleccionar…</option><option v-for="contract in options?.contracts || []" :key="contract.id" :value="contract.id">{{ contract.title }}</option></select>
       </label>
       <label class="block text-sm text-text-default">Otrosí (opcional)
         <select data-testid="billing-amendment" :value="modelValue.amendment_id || ''" :class="fieldClass" @change="change('amendment_id', $event.target.value)"><option value="">Sin otrosí</option><option v-for="amendment in amendments" :key="amendment.id" :value="amendment.id">{{ amendment.title }}</option></select>

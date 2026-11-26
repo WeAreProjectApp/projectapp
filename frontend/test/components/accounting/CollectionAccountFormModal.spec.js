@@ -1,5 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
+import { createI18n } from 'vue-i18n';
+import panelUsability from '../../../locales/panelUsability/es';
 import CollectionAccountFormModal from '../../../components/accounting/CollectionAccountFormModal.vue';
 
 jest.mock('../../../stores/services/request_http', () => ({
@@ -175,7 +177,7 @@ function mountModal(props = {}) {
     props: { open: true, ...props },
     attachTo: document.body,
     global: {
-      plugins: [createPinia()],
+      plugins: [createPinia(), createI18n({ legacy: false, locale: 'es-co', messages: { 'es-co': { panelUsability } } })],
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
@@ -839,6 +841,256 @@ describe('CollectionAccountFormModal', () => {
     expect(wrapper.text()).toContain('Selecciona la fecha fija de pago.');
     expect(wrapper.get('[data-testid="collection-form-preview"]').element.disabled)
       .toBe(false);
+  });
+
+  it('disables the income preview while naming every unresolved requirement', async () => {
+    // Fails if Ingresos again shows an enabled action while the submit guard refuses the preview.
+    const wrapper = mountModal({
+      income: { ...incomeFixture, project: 42 },
+      incomeEntry: true,
+    });
+    await flushPromises();
+
+    const context = wrapper.findComponent(CollectionAccountProjectContextStub);
+    await wrapper.get('[data-testid="collection-form-description"]')
+      .setValue('Cobro del período de agosto');
+    context.vm.$emit('valid', false);
+    context.vm.$emit('validation-message', 'Selecciona el período de hosting que estás cobrando.');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="collection-form-preview"]').element.disabled).toBe(true);
+    expect(wrapper.get('[data-testid="collection-preview-issues"]').text())
+      .toContain('Elige o crea un cliente.');
+    expect(wrapper.get('[data-testid="collection-preview-issues"]').text())
+      .toContain('Selecciona el período de hosting que estás cobrando.');
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    expect(create_request).not.toHaveBeenCalled();
+
+    await selectClient(wrapper);
+    context.vm.$emit('valid', true);
+    context.vm.$emit('validation-message', '');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="collection-form-description"]').element.value)
+      .toBe('Cobro del período de agosto');
+    expect(wrapper.get('[data-testid="collection-form-preview"]').element.disabled).toBe(false);
+  });
+
+  it('sends the IVA presentation choice without changing the exempt calculation', async () => {
+    // Fails if the display switch changes the total, loses the previous rate, or stays out of the preview payload.
+    const wrapper = mountModal({ income: incomeFixture, incomeEntry: true });
+    await flushPromises();
+    await selectClient(wrapper);
+
+    await wrapper.get('[data-testid="collection-no-vat"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="vat-rate"]').element.disabled).toBe(true);
+
+    await wrapper.get('[data-testid="collection-no-vat"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="vat-rate"]').element.value).toBe('19');
+
+    await wrapper.get('[data-testid="collection-no-vat"]').trigger('click');
+    await wrapper.get('[data-testid="collection-show-vat"]').trigger('click');
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    await flushPromises();
+
+    const [url, payload] = create_request.mock.calls.at(-1);
+    expect(url).toBe('accounting/collection-accounts/preview/');
+    expect(payload).toMatchObject({
+      vat_rate: 0,
+      show_vat: false,
+      due_date_mode: 'dated',
+      items: [{ amount: '1490000', amount_mode: 'vat_included' }],
+    });
+  });
+
+  it('preserves an amount entered before IVA when hiding the tax presentation', async () => {
+    // Fails if the presentation switch rewrites the amount mode that accounting uses to rebuild the total.
+    const wrapper = mountModal({ income: incomeFixture, incomeEntry: true });
+    await flushPromises();
+    await selectClient(wrapper);
+
+    const beforeVat = wrapper.findAll('button')
+      .find((button) => button.text() === 'Antes de IVA');
+    await beforeVat.trigger('click');
+    await wrapper.get('[data-testid="collection-form-amount"]').setValue('100000');
+    await wrapper.get('[data-testid="collection-show-vat"]').trigger('click');
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    await flushPromises();
+
+    expect(create_request.mock.calls.at(-1)[1]).toMatchObject({
+      vat_rate: 19,
+      show_vat: false,
+      items: [{ amount: '100000', amount_mode: 'before_vat' }],
+    });
+  });
+
+  it('keeps the IVA presentation switch available when a paid income locks the amount', async () => {
+    // Fails if the financial lock also blocks the independent document-presentation decision.
+    const wrapper = mountModal({
+      income: {
+        ...incomeFixture,
+        kind: 'liquid',
+        paid_amount: '1490000.00',
+        vat_rate: 19,
+      },
+      incomeEntry: true,
+    });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="collection-form-amount"]').element.disabled).toBe(true);
+    expect(wrapper.get('[data-testid="collection-show-vat"]').element.disabled).toBe(false);
+    await wrapper.get('[data-testid="collection-show-vat"]').trigger('click');
+    expect(wrapper.get('[data-testid="collection-show-vat"]').attributes('aria-checked')).toBe('false');
+  });
+
+  it('sends an explicit no-date mode without carrying a hidden payment term', async () => {
+    // Fails if an omitted deadline is serialized as the ambiguous legacy zero-day term.
+    const wrapper = mountModal({ income: incomeFixture, incomeEntry: true });
+    await flushPromises();
+    await selectClient(wrapper);
+
+    await wrapper.get('[data-testid="collection-no-due-date"]').trigger('click');
+    expect(wrapper.text()).toContain('La cuenta saldrá sin fecha de vencimiento.');
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    await flushPromises();
+
+    const payload = create_request.mock.calls.at(-1)[1];
+    expect(payload.due_date_mode).toBe('none');
+    expect(payload.payment_term_days).toBeUndefined();
+    expect(payload.due_date).toBeUndefined();
+  });
+
+  it('restores a zero-day draft as an explicit dated deadline', async () => {
+    // Fails if toggling no-date discards the prior zero or returns it to legacy immediate-payment behavior.
+    const wrapper = mountModal({ income: incomeFixture, incomeEntry: true });
+    await flushPromises();
+    await selectClient(wrapper);
+
+    await wrapper.get('[data-testid="collection-form-term-days"]').setValue('0');
+    await wrapper.get('[data-testid="collection-no-due-date"]').trigger('click');
+    await wrapper.get('[data-testid="collection-no-due-date"]').trigger('click');
+    expect(wrapper.get('[data-testid="collection-form-term-days"]').element.value).toBe('0');
+
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    await flushPromises();
+    const payload = create_request.mock.calls.at(-1)[1];
+    expect(payload.due_date_mode).toBe('dated');
+    expect(payload.payment_term_days).toBe(0);
+  });
+
+  it('hides the IVA breakdown when the preview response disables it', async () => {
+    // Fails if show_vat=false reaches the server but the review still exposes the tax breakdown.
+    create_request.mockImplementation((url) => {
+      if (!url.includes('preview')) return Promise.resolve({ data: { document: { id: 33 }, email_sent: true } });
+      return Promise.resolve({
+        data: {
+          subject: 'Cuenta de cobro PA-ACME-003 — ProjectApp',
+          html_body: '<p>Valor a pagar: $1.490.000 COP.</p>',
+          public_number: 'PA-ACME-003',
+          total: '1490000.00',
+          tax_total: '238000.00',
+          vat_rate: '19',
+          show_vat: false,
+          due_date_mode: 'dated',
+          due_date: '2026-08-13',
+          customer_email: 'ana@acme.co',
+          issue_date: '2026-08-05',
+          customer_name: 'Acme Soluciones',
+          project_name: 'Portal Acme',
+          billing_concept: 'Desarrollo módulo de reportes',
+          pdf_url: '/api/accounting/collection-accounts/preview/tok123/PA-ACME-003.pdf',
+        },
+      });
+    });
+    const wrapper = mountModal({ income: incomeFixture, incomeEntry: true });
+    await flushPromises();
+    await selectClient(wrapper);
+    await wrapper.get('[data-testid="collection-show-vat"]').trigger('click');
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="collection-preview-subject"]').text())
+      .toBe('Asunto: Cuenta de cobro PA-ACME-003 — ProjectApp');
+    expect(wrapper.text()).not.toContain('IVA (19 %)');
+  });
+
+  it('omits the deadline from review surfaces when the preview response has no due date', async () => {
+    // Fails if due_date_mode=none leaks a stale deadline into the preview or final confirmation.
+    create_request.mockImplementation((url) => {
+      if (!url.includes('preview')) return Promise.resolve({ data: { document: { id: 33 }, email_sent: true } });
+      return Promise.resolve({
+        data: {
+          subject: 'Cuenta de cobro PA-ACME-003 — ProjectApp',
+          html_body: '<p>Valor a pagar: $1.490.000 COP.</p>',
+          public_number: 'PA-ACME-003',
+          total: '1490000.00',
+          tax_total: '238000.00',
+          vat_rate: '19',
+          show_vat: true,
+          due_date_mode: 'none',
+          due_date: null,
+          customer_email: 'ana@acme.co',
+          issue_date: '2026-08-05',
+          customer_name: 'Acme Soluciones',
+          project_name: 'Portal Acme',
+          billing_concept: 'Desarrollo módulo de reportes',
+          pdf_url: '/api/accounting/collection-accounts/preview/tok123/PA-ACME-003.pdf',
+        },
+      });
+    });
+    const wrapper = mountModal({ income: incomeFixture, incomeEntry: true });
+    await flushPromises();
+    await selectClient(wrapper);
+    await wrapper.get('[data-testid="collection-no-due-date"]').trigger('click');
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="vat-tax"]').text()).toBe('$238.000 COP');
+    expect(wrapper.text()).not.toContain('Fecha de vencimiento:');
+
+    await wrapper.get('[data-testid="collection-form-confirm"]').trigger('click');
+    expect(wrapper.text()).not.toContain('Fecha de vencimiento');
+  });
+
+  it('renders the dated response in the preview and final confirmation', async () => {
+    // Fails if the response's dated mode stops reaching either document-review surface.
+    create_request.mockImplementation((url) => {
+      if (!url.includes('preview')) return Promise.resolve({ data: { document: { id: 33 }, email_sent: true } });
+      return Promise.resolve({
+        data: {
+          subject: 'Cuenta de cobro PA-ACME-003 — ProjectApp',
+          html_body: '<p>Valor a pagar: $1.490.000 COP.</p>',
+          public_number: 'PA-ACME-003',
+          total: '1490000.00',
+          tax_total: '237899.16',
+          vat_rate: '19',
+          show_vat: true,
+          due_date_mode: 'dated',
+          due_date: '2026-08-13',
+          customer_email: 'ana@acme.co',
+          issue_date: '2026-08-05',
+          customer_name: 'Acme Soluciones',
+          project_name: 'Portal Acme',
+          billing_concept: 'Desarrollo módulo de reportes',
+          pdf_url: '/api/accounting/collection-accounts/preview/tok123/PA-ACME-003.pdf',
+        },
+      });
+    });
+    const wrapper = mountModal({ income: incomeFixture, incomeEntry: true });
+    await flushPromises();
+    await selectClient(wrapper);
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="collection-preview-due-date"]').text())
+      .toBe('Fecha de vencimiento: Jue, 13 ago 2026');
+    expect(wrapper.get('[data-testid="vat-tax"]').text()).toBe('$237.899 COP');
+
+    await wrapper.get('[data-testid="collection-form-confirm"]').trigger('click');
+    expect(wrapper.get('[data-testid="collection-send-notice-due"]').text())
+      .toBe('Jue, 13 ago 2026');
   });
 
   it('defaults an unpaid income without VAT to 19% in the preview payload', async () => {

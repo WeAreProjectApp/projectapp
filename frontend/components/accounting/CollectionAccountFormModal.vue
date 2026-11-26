@@ -2,6 +2,8 @@
 import { computed, ref, useId, watch } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import BaseFloatingListbox from '~/components/base/BaseFloatingListbox.vue';
+import BaseToggle from '~/components/base/BaseToggle.vue';
+import { useI18n } from 'vue-i18n';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import ConfirmationSummaryList from '~/components/accounting/ConfirmationSummaryList.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
@@ -21,6 +23,7 @@ import { clientCustomerSnapshot, clientFormPayload, emptyClientForm } from '~/ut
 import { downloadUrl } from '~/utils/downloadFile';
 import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
+import { vatBreakdown } from '~/utils/accountingVat';
 
 /**
  * Two-step create modal for cuentas de cobro: form → preview → send.
@@ -33,10 +36,13 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   /** Preselected income row (entry point from the Ingresos tab). */
   income: { type: Object, default: null },
+  incomeEntry: Boolean,
   resumeDraft: { type: Object, default: null },
 });
 
 const emit = defineEmits(['close', 'created', 'reconcile']);
+const { t } = useI18n();
+const collectionText = (key) => t(`panelUsability.incomeCollection.${key}`);
 const hostingModalOpen = ref(false);
 
 const store = useAccountingStore();
@@ -51,6 +57,8 @@ const saving = ref(false);
 const sendConfirmOpen = ref(false);
 const validationAttempted = ref(false);
 const preview = ref(null);
+const reviewedPayload = ref(null);
+let previewRequest = 0;
 // Served by the backend, not a blob: the viewer names its download after the
 // URL / Content-Disposition, and a blob: URL carries neither.
 const pdfUrl = ref('');
@@ -84,6 +92,7 @@ const selectedIncome = ref(null);
 const billingContext = ref({});
 const billingContextValid = ref(false);
 const billingContextMessage = ref('');
+const missingPeriodMessage = ref('');
 const incomeQuery = ref('');
 /** The FULL eligible set for the current search term, unscoped by client. */
 const incomeOptions = ref([]);
@@ -125,6 +134,9 @@ function defaultForm() {
     unit_price: null,
     vat_rate: 19,
     vat_capture: null,
+    prior_vat_rate: null,
+    show_vat: true,
+    no_due_date: false,
     period_start: '',
     period_end: '',
     term: 'days',
@@ -166,6 +178,9 @@ watch(
   () => props.open,
   (open) => {
     clientRequestId += 1;
+    previewRequest += 1;
+    previewing.value = false;
+    reviewedPayload.value = null;
     if (!open) return;
     step.value = 'form';
     validationAttempted.value = false;
@@ -191,6 +206,7 @@ watch(
     billingContext.value = {};
     billingContextValid.value = false;
     billingContextMessage.value = '';
+    missingPeriodMessage.value = '';
     incomeQuery.value = '';
     incomeOptions.value = [];
     incomeScope.value = 'all';
@@ -201,7 +217,7 @@ watch(
       // Restore values directly: applying income/client defaults would overwrite
       // the operator's edits and start competing asynchronous requests.
       selectedIncome.value = draft.selectedIncome;
-      form.value = JSON.parse(JSON.stringify(draft.form));
+      form.value = { ...defaultForm(), ...JSON.parse(JSON.stringify(draft.form)) };
       clientId.value = draft.clientId;
       selectedClient.value = draft.selectedClient;
       clientFromIncome.value = draft.clientFromIncome;
@@ -226,6 +242,7 @@ function applyIncome(income) {
   selectedIncome.value = income;
   const hasPayments = income.kind === 'liquid' || Number(income.paid_amount || 0) > 0;
   form.value.vat_rate = income.vat_rate ?? (hasPayments ? null : 19);
+  form.value.prior_vat_rate = null;
   form.value.vat_capture = null;
   incomeQuery.value = income.concept || '';
   if (!form.value.billing_concept) {
@@ -855,8 +872,26 @@ function onSplitKey(e) {
 
 // ── Preview + confirm ──
 
+const showValidation = computed(() => props.incomeEntry || validationAttempted.value);
+const noDueDate = computed(() => props.incomeEntry && form.value.no_due_date);
+const noVat = computed(() => form.value.vat_rate != null && Number(form.value.vat_rate) === 0);
+const amountLockReason = computed(() => {
+  if (selectedIncome.value?.kind === 'liquid' || Number(selectedIncome.value?.paid_amount || 0) > 0) {
+    return 'Este ingreso ya tiene pagos; se conservan su valor facturable y su IVA.';
+  }
+  if (billingContext.value.billing_nature === 'hosting' && !billingContext.value.document_pending && billingContext.value.period_version) {
+    return collectionText('hostingAmountLocked');
+  }
+  return '';
+});
+
+function updateVatRate(rate) {
+  if (!noVat.value && rate != null && Number(rate) === 0) form.value.prior_vat_rate = form.value.vat_rate;
+  form.value.vat_rate = rate;
+}
+
 const clientValidationError = computed(() => {
-  if (!validationAttempted.value) return '';
+  if (!showValidation.value) return '';
   if (!clientId.value) return 'Elige o crea un cliente.';
   if (loadingClient.value) return 'Espera a que carguen los datos del cliente.';
   if (editingClient.value) return 'Guarda los datos del cliente o cancela su edición antes de revisar la cuenta.';
@@ -864,53 +899,73 @@ const clientValidationError = computed(() => {
   return '';
 });
 const incomeValidationError = computed(() => {
-  if (!validationAttempted.value) return '';
+  if (!showValidation.value) return '';
   if (!selectedIncome.value?.id) return 'Selecciona un ingreso vinculado.';
   if (incomeClientConflict.value) return 'Resuelve el conflicto con el cliente del ingreso.';
   return '';
 });
 const billingContextValidationError = computed(() => (
-  validationAttempted.value
+  showValidation.value
   && (selectedIncome.value?.project || selectedIncome.value?.project_id)
   && !billingContextValid.value
     ? (billingContextMessage.value || 'Completa el tipo de cobro y selecciona el contrato o hosting en «Cobro del proyecto».')
     : ''
 ));
-const amountValidationError = computed(() => (
-  validationAttempted.value && !(Number(form.value.unit_price) > 0)
-    ? 'Ingresa un valor mayor a cero.'
-    : ''
-));
+const amountValidationError = computed(() => {
+  if (!showValidation.value) return '';
+  if (!(Number(form.value.unit_price) > 0)) return 'Ingresa un valor mayor a cero.';
+  const capture = form.value.vat_capture;
+  return vatBreakdown(capture?.amount ?? form.value.unit_price, form.value.vat_rate, capture?.amount_mode)
+    ? '' : collectionText('vatInvalid');
+});
 const conceptValidationError = computed(() => (
-  validationAttempted.value && !form.value.billing_concept.trim()
+  showValidation.value && !form.value.billing_concept.trim()
     ? 'Escribe el concepto del servicio.'
     : ''
 ));
 const customerEmailValidationError = computed(() => (
-  validationAttempted.value
+  showValidation.value
   && clientId.value
   && !selectedClientMissingEmail.value
   && !isValidEmail(form.value.customer.email)
     ? 'Escribe un correo destinatario válido.'
     : ''
 ));
-const dueDateValidationError = computed(() => (
-  validationAttempted.value && form.value.term === 'fixed' && !form.value.due_date
-    ? 'Selecciona la fecha fija de pago.'
-    : ''
+const customerNameValidationError = computed(() => (
+  props.incomeEntry && clientId.value && !loadingClient.value && !form.value.customer.name?.trim()
+    ? collectionText('nameRequired') : ''
 ));
+const dueDateValidationError = computed(() => {
+  if (!showValidation.value || noDueDate.value) return '';
+  if (form.value.term === 'fixed') return form.value.due_date ? '' : 'Selecciona la fecha fija de pago.';
+  const days = Number(form.value.payment_term_days);
+  return props.incomeEntry && (!Number.isInteger(days) || days < 0 || days > 120)
+    ? collectionText('daysInvalid') : '';
+});
 
 const previewBlockers = computed(() => [
-  clientValidationError.value,
-  incomeValidationError.value,
-  billingContextValidationError.value,
-  amountValidationError.value,
-  conceptValidationError.value,
-  customerEmailValidationError.value,
-  dueDateValidationError.value,
-].filter(Boolean));
+  {
+    field: editingClient.value ? 'client-edit' : 'client',
+    message: clientValidationError.value,
+    target: selectedClientMissingEmail.value && !editingClient.value ? 'input[type="email"]' : '',
+  },
+  { field: 'income', message: incomeValidationError.value },
+  { field: 'context', message: billingContextValidationError.value,
+    period: billingContext.value.billing_nature === 'hosting' && Boolean(billingContext.value.project_hosting_id) },
+  { field: 'context', message: missingPeriodMessage.value, period: true },
+  { field: 'concept', message: conceptValidationError.value },
+  { field: 'amount', message: amountValidationError.value },
+  { field: 'term', message: dueDateValidationError.value },
+  { field: 'name', message: customerNameValidationError.value },
+  { field: 'email', message: customerEmailValidationError.value },
+].filter(issue => issue.message));
 
 const canPreview = computed(() => previewBlockers.value.length === 0);
+
+function updateContextMessages(message, periodMessage = '') {
+  billingContextMessage.value = message;
+  missingPeriodMessage.value = periodMessage;
+}
 
 function buildPayload() {
   const payload = {
@@ -937,6 +992,11 @@ function buildPayload() {
   if (numberDirty.value && form.value.public_number.trim()) {
     payload.public_number = form.value.public_number.trim();
   }
+  if (props.incomeEntry) {
+    payload.show_vat = form.value.show_vat;
+    payload.due_date_mode = noDueDate.value ? 'none' : 'dated';
+    if (noDueDate.value) return payload;
+  }
   if (form.value.term === 'fixed' && form.value.due_date) {
     payload.due_date = form.value.due_date;
   } else {
@@ -959,9 +1019,13 @@ function buildPayload() {
 async function goPreview() {
   validationAttempted.value = true;
   if (!canPreview.value || previewing.value) return;
+  const request = ++previewRequest;
+  const payload = buildPayload();
   previewing.value = true;
-  const result = await store.previewCollectionAccount(buildPayload());
+  const result = await store.previewCollectionAccount(payload);
+  if (request !== previewRequest) return;
   previewing.value = false;
+  if (!canPreview.value || JSON.stringify(payload) !== JSON.stringify(buildPayload())) return;
   if (!result.success) {
     notify.error({
       title: 'No se pudo generar la previsualización',
@@ -970,6 +1034,7 @@ async function goPreview() {
     return;
   }
   preview.value = result.data;
+  reviewedPayload.value = payload;
   // A real same-origin URL ending in the consecutivo and served with
   // `Content-Disposition: inline; filename=...`. That header is what names the
   // save in Chrome's own viewer button and in "Save to Drive" — the blob: URL
@@ -1015,11 +1080,11 @@ const sendNoticeRows = computed(() => {
     { key: 'concept', label: 'Concepto', value: data.billing_concept || form.value.billing_concept },
     { key: 'total', label: 'Valor total', value: formatMoney(Number(data.total ?? 0), 'COP') },
     { key: 'issue', label: 'Fecha de emisión', value: data.issue_date ? formatDate(data.issue_date) : 'Hoy' },
-    {
+    ...(data.due_date_mode === 'none' ? [] : [{
       key: 'due',
       label: 'Fecha de vencimiento',
       value: data.due_date ? formatDate(data.due_date) : 'Sin vencimiento (pago inmediato)',
-    },
+    }]),
     { key: 'recipient', label: 'Se enviará a', value: data.customer_email || '—' },
   ];
 });
@@ -1031,9 +1096,9 @@ function askSendConfirmation() {
 
 async function confirmSend() {
   // The email cannot be undone: one click, one cuenta.
-  if (saving.value) return;
+  if (saving.value || !reviewedPayload.value) return;
   saving.value = true;
-  const result = await store.createCollectionAccount(buildPayload());
+  const result = await store.createCollectionAccount(reviewedPayload.value);
   saving.value = false;
   if (!result.success) {
     notify.error({
@@ -1093,6 +1158,16 @@ function downloadPdf() {
 }
 
 const modalFormId = useId();
+
+function focusIssue(issue) {
+  const group = document.getElementById(`${modalFormId}-${issue.field}`);
+  const hosting = issue.period && group?.querySelector('[data-hosting-period-group]');
+  const periodControl = hosting && (hosting.querySelector('select:not([name="hostingService"]):not(:disabled)') || hosting);
+  const target = issue.target && group?.querySelector(issue.target);
+  const control = target || periodControl || group?.querySelector('[aria-invalid="true"]:not(:disabled)')
+    || group?.querySelector('input:not(:disabled):not([type="hidden"]), select:not(:disabled), button:not(:disabled)');
+  (control || group)?.focus();
+}
 </script>
 
 <template>
@@ -1124,7 +1199,7 @@ const modalFormId = useId();
       novalidate
       @submit.prevent="goPreview"
     >
-      <BaseFormField label="Cliente" required :error="clientValidationError">
+      <BaseFormField :id="`${modalFormId}-client`" tabindex="-1" label="Cliente" required :error="clientValidationError">
         <div
           v-if="clientFromIncome"
           class="flex items-center justify-between gap-2 rounded-xl border border-border-default bg-surface-raised px-3 py-2.5 text-sm text-text-default"
@@ -1230,6 +1305,7 @@ const modalFormId = useId();
 
       <!-- Income combobox: mandatory link -->
       <BaseFormField
+        :id="`${modalFormId}-income`" tabindex="-1"
         label="Ingreso vinculado"
         required
         hint="Los ingresos perdidos nunca se listan"
@@ -1435,6 +1511,7 @@ const modalFormId = useId();
 
       <CollectionAccountProjectContext
         v-if="open"
+        :id="`${modalFormId}-context`" tabindex="-1"
         v-model="billingContext"
         :project-id="selectedIncome?.project || selectedIncome?.project_id || null"
         :client="selectedClient || (clientId ? { id: clientId, name: form.customer.name, email: form.customer.email, company: form.customer.name } : null)"
@@ -1442,7 +1519,8 @@ const modalFormId = useId();
         @reconcile="reconcileHosting"
         @nested-open="hostingModalOpen = $event"
         @valid="billingContextValid = $event"
-        @validation-message="billingContextMessage = $event"
+        :income-entry="incomeEntry"
+        @validation-message="updateContextMessages"
       />
 
       <BaseFormRow :cols="2" :gap="4" help="El consecutivo sugerido se puede editar.">
@@ -1454,7 +1532,7 @@ const modalFormId = useId();
             @input="onNumberInput"
           />
         </BaseFormField>
-        <BaseFormField label="Concepto del servicio" required :error="conceptValidationError">
+        <BaseFormField :id="`${modalFormId}-concept`" tabindex="-1" label="Concepto del servicio" required :error="conceptValidationError">
           <BaseInput
             v-model="form.billing_concept"
             data-testid="collection-form-concept"
@@ -1463,10 +1541,32 @@ const modalFormId = useId();
         </BaseFormField>
       </BaseFormRow>
 
-      <VatAmountInput v-model="form.unit_price" v-model:rate="form.vat_rate" :reset-key="open"
-          :error="amountValidationError"
-          input-test-id="collection-form-amount" :disabled="selectedIncome?.kind === 'liquid' || Number(selectedIncome?.paid_amount || 0) > 0"
-          disabled-reason="Este ingreso ya tiene pagos; se conservan su valor facturable y su IVA." @capture="form.vat_capture = $event" />
+      <VatAmountInput
+        :id="`${modalFormId}-amount`" tabindex="-1"
+        v-model="form.unit_price" :rate="form.vat_rate" :reset-key="open"
+        :error="amountValidationError" input-test-id="collection-form-amount"
+        :disabled="Boolean(amountLockReason)" :rate-disabled="incomeEntry && noVat"
+        :rate-disabled-reason="incomeEntry && noVat ? collectionText('noVatRateHelp') : ''"
+        :disabled-reason="amountLockReason"
+        @update:rate="updateVatRate" @capture="form.vat_capture = $event"
+      >
+        <template v-if="incomeEntry" #amount-actions="{ changeRate }">
+          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <label class="inline-flex items-center gap-2 text-sm">
+              <BaseToggle :model-value="noVat" :aria-label="collectionText('noVat')" size="sm"
+                :aria-describedby="`${modalFormId}-vat-help`"
+                :disabled="Boolean(amountLockReason)" :disabled-reason="amountLockReason"
+                data-testid="collection-no-vat" @update:model-value="changeRate($event ? 0 : form.prior_vat_rate)" />
+              {{ collectionText('noVat') }}
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm">
+              <BaseToggle v-model="form.show_vat" :aria-label="collectionText('showVat')" :aria-describedby="`${modalFormId}-vat-help`" size="sm" data-testid="collection-show-vat" />
+              {{ collectionText('showVat') }}
+            </label>
+          </div>
+          <p :id="`${modalFormId}-vat-help`" class="mt-1 text-xs text-text-muted">{{ collectionText('vatControlsHelp') }}</p>
+        </template>
+      </VatAmountInput>
       <p class="text-xs text-text-muted" data-testid="collection-income-vat-hint">
         Al emitir, el valor y el IVA se actualizarán también en el ingreso si todavía no tiene pagos ni deducciones.
       </p>
@@ -1497,27 +1597,34 @@ const modalFormId = useId();
       <BaseFormRow
         :cols="2"
         :gap="4"
-        :help="form.term === 'days'
-          ? '0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.'
-          : ''"
+        :help="noDueDate ? collectionText('noDueHelp') : form.term === 'days'
+          ? (incomeEntry ? collectionText('datedHelp') : '0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.') : ''"
         help-testid="collection-form-term-hint"
+        :help-id="`${modalFormId}-term-help`"
       >
         <BaseFormField label="Ciudad">
           <BaseInput v-model="form.city" placeholder="Ciudad de emisión" />
         </BaseFormField>
-        <BaseFormField label="Plazo de pago" :error="dueDateValidationError">
+        <BaseFormField :id="`${modalFormId}-term`" tabindex="-1" label="Plazo de pago" :error="dueDateValidationError">
           <div class="space-y-2">
-            <BaseSegmented v-model="form.term" :options="termOptions" full-width />
+            <label v-if="incomeEntry" class="flex items-center gap-2 text-sm">
+              <BaseToggle v-model="form.no_due_date" :aria-label="collectionText('noDueDate')" size="sm"
+                :aria-describedby="noDueDate || form.term === 'days' ? `${modalFormId}-term-help` : undefined"
+                data-testid="collection-no-due-date" />
+              {{ collectionText('noDueDate') }}
+            </label>
+            <BaseSegmented v-if="!noDueDate" v-model="form.term" :options="termOptions" full-width />
             <BaseInput
-              v-if="form.term === 'days'"
+              v-if="!noDueDate && form.term === 'days'"
               v-model="form.payment_term_days"
+              :aria-describedby="`${modalFormId}-term-help`"
               type="number"
               min="0"
               max="120"
               data-testid="collection-form-term-days"
             />
             <BaseInput
-              v-else
+              v-else-if="!noDueDate"
               v-model="form.due_date"
               type="date"
               :error="!!dueDateValidationError"
@@ -1536,7 +1643,7 @@ const modalFormId = useId();
           </BaseButton>
         </div>
         <p class="text-xs text-text-muted">Se completan desde la ficha del cliente: nombre, identificación, contacto, correo y dirección.</p>
-        <div v-if="editingClient" class="space-y-3" data-testid="collection-form-client-edit">
+        <div v-if="editingClient" :id="`${modalFormId}-client-edit`" tabindex="-1" class="space-y-3" data-testid="collection-form-client-edit">
           <ClientFormFields v-model="clientEdit" :errors="clientEditErrors" testid-prefix="collection-form-client-edit" dense @clear-error="clearClientEditError" />
           <div class="flex flex-wrap justify-end gap-2">
             <BaseButton type="button" variant="secondary" size="sm" :disabled="savingClient" @click="editingClient = false">Cancelar edición</BaseButton>
@@ -1548,10 +1655,10 @@ const modalFormId = useId();
           :gap="3"
           help="El correo se completa desde el cliente; cambiarlo aquí sólo afecta esta cuenta."
         >
-          <BaseFormField label="Nombre / Razón social">
+          <BaseFormField :id="`${modalFormId}-name`" tabindex="-1" label="Nombre / Razón social" :required="incomeEntry" :error="customerNameValidationError">
             <BaseInput v-model="form.customer.name" data-testid="collection-form-customer-name" />
           </BaseFormField>
-          <BaseFormField label="Correo destinatario de esta cuenta" required :error="customerEmailValidationError">
+          <BaseFormField :id="`${modalFormId}-email`" tabindex="-1" label="Correo destinatario de esta cuenta" required :error="customerEmailValidationError">
             <BaseInput
               v-model="form.customer.email"
               type="email"
@@ -1624,7 +1731,10 @@ const modalFormId = useId();
             {{ formatMoney(Number(preview?.total ?? 0), 'COP') }}
           </p>
         </div>
-        <VatBreakdown :total="preview?.total" :rate="preview?.vat_rate ?? null" :tax="preview?.vat_rate != null ? preview.tax_total : null" />
+        <VatBreakdown v-if="preview?.show_vat !== false" :total="preview?.total" :rate="preview?.vat_rate ?? null" :tax="preview?.vat_rate != null ? preview.tax_total : null" />
+        <p v-if="incomeEntry && preview?.due_date" class="text-sm" data-testid="collection-preview-due-date">
+          Fecha de vencimiento: {{ formatDate(preview.due_date) }}
+        </p>
         <p v-if="preview?.income_total" class="text-xs text-text-muted" data-testid="collection-preview-income-total">
           Total del ingreso al confirmar: {{ formatMoney(preview.income_total, 'COP') }}.
         </p>
@@ -1751,6 +1861,17 @@ const modalFormId = useId();
       <!-- Fixed: the send decision never needs scrolling to reach. -->
     </div>
     <template #footer>
+      <div v-if="step === 'form' && incomeEntry" :id="`${modalFormId}-issues`" aria-live="polite"
+        class="max-h-24 overflow-y-auto px-4 text-sm panel-portrait:px-6" data-testid="collection-preview-issues">
+        <template v-if="previewBlockers.length">
+          <p class="font-medium">{{ collectionText('previewIssues') }}</p>
+          <ul class="list-disc ps-5">
+            <li v-for="issue in previewBlockers" :key="issue.field + issue.message">
+              <a :href="`#${modalFormId}-${issue.field}`" class="text-text-brand underline" @click.prevent="focusIssue(issue)">{{ issue.message }}</a>
+            </li>
+          </ul>
+        </template>
+      </div>
       <BaseModalActions v-if="step === 'form'">
         <BaseButton type="button" variant="secondary" @click="close">
           Cancelar
@@ -1759,6 +1880,9 @@ const modalFormId = useId();
           type="submit" :form="modalFormId"
           variant="primary"
           :loading="previewing"
+          :disabled="incomeEntry && !canPreview"
+          :disabled-reason="previewBlockers[0]?.message"
+          :aria-describedby="incomeEntry && !canPreview ? `${modalFormId}-issues` : undefined"
           data-testid="collection-form-preview"
         >
           {{ previewing ? 'Generando...' : 'Previsualizar' }}
