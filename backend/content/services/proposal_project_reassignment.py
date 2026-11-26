@@ -16,8 +16,9 @@ from rest_framework.exceptions import PermissionDenied
 
 from accounts.models import Deliverable, HostingSubscription, Project, ProjectPhase
 from content.models import (
-    BusinessProposal, Document, ProjectRetentionContext, ProjectRetentionOperation,
-    ProposalApprovalFile, ProposalChangeLog, ProposalProjectReassignment,
+    BusinessProposal, Document, DocumentState, ProjectRetentionContext,
+    ProjectRetentionOperation, ProposalApprovalFile, ProposalChangeLog,
+    ProposalProjectReassignment,
 )
 from content.serializers.proposal_project_reassignment import ProposalProjectReassignmentSerializer
 from content.services.proposal_approval_service import ApprovalConflict, load_proposal
@@ -61,7 +62,11 @@ def preview_reassignment(proposal_id, target_project_id, *, hosting_start_date=N
             or (context and context.client_id != target.client_id)):
         block('different_client', 'El origen y el destino deben pertenecer al mismo cliente de la propuesta.')
     from accounts.services.project_catalog_service import project_catalog_bucket
-    if project_catalog_bucket(target) == 'archived':
+    if project_catalog_bucket(target) == 'archived' and not (
+        source is not None
+        and target.current_state_id is not None
+        and target.current_state.operational_effect == DocumentState.OperationalEffect.SUSPENDED
+    ):
         block('archived_target', 'Selecciona un proyecto de destino activo.')
     if proposal.client_id and proposal.client.archived_at:
         block('archived_client', 'El cliente está archivado.')
