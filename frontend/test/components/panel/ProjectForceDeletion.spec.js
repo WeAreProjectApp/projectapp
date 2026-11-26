@@ -4,6 +4,10 @@ import ProjectDeleteModal from '../../../components/panel/projects/ProjectDelete
 import { usePanelProjectsStore } from '../../../stores/panel_projects';
 import translations from '../../../locales/projectAccess/es';
 
+jest.mock('#imports', () => ({
+  useI18n: () => ({ locale: { value: 'es-co' }, t: (key, params) => mockTranslate(key, params) }),
+}));
+
 const PROJECT = {
   id: 7,
   name: 'Proyecto siete',
@@ -16,18 +20,32 @@ const PROJECT_EIGHT = {
   name: 'Proyecto ocho',
 };
 const PREVIEW_SEVEN = {
+  project: { id: PROJECT.id },
   can_delete: true,
+  delete_keys: [],
   impact_token: 'force-token-7',
   dependencies: [{ key: 'documents', label: 'Documentos', description: 'Archivos del proyecto.', count: 2 }],
   blockers: [],
 };
 const PREVIEW_EIGHT = {
+  project: { id: PROJECT_EIGHT.id },
   can_delete: true,
+  delete_keys: [],
   impact_token: 'force-token-8',
   dependencies: [{ key: 'contracts', label: 'Contratos', description: 'Acuerdos del proyecto.', count: 4 }],
   blockers: [],
 };
-const t = (key) => key.split('.').slice(1).reduce((value, part) => value?.[part], translations) || key;
+const mockTranslate = (key, params = {}) => {
+  const message = key.split('.').slice(1).reduce((value, part) => value?.[part], translations) || key;
+  return message.replace(/\{(\w+)\}/g, (_, name) => params[name]);
+};
+const forcePreview = (deleteKeys, token) => ({
+  success: true,
+  data: { ...PREVIEW_SEVEN, delete_keys: deleteKeys, impact_token: token },
+});
+const category = '[data-testid="project-delete-category-documents"]';
+const forceConfirm = '[data-testid="project-force-delete-confirm"]';
+const confirmation = '[data-testid="project-force-delete-confirmation"]';
 
 function mountModal(props = {}) {
   const pinia = createPinia();
@@ -72,7 +90,7 @@ function mountModal(props = {}) {
           template: '<button v-bind="$attrs" :disabled="disabled || loading" @click="$emit(\'click\')"><slot /></button>',
         },
       },
-      mocks: { $t: t, $te: (key) => t(key) !== key },
+      mocks: { $t: mockTranslate, $te: (key) => mockTranslate(key) !== key },
     },
   });
   return { wrapper, projectStore };
@@ -157,7 +175,7 @@ describe('ProjectDeleteModal force deletion', () => {
 
     projectStore.previewDeletion.mockResolvedValueOnce({
       success: true,
-      data: { ...PREVIEW_SEVEN, impact_token: 'force-token-documents' },
+      data: { ...PREVIEW_SEVEN, delete_keys: ['documents'], impact_token: 'force-token-documents' },
     });
     await wrapper.get('[data-testid="project-delete-category-documents"]').trigger('click');
     await flushPromises();
@@ -173,7 +191,7 @@ describe('ProjectDeleteModal force deletion', () => {
     await enterForceMode(wrapper);
     projectStore.previewDeletion.mockResolvedValueOnce({
       success: true,
-      data: { ...PREVIEW_SEVEN, impact_token: 'force-token-documents' },
+      data: { ...PREVIEW_SEVEN, delete_keys: ['documents'], impact_token: 'force-token-documents' },
     });
     await wrapper.get('[data-testid="project-delete-category-documents"]').trigger('click');
     await flushPromises();
@@ -195,8 +213,8 @@ describe('ProjectDeleteModal force deletion', () => {
     const { wrapper, projectStore } = mountModal();
     projectStore.deleteProject.mockResolvedValue({
       success: false,
-      message: 'Las dependencias cambiaron.',
-      preview: { ...PREVIEW_EIGHT, blockers: [{ message: 'Hay un contrato compartido.' }] },
+      code: 'stale_project_delete_preview',
+      preview: { ...PREVIEW_SEVEN, blockers: [{ message: 'Hay un contrato compartido.' }] },
     });
     await enterForceMode(wrapper);
     await wrapper.get('[data-testid="project-force-delete-confirmation"]').setValue('DELETE');
@@ -204,7 +222,7 @@ describe('ProjectDeleteModal force deletion', () => {
     await flushPromises();
 
     expect(wrapper.get('[data-testid="project-force-delete-confirmation"]').element.value).toBe('');
-    expect(wrapper.get('[data-testid="project-force-delete-error"]').text()).toBe('Las dependencias cambiaron.');
+    expect(wrapper.get('[data-testid="project-force-delete-error"]').text()).toBe('Las dependencias cambiaron. Revisa el alcance y escribe DELETE de nuevo.');
     expect(wrapper.emitted('close')).toBeUndefined();
   });
 
@@ -239,4 +257,45 @@ describe('ProjectDeleteModal force deletion', () => {
     expect(wrapper.get('[data-testid="project-force-delete-confirm"]').element.disabled).toBe(false);
   });
 
+  it('uses only the latest forced impact for confirmation', async () => {
+    const { wrapper, projectStore } = mountModal();
+    let resolveEarlier;
+    let resolveLatest;
+    projectStore.previewDeletion
+      .mockResolvedValueOnce(forcePreview([], 'initial'))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveEarlier = resolve; }))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveLatest = resolve; }));
+    await enterForceMode(wrapper);
+
+    await wrapper.get(category).trigger('click');
+    await wrapper.get(category).trigger('click');
+    await wrapper.get(confirmation).setValue('DELETE');
+    await wrapper.get(forceConfirm).trigger('click');
+    expect(projectStore.deleteProject).not.toHaveBeenCalled();
+
+    resolveLatest(forcePreview([], 'latest'));
+    resolveEarlier(forcePreview(['documents'], 'earlier'));
+    await flushPromises();
+    await wrapper.get(forceConfirm).trigger('click');
+
+    expect(projectStore.deleteProject).toHaveBeenCalledWith(7, {
+      force: true, delete_keys: [], impact_token: 'latest', confirmation: 'DELETE',
+    });
+  });
+
+  it('rejects an impact that echoes another selection', async () => {
+    const { wrapper, projectStore } = mountModal();
+    projectStore.previewDeletion
+      .mockResolvedValueOnce(forcePreview([], 'initial'))
+      .mockResolvedValueOnce(forcePreview([], 'mismatch'));
+    await enterForceMode(wrapper);
+
+    await wrapper.get(category).trigger('click');
+    await flushPromises();
+    await wrapper.get(confirmation).setValue('DELETE');
+
+    expect(wrapper.get(forceConfirm).attributes()).toHaveProperty('disabled');
+    expect(wrapper.get(category).attributes('aria-checked')).toBe('true');
+    expect(wrapper.get('[data-testid="project-force-delete-error"]').text()).toContain('No se pudieron comprobar');
+  });
 });

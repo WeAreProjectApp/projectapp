@@ -3,8 +3,6 @@ import { createPinia, setActivePinia } from 'pinia';
 import ProjectDeleteModal from '../../../components/panel/projects/ProjectDeleteModal.vue';
 import { usePanelProjectsStore } from '../../../stores/panel_projects';
 import translations from '../../../locales/projectAccess/es';
-import BaseToggle from '../../../components/base/BaseToggle.vue';
-import BaseInput from '../../../components/base/BaseInput.vue';
 
 jest.mock('#imports', () => ({
   useI18n: () => ({ locale: { value: 'es-co' }, t: (key, params) => mockTranslate(key, params) }),
@@ -17,32 +15,15 @@ const mockTranslate = (key, params = {}) => {
   const message = key.split('.').slice(1).reduce((value, part) => value?.[part], translations) || key;
   return message.replace(/\{(\w+)\}/g, (_, name) => params[name]);
 };
-const forcePreview = (deleteKeys, token) => ({
-  success: true,
-  data: {
-    project: { id: 7 }, delete_keys: deleteKeys, impact_token: token, can_delete: true, blockers: [],
-    dependencies: [{ key: 'documents', label: 'Documentos', label_en: 'Documents', count: 2,
-      description: 'Documentos vinculados.', description_en: 'Linked documents.' }],
-  },
-});
-const category = '[data-testid="project-delete-category-documents"]';
-const forceConfirm = '[data-testid="project-force-delete-confirm"]';
-const confirmation = '[data-testid="project-force-delete-confirmation"]';
 
-async function openModal(preview = empty, isSuperuser = false) {
+async function openModal(preview = empty) {
   const store = usePanelProjectsStore();
   jest.spyOn(store, 'previewDeletion').mockResolvedValue({ success: true, data: preview });
   jest.spyOn(store, 'deleteProject').mockResolvedValue({ success: true });
   const wrapper = mount(ProjectDeleteModal, {
-    props: { project, isSuperuser },
+    props: { project },
     global: {
-      components: { BaseToggle, BaseInput },
-      stubs: {
-        NuxtLink: { template: '<a><slot /></a>' },
-        BaseModal: { template: '<div role="dialog"><slot /></div>' },
-        BaseAlert: { template: '<div><slot /></div>' },
-        BaseFormField: { template: '<label><slot /></label>' },
-      },
+      stubs: { NuxtLink: { template: '<a><slot /></a>' }, BaseModal: { template: '<div role="dialog"><slot /></div>' } },
       mocks: { $t: mockTranslate, $te: (key) => mockTranslate(key) !== key },
     },
   });
@@ -133,49 +114,5 @@ describe('ProjectDeleteModal', () => {
     expect(store.deleteProject).toHaveBeenCalledTimes(1);
     resolve({ success: true });
     await flushPromises();
-  });
-
-  it('uses only the latest forced impact for confirmation', async () => {
-    const { wrapper, store } = await openModal(blocked, true);
-    let resolveEarlier;
-    let resolveLatest;
-    store.previewDeletion
-      .mockResolvedValueOnce(forcePreview([], 'initial'))
-      .mockReturnValueOnce(new Promise((resolve) => { resolveEarlier = resolve; }))
-      .mockReturnValueOnce(new Promise((resolve) => { resolveLatest = resolve; }));
-    await wrapper.get('[data-testid="project-force-delete-toggle"]').trigger('click');
-    await flushPromises();
-
-    await wrapper.get(category).trigger('click');
-    await wrapper.get(category).trigger('click');
-    await wrapper.get(confirmation).setValue('DELETE');
-    await wrapper.get(forceConfirm).trigger('click');
-    expect(store.deleteProject).not.toHaveBeenCalled();
-
-    resolveLatest(forcePreview([], 'latest'));
-    resolveEarlier(forcePreview(['documents'], 'earlier'));
-    await flushPromises();
-    await wrapper.get(forceConfirm).trigger('click');
-
-    expect(store.deleteProject).toHaveBeenCalledWith(7, {
-      force: true, delete_keys: [], impact_token: 'latest', confirmation: 'DELETE',
-    });
-  });
-
-  it('rejects an impact that echoes another selection', async () => {
-    const { wrapper, store } = await openModal(blocked, true);
-    store.previewDeletion
-      .mockResolvedValueOnce(forcePreview([], 'initial'))
-      .mockResolvedValueOnce(forcePreview([], 'mismatch'));
-    await wrapper.get('[data-testid="project-force-delete-toggle"]').trigger('click');
-    await flushPromises();
-
-    await wrapper.get(category).trigger('click');
-    await flushPromises();
-    await wrapper.get(confirmation).setValue('DELETE');
-
-    expect(wrapper.get(forceConfirm).attributes()).toHaveProperty('disabled');
-    expect(wrapper.get(category).attributes('aria-checked')).toBe('true');
-    expect(wrapper.get('[data-testid="project-force-delete-error"]').text()).toContain('No se pudieron comprobar');
   });
 });

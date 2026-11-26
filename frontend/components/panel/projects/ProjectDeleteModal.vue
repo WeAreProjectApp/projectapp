@@ -106,7 +106,7 @@ async function loadDeletionPreview() {
       Array.isArray(impact.delete_keys) &&
       impact.delete_keys.length === deleteKeys.length &&
       deleteKeys.every((key) => impact.delete_keys.includes(key)) &&
-      (!impact.project || impact.project.id === id)) {
+      impact.project?.id === id) {
     deletionPreview.value = impact
     currentImpact.value = true
   } else {
@@ -148,7 +148,9 @@ async function confirmForceDeletion() {
     confirmation.value = ''
     currentImpact.value = false
     // A conflict supplies information to review, never authority to retry.
-    if (result.preview?.dependencies) deletionPreview.value = result.preview
+    if (result.preview?.project?.id === id && Array.isArray(result.preview.dependencies)) {
+      deletionPreview.value = result.preview
+    }
     deletionError.value = errorText(result, 'deleteFailed')
   }
 }
