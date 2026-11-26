@@ -967,6 +967,19 @@ def _list_schema(key):
 _RECORD_ID_PROP = {'record_id': {'type': 'integer', 'description': 'ID del registro.'}}
 
 _SETTLEMENT_PROPS = {
+    'hosting_receipt': {
+        'type': 'object', 'additionalProperties': False, 'required': ['entries'],
+        'description': 'Comprobante estable compartido por Hostings e Ingresos; también permite vincular un asiento existente.',
+        'properties': {
+            'issuer': {'type': 'string', 'maxLength': 96, 'description': 'Fuente emisora del comprobante.'},
+            'reference': {'type': 'string', 'maxLength': 128, 'description': 'Folio o transacción de la fuente emisora.'},
+            'entries': {'type': 'array', 'minItems': 1, 'items': {
+                'type': 'object', 'additionalProperties': False, 'required': ['income_id', 'hosting_record_id'],
+                'properties': {key: {'type': 'integer', 'minimum': 1} for key in
+                               ('income_id', 'hosting_record_id', 'liquid_id', 'cycle_id')},
+            }},
+        },
+    },
     **_RECORD_ID_PROP,
     'preview_hash': {'type': 'string', 'description': 'Huella de preview_income_settlement; rechaza saldos o destinatarios cambiados.'},
     'request_id': {'type': 'string', 'format': 'uuid', 'description': 'Identidad de reintento de la misma liquidación; no reutilizar con otros datos.'},
@@ -1154,7 +1167,7 @@ _ABONO_PROPS = {
 # Both adapters configure the source income; payments still inherit its VAT.
 _ABONO_PROPS.update({key: deepcopy(_SETTLEMENT_PROPS[key]) for key in (
     'destination', 'gustavo_amount', 'carlos_amount', 'deductions',
-    'send_payment_confirmation', 'preview_hash', 'request_id', 'vat_updates',
+    'send_payment_confirmation', 'preview_hash', 'request_id', 'vat_updates', 'hosting_receipt',
 )})
 _ABONO_PROPS['destination']['default'] = 'pocket'
 _ABONO_PROPS['income_ids'] = {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 500, 'description': 'Ingresos seleccionados. Si omites allocations, propone cobertura más antigua primero y deducciones proporcionales.'}

@@ -4,8 +4,11 @@ from decimal import Decimal
 
 import pytest
 
+from accounts.models import HostingSubscription, Payment, Project
+from accounts.services.hosting_context import reconcile_hosting
 from accounts.services.proposal_client_service import build_client_display_name
 from content.models import AccountingChangeLog, Document, HostingRecord
+from content.services.hosting_periods import current_summary
 
 pytestmark = pytest.mark.django_db
 
@@ -41,6 +44,45 @@ def make_hosting(**overrides):
     }
     defaults.update(overrides)
     return HostingRecord.objects.create(**defaults)
+
+
+def emission_payload(hosting, actor):
+    project = Project.objects.create(
+        name=f'Hosting {hosting.pk}',
+        client=hosting.client.user,
+        status=Project.STATUS_ACTIVE,
+    )
+    hosting.project = project
+    hosting.save(update_fields=['project'])
+    subscription = HostingSubscription.objects.create(
+        project=project,
+        plan=HostingSubscription.PLAN_SEMIANNUAL,
+        base_monthly_amount=hosting.monthly_value,
+        effective_monthly_amount=hosting.monthly_value,
+        billing_amount=hosting.payment_per_cycle,
+        start_date='2026-01-20',
+        status=HostingSubscription.STATUS_ACTIVE,
+    )
+    payment = Payment.objects.create(
+        subscription=subscription,
+        amount=hosting.payment_per_cycle,
+        status=Payment.STATUS_PENDING,
+        billing_period_start='2026-07-20',
+        billing_period_end='2027-01-19',
+        due_date='2026-07-20',
+    )
+    reconcile_hosting(project.pk, actor, {
+        'expected_version': 0,
+        'reason': 'Período pendiente verificado por la fixture.',
+        'subscription_id': subscription.pk,
+        'hosting_record_ids': [hosting.pk],
+        'operational_record_id': hosting.pk,
+    })
+    summary = current_summary(project.pk)
+    return {
+        'hosting_payment_id': payment.pk,
+        'period_version': summary['version'],
+    }
 
 
 def _ids(response):
@@ -108,15 +150,18 @@ class TestClientFilter:
 
 class TestBillingInheritsTheClient:
     def test_a_hosting_without_email_is_billable_through_its_client(
-        self, super_client, make_client_profile, mailoutbox,
+        self, super_client, superuser, make_client_profile, mailoutbox,
     ):
         # The production shape: no client_email anywhere, so this used to be
         # unbillable outright.
         profile = make_client_profile(company='Acme SAS')
         hosting = make_hosting(client=profile, client_email='')
+        payload = emission_payload(hosting, superuser)
 
         response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            payload,
+            format='json',
         )
 
         assert response.status_code == 201, response.data
@@ -124,20 +169,24 @@ class TestBillingInheritsTheClient:
         assert mailoutbox[0].to == [profile.user.email]
 
     def test_the_hosting_email_overrides_the_client_one(
-        self, super_client, make_client_profile, mailoutbox,
+        self, super_client, superuser, make_client_profile, mailoutbox,
     ):
         hosting = make_hosting(
             client=make_client_profile(), client_email='pagos@kore.co',
         )
+        payload = emission_payload(hosting, superuser)
 
-        super_client.post(
+        response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            payload,
+            format='json',
         )
 
+        assert response.status_code == 201, response.data
         assert mailoutbox[0].to == ['pagos@kore.co']
 
     def test_a_linked_hosting_uses_the_per_client_series(
-        self, super_client, make_client_profile,
+        self, super_client, superuser, make_client_profile,
     ):
         # NIT present, so the code derives from the company name. Without one
         # the same client would number under the person's name — the code
@@ -145,47 +194,60 @@ class TestBillingInheritsTheClient:
         hosting = make_hosting(client=make_client_profile(
             company='Acme SAS', nit='900123456-7',
         ))
+        payload = emission_payload(hosting, superuser)
 
         response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            payload,
+            format='json',
         )
 
         number = response.data['document']['public_number']
         assert re.fullmatch(r'[A-Z]+-[A-Z0-9]+-\d{3}', number), number
         assert number.startswith('PA-ACMESAS-')
 
-    def test_a_hosting_without_client_keeps_the_legacy_series(
+    def test_a_hosting_without_client_or_reviewed_period_is_not_issued(
         self, super_client,
     ):
         hosting = make_hosting(client_email='german@korehealths.com')
 
         response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            {},
+            format='json',
         )
 
-        number = response.data['document']['public_number']
-        assert re.fullmatch(r'[A-Z]+-\d{4}-\d{4}', number), number
+        assert response.status_code == 400
+        assert 'period_version' in response.data
+        assert not Document.objects.exists()
 
     def test_the_document_links_the_client_user(
-        self, super_client, make_client_profile,
+        self, super_client, superuser, make_client_profile,
     ):
         profile = make_client_profile()
         hosting = make_hosting(client=profile)
+        payload = emission_payload(hosting, superuser)
 
         response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            payload,
+            format='json',
         )
 
         document = Document.objects.get(pk=response.data['document']['id'])
         assert document.client_user_id == profile.user_id
 
     def test_without_any_recipient_the_error_says_what_to_do(
-        self, super_client,
+        self, super_client, superuser, make_client_profile,
     ):
-        hosting = make_hosting(client_email='')
+        profile = make_client_profile(email='')
+        hosting = make_hosting(client=profile, client_email='')
+        payload = emission_payload(hosting, superuser)
 
         response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            payload,
+            format='json',
         )
 
         assert response.status_code == 400

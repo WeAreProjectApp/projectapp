@@ -117,6 +117,9 @@ function accountingHandler(calls, { incomeCreateStatus = 201 } = {}) {
     if (apiPath.startsWith('proposals/client-profiles/search/') && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([CLIENT]) };
     }
+    if (apiPath === 'proposals/client-profiles/5/' && method === 'GET') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify(CLIENT) };
+    }
     if (apiPath.startsWith('proposals/client-profiles/5/projects/') && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
     }
@@ -140,6 +143,8 @@ function accountingHandler(calls, { incomeCreateStatus = 201 } = {}) {
     if (apiPath === 'accounting/collection-accounts/preview/' && method === 'POST') {
       const body = route.request().postDataJSON();
       calls.push({ apiPath, method, body });
+      const showVat = body.show_vat !== false;
+      const noDueDate = body.due_date_mode === 'none';
       return {
         status: 200,
         contentType: 'application/json',
@@ -148,14 +153,19 @@ function accountingHandler(calls, { incomeCreateStatus = 201 } = {}) {
           customer_email: CLIENT.email,
           public_number: 'PA-ACME-001',
           total: '1190000.00',
+          show_vat: showVat,
+          vat_rate: body.vat_rate,
+          tax_total: body.vat_rate === '0' || body.vat_rate === 0 ? '0.00' : '190000.00',
+          due_date_mode: noDueDate ? 'none' : 'dated',
+          due_date: noDueDate ? null : (Number(body.payment_term_days) === 0 ? '2026-11-26' : '2026-12-04'),
           pdf_url: PREVIEW_PDF_URL,
-          html_body: [
+          html_body: showVat ? [
             '<main>',
             '<p>Valor antes de IVA: $1.000.000 COP</p>',
             '<p>IVA (19%): $190.000 COP</p>',
             '<p>Total a pagar: $1.190.000 COP</p>',
             '</main>',
-          ].join(''),
+          ].join('') : '<main><p>Total a pagar: $1.190.000 COP</p></main>',
         }),
       };
     }
@@ -198,17 +208,106 @@ test.describe('Admin accounting VAT', () => {
         await page.getByTestId('income-action-generate-collection-8').click();
         const rate = page.getByTestId('vat-rate');
 
-        await page.getByRole('button', { name: 'Sin IVA', exact: true }).click();
+        const noVat = page.getByTestId('collection-no-vat');
+        await noVat.click();
 
         await expect(rate).toHaveValue('0');
         await expect(page.getByTestId('vat-breakdown')).toContainText('IVA (0 %)');
         await expect(page.getByTestId('vat-tax')).toContainText('$0');
         await page.screenshot({ path: testInfo.outputPath('collection-vat.png'), fullPage: true });
+        await noVat.click();
         await rate.fill('');
         await expect(page.getByTestId('vat-tax')).toHaveText('IVA sin registrar');
       });
     });
   }
+
+  test.describe('PA-301 presentation toggles from Ingresos', () => {
+    test.use(viewportUse('compact'));
+
+    test('keyboard VAT toggles preserve the amount while the preview hides its breakdown', {
+      tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      // Catches the disagreement where the compact keyboard controls said
+      // "Sin IVA" while the preview email/PDF still exposed IVA, or altered
+      // the total rather than only its presentation.
+      const calls = [];
+      await mockApi(page, accountingHandler(calls));
+      await page.goto(`${PANEL_PATH}/incomes`, { waitUntil: 'domcontentloaded' });
+      await page.getByTestId('income-actions-8').click();
+      await page.getByTestId('income-action-generate-collection-8').click();
+
+      const noVat = page.getByTestId('collection-no-vat');
+      const showVat = page.getByTestId('collection-show-vat');
+      await expect(noVat).toHaveAccessibleName('Sin IVA');
+      await expect(showVat).toHaveAccessibleDescription(/Mostrar IVA controla el desglose/);
+      await expect(showVat).toHaveAttribute('aria-checked', 'true');
+      await noVat.focus();
+      await page.keyboard.press('Space');
+      await expect(noVat).toHaveAttribute('aria-checked', 'true');
+      await expect(page.getByTestId('vat-rate')).toHaveValue('0');
+      await showVat.focus();
+      await page.keyboard.press('Space');
+      await expect(showVat).toHaveAttribute('aria-checked', 'false');
+
+      await page.getByTestId('collection-form-preview').click();
+      await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-ACME-001');
+      await expect(page.getByTestId('collection-preview-subject').locator('..'))
+        .toContainText('Total: $1.190.000 COP');
+      await expect(page.getByTestId('vat-breakdown')).toHaveCount(0);
+      await page.getByTestId('collection-preview-tab-email').click();
+      const email = page.frameLocator('[data-testid="collection-preview-email"]');
+      await expect(email.getByText('Total a pagar: $1.190.000 COP')).toHaveCount(1);
+      await expect(email.getByText(/IVA/)).toHaveCount(0);
+
+      const previewCall = calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/');
+      expect(previewCall.body).toMatchObject({
+        income_record_id: 8,
+        vat_rate: 0,
+        show_vat: false,
+        items: [{ amount: '1190000', amount_mode: 'vat_included' }],
+      });
+    });
+
+    test('zero days remains a dated immediate account while no due date omits it and restores the draft', {
+      tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
+    }, async ({ page }) => {
+      // Catches the regression where zero days silently became "no date", or
+      // where toggling the explicit mode discarded the payment-term draft.
+      const calls = [];
+      await mockApi(page, accountingHandler(calls));
+      await page.goto(`${PANEL_PATH}/incomes`, { waitUntil: 'domcontentloaded' });
+      await page.getByTestId('income-actions-8').click();
+      await page.getByTestId('income-action-generate-collection-8').click();
+
+      const days = page.getByTestId('collection-form-term-days');
+      await days.fill('0');
+      await page.getByTestId('collection-form-preview').click();
+      await expect(page.getByTestId('collection-preview-due-date')).toContainText('Fecha de vencimiento:');
+      await expect(page.getByTestId('collection-preview-due-date')).toContainText('26 nov 2026');
+      await page.getByTestId('collection-form-back').click();
+
+      const noDueDate = page.getByTestId('collection-no-due-date');
+      await noDueDate.click();
+      await expect(days).toHaveCount(0);
+      await expect(page.getByTestId('collection-form-term-hint'))
+        .toHaveText('La cuenta saldrá sin fecha de vencimiento.');
+      await noDueDate.click();
+      await expect(days).toHaveValue('0');
+
+      await noDueDate.click();
+      await page.getByTestId('collection-form-preview').click();
+      await expect(page.getByTestId('collection-preview-due-date')).toHaveCount(0);
+      await page.getByTestId('collection-form-confirm').click();
+      await expect(page.getByTestId('collection-send-notice-due')).toHaveCount(0);
+
+      const previewCalls = calls.filter((call) => call.apiPath === 'accounting/collection-accounts/preview/');
+      expect(previewCalls).toHaveLength(2);
+      expect(previewCalls[0].body).toMatchObject({ due_date_mode: 'dated', payment_term_days: 0 });
+      expect(previewCalls[1].body).toMatchObject({ due_date_mode: 'none' });
+      expect(previewCalls[1].body).not.toHaveProperty('payment_term_days');
+    });
+  });
 
   // Bug caught: a company income could silently treat a pre-tax value as a total,
   // understating both its total payable and partner distribution.

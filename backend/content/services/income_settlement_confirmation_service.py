@@ -3,7 +3,7 @@ from content.services import income_payment_confirmation_service as confirmation
 
 
 def confirm_operation(result, data, *, schedule=False):
-    if result.get('replayed'):
+    if result.get('replayed') or result.get('linked_existing_cash'):
         return []
     selected = data.get('confirmation_income_ids')
     results = []

@@ -3,9 +3,11 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from accounts.models import Project
+from accounts.models import HostingSubscription, Payment, Project, UserProfile
+from accounts.services.hosting_context import reconcile_hosting
 
 from content.models import (
     Document,
@@ -20,8 +22,10 @@ from content.services.document_type_utils import (
 from content.services.hosting_billing_service import (
     send_hosting_collection_account,
 )
+from content.services.hosting_periods import current_summary
 
 pytestmark = pytest.mark.django_db
+User = get_user_model()
 
 
 @pytest.fixture(autouse=True)
@@ -54,15 +58,64 @@ def make_hosting(**overrides):
     return HostingRecord.objects.create(**defaults)
 
 
+def emission_payload(hosting, actor, *, profile_email=None):
+    email = profile_email if profile_email is not None else f'client-{hosting.pk}@example.test'
+    user = User.objects.create_user(
+        username=f'client-{hosting.pk}@example.test', email=email,
+    )
+    profile, _ = UserProfile.objects.update_or_create(
+        user=user,
+        defaults={'role': UserProfile.ROLE_CLIENT, 'company_name': hosting.client_name},
+    )
+    project = Project.objects.create(
+        name=f'Hosting {hosting.pk}', client=user, status=Project.STATUS_ACTIVE,
+    )
+    hosting.client = profile
+    hosting.project = project
+    hosting.save(update_fields=['client', 'project'])
+    subscription = HostingSubscription.objects.create(
+        project=project,
+        plan=HostingSubscription.PLAN_SEMIANNUAL,
+        base_monthly_amount=hosting.monthly_value,
+        effective_monthly_amount=hosting.monthly_value,
+        billing_amount=hosting.payment_per_cycle,
+        start_date=date(2026, 1, 20),
+        status=HostingSubscription.STATUS_ACTIVE,
+    )
+    payment = Payment.objects.create(
+        subscription=subscription,
+        amount=hosting.payment_per_cycle,
+        status=Payment.STATUS_PENDING,
+        billing_period_start=date(2026, 7, 20),
+        billing_period_end=date(2027, 1, 19),
+        due_date=date(2026, 7, 20),
+    )
+    reconcile_hosting(project.pk, actor, {
+        'expected_version': 0,
+        'reason': 'Período pendiente verificado por la fixture.',
+        'subscription_id': subscription.pk,
+        'hosting_record_ids': [hosting.pk],
+        'operational_record_id': hosting.pk,
+    })
+    summary = current_summary(project.pk)
+    return {
+        'hosting_payment_id': payment.pk,
+        'period_version': summary['version'],
+    }
+
+
 def issue_for(hosting):
     return send_hosting_collection_account(hosting)['document']
 
 
 class TestSendEndpoint:
-    def test_send_creates_and_emails(self, super_client):
+    def test_send_creates_and_emails(self, super_client, superuser):
         hosting = make_hosting()
+        payload = emission_payload(hosting, superuser)
         response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            payload,
+            format='json',
         )
         assert response.status_code == 201, response.data
         assert response.data['email_sent'] is True
@@ -71,10 +124,13 @@ class TestSendEndpoint:
         hosting.refresh_from_db()
         assert hosting.billing_requested_at is not None
 
-    def test_send_without_client_email_returns_400(self, super_client):
+    def test_send_without_client_email_returns_400(self, super_client, superuser):
         hosting = make_hosting(client_email='')
+        payload = emission_payload(hosting, superuser, profile_email='')
         response = super_client.post(
             f'/api/accounting/hostings/{hosting.pk}/send-collection-account/',
+            payload,
+            format='json',
         )
         assert response.status_code == 400
         assert 'email' in response.data['error']

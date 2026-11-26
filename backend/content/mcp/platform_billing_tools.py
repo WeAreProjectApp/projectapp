@@ -20,6 +20,7 @@ from accounts.services.hosting_context import (
     reconcile_evidence,
     reconcile_hosting,
 )
+from content.services.hosting_periods import current_summary
 from rest_framework.exceptions import APIException
 
 from content.mcp.actor import mcp_actor
@@ -202,7 +203,8 @@ PLATFORM_BILLING_TOOLS = [
     _tool('get_project_hosting', 'Consulta un hosting por proyecto y sus pagos, cuentas y evidencias sin sumar orígenes no conciliados.',
           lambda args, actor, data: project_hosting_read(args['project_id'], actor)),
     _tool('get_project_hosting_inventory', 'Inventaría orígenes históricos, contradicciones, cuentas pendientes y decisiones auditadas.',
-          lambda args, actor, data: hosting_inventory(args['project_id'], actor)),
+          lambda args, actor, data: {**hosting_inventory(args['project_id'], actor),
+                                     'billing_period': current_summary(args['project_id'])}),
     _tool('get_collection_account_context', 'Consulta el contexto, document_pending, pending_by y pending_at; distingue decisiones explícitas de históricos sin asociación.',
           _read_account, required=('account_id',)),
     _tool('associate_collection_account_context', 'Completa el documento pendiente o corrige contrato/otrosí O hosting con versión y motivo, sin cambiar PDF, importe ni estado financiero.',

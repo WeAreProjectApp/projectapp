@@ -335,6 +335,7 @@
       @history="historyRow = $event"
       @notes="noteRow = $event"
       @cycles="openCyclesModal"
+      @next-income="openNextIncome($event)"
       @send-billing="askSendBilling"
       @emails="goToHostingEmails"
       @edit="openEditModal"
@@ -379,7 +380,9 @@
       :record="cyclesRecord"
       @close="closeCyclesModal"
       @changed="onCyclesChanged"
+      @next-income="openNextIncome(cyclesRecord, $event)"
     />
+    <HostingNextIncomeModal :record="nextIncomeRecord" :reference-income-id="nextReferenceId" @close="nextIncomeRecord = null" />
 
     <EntityHistoryRecordModal
       :open="historyRow !== null"
@@ -424,6 +427,7 @@ import AccountingIndicatorGroup from '~/components/accounting/AccountingIndicato
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
 import AccountingStatusSelect from '~/components/accounting/AccountingStatusSelect.vue';
 import AccountingInlineCell from '~/components/accounting/AccountingInlineCell.vue';
+import HostingNextIncomeModal from '~/components/accounting/HostingNextIncomeModal.vue';
 import HostingCyclesModal from '~/components/accounting/HostingCyclesModal.vue';
 import HostingActionsModal from '~/components/accounting/HostingActionsModal.vue';
 import HostingAccountEmissionModal from '~/components/accounting/billing/HostingAccountEmissionModal.vue';
@@ -944,6 +948,15 @@ const {
 
 function openCyclesModal(row) {
   openCyclesById(row.id);
+}
+
+const nextIncomeRecord = ref(null);
+const nextReferenceId = ref(null);
+function openNextIncome(row, reference = null) {
+  if (!row) return;
+  nextIncomeRecord.value = row;
+  nextReferenceId.value = reference;
+  if (cyclesModalOpen.value) closeCyclesModal();
 }
 
 function goToHostingEmails(row) {

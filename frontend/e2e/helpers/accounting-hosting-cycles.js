@@ -11,6 +11,8 @@ export function hostingRows({ billingSent }) {
     display_label: 'German — Kore',
       client: 5,
       client_display_name: 'Germán Franco',
+      project: 10,
+      project_id: 10,
       billing_email: 'german@korehealths.com',
       client_email: 'german@korehealths.com',
       domain_url: 'https://korehealths.com/',
@@ -70,14 +72,59 @@ export const BACKFILL_CYCLE = {
   notes: 'Backfill histórico',
 };
 
+export const HOSTING_PERIOD = {
+  income_id: 301,
+  hosting_record_id: 1,
+  project_hosting_id: 90,
+  hosting_payment_id: 401,
+  source: 'subscription',
+  concept: 'Hosting Kore septiembre 2026',
+  period_start: '2026-09-03',
+  period_end: '2027-03-02',
+  state: 'pending',
+  amount: '550002.00',
+  received: '0.00',
+  balance: '550002.00',
+  documents: [],
+  cycles: [],
+  liquids: [],
+  version: 'hosting-period-401-v1',
+};
+
+function billingContext({ period = HOSTING_PERIOD, blocked = '' } = {}) {
+  return {
+    overview: {
+      hosting_id: 90,
+      reconciliation_required: false,
+      accounting_sources: [{ id: 1, operational: true }],
+    },
+    selection: {
+      requires_reconciliation: false,
+      candidates: [{
+        project_hosting_id: 90,
+        hosting_record_id: 1,
+        domain_url: 'https://korehealths.com/',
+        payment_modality: 'semiannual',
+        is_active: true,
+        selectable: true,
+        requires_association: false,
+      }],
+    },
+    billing_period: { ...period, blocker: blocked || undefined },
+  };
+}
+
 export function buildHandler({
   calls,
   emailSent = true,
   cycles = [],
   createCycleError,
   loadCyclesError,
+  cycleReceiptError,
+  cycleReceiptBlocker,
+  nextIncomeError,
 }) {
-  const state = { billingSent: false, cycles: [...cycles] };
+  const state = { billingSent: false, cycles: [...cycles], nextIncomeId: null };
   return async ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') {
       return {
@@ -115,6 +162,95 @@ export function buildHandler({
         body: JSON.stringify({
           document: { id: 77, public_number: 'PA-2026-0007' },
           email_sent: emailSent,
+        }),
+      };
+    }
+    if (apiPath === 'admin/billing-context/projects/10/hosting/' && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(billingContext()),
+      };
+    }
+    if (apiPath === 'accounting/hostings/1/cycle-receipt/' && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          incomes: [{ ...HOSTING_PERIOD, blocker: cycleReceiptBlocker || undefined }],
+        }),
+      };
+    }
+    if (apiPath === 'accounting/hostings/1/cycle-receipt/' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      calls.push({ apiPath, method, body });
+      if (cycleReceiptError) {
+        return {
+          status: cycleReceiptError.status,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: cycleReceiptError.detail }),
+        };
+      }
+      const preview = new URL(route.request().url()).searchParams.get('preview') === '1';
+      if (preview) {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            preview_hash: 'receipt-preview-v1',
+            rows: [{ income_id: 301, validity_target: '2027-03-02' }],
+          }),
+        };
+      }
+      const cycle = {
+        ...BACKFILL_CYCLE,
+        id: 50,
+        paid_at: body.paid_at,
+        amount: String(body.amount),
+        is_backfill: false,
+        cycles_represented: 1,
+        notes: body.notes || '',
+      };
+      state.cycles = [cycle, ...state.cycles];
+      return {
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          cycle,
+          allocation_id: 91,
+          settlement_id: 'settlement-1',
+          already_registered: false,
+          period: { ...HOSTING_PERIOD, received: String(body.amount), balance: '0.00' },
+        }),
+      };
+    }
+    if (apiPath === 'accounting/hostings/1/next-income/' && method === 'GET') {
+      if (nextIncomeError) {
+        return { status: nextIncomeError.status, contentType: 'application/json', body: JSON.stringify({ detail: nextIncomeError.detail }) };
+      }
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          client_name: 'Germán Franco', project_name: 'Kore', service: 'korehealths.com',
+          reference_start: '2026-09-03', reference_end: '2027-03-02', version: 'next-income-v1',
+          existing_income_id: state.nextIncomeId,
+          fields: { concept: 'Hosting Kore marzo 2027', period_start: '2027-03-03', period_end: '2027-09-02', total_amount: '550002.00' },
+        }),
+      };
+    }
+    if (apiPath === 'accounting/hostings/1/next-income/' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      calls.push({ apiPath, method, body });
+      state.nextIncomeId = 302;
+      return {
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          client_name: 'Germán Franco', project_name: 'Kore', service: 'korehealths.com',
+          reference_start: '2026-09-03', reference_end: '2027-03-02', version: 'next-income-v1',
+          existing_income_id: 302,
+          fields: { concept: 'Hosting Kore marzo 2027', period_start: '2027-03-03', period_end: '2027-09-02', total_amount: '550002.00' },
         }),
       };
     }

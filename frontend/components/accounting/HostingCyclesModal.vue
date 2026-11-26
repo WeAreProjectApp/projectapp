@@ -12,46 +12,8 @@
     </div>
 
     <div class="px-6 py-4 space-y-5">
-      <!-- Register form -->
-      <BaseFormRow
-        as="form"
-        :cols="2"
-        :lg="4"
-        :gap="4"
-        class="bg-surface-raised rounded-xl p-4"
-        @submit.prevent="submit"
-      >
-        <BaseFormField label="Monto pagado" required>
-          <BaseCurrencyInput v-model="form.amount" required data-testid="cycle-amount" />
-        </BaseFormField>
-        <BaseFormField label="Modalidad del ciclo">
-          <BaseSelect
-            v-model="form.modality"
-            :options="modalityOptions"
-            data-testid="cycle-modality"
-          />
-        </BaseFormField>
-        <BaseFormField label="Fecha de pago">
-          <BaseInput v-model="form.paid_at" type="date" />
-        </BaseFormField>
-        <BaseFormField label="Notas">
-          <BaseInput v-model="form.notes" placeholder="Opcional" />
-        </BaseFormField>
-        <!-- Not a field: spans the full width and the three bands, so it sits
-             below the inputs instead of landing in a label cell. -->
-        <div class="col-span-full panel-portrait:row-span-3 flex flex-wrap items-center justify-between gap-3">
-          <label class="flex items-center gap-2 text-sm text-text-default">
-            <BaseToggle v-model="form.advance_validity" aria-label="Extender vigencia" />
-            <span>
-              Extender vigencia
-              <span v-if="projectedValidTo" class="text-text-muted">hasta {{ projectedValidTo }}</span>
-            </span>
-          </label>
-          <BaseButton type="submit" variant="primary" :disabled="saving" data-testid="cycle-submit">
-            {{ saving ? 'Registrando...' : 'Registrar pago de ciclo' }}
-          </BaseButton>
-        </div>
-      </BaseFormRow>
+      <HostingCycleReceiptForm v-if="open && record" :record="record" @changed="paymentChanged"
+        @next-income="emit('next-income', $event)" />
 
       <!-- History -->
       <div>
@@ -100,6 +62,8 @@
                     label="Eliminar ciclo"
                     variant="danger-ghost"
                     size="sm"
+                    :disabled="Boolean(cycle.receipt_allocation_id)"
+                    :disabled-reason="cycle.receipt_allocation_id ? $t('hostingBilling.correctReceipt') : ''"
                     @click="askDelete(cycle)"
                   />
                 </td>
@@ -131,6 +95,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import HostingCycleReceiptForm from './billing/HostingCycleReceiptForm.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useAccountingStore } from '~/stores/accounting';
@@ -141,50 +106,21 @@ const props = defineProps({
   record: { type: Object, default: null },
 });
 
-const emit = defineEmits(['close', 'changed']);
+const emit = defineEmits(['close', 'changed', 'next-income']);
 
 const store = useAccountingStore();
 const notify = usePanelNotify();
 
-const MODALITY_MONTHS = { quarterly: 3, semiannual: 6, nine_month: 9 };
-
-const modalityOptions = [
-  { value: 'quarterly', label: 'Trimestral' },
-  { value: 'semiannual', label: 'Semestral' },
-  { value: 'nine_month', label: 'Cada 9 meses' },
-];
-
 const cycles = ref([]);
 const loading = ref(false);
-const saving = ref(false);
-
-function defaultForm() {
-  return {
-    amount: props.record ? Number(props.record.payment_per_cycle) || null : null,
-    modality: MODALITY_MONTHS[props.record?.payment_modality]
-      ? props.record.payment_modality
-      : 'quarterly',
-    paid_at: new Date().toISOString().slice(0, 10),
-    notes: '',
-    advance_validity: true,
-  };
-}
-
-const form = ref(defaultForm());
-
-const projectedValidTo = computed(() => {
-  const base = props.record?.valid_to;
-  if (!base) return '';
-  const months = MODALITY_MONTHS[form.value.modality] || 1;
-  const [year, month, day] = base.split('-').map(Number);
-  const target = new Date(Date.UTC(year, month - 1 + months, day));
-  return target.toISOString().slice(0, 10);
-});
+let sequence = 0;
 
 async function loadCycles() {
   if (!props.record) return;
+  const current = ++sequence;
   loading.value = true;
   const result = await store.fetchHostingCycles(props.record.id);
+  if (current !== sequence) return;
   loading.value = false;
   if (result.success) {
     cycles.value = result.data;
@@ -194,35 +130,16 @@ async function loadCycles() {
 }
 
 watch(
-  () => [props.open, props.record?.id],
+  [() => props.open, () => props.record?.id],
   () => {
-    if (!props.open) return;
-    form.value = defaultForm();
-    loadCycles();
+    sequence += 1;
+    cycles.value = [];
+    if (props.open) loadCycles();
   },
   { immediate: true },
 );
 
-async function submit() {
-  if (!props.record || !form.value.amount) return;
-  saving.value = true;
-  const result = await store.createHostingCycle(props.record.id, {
-    amount: form.value.amount,
-    modality: form.value.modality,
-    paid_at: form.value.paid_at,
-    notes: form.value.notes,
-    advance_validity: form.value.advance_validity,
-  });
-  saving.value = false;
-  if (result.success) {
-    notify.success({ title: 'Pago de ciclo registrado' });
-    form.value = defaultForm();
-    loadCycles();
-    emit('changed');
-  } else {
-    notify.error({ title: 'No se pudo registrar el ciclo', detail: result.message });
-  }
-}
+function paymentChanged() { loadCycles(); emit('changed'); }
 
 const deleteConfirmOpen = ref(false);
 const cycleToDelete = ref(null);
@@ -237,6 +154,7 @@ const deleteMessage = computed(() => {
 });
 
 function askDelete(cycle) {
+  if (cycle.receipt_allocation_id) return;
   cycleToDelete.value = cycle;
   deleteConfirmOpen.value = true;
 }

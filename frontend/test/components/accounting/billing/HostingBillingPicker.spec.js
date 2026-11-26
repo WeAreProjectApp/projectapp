@@ -46,6 +46,7 @@ const pickerData = (overrides = {}) => ({
     hosting: { subscription_id: 22, hosting_record_ids: [31] },
     ...overrides.inventory,
   },
+  billing_period: overrides.billing_period,
 })
 
 function deferred() {
@@ -116,6 +117,29 @@ describe('HostingBillingPicker', () => {
       project_hosting_id: 91, hosting_payment_id: null,
     })
     expect(create_request).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  // Falla si una cuenta de cobro confirma una ventana distinta de la que el
+  // operador vio en el selector común de Ingresos y Hostings.
+  it('adds the reviewed period version to an existing hosting selection', async () => {
+    const wrapper = mountPicker({ data: pickerData({
+      billing_period: {
+        project_hosting_id: 91, hosting_payment_id: 62, version: 'period-v4',
+        period_start: '2026-11-01', period_end: '2027-01-31', amount: '233280', received: '0', balance: '233280',
+        state: 'pending', source: 'subscription', documents: [],
+      },
+    }) })
+
+    await wrapper.get('[data-testid="billing-hosting-choice"]').setValue('hosting:91')
+    await wrapper.get('[data-testid="billing-hosting-review"]').trigger('click')
+    await wrapper.setProps({ modelValue: { ...model, project_hosting_id: 91, hosting_payment_id: null } })
+    await flushPromises()
+
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toEqual({
+      billing_nature: 'hosting', contract_id: null, amendment_id: null,
+      project_hosting_id: 91, hosting_payment_id: 62, period_version: 'period-v4',
+    })
     wrapper.unmount()
   })
 
@@ -281,6 +305,43 @@ describe('HostingBillingPicker', () => {
     await wrapper.get('[data-testid="billing-hosting-reconcile"]').trigger('click')
 
     expect(wrapper.emitted('reconcile')).toEqual([[]])
+    wrapper.unmount()
+  })
+
+  it('keeps an unassigned record unconfirmed when the account has no hosting id', () => {
+    // A missing row id and a missing account id do not identify the same service.
+    const wrapper = mountPicker({
+      data: pickerData({
+        selection: { candidates: [candidate({ project_hosting_id: null, hosting_record_id: 31 })] },
+      }),
+    })
+
+    expect(wrapper.get('[data-testid="billing-hosting-choice"]').element.value).toBe('')
+    expect(wrapper.emitted('validation-message').at(-1)[0])
+      .toBe('Elige y confirma el hosting del proyecto para continuar.')
+    expect(wrapper.text()).not.toContain('Hosting confirmado para esta cuenta.')
+    wrapper.unmount()
+  })
+
+  it('retains A after reload only while it remains selectable and matches the account, then invalidates it when B replaces it', async () => {
+    // Fails if a refreshed candidate list displays a removed hosting as confirmed for this account.
+    const selectedA = candidate({ project_hosting_id: 91 })
+    const replacementB = candidate({ project_hosting_id: 92, domain_url: 'boreal.co' })
+    const wrapper = mountPicker({
+      modelValue: { ...model, project_hosting_id: 91 },
+      data: pickerData({ selection: { candidates: [selectedA] } }),
+    })
+
+    await wrapper.setProps({ data: pickerData({ selection: { candidates: [{ ...selectedA }] } }) })
+    expect(wrapper.get('[data-testid="billing-hosting-choice"]').element.value).toBe('hosting:91')
+    expect(wrapper.get('[data-testid="billing-hosting-confirmed"]').text())
+      .toBe('Hosting confirmado para esta cuenta.')
+
+    await wrapper.setProps({ data: pickerData({ selection: { candidates: [replacementB] } }) })
+    expect(wrapper.get('[data-testid="billing-hosting-choice"]').element.value).toBe('')
+    expect(wrapper.emitted('validation-message').at(-1)[0])
+      .toBe('Elige y confirma el hosting del proyecto para continuar.')
+    expect(wrapper.text()).not.toContain('Hosting confirmado para esta cuenta.')
     wrapper.unmount()
   })
 })

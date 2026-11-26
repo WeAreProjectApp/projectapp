@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
 import IncomeActionsModal from '~/components/accounting/IncomeActionsModal.vue';
+import hostingBilling from '~/locales/hostingBilling/es';
 
 const EXPECTED = {
   id: 42,
@@ -18,6 +20,7 @@ function mountModal(record) {
   return mount(IncomeActionsModal, {
     props: { open: true, record },
     global: {
+      plugins: [createI18n({ legacy: false, locale: 'es', messages: { es: { hostingBilling } } })],
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         BaseModal: {
@@ -84,6 +87,21 @@ describe('IncomeActionsModal', () => {
 
     expect(actions).toContain('detail');
     expect(actions).not.toContain('toggle-mute');
+  });
+
+  // Falla si un hosting acreditado con saldo cero pierde la única acción que
+  // permite enlazar o documentar el recibo ya registrado.
+  it('offers receipt review for a fully paid hosting income', async () => {
+    const paidHosting = {
+      ...EXPECTED, origin: 'hosting', project_id: 9, period_start: '2026-11-01',
+      payment_status: 'paid', paid_amount: '233280.00', pending_amount: '0.00',
+    };
+    const wrapper = mountModal(paidHosting);
+
+    await wrapper.get('[data-testid="income-action-review-hosting-receipt-42"]').trigger('click');
+
+    expect(wrapper.emitted('review-hosting-receipt')).toEqual([[paidHosting]]);
+    expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
   it('swaps generar for ver when the income already has a cuenta', () => {

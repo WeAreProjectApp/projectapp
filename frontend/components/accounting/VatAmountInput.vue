@@ -72,11 +72,12 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
       </BaseFormField>
       <BaseFormField :label="mode === 'before_vat' ? 'Valor antes de IVA' : 'Total con IVA incluido'" :required="required" :error="error" v-slot="{ errorId, invalid }">
         <BaseCurrencyInput :model-value="inputAmount" :decimals="2" :required="required" :data-testid="inputTestId" :disabled="disabled" :disabled-reason="disabledReason" :error="invalid" :aria-invalid="invalid ? 'true' : undefined" :aria-describedby="errorId" @update:model-value="capture($event)" />
+        <slot name="amount-actions" :changeRate="changeRate" />
       </BaseFormField>
       <BaseFormField label="IVA (%)" :for="rateId">
         <div class="flex flex-wrap items-start gap-2">
           <BaseInput :id="rateId" class="min-w-0 flex-1 basis-20" :model-value="rate" type="number" min="0" max="100" step="0.01" placeholder="Sin registrar" data-testid="vat-rate" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @update:model-value="changeRate($event)" />
-          <BaseButton type="button" variant="secondary" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
+          <BaseButton v-if="!$slots['amount-actions']" type="button" variant="secondary" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
         </div>
       </BaseFormField>
       <template #help>

@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
 import HostingActionsModal from '~/components/accounting/HostingActionsModal.vue'
+import hostingBilling from '~/locales/hostingBilling/es'
 
 const RECORD = {
   id: 8,
@@ -12,6 +14,7 @@ function mountModal(record = RECORD, props = {}) {
   return mount(HostingActionsModal, {
     props: { open: true, record, ...props },
     global: {
+      plugins: [createI18n({ legacy: false, locale: 'es', messages: { es: { hostingBilling } } })],
       stubs: {
         BaseModal: {
           props: ['modelValue', 'kind'],
@@ -40,6 +43,7 @@ describe('HostingActionsModal', () => {
     expect(entryIds(wrapper)).toEqual([
       'hosting-history-8',
       'hosting-cycles-8',
+      'hosting-next-income-8',
       'hosting-send-billing-8',
       'hosting-emails-8',
       'hosting-edit-8',
@@ -79,6 +83,17 @@ describe('HostingActionsModal', () => {
     await wrapper.get('[data-testid="hosting-cycles-8"]').trigger('click')
 
     expect(wrapper.emitted('cycles')[0]).toEqual([RECORD])
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  // Falla si la nueva entrada prepara el siguiente período con otro servicio
+  // o deja el menú abierto para registrar el mismo ingreso dos veces.
+  it('opens next expected income for the selected hosting and closes the menu', async () => {
+    const wrapper = mountModal()
+
+    await wrapper.get('[data-testid="hosting-next-income-8"]').trigger('click')
+
+    expect(wrapper.emitted('next-income')).toEqual([[RECORD]])
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 })

@@ -107,3 +107,15 @@ volver a liquidar el ingreso. El intento enviado queda relacionado con el
 fallido; este último conserva su estado histórico. No se crean pagos ni avisos
 de negocio adicionales. La validación automática de esta corrección corresponde
 exclusivamente a CI y la comprobación manual a DevQA/QA sobre su SHA servido.
+
+## Hosting, períodos y pagos acreditados
+
+Ingresos y Hostings consultan `GET /api/admin/billing-context/projects/{project_id}/hosting/`. El objeto `billing_period` identifica servicio, cliente, fuente, ingreso y obligación cuando existen. Entrega inicio y fin inclusivos, moneda, importe, efectivo recibido, deducciones, importe trasladado a otros esperados, saldo del período, estado, documentos vigentes y versión. Las dos entradas presentan el mismo resumen. PA-295 puede usarlo en la previsualización y PA-297 puede precargar el servicio de la fila. La cuenta se emite con la versión revisada. Si las evidencias cambiaron o el período está cubierto, el servidor exige revisar el contexto.
+
+Para acreditar dinero, el panel conserva el `request_id` durante los reintentos del formulario. El cobro se identifica por emisor y folio de la fuente, o por un asiento previo que ya se pueda vincular de manera inequívoca. El folio conserva las mayúsculas y minúsculas de la fuente. Una operación puede distribuir dinero entre varios esperados. Cada imputación vincula un líquido y un ciclo. Dos solicitudes de pantallas distintas para el mismo pago devuelven la misma liquidación, incluso con saldo cero. Dos folios distintos pueden sumar abonos de igual importe el mismo día.
+
+El panel presenta los líquidos y ciclos previos antes de confirmar. Cuando la evidencia histórica deja más de una interpretación, la operación se detiene para conciliar. Un pago manual sin asiento ni referencia estable requiere que Carlos decida si habilita recibos numerados. El registro genérico previo de ingresos sin ventana conserva su historial. Los ingresos esperados con saldo cero conservan el acceso «Revisar pago de hosting».
+
+En Hostings, un nuevo ciclo puede ampliar la vigencia con cualquier abono positivo. La opción viene activada por defecto y la revisión muestra el destino de la vigencia. Vincular un pago, liquidar desde Ingresos o revertir la contabilidad conserva la fecha contractual. La documentación de dinero acreditado requiere otra confirmación. Si ya se emitió una cuenta, se muestra su referencia y se conserva el reenvío de Cuentas de cobro.
+
+«Crear ingreso esperado» abre la misma propuesta desde la fila y tras el registro del ciclo. El período siguiente comienza al día siguiente del fin inclusivo revisado. El operador ve cliente, proyecto, concepto, tarifa y fechas antes de confirmar. Dos confirmaciones concurrentes devuelven el mismo esperado. Cancelar conserva el pago anterior.

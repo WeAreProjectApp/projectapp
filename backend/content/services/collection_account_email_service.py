@@ -99,7 +99,7 @@ def build_collection_account_email(document, *, resend=False):
     if item and item.period_start and item.period_end:
         period = f'{item.period_start:%d/%m/%Y} a {item.period_end:%d/%m/%Y}'
         markdown_sections.append(f'Período facturado: **{period}**.')
-    if extension.vat_rate is not None or document.tax_total:
+    if extension.shows_vat_breakdown(document.tax_total):
         rate_label = f' ({extension.vat_rate.normalize():f} %)' if extension.vat_rate is not None else ''
         markdown_sections.append(f'Valor antes de IVA: **${format_cop_email(document.total - document.tax_total)} COP**.')
         markdown_sections.append(f'IVA{rate_label}: **${format_cop_email(document.tax_total)} COP**.')
@@ -108,7 +108,7 @@ def build_collection_account_email(document, *, resend=False):
         f'Valor pagado: **${total} COP**. Esta cuenta ya está pagada; no debes realizar otro pago.'
         if is_paid else f'Valor a pagar: **${total} COP**.'
     )
-    if document.due_date and not is_paid:
+    if document.due_date and (not is_paid or extension.due_date_mode == extension.DueDateMode.DATED):
         # Its own line. Sharing the amount's line buried the one date the
         # client has to act on, and the house weekday format reads faster
         # than 19/08/2026 for a deadline.

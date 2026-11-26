@@ -404,7 +404,12 @@ class CollectionAccountPdfService:
             # reserved line by line rather than for the whole item: reserving
             # the block up front asks for more than a page fits and breaks
             # ahead of text that would have flowed fine.
-            chunks = _wrap(item.description, 'regular', 8, desc_w) or ['']
+            description = item.description
+            if item.item_type == 'hosting' and item.period_start and item.period_end:
+                dates = f'{item.period_start:%d/%m/%Y} a {item.period_end:%d/%m/%Y}'
+                if dates not in description:
+                    description = f'{description}\nPeríodo facturado: {dates}'
+            chunks = _wrap(description, 'regular', 8, desc_w) or ['']
             amount = _format_cop(item.line_total)
             for index, chunk in enumerate(chunks):
                 ensure_space(11)
@@ -416,7 +421,7 @@ class CollectionAccountPdfService:
                 y -= 11
             y -= 3
 
-        if ext.vat_rate is not None or document.tax_total:
+        if ext.shows_vat_breakdown(document.tax_total):
             rate_label = f' ({ext.vat_rate.normalize():f} %)' if ext.vat_rate is not None else ''
             ensure_space(64)
             c.setFont(_font('regular'), 9)

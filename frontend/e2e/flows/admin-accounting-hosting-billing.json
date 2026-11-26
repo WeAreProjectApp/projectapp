@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "El superusuario abre Enviar cuenta de cobro desde la fila de Hostings. Ve su proyecto, cliente, servicio, destinatario y el mismo resumen de período que en Ingresos. Si los vínculos discrepan o falta un período elegible, el diálogo indica cómo continuar. Cancelar conserva la fila. Enviar al cliente revalida la referencia y la versión, emite el saldo revisado y envía el PDF. Tras emitir se pausan los avisos de vencimiento. Si falla el correo, el documento queda disponible para reenvío.",
+  "description": "El superusuario abre Enviar cuenta de cobro desde la fila de Hostings. Ve su proyecto, cliente, servicio, destinatario y el mismo resumen de período que en Ingresos, con fechas inclusivas, valor, cobros recibidos, saldo y documentos existentes. Si los vínculos discrepan o falta un período elegible, el diálogo indica cómo continuar. Cancelar conserva la fila. Enviar al cliente revalida la referencia y la versión, emite el saldo revisado y envía el PDF. Tras emitir se pausan los avisos de vencimiento. Si falla el correo, el documento queda disponible para reenvío.",
   "expectedSpecs": 7,
   "outcomes": [
     "display",
