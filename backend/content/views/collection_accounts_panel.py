@@ -99,6 +99,7 @@ def _get_document(doc_id):
     return get_object_or_404(_base_qs(), pk=doc_id)
 
 
+@transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def send_hosting_collection_account(request, record_id):
@@ -108,7 +109,7 @@ def send_hosting_collection_account(request, record_id):
     hosting = get_object_or_404(HostingRecord, pk=record_id)
     try:
         result = hosting_billing_service.send_hosting_collection_account(
-            hosting, acting_user=request.user, hosting_payment_id=context_serializer.validated_data.get('hosting_payment_id'),
+            hosting, acting_user=request.user, **context_serializer.validated_data,
         )
     except hosting_billing_service.HostingBillingError as exc:
         return error_response(str(exc))
@@ -122,6 +123,7 @@ def send_hosting_collection_account(request, record_id):
     )
 
 
+@transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def create_collection_account_view(request):

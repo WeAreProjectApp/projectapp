@@ -10,9 +10,10 @@ const props = defineProps({
   projectId: { type: [String, Number], default: null },
   modelValue: { type: Object, required: true },
   validationError: { type: String, default: '' },
+  incomeId: { type: [Number, String], default: null },
   client: { type: Object, default: null },
 })
-const emit = defineEmits(['update:modelValue', 'valid', 'validation-message', 'reconcile', 'nested-open'])
+const emit = defineEmits(['update:modelValue', 'valid', 'validation-message', 'reconcile', 'nested-open', 'period'])
 const options = ref(null)
 const payments = ref([])
 const hostingData = ref(null)
@@ -56,11 +57,18 @@ const validationMessage = computed(() => {
     if (hostingValidation.value) return hostingValidation.value
     if (!options.value?.hosting_id) return 'Asocia el hosting al proyecto desde «Conciliar hosting del proyecto» antes de emitir esta cuenta.'
     if (Number(context.project_hosting_id) !== Number(options.value.hosting_id)) return 'Selecciona el hosting del proyecto para esta cuenta de cobro.'
-    if (payments.value.length && !payments.value.some(row => Number(row.id) === Number(context.hosting_payment_id))) return 'Selecciona el período de hosting que estás cobrando.'
+    const period = hostingData.value?.billing_period
+    if (period?.blocker) return period.blocker
+    if (!period?.version || context.period_version !== period.version) return period?.blocker || 'Revisa el período del hosting.'
+    if (props.incomeId && Number(props.incomeId) !== Number(period.income_id)) return 'Selecciona el ingreso esperado del período revisado.'
     return ''
   }
   return 'Elige un tipo de cobro válido: contrato o hosting.'
 })
+watch(() => [props.modelValue.billing_nature, props.modelValue.document_pending,
+  props.modelValue.period_version, hostingData.value?.billing_period, props.incomeId], ([nature, pending, version, period]) => {
+  emit('period', nature === 'hosting' && !pending && version && version === period?.version ? period : null)
+}, { immediate: true })
 const valid = computed(() => !validationMessage.value)
 const missingPeriod = computed(() => {
   const context = props.modelValue

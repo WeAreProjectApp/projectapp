@@ -1769,7 +1769,7 @@ automáticamente el inicio. Inicio, fin y periodicidad se auditan en
 
 ### Cuenta de cobro preparada desde Ingresos
 
-El conector `accounting` 2.3.0 y el adaptador `accounting-billing` 3.2.0 publican las preferencias de IVA y vencimiento en las herramientas de previsualización y creación. [Historial del contrato](changelog/2026-11-26-collection-account-presentation.md)
+El conector `accounting` 3.1.0 y el adaptador `accounting-billing` 4.1.0 publican las preferencias de IVA y vencimiento en las herramientas de previsualización y creación. [Historial del contrato](changelog/2026-11-26-collection-account-presentation.md)
 
 1. En DEV, previsualizar una cuenta ficticia con `preview_collection_account`, base COP 100.000 y tasa del 19 %. Repetir con `show_vat` en ambas posiciones. El total debe ser COP 119.000 en ambos casos. Con el desglose oculto, el PDF y las dos versiones del correo omiten las filas fiscales.
 2. Con emisión el 26/11/2026, comparar `due_date_mode=dated` con cero días (26/11) y ocho días (04/12). Para `none`, omitir plazo y fecha y comprobar que `due_date` es nulo. Enviar plazo o fecha junto con `none` debe dar un error de validación. Omitir el modo y usar cero días reproduce el resultado histórico sin fecha.
@@ -3200,3 +3200,13 @@ de precio y los movimientos del paquete tienen sus propios procedimientos.
 ## PA-263 · Feature flags (Proyectos 7.0.0)
 
 Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento de las seis herramientas, consulta global y por cliente, actualización confirmada, retirada con null, persistencia, 409 con versión superada y denegación de una credencial/actor sin acceso administrativo. Contrastar con el mismo caso en Panel y una cuenta cliente; REST no acredita MCP. Cada clave parte habilitada, incluidas IA/audio. Probar una instalación limpia, una clave nueva y la conservación de globales y excepciones previos. Las excepciones prevalecen. Los adaptadores anteriores de IA/Ayuda usan la fuente nueva. Automatizadas sólo en CI; DevQA cotejará herramientas, operaciones, rol, resultado y límites sobre el mismo SHA/entorno al levantarse la pausa.
+
+### Contabilidad de hosting (PA-296, PA-298 y PA-299)
+
+Las versiones publicadas son `accounting` 3.0.0, `accounting-billing` 4.0.0 y `accounting-ledger` 4.0.0. [Cambios para consumidores de los conectores](changelog/2026-11-26-hosting-accounting-mcp.md).
+
+Con una fixture administrativa en DEV, consultar `get_project_hosting_inventory` y verificar el objeto `billing_period` contra el resumen de Ingresos y Hostings. Para la cuenta, enviar la obligación y la `period_version` devueltas por esa lectura. Un período cubierto o cambiado debe producir bloqueo. Verificar que sus fechas y el saldo coincidan en línea, PDF y correo simulado.
+
+En la liquidación individual o múltiple, `hosting_receipt.entries` identifica cada ingreso y su origen contable. Los campos opcionales `cycle_id` y `liquid_id` seleccionan evidencias previas. Para un pago nuevo, `issuer` y `reference` identifican el cobro real. Repetir con un segundo UUID desde la otra pantalla y cotejar la liquidación, la imputación y el movimiento de bolsillo. Probar luego dos folios distintos de igual importe.
+
+El guion `scripts/ci/mysql-hosting-receipts-check.py --socket <directorio-privado>/mysql.sock` usa un MySQL 8 desechable que escucha únicamente en ese socket, con su directorio `data` bajo el mismo directorio privado. Usa una base de prueba nueva, dos conexiones por carrera y correo en memoria. Verifica el pago con dos UUID, la emisión concurrente y la creación del siguiente esperado. El directorio completo pertenece a la fixture de DEV.

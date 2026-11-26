@@ -26,6 +26,7 @@ from content.views.building_on_demand import (
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
 from content.views.proposal_document_exports import contract_markdown, formalization_markdown, attachment_markdown, attachment_download
 from content.views import linktree_template as lt_templates
+from content.views import hosting_payments
 from django.urls import include, path
 from content.views.accounting import (
     accounting_dashboard, accounting_stats, accounting_receivables,
@@ -1346,6 +1347,8 @@ urlpatterns = [
     ),
     path('accounting/hostings/bulk-assign-client/', bulk_assign_hosting_client, name='bulk-assign-hosting-client'),
     path('accounting/hostings/bulk-assign-project/', bulk_assign_hosting_project, name='bulk-assign-hosting-project'),
+    path('accounting/hostings/<int:record_id>/next-income/', hosting_payments.next_income, name='hosting-next-income'),
+    path('accounting/hostings/<int:record_id>/cycle-receipt/', hosting_payments.cycle_receipt, name='hosting-cycle-receipt'),
     path('accounting/hostings/<int:record_id>/cycles/', list_hosting_cycles, name='list-hosting-cycles'),
     path('accounting/hostings/<int:record_id>/cycles/create/', create_hosting_cycle, name='create-hosting-cycle'),
     path('accounting/hostings/<int:record_id>/cycles/<int:cycle_id>/delete/', delete_hosting_cycle, name='delete-hosting-cycle'),

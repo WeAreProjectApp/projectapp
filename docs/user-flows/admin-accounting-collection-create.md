@@ -87,3 +87,5 @@ La preparación permite activar «Dejar documento pendiente»: conserva sólo el
 ## Cuenta preparada desde Ingresos
 
 El botón Previsualizar explica en español qué datos faltan y permite llevar el foco a cada corrección. El formulario conserva lo escrito y pide confirmar el servicio de hosting cuando corresponde. Sin IVA alterna el cálculo y Mostrar IVA controla el desglose del documento, el correo y el PDF. Con vencimiento habilitado, cero días vence al emitir en Bogotá. Sin fecha de vencimiento omite la fecha en el documento y en la confirmación y conserva el plazo al volver a editar.
+
+Para una cuenta de hosting, el formulario toma las fechas y el saldo del período revisado en el proyecto. Tanto la previsualización como la emisión comprueban su versión.

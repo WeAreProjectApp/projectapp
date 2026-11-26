@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('content', '0309_calculator_verified_costs'),
+        ('content', '0310_hosting_receipt_identity'),
     ]
 
     operations = [

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import HostingPeriodSummary from './HostingPeriodSummary.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import HostingFormModal from '~/components/accounting/HostingFormModal.vue'
 import { INPUT_FIELD_BASE, INPUT_FIELD_SIZE } from '~/components/base/inputClasses'
@@ -23,8 +24,7 @@ const selection = computed(() => props.data?.selection)
 const candidates = computed(() => selection.value?.candidates || [])
 const keyFor = row => row.hosting_record_id ? `record:${row.hosting_record_id}` : `hosting:${row.project_hosting_id}`
 const selected = computed(() => candidates.value.find(row => keyFor(row) === choice.value))
-const subscription = computed(() => props.data?.overview?.subscription)
-const payments = computed(() => subscription.value?.associated ? subscription.value.payments || [] : [])
+const period = computed(() => props.data?.billing_period)
 const blockers = computed(() => selection.value?.blockers || [])
 const confirmedRow = computed(() => candidates.value.find(row => row.selectable && !row.requires_association
   && row.project_hosting_id != null && props.modelValue.project_hosting_id != null
@@ -36,15 +36,19 @@ const validation = computed(() => {
   if (error.value) return error.value
   if (blockers.value.length) return blockers.value[0].message
   if (!confirmed.value) return t('hostingBilling.chooseRequired')
-  if (subscription.value && !payments.value.length) return t('hostingBilling.paymentEmpty')
-  if (subscription.value && !payments.value.some(row => Number(row.id) === Number(props.modelValue.hosting_payment_id))) return t('hostingBilling.paymentRequired')
-  return ''
+  return period.value?.blocker || (period.value?.version ? '' : t('hostingBilling.paymentEmpty'))
 })
 let sequence = 0, revision = 0
 onBeforeUnmount(() => { sequence += 1 })
 watch(() => props.modelValue, () => { revision += 1; preview.value = null }, { deep: true, flush: 'sync' })
 watch(() => props.data, () => { preview.value = null; choice.value = ''; sequence += 1; busy.value = false })
 watch(() => props.projectId, () => { sequence += 1; creating.value = false; choice.value = ''; preview.value = null; error.value = ''; busy.value = false }, { flush: 'sync' })
+watch([confirmed, period], ([selectedService, current]) => {
+  if (!selectedService || !current || Number(current.project_hosting_id) !== Number(props.modelValue.project_hosting_id)) return
+  if (current.version && (props.modelValue.period_version !== current.version || props.modelValue.hosting_payment_id !== current.hosting_payment_id)) {
+    emit('update:modelValue', { ...props.modelValue, hosting_payment_id: current.hosting_payment_id, period_version: current.version })
+  }
+}, { immediate: true })
 watch(validation, message => emit('validation-message', message), { immediate: true })
 watch(creating, value => emit('nested-open', value), { flush: 'sync' })
 function label(row) {
@@ -148,16 +152,10 @@ async function createHosting(payload) {
         </div>
       </section>
       <p v-if="confirmed" role="status" class="text-sm text-success-strong" data-testid="billing-hosting-confirmed">{{ t('hostingBilling.selected') }}</p>
-      <label v-if="confirmed && payments.length" class="block text-sm text-text-default">{{ t('hostingBilling.period') }}
-        <select :value="modelValue.hosting_payment_id || ''" :class="fieldClass" data-testid="billing-payment" @change="emit('update:modelValue', { ...modelValue, hosting_payment_id: Number($event.target.value) || null })">
-          <option value="">{{ t('hostingBilling.choosePeriod') }}</option>
-          <option v-for="payment in payments" :key="payment.id" :value="payment.id">#{{ payment.id }} · {{ payment.billing_period_start }} — {{ payment.billing_period_end }} · {{ payment.amount }} · {{ payment.status }}</option>
-        </select>
-      </label>
-      <p v-if="confirmed && subscription && !payments.length" role="alert" class="text-sm text-warning-strong">{{ t('hostingBilling.paymentEmpty') }}</p>
+      <HostingPeriodSummary v-if="confirmed && period" :period="period" />
       <div class="flex flex-wrap gap-3">
         <BaseButton v-if="selection?.can_create && client?.id" size="sm" variant="secondary" data-testid="billing-hosting-create" @click="creating = true">{{ t('hostingBilling.create') }}</BaseButton>
-        <BaseButton v-if="selection?.requires_reconciliation" size="sm" variant="link" data-testid="billing-hosting-reconcile" @click="emit('reconcile')">{{ t('hostingBilling.reconcile') }}</BaseButton>
+        <BaseButton v-if="selection?.requires_reconciliation || period?.blocker" size="sm" variant="link" data-testid="billing-hosting-reconcile" @click="emit('reconcile')">{{ t('hostingBilling.reconcile') }}</BaseButton>
         <BaseButton size="sm" variant="link" :loading="busy" data-testid="billing-hosting-refresh" @click="refresh">{{ t('hostingBilling.refresh') }}</BaseButton>
       </div>
     </template>

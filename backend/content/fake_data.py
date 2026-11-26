@@ -299,6 +299,9 @@ EXEMPT_MODELS = {
     # Runtime replay receipts are produced by real administrative actions.
     'accounts.DeliveryOperation',
     'content.IncomeSettlement',
+    # The accounting service creates these from verified forecasts and receipts.
+    'content.HostingIncomePeriod', 'content.HostingReceipt', 'content.HostingReceiptAttempt',
+    'content.HostingReceiptAllocation',
     'accounts.VerificationCode', 'content.LinkedInToken',
     'accounts.LoginChallenge', 'accounts.AccessRateBucket', 'accounts.GoogleIdentity',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',

@@ -160,6 +160,25 @@ def _create_income_collection_account(
         )
         income.client = profile
 
+    window = None
+    is_hosting = data.get('billing_nature') == 'hosting' and not data.get('document_pending')
+    if issue_document and income.origin == 'hosting' and income.project_id and income.period_start and not is_hosting:
+        from accounts.models import ProjectHosting
+        if ProjectHosting.objects.filter(project_id=income.project_id).exists():
+            raise CollectionAccountError('Selecciona el hosting y revisa su período antes de emitir.')
+    if is_hosting and (issue_document or data.get('period_version')):
+        from content.services.hosting_periods import HostingPeriods, PeriodConflict, reviewed_period
+
+        try:
+            book = HostingPeriods(income.project_id)
+            if book.hosting.pk != data.get('project_hosting_id') or profile.pk != book.client_id:
+                raise PeriodConflict('El servicio revisado pertenece a otro cliente o proyecto.')
+            window = reviewed_period(book, data)
+            if not window.income or window.income.pk != income.pk:
+                raise PeriodConflict('Selecciona el ingreso esperado que corresponde al período revisado.')
+        except PeriodConflict as exc:
+            raise CollectionAccountError(str(exc)) from exc
+
     rate = data.get('vat_rate', income.vat_rate)
     prepared_items = []
     for item in data['items']:
@@ -185,6 +204,8 @@ def _create_income_collection_account(
             'line_total': line_total,
         })
     document_total = sum((item['line_total'] for item in prepared_items), Decimal('0'))
+    if window and (document_total != window.balance or rate != income.vat_rate or data.get('currency', 'COP').upper() != 'COP'):
+        raise CollectionAccountError('La cuenta debe conservar el importe, IVA y moneda del período revisado.')
     try:
         vat_breakdown(document_total, rate)
     except ValueError as exc:
@@ -233,6 +254,9 @@ def _create_income_collection_account(
         'created_by': acting_user,
         'updated_by': acting_user,
     }
+    if window:
+        document_fields['metadata'] = {'hosting_period_review': {
+            'period_version': data['period_version'], 'hosting_payment_id': data.get('hosting_payment_id')}}
     if data.get('uuid'):
         document_fields['uuid'] = data['uuid']
     document = Document.objects.create(
@@ -272,14 +296,14 @@ def _create_income_collection_account(
         DocumentItem.objects.create(
             document=document,
             position=position,
-            item_type=DocumentItem.ItemType.SERVICE,
+            item_type=DocumentItem.ItemType.HOSTING if window else DocumentItem.ItemType.SERVICE,
             description=(item.get('description') or '').strip() or billing_concept,
             quantity=quantity,
             unit_price=unit_price,
             tax_amount=item['tax_amount'],
             line_total=item['line_total'],
-            period_start=item.get('period_start'),
-            period_end=item.get('period_end'),
+            period_start=window.start if window else item.get('period_start'),
+            period_end=window.end if window else item.get('period_end'),
             reference_type='income_record',
             reference_id=income.pk,
         )
@@ -328,7 +352,8 @@ def create_income_collection_account(
 
     stored = None
     try:
-        with transaction.atomic():
+        from content.services.entity_history import history_operation
+        with history_operation(actor=acting_user, source='service'), transaction.atomic():
             document = _create_income_collection_account(
                 data, acting_user=acting_user, issued_on=issued_on,
             )

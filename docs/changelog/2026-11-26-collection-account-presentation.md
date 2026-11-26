@@ -2,8 +2,8 @@
 
 | Conector MCP | Versión anterior | Versión nueva |
 | --- | --- | --- |
-| `accounting` | 2.2.0 | 2.3.0 |
-| `accounting-billing` | 3.1.0 | 3.2.0 |
+| `accounting` | 3.0.0 | 3.1.0 |
+| `accounting-billing` | 4.0.0 | 4.1.0 |
 
 `preview_collection_account` y `create_collection_account` aceptan dos preferencias opcionales.
 

@@ -236,6 +236,10 @@ _decide(gap('Apunta a un ancestro archivado, y sólo mientras el registro está 
 
 _decide(exempt('Hijo en cascada sin copia de cliente ni proyecto.'), 'content.CommunicationMessage.thread')
 _decide(covered('AC2', 'AC12'), 'content.IncomeRecord.expected_income')
+_decide(gap('El ingreso debe ser esperado del mismo servicio, cliente, proyecto y período; el resolver de hosting valida el vínculo.'),
+        'content.HostingIncomePeriod.income')
+_decide(gap('El líquido debe pertenecer al esperado de la imputación y al mismo cobro; lo comprueba el escritor de liquidación.'),
+        'content.HostingReceiptAllocation.liquid')
 _decide(covered('AC9', 'AC10'), 'content.Document.income_record')
 _decide(exempt('Aviso duradero del cierre del ingreso.'), 'content.IncomeCompletionNotice.income')
 _decide(exempt('Evidencia de los ingresos seleccionados al liquidar: se conserva para revisión y reversa, nunca se limpia.'),
