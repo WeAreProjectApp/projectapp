@@ -13,13 +13,16 @@ from accounts.models import (
 from content.models import (
     BusinessProposal,
     Document,
+    DocumentState,
     DocumentType,
+    IncomeRecord,
     ProposalApprovalFile,
     ProposalChangeLog,
     ProposalDocument,
     ProposalProjectReassignment,
 )
 from content.services.project_document_folder_service import ensure_project_folder
+from content.services.project_state_service import initialize_project_state
 from content.services.proposal_approval_service import ApprovalConflict
 from content.services.proposal_project_reassignment import preview_reassignment, reassign_proposal
 
@@ -117,10 +120,21 @@ def _add_delivery_contract(ctx):
 
 @pytest.mark.django_db
 class TestProposalProjectReassignment:
-    def test_reassignment_moves_only_the_proposal_owned_relations(self):
-        """Fails if a safe correction leaves a proposal-owned relation in its former project."""
+    def test_reassignment_moves_proposal_relations_to_a_suspended_project(self):
+        """A suspended destination can receive the proposal while preserving its ledger."""
         ctx = _context()
-        impact = preview_reassignment(ctx['proposal'].pk, ctx['target'].pk)
+        target = ctx['target']
+        state = DocumentState.objects.get(catalog='projects', system_key='suspended')
+        initialize_project_state(target, state)
+        income = IncomeRecord.objects.create(
+            client=ctx['client'],
+            project=target,
+            kind=IncomeRecord.Kind.EXPECTED,
+            concept='Existing milestone',
+            period_date=date(2026, 1, 1),
+            total_amount=Decimal('100.00'),
+        )
+        impact = preview_reassignment(ctx['proposal'].pk, target.pk)
 
         result = reassign_proposal(ctx['proposal'].pk, _payload(impact), actor=ctx['actor'])
 
@@ -134,7 +148,23 @@ class TestProposalProjectReassignment:
             ctx['phase'].project_id, ctx['main'].project_id, ctx['resource'].project_id,
             ctx['approval'].project_id, ctx['document'].project_id,
         ) == (ctx['target'].pk,) * 5
-        assert ctx['document'].client_user_id == ctx['target'].client_id
+        assert ctx['document'].client_user_id == target.client_id
+        assert (ctx['approval'].filename, ctx['approval'].file.read()) == ('contract.pdf', b'approval bytes')
+        target.refresh_from_db()
+        assert (target.current_state_id, target.status) == (state.pk, Project.STATUS_SUSPENDED)
+        assert list(target.income_records.values_list('pk', 'kind', 'total_amount')) == [
+            (income.pk, IncomeRecord.Kind.EXPECTED, Decimal('100.00')),
+        ]
+
+    @pytest.mark.parametrize('system_key', ['completed', 'decommissioned'])
+    def test_preview_blocks_terminal_destinations(self, system_key):
+        ctx = _context()
+        state = DocumentState.objects.get(catalog='projects', system_key=system_key)
+        initialize_project_state(ctx['target'], state)
+
+        impact = preview_reassignment(ctx['proposal'].pk, ctx['target'].pk)
+
+        assert [blocker['code'] for blocker in impact['blockers']] == ['archived_target']
 
     def test_reassignment_preserves_approved_file_names_and_bytes(self):
         """Fails if moving approved evidence changes its stored name or immutable bytes."""

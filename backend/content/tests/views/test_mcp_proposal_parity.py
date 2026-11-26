@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 
 from content.models import (
     BusinessProposal,
+    DocumentState,
     EntityHistory,
     EntityRevision,
     McpConnector,
@@ -17,6 +18,7 @@ from content.models import (
     Document,
     DocumentType,
 )
+from content.services.project_state_service import initialize_project_state
 
 
 def _rpc(name, arguments, message_id=1):
@@ -81,43 +83,33 @@ def proposals_token(db):
 
 @pytest.mark.django_db
 class TestProposalMcpSettings:
+    @pytest.mark.parametrize('target_status', [Project.STATUS_ACTIVE, Project.STATUS_SUSPENDED])
     def test_reassignment_requires_mcp_confirmation_before_moving_the_phase(
-        self, api_client, proposals_token,
+        self, api_client, proposals_token, target_status,
     ):
-        """Fails if MCP applies a proposal project correction before the caller confirms its reviewed impact."""
-        User = get_user_model()
-        client_user = User.objects.create_user(username='mcp-reassignment-client', password='test')
-        client = UserProfile.objects.create(user=client_user, role=UserProfile.ROLE_CLIENT)
-        source = Project.objects.create(name='MCP source', client=client_user)
-        target = Project.objects.create(name='MCP target', client=client_user)
-        proposal = BusinessProposal.objects.create(
-            title='MCP proposal correction', client=client, client_name='MCP client',
-            client_email='mcp-client@example.test', total_investment=1,
-            status=BusinessProposal.Status.ACCEPTED,
-        )
-        package = Deliverable.objects.create(project=source, title='MCP package', uploaded_by=client_user)
-        proposal.deliverable = package
-        proposal.save(update_fields=['deliverable'])
-        phase = ProjectPhase.objects.create(project=source, business_proposal=proposal, order=1)
+        """An eligible destination receives the phase only after MCP confirmation."""
+        ctx = _reassignment_context()
+        state = DocumentState.objects.get(catalog='projects', system_key=target_status)
+        initialize_project_state(ctx.target, state)
         preview = _payload(_call(api_client, proposals_token, 'preview_proposal_project_reassignment', {
-            'proposal_id': proposal.pk, 'target_project_id': target.pk,
+            'proposal_id': ctx.proposal.pk, 'target_project_id': ctx.target.pk,
         }))
+        assert preview['blockers'] == []
 
-        pending = _call(api_client, proposals_token, 'reassign_proposal_project', {
-            'proposal_id': proposal.pk, 'target_project_id': target.pk,
-            'reason': 'Correct MCP project association',
-            'expected_impact_hash': preview['impact_hash'], 'request_id': 'mcp-confirmation-request',
-        })
-        phase.refresh_from_db()
+        pending = _call(api_client, proposals_token, 'reassign_proposal_project',
+                        _reassignment_arguments(ctx, preview['impact_hash']))
+        ctx.phase.refresh_from_db()
         assert _payload(pending)['confirmation_required'] is True
-        assert phase.project_id == source.pk
+        assert ctx.phase.project_id == ctx.source.pk
         confirmed = _call(api_client, proposals_token, 'confirm_action', {
             'confirmation_id': _payload(pending)['confirmation_id'],
         })
 
-        phase.refresh_from_db()
-        assert phase.project_id == target.pk
         assert confirmed['isError'] is False
+        ctx.phase.refresh_from_db()
+        ctx.target.refresh_from_db()
+        assert ctx.phase.project_id == ctx.target.pk
+        assert (ctx.target.current_state_id, ctx.target.status) == (state.pk, target_status)
 
     def test_reassignment_rejects_an_invalid_impact_hash_before_creating_an_intent(
         self, api_client, proposals_token,
