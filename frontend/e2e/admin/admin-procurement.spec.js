@@ -6,6 +6,7 @@
  * navigates staff to a page that does not render the received opportunity.
  */
 import { test, expect } from '../helpers/test.js'
+import { waitForNuxtApp } from '../helpers/navigation.js'
 import {
   ADMIN_PROCUREMENT_ALERTS,
   ADMIN_PROCUREMENT_CLASSIFICATION,
@@ -39,9 +40,36 @@ test.describe('Admin procurement', () => {
     await setupProcurementApi(page)
     await openProcurementFromSidebar(page)
 
+    const nav = page.getByRole('navigation', { name: 'Navegación del panel' })
+    await expect(nav.getByRole('link', { name: 'Secop', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(nav.getByRole('link', { name: 'Admins del panel', exact: true })).toHaveCount(0)
     const card = page.getByTestId(`procurement-opportunity-${opportunity.id}`)
     await expect(card).toContainText('Mantenimiento de espacios públicos')
     await expect(card).toContainText('Alcaldía de Bogotá')
+  })
+
+  test('opens Secop by keyboard from the compact superuser menu', {
+    tag: [...ADMIN_PROCUREMENT_OPPORTUNITY_LIST, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Without a compact link name, keyboard users cannot identify the SECOP destination.
+    await setupProcurementApi(page, { isSuperuser: true })
+    // quality: allow-deep-link (proposals provides the authenticated starting page for sidebar navigation)
+    await page.goto('/es-co/panel/proposals', { waitUntil: 'domcontentloaded' })
+    await waitForNuxtApp(page)
+    const nav = page.getByRole('navigation', { name: 'Navegación del panel' })
+    await expect(nav.getByText('Contratación estatal', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Contraer barra lateral' }).click()
+    await expect(nav.getByRole('link', { name: 'Admins del panel' })).toHaveAttribute('href', '/es-co/panel/admins')
+
+    const secop = nav.getByRole('link', { name: 'Secop', exact: true })
+    await expect(secop).toHaveAttribute('title', 'Secop')
+    await secop.focus()
+    await expect(secop).toBeFocused()
+    await secop.press('Enter')
+
+    await expect(page).toHaveURL(/\/es-co\/panel\/procurement$/)
+    await expect(secop).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByTestId(`procurement-opportunity-${opportunity.id}`)).toContainText(opportunity.title)
   })
 
   test('refresh recovers the opportunity list after a service failure', {

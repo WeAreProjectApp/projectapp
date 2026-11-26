@@ -1,6 +1,7 @@
 import { expect } from './test.js'
 import { mockApi } from './api.js'
 import { setAuthLocalStorage } from './auth.js'
+import { waitForNuxtApp } from './navigation.js'
 
 export const opportunity = {
   id: 71,
@@ -75,7 +76,9 @@ export async function setupProcurementApi(page, scenario = {}) {
     const override = await scenario.onRequest?.({ route, apiPath, method, state })
     if (override) return override
 
-    if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } })
+    if (apiPath === 'auth/check/') return json({ user: {
+      username: 'admin', is_staff: true, is_superuser: scenario.isSuperuser ?? false,
+    } })
     if (apiPath === 'proposals/' || apiPath === 'proposals/alerts/' || apiPath === 'proposals/client-profiles/') return json([])
     if (apiPath === 'proposals/dashboard/') return json({ total: 0, by_status: {} })
     if (apiPath === 'procurement/searches/' && method === 'GET') return json(state.searches)
@@ -132,7 +135,9 @@ export async function setupProcurementApi(page, scenario = {}) {
 
 export async function openProcurementFromSidebar(page) {
   await page.goto('/es-co/panel/proposals', { waitUntil: 'domcontentloaded' })
-  const procurementLink = page.getByRole('link', { name: 'Oportunidades SECOP', exact: true })
+  await waitForNuxtApp(page)
+  const procurementLink = page.getByRole('navigation', { name: 'Navegación del panel' })
+    .getByRole('link', { name: 'Secop', exact: true })
   await expect(procurementLink).toHaveCount(1)
   await procurementLink.click()
   await expect(page).toHaveURL(/\/panel\/procurement$/)

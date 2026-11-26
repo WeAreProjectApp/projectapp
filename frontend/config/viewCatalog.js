@@ -17,7 +17,7 @@ export const viewCatalogSections = [
     id: 'panel-procurement', label: 'Contratación estatal',
     description: 'Consulta SECOP II y administra alertas y seguimiento interno con análisis externo.',
     views: [
-      { label: 'Oportunidades SECOP', url: '/panel/procurement', group: 'Contratación estatal',
+      { label: 'Secop', url: '/panel/procurement', group: 'Contratación estatal',
         file: 'frontend/pages/panel/procurement/index.vue', reference: 'listado de contratación estatal',
         notes: 'Procesos y Mis clasificados, búsquedas guardadas con favorito, alertas con destinatarios y frecuencias, entregas con reintento y configuración de horarios Bogotá. Modales de búsqueda, alerta, confirmación y contenido enviado. Exportación Excel, filtros únicos y sincronización manual. MCP propio; el correo y análisis externo no se ejecutan dentro del módulo.',
         audience: 'admin', viewType: 'list' },
