@@ -10,6 +10,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { openHostingBillingList } from '../helpers/accounting-hosting-row-billing.js';
 import {
   ADMIN_ACCOUNTING_HOSTING_BILLING,
   ADMIN_ACCOUNTING_HOSTING_CYCLES,
@@ -25,24 +26,14 @@ import {
 test.setTimeout(60_000);
 
 test.describe('Admin Accounting Hosting Billing', () => {
-  test.beforeEach(async ({ page }) => {
-    await setAuthLocalStorage(page, {
-      token: 'e2e-token',
-      userAuth: { id: 9001, role: 'admin', is_staff: true },
-    });
-  });
-
-  test('the send action requires a resolvable recipient and previews it', {
+  test('the send action shows the reviewed period before emission', {
     tag: [...ADMIN_ACCOUNTING_HOSTING_BILLING, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
-    // quality: allow-deep-link (the tab is a subnav entry; the flow under
-    // test starts at the row's send action, which IS clicked below)
-    await mockApi(page, buildHandler({ calls: [] }));
-    await gotoHostings(page);
+    // quality: allow-deep-link (the locale-prefixed Panel home is test setup; the user enters Hostings through its sidebar)
+    const writes = await openHostingBillingList(page);
 
-    // Row 2 has neither its own email nor a linked client: nothing to send to.
-    await openHostingMenu(page, 2);
-    const unavailable = page.getByTestId('hosting-send-billing-2');
+    await openHostingMenu(page, 3);
+    const unavailable = page.getByTestId('hosting-send-billing-3');
     await expect(unavailable).toBeDisabled();
     await expect(unavailable).toContainText('Vincula un cliente con correo');
     const dialog = page.getByRole('dialog').filter({ has: page.getByTestId('hosting-actions-modal') });
@@ -53,20 +44,20 @@ test.describe('Admin Accounting Hosting Billing', () => {
 
     // The confirm previews exactly where it is going before anything is sent.
     await expect(
-      page.getByRole('dialog').getByText('german@korehealths.com', { exact: false }),
+      page.getByRole('dialog').getByText('alfa@example.invalid', { exact: false }),
     ).toBeVisible();
+    await expect(page.getByTestId('hosting-period-summary')).toContainText('2026-04-01 — 2026-06-30');
     await page.getByRole('dialog').getByRole('button', { name: /^(Cancelar|Cancel)$/ }).click();
     await expect(
       page.getByRole('heading', { name: 'Enviar cuenta de cobro' }),
     ).toHaveCount(0);
+    expect(writes).toEqual([]);
   });
 
   test('sending the cuenta de cobro confirms, POSTs and shows the badge', {
     tag: [...ADMIN_ACCOUNTING_HOSTING_BILLING, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    const calls = [];
-    await mockApi(page, buildHandler({ calls }));
-    await gotoHostings(page);
+    const writes = await openHostingBillingList(page);
 
     await chooseHostingAction(page, 1, 'send-billing');
     await expect(
@@ -77,17 +68,17 @@ test.describe('Admin Accounting Hosting Billing', () => {
 
     await expect(page.getByText('Cuenta de cobro enviada')).toBeVisible();
     await expect(page.getByText('Cobro enviado')).toBeVisible();
-    expect(calls).toContainEqual({
+    expect(writes).toEqual([{
       apiPath: 'accounting/hostings/1/send-collection-account/',
       method: 'POST',
-    });
+      body: { hosting_payment_id: 48, period_version: 'review-1' },
+    }]);
   });
 
   test('a failed email keeps the document issued and warns the user', {
     tag: [...ADMIN_ACCOUNTING_HOSTING_BILLING, '@role:admin', '@outcome:failure'],
   }, async ({ page }) => {
-    await mockApi(page, buildHandler({ calls: [], emailSent: false }));
-    await gotoHostings(page);
+    await openHostingBillingList(page, { emailSent: false });
 
     await chooseHostingAction(page, 1, 'send-billing');
     await page.getByRole('button', { name: 'Enviar al cliente' }).click();
@@ -95,6 +86,7 @@ test.describe('Admin Accounting Hosting Billing', () => {
     await expect(
       page.getByText('Cuenta de cobro emitida, pero el correo falló'),
     ).toBeVisible();
+    await expect(page.getByTestId('accounting-row-1')).toContainText('Cobro enviado');
   });
 });
 
@@ -113,6 +105,8 @@ test.describe('Admin Accounting Hosting Cycles', () => {
       page,
       buildHandler({ calls: [], cycles: [BACKFILL_CYCLE] }),
     );
+    // quality: allow-deep-link (the authenticated panel is test setup; this
+    // display flow navigates to Hostings through the visible sidebar below)
     await gotoHostings(page);
 
     await openHostingMenu(page, 1);
