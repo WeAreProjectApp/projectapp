@@ -3195,6 +3195,8 @@ Contrato: [Feature flags](PLATFORM_FEATURE_FLAGS.md). Verificar descubrimiento d
 
 ### Contabilidad de hosting (PA-296, PA-298 y PA-299)
 
+Las versiones publicadas son `accounting` 3.0.0, `accounting-billing` 4.0.0 y `accounting-ledger` 4.0.0. [Cambios para consumidores de los conectores](changelog/2026-11-26-hosting-accounting-mcp.md).
+
 Con una fixture administrativa en DEV, consultar `get_project_hosting_inventory` y verificar el objeto `billing_period` contra el resumen de Ingresos y Hostings. Para la cuenta, enviar la obligación y la `period_version` devueltas por esa lectura. Un período cubierto o cambiado debe producir bloqueo. Verificar que sus fechas y el saldo coincidan en línea, PDF y correo simulado.
 
 En la liquidación individual o múltiple, `hosting_receipt.entries` identifica cada ingreso y su origen contable. Los campos opcionales `cycle_id` y `liquid_id` seleccionan evidencias previas. Para un pago nuevo, `issuer` y `reference` identifican el cobro real. Repetir con un segundo UUID desde la otra pantalla y cotejar la liquidación, la imputación y el movimiento de bolsillo. Probar luego dos folios distintos de igual importe.
