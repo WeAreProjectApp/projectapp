@@ -18,6 +18,12 @@ function contextData(overrides = {}) {
       ...overrides.overview,
     },
     selection: { requires_reconciliation: false, ...overrides.selection },
+    billing_period: {
+      version: 'period-v4', hosting_payment_id: null,
+      period_start: '2026-11-01', period_end: '2027-01-31', state: 'pending',
+      amount: '233280', received: '0', balance: '233280', source: 'subscription', documents: [],
+      ...overrides.billing_period,
+    },
   }
 }
 
@@ -49,8 +55,9 @@ async function mountOpen(props = {}) {
         HostingBillingPicker: {
           props: ['modelValue'],
           emits: ['update:modelValue', 'reconcile'],
+          mounted() { this.$emit('update:modelValue', { ...this.modelValue, period_version: 'period-v4' }) },
           template: `<section role="group">
-            <button data-testid="emission-picker-payment" @click="$emit('update:modelValue', { ...modelValue, hosting_payment_id: 8 })">Seleccionar período 8</button>
+            <button data-testid="emission-picker-payment" @click="$emit('update:modelValue', { ...modelValue, hosting_payment_id: 8, period_version: 'period-v4' })">Seleccionar período 8</button>
             <button data-testid="emission-picker-reconcile" @click="$emit('reconcile')">Conciliar</button>
           </section>`,
         },
@@ -91,20 +98,21 @@ describe('HostingAccountEmissionModal', () => {
     expect(confirm.element.disabled).toBe(false)
     await confirm.trigger('click')
 
-    expect(wrapper.emitted('confirm')).toEqual([[{ hosting_payment_id: null }]])
+    expect(wrapper.emitted('confirm')).toEqual([[{ hosting_payment_id: null, period_version: 'period-v4' }]])
     expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
     wrapper.unmount()
   })
 
   // Falla si el modal acepta un período ajeno a la suscripción o rechaza uno recuperado del borrador.
   it.each([
-    ['a saved subscription payment', 8, false, [[{ hosting_payment_id: 8 }]]],
-    ['a foreign subscription payment', 99, true, undefined],
+    ['a saved subscription payment', 8, false, [[{ hosting_payment_id: 8, period_version: 'period-v4' }]]],
+    ['a foreign subscription payment', 99, false, [[{ hosting_payment_id: 8, period_version: 'period-v4' }]]],
   ])('handles %s by its current payment list', async (_case, paymentId, disabled, expectedConfirm) => {
     get_request.mockResolvedValue({ data: contextData({
       overview: {
         subscription: { associated: true, payments: [{ id: 8, status: 'pending' }] },
       },
+      billing_period: { hosting_payment_id: 8 },
     }) })
     const wrapper = await mountOpen({ resumeDraft: { hosting_payment_id: paymentId } })
     const confirm = button(wrapper, 'Enviar al cliente')

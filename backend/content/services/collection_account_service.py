@@ -248,7 +248,13 @@ def issue_collection_account(
     from rest_framework.exceptions import ValidationError
     try:
         validate_account_context(document)
-    except ValidationError as exc:
+        review = (document.metadata or {}).get('hosting_period_review')
+        if review:
+            from content.services.hosting_periods import validate_reviewed_document
+            validate_reviewed_document(document, review)
+    except (ValueError, ValidationError) as exc:
+        if isinstance(exc, ValueError):
+            raise CollectionAccountError(str(exc)) from exc
         detail = exc.detail.get('detail', exc.detail) if isinstance(exc.detail, dict) else exc.detail
         raise CollectionAccountError(str(detail)) from exc
     ext, _ = DocumentCollectionAccount.objects.get_or_create(document=document)

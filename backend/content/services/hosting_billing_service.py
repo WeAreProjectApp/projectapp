@@ -1,8 +1,7 @@
 """Cuenta de cobro (collection account) flow for accounting hostings.
 
 The panel action "Enviar cuenta de cobro" on a HostingRecord:
-1. Creates a draft Document + DocumentCollectionAccount for the next
-   billing period (valid_to → valid_to + modality months).
+1. Creates a draft Document for the verified service period and its balance.
 2. Issues it (public number, payer/customer snapshots — the customer
    comes from the hosting's client fields, not a platform user).
 3. Emails the client the branded message with the PDF attached.
@@ -82,7 +81,7 @@ def _default_issuer():
 
 
 @transaction.atomic
-def create_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None):
+def create_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None, period_version=None, receipt_allocation_id=None):
     """Draft Document + extension + line item + default payment methods."""
     from accounts.services.billing_locks import lock_billing_rows
     hosting = lock_billing_rows(hosting_ids=[hosting.pk]).hostings.get(hosting.pk)
@@ -90,16 +89,44 @@ def create_hosting_collection_account(hosting, *, acting_user=None, hosting_paym
         raise HostingBillingError('El hosting seleccionado no existe.')
     if hosting.project_id and (not hosting.client_id or hosting.client.user_id != hosting.project.client_id):
         raise HostingBillingError('El origen hosting y el proyecto deben pertenecer al mismo cliente.')
-    base, tax, total = vat_breakdown(hosting.payment_per_cycle, hosting.vat_rate)
-    period_from, period_to = next_billing_period(hosting)
+    income = None
+    if period_version is not None:
+        from content.models import HostingReceiptAllocation
+        from content.services.hosting_periods import HostingPeriods, PeriodConflict, reviewed_period
+
+        allocation = None
+        if receipt_allocation_id is not None:
+            allocation = HostingReceiptAllocation.objects.select_related('liquid', 'period__income').filter(
+                pk=receipt_allocation_id, cycle__hosting_record=hosting,
+            ).first()
+            if not allocation:
+                raise HostingBillingError('El pago acreditado no corresponde a este servicio.')
+        try:
+            book = HostingPeriods(hosting.project_id, record_id=hosting.pk)
+            window = reviewed_period(book, {'hosting_payment_id': hosting_payment_id, 'period_version': period_version},
+                                     paid_allocation=allocation)
+        except PeriodConflict as exc:
+            raise HostingBillingError(str(exc)) from exc
+        income = allocation.liquid if allocation else window.income
+        amount = allocation.liquid.total_amount if allocation else window.balance
+        period_from, period_to = window.start, window.end
+    else:
+        # Historical draft integrations can still supply an explicit obligation.
+        # Both panel emission endpoints require the reviewed window.
+        amount = hosting.payment_per_cycle
+        period_from, period_to = next_billing_period(hosting)
+    base, tax, total = vat_breakdown(amount, income.vat_rate if income else hosting.vat_rate)
     # What is being hosted, not who pays for it: with no domain the project
     # names the service ("hosting Kore"), the client half never did.
     label = hosting.domain_url or hosting.project_name or hosting.client_name
     document = Document.objects.create(
         title=f'Cuenta de cobro — hosting {label}',
         document_type=get_collection_account_document_type(),
+        metadata={'hosting_period_review': {'period_version': period_version, 'hosting_payment_id': hosting_payment_id,
+                                            'receipt_allocation_id': receipt_allocation_id}} if period_version else {},
         commercial_status=Document.CommercialStatus.DRAFT,
         hosting_record=hosting,
+        income_record=income,
         client_user=hosting.client.user if hosting.client_id else None,
         project=hosting.project,
         currency='COP',
@@ -118,7 +145,7 @@ def create_hosting_collection_account(hosting, *, acting_user=None, hosting_paym
         }, creating=True)
     DocumentCollectionAccount.objects.create(
         document=document,
-        vat_rate=hosting.vat_rate,
+        vat_rate=income.vat_rate if income else hosting.vat_rate,
         billing_concept=f'Servicio de hosting {label}',
         payment_term_type=DocumentCollectionAccount.PaymentTermType.DAYS_AFTER_ISSUE,
         payment_term_days=PAYMENT_TERM_DAYS,
@@ -144,7 +171,7 @@ def create_hosting_collection_account(hosting, *, acting_user=None, hosting_paym
     return document
 
 
-def _prepare_hosting_collection_account(hosting):
+def _prepare_hosting_collection_account(hosting, *, reviewed=False):
     """Validate and snapshot the current origin inside its writer transaction."""
     from content.services.project_state_service import project_allows_billing
 
@@ -158,12 +185,12 @@ def _prepare_hosting_collection_account(hosting):
             'El hosting no tiene a quién enviarle la cuenta: vincula un '
             'cliente con correo o escribe un email de facturación.',
         )
-    if not hosting.payment_per_cycle or hosting.payment_per_cycle <= 0:
+    if not reviewed and (not hosting.payment_per_cycle or hosting.payment_per_cycle <= 0):
         raise HostingBillingError(
             'El hosting no tiene un pago por ciclo configurado.',
         )
     already_billed = (
-        hosting.billing_requested_at is not None
+        not reviewed and hosting.billing_requested_at is not None
         and hosting.collection_documents.exclude(
             commercial_status=Document.CommercialStatus.CANCELLED,
         ).exists()
@@ -208,18 +235,20 @@ def _prepare_hosting_collection_account(hosting):
     }
 
 
-def send_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None):
+def send_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None, period_version=None, receipt_allocation_id=None):
     """Create + issue + archive atomically; email keeps the existing boundary."""
     stored = None
     try:
-        with transaction.atomic():
+        from content.services.entity_history import history_operation
+        with history_operation(actor=acting_user, source='service'), transaction.atomic():
             from accounts.services.billing_locks import lock_billing_rows
             hosting = lock_billing_rows(hosting_ids=[hosting.pk]).hostings.get(hosting.pk)
             if not hosting:
                 raise HostingBillingError('El hosting seleccionado no existe.')
-            issuer, allocator, customer = _prepare_hosting_collection_account(hosting)
+            issuer, allocator, customer = _prepare_hosting_collection_account(hosting, reviewed=period_version is not None)
             document = create_hosting_collection_account(
                 hosting, acting_user=acting_user, hosting_payment_id=hosting_payment_id,
+                period_version=period_version, receipt_allocation_id=receipt_allocation_id,
             )
             issue_collection_account(
                 document,
@@ -229,6 +258,9 @@ def send_hosting_collection_account(hosting, *, acting_user=None, hosting_paymen
                 number_allocator=allocator,
             )
 
+            if receipt_allocation_id is not None:
+                from content.services.collection_account_service import mark_collection_account_paid
+                mark_collection_account_paid(document, acting_user=acting_user)
             # Re-read: the in-memory document may cache the pre-issue extension
             # (empty customer snapshot) via the reverse one-to-one descriptor.
             document = (

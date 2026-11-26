@@ -335,6 +335,7 @@
       @history="historyRow = $event"
       @notes="noteRow = $event"
       @cycles="openCyclesModal"
+      @next-income="openNextIncome($event)"
       @send-billing="askSendBilling"
       @emails="goToHostingEmails"
       @edit="openEditModal"
@@ -379,7 +380,9 @@
       :record="cyclesRecord"
       @close="closeCyclesModal"
       @changed="onCyclesChanged"
+      @next-income="openNextIncome(cyclesRecord, $event)"
     />
+    <HostingNextIncomeModal :record="nextIncomeRecord" :reference-income-id="nextReferenceId" @close="nextIncomeRecord = null" />
 
     <EntityHistoryRecordModal
       :open="historyRow !== null"
@@ -426,6 +429,7 @@ import AccountingIndicatorGroup from '~/components/accounting/AccountingIndicato
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
 import AccountingStatusSelect from '~/components/accounting/AccountingStatusSelect.vue';
 import AccountingInlineCell from '~/components/accounting/AccountingInlineCell.vue';
+import HostingNextIncomeModal from '~/components/accounting/HostingNextIncomeModal.vue';
 import HostingCyclesModal from '~/components/accounting/HostingCyclesModal.vue';
 import HostingActionsModal from '~/components/accounting/HostingActionsModal.vue';
 import HostingAccountEmissionModal from '~/components/accounting/billing/HostingAccountEmissionModal.vue';
@@ -948,6 +952,15 @@ function openCyclesModal(row) {
   openCyclesById(row.id);
 }
 
+const nextIncomeRecord = ref(null);
+const nextReferenceId = ref(null);
+function openNextIncome(row, reference = null) {
+  if (!row) return;
+  nextIncomeRecord.value = row;
+  nextReferenceId.value = reference;
+  if (cyclesModalOpen.value) closeCyclesModal();
+}
+
 function goToHostingEmails(row) {
   navigateTo(historySendsLink('hosting', row.id));
 }
@@ -971,8 +984,7 @@ const billingConfirmMessage = computed(() => {
   const row = billingRow.value;
   if (!row) return '';
   return (
-    `Se emitirá la cuenta de cobro por ${formatMoney(row.payment_per_cycle, 'COP')} ` +
-    `y se enviará con el PDF adjunto a ${row.billing_email}. ` +
+    `Se enviará la cuenta del período revisado con el PDF adjunto a ${row.billing_email}. ` +
     'Los avisos de vencimiento de este hosting se pausan hasta la próxima renovación.'
   );
 });

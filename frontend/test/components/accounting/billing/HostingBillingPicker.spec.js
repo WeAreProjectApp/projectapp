@@ -46,6 +46,7 @@ const pickerData = (overrides = {}) => ({
     hosting: { subscription_id: 22, hosting_record_ids: [31] },
     ...overrides.inventory,
   },
+  billing_period: overrides.billing_period,
 })
 
 function deferred() {
@@ -116,6 +117,29 @@ describe('HostingBillingPicker', () => {
       project_hosting_id: 91, hosting_payment_id: null,
     })
     expect(create_request).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  // Falla si una cuenta de cobro confirma una ventana distinta de la que el
+  // operador vio en el selector común de Ingresos y Hostings.
+  it('adds the reviewed period version to an existing hosting selection', async () => {
+    const wrapper = mountPicker({ data: pickerData({
+      billing_period: {
+        project_hosting_id: 91, hosting_payment_id: 62, version: 'period-v4',
+        period_start: '2026-11-01', period_end: '2027-01-31', amount: '233280', received: '0', balance: '233280',
+        state: 'pending', source: 'subscription', documents: [],
+      },
+    }) })
+
+    await wrapper.get('[data-testid="billing-hosting-choice"]').setValue('hosting:91')
+    await wrapper.get('[data-testid="billing-hosting-review"]').trigger('click')
+    await wrapper.setProps({ modelValue: { ...model, project_hosting_id: 91, hosting_payment_id: null } })
+    await flushPromises()
+
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toEqual({
+      billing_nature: 'hosting', contract_id: null, amendment_id: null,
+      project_hosting_id: 91, hosting_payment_id: 62, period_version: 'period-v4',
+    })
     wrapper.unmount()
   })
 

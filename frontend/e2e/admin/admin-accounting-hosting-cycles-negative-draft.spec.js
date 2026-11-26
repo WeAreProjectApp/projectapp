@@ -24,33 +24,35 @@ test.describe('Admin Accounting Hosting Cycles — negative outcomes', () => {
     });
   });
 
-  test('a rejected cycle registration keeps the form retryable', {
-    // Bug this catches: a failed cycle create being presented as success or
-    // leaving the administrator unable to correct the form and retry.
+  test('a rejected receipt review keeps the payment form retryable', {
+    // Bug this catches: a rejected receipt review being presented as a payment
+    // or leaving the administrator unable to correct the reference and retry.
     tag: [...ADMIN_ACCOUNTING_HOSTING_CYCLES, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
     const calls = [];
     await mockApi(page, buildHandler({
       calls,
-      cycles: [BACKFILL_CYCLE],
-      createCycleError: {
-        status: 400,
-        detail: 'El monto debe ser mayor a cero.',
+      cycleReceiptError: {
+        status: 409,
+        detail: 'La referencia ya corresponde a otra imputación.',
       },
     }));
     await gotoHostings(page);
 
     await chooseHostingAction(page, 1, 'cycles');
     const cycleSubmit = page.getByTestId('cycle-submit');
-    await expect(cycleSubmit).toBeEnabled();
+    await page.getByTestId('cycle-income').selectOption('301');
+    await page.getByTestId('hosting-receipt-issuer').fill('Banco de prueba');
+    await page.getByTestId('hosting-receipt-reference').fill('TRX-repetida');
     await cycleSubmit.click();
 
     await expect(
-      page.getByText('No se pudo registrar el ciclo', { exact: true }),
+      page.getByRole('alert'),
     ).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText('La referencia ya corresponde a otra imputación.');
     await expect(cycleSubmit).toBeEnabled();
     expect(calls).toEqual([expect.objectContaining({
-      apiPath: 'accounting/hostings/1/cycles/create/',
+      apiPath: 'accounting/hostings/1/cycle-receipt/',
       method: 'POST',
     })]);
   });

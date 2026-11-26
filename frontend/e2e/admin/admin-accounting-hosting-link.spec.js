@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-11-06 — app not running)
 /**
  * PA-230 — linking a hosting while preparing a collection account.
  *
@@ -32,6 +31,8 @@ const income = {
   period: '2026-11',
   period_label: 'Noviembre 2026',
   period_date: '2026-11-01',
+  period_start: '2026-11-01',
+  period_end: '2027-01-31',
   destination: 'company',
   destination_label: 'Empresa',
   ledger: 'company',
@@ -93,6 +94,35 @@ function unlinkedCandidate() {
   };
 }
 
+function expectedIncomePeriod(state, blockers) {
+  if (state.mode !== 'linked') {
+    return { state: 'blocked', blocker: blockers[0]?.message || 'Asocia el origen contable operativo antes de revisar el período.' };
+  }
+  return {
+    project_id: income.project,
+    client_id: income.client,
+    hosting_record_id: 31,
+    income_id: income.id,
+    project_hosting_id: state.hostingId,
+    hosting_payment_id: null,
+    source: 'expected_income',
+    period_start: income.period_start,
+    period_end: income.period_end,
+    state: 'pending',
+    currency: 'COP',
+    amount: income.total_amount,
+    received: '0.00',
+    deductions: '0.00',
+    rescheduled: '0.00',
+    balance: income.total_amount,
+    documents: [],
+    cycle_ids: [],
+    version: `expected-income-${income.id}-v${state.version}`,
+    blocker: '',
+  };
+}
+
+
 function hostingResponse(state) {
   const linked = state.mode === 'linked';
   const candidates = state.mode === 'unlinked' ? [unlinkedCandidate()]
@@ -124,6 +154,8 @@ function hostingResponse(state) {
       can_create: state.mode === 'empty',
       requires_reconciliation: state.mode === 'contradictory',
     },
+    // This project uses an expected income linked to its operating service.
+    billing_period: expectedIncomePeriod(state, blockers),
   };
 }
 
@@ -231,6 +263,8 @@ test.describe('PA-230 hosting link from a collection account', () => {
     await expect(page.getByTestId('billing-hosting-link-preview')).toContainText('pendiente.aurora.test · Semestral · Activo');
     await page.getByTestId('billing-hosting-confirm').click();
     await expect(page.getByTestId('billing-hosting-confirmed')).toHaveText('Hosting confirmado para esta cuenta.');
+    await expect(page.getByTestId('hosting-period-summary')).toContainText('2026-11-01 — 2027-01-31');
+    await expect(page.getByTestId('hosting-period-summary')).toContainText('$120.000 COP');
     await page.getByTestId('collection-form-preview').click();
     await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-AUR-001');
     expect(calls.filter((call) => call.apiPath === 'admin/billing-context/projects/10/hosting/'))
@@ -239,7 +273,10 @@ test.describe('PA-230 hosting link from a collection account', () => {
         expect.objectContaining({ preview: null, body: expect.objectContaining({ hosting_record_ids: [31], operational_record_id: 31, expected_version: 4 }) }),
       ]));
     expect(calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/').body)
-      .toMatchObject({ billing_nature: 'hosting', project_hosting_id: 70, income_record_id: 1 });
+      .toMatchObject({
+        billing_nature: 'hosting', project_hosting_id: 70, income_record_id: 1,
+        period_version: 'expected-income-1-v4', hosting_payment_id: null,
+      });
   });
 
   test('creating a missing hosting preserves the account draft for selection', {

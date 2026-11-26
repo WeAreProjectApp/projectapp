@@ -1,9 +1,11 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseModal from '~/components/base/BaseModal.vue'
 import { leadingRowActions } from '~/utils/accountingRowActions'
 
+const { t } = useI18n()
 const props = defineProps({
   open: { type: Boolean, default: false },
   record: { type: Object, default: null },
@@ -11,7 +13,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'close', 'history', 'notes', 'cycles', 'send-billing', 'emails', 'edit', 'delete',
+  'close', 'history', 'notes', 'cycles', 'next-income', 'send-billing', 'emails', 'edit', 'delete',
 ])
 
 const actions = computed(() => {
@@ -25,7 +27,11 @@ const actions = computed(() => {
       description: 'Registrar un pago o revisar el histórico.',
     },
     {
-      id: 'send-billing', action: 'send', label: 'Enviar cuenta de cobro',
+      id: 'next-income', action: 'create', label: t('hostingBilling.nextAction'), event: 'next-income',
+      description: 'Revisar el período siguiente del servicio.',
+    },
+    {
+      id: 'send-billing', action: 'send', label: t('hostingBilling.sendAccount'),
       event: 'send-billing',
       disabled: !row.billing_email || props.billingBusy,
       description: props.billingBusy

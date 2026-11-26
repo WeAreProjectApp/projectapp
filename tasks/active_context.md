@@ -1,3 +1,7 @@
+## W2 · PA-296, PA-298 y PA-299
+
+Contabilidad comparte el período de hosting entre Ingresos y Hostings. El mismo recibo puede llegar por ambas entradas y el siguiente esperado se prepara desde el calendario contractual. El [contrato de liquidación](../docs/accounting-settlement.md) recoge la decisión pendiente sobre recibos manuales sin referencia.
+
 ## PA-221 · evidencia de integridad y retiro por destino
 
 El expediente w2 conserva TO DO, el acceso actual y la pausa de DEVQA-000. Se

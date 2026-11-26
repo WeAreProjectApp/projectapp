@@ -21,6 +21,7 @@ from content.services.hosting_billing_service import (
     HostingBillingError,
     send_hosting_collection_account,
 )
+from content.services.hosting_periods import current_summary
 
 
 User = get_user_model()
@@ -234,11 +235,17 @@ def test_hosting_send_requires_selected_subscription_payment(
     """Falla si una emisión de hosting con suscripción deduce el pago por importe o fecha."""
     from accounts.services.hosting_context import reconcile_hosting
 
+    payment.status = payment.STATUS_PENDING
+    payment.save(update_fields=['status'])
     reconcile_hosting(project.pk, admin_user, hosting_mapping(hosting_record, payment.subscription))
     before = (Document.objects.count(), DocumentCollectionAccount.objects.count(), payment.__class__.objects.count())
+    period = current_summary(project.pk)
 
-    with pytest.raises(HostingBillingError, match='Asocia explícitamente'):
-        send_hosting_collection_account(hosting_record, acting_user=admin_user)
+    with pytest.raises(HostingBillingError, match='obligación revisada cambió'):
+        send_hosting_collection_account(
+            hosting_record, acting_user=admin_user,
+            period_version=period['version'],
+        )
 
     assert (Document.objects.count(), DocumentCollectionAccount.objects.count(), payment.__class__.objects.count()) == before
 
@@ -250,9 +257,12 @@ def test_hosting_send_records_the_selected_payment_without_new_financial_rows(
     from accounts.models import HostingEvidence
     from accounts.services.hosting_context import reconcile_hosting
 
+    payment.status = payment.STATUS_PENDING
+    payment.save(update_fields=['status'])
     identity = reconcile_hosting(
         project.pk, admin_user, hosting_mapping(hosting_record, payment.subscription),
     )
+    period = current_summary(project.pk)
     before_payment_count = payment.__class__.objects.count()
     with patch(
         'content.services.hosting_billing_service.persist_collection_account_pdf',
@@ -263,6 +273,7 @@ def test_hosting_send_records_the_selected_payment_without_new_financial_rows(
     ):
         result = send_hosting_collection_account(
             hosting_record, acting_user=admin_user, hosting_payment_id=payment.pk,
+            period_version=period['version'],
         )
 
     document = result['document']

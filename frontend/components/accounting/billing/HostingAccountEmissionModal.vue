@@ -14,10 +14,10 @@ let sequence = 0
 onBeforeUnmount(() => { sequence += 1 })
 const source = computed(() => overview.value?.accounting_sources?.find(row => Number(row.id) === Number(props.record?.id)))
 const projectId = computed(() => props.record?.project_id || props.record?.project)
-const ready = computed(() => !projectId.value || (!loading.value && !error.value && source.value?.operational
+const period = computed(() => hostingData.value?.billing_period)
+const ready = computed(() => Boolean(projectId.value && !loading.value && !error.value && source.value?.operational
   && !overview.value?.reconciliation_required && !hostingData.value?.selection?.requires_reconciliation
-  && (!overview.value?.subscription || (overview.value.subscription.associated
-    && overview.value.subscription.payments.some(row => Number(row.id) === Number(context.value.hosting_payment_id))))))
+  && period.value?.version && !period.value.blocker && context.value.period_version === period.value.version))
 watch(() => [props.modelValue, props.record?.id], async () => {
   const request = ++sequence
   hostingData.value = null; context.value = {}; error.value = ''; loading.value = false
@@ -34,7 +34,7 @@ watch(() => [props.modelValue, props.record?.id], async () => {
 })
 function confirm() {
   if (!ready.value) return
-  emit('confirm', { hosting_payment_id: context.value.hosting_payment_id || null }); emit('update:modelValue', false)
+  emit('confirm', { hosting_payment_id: period.value.hosting_payment_id, period_version: period.value.version }); emit('update:modelValue', false)
 }
 function cancel() { emit('cancel'); emit('update:modelValue', false) }
 function reconcile() { emit('reconcile', { record: props.record, hosting_payment_id: context.value.hosting_payment_id || null }) }
@@ -42,9 +42,10 @@ function reconcile() { emit('reconcile', { record: props.record, hosting_payment
 <template>
   <BaseModal :model-value="modelValue" kind="confirm" @update:model-value="cancel">
     <div class="space-y-4 p-5">
-      <h2 class="text-xl font-semibold">Enviar cuenta de cobro</h2><p class="text-sm">{{ message }}</p>
+      <h2 class="text-xl font-semibold">{{ t('hostingBilling.sendAccount') }}</h2><p class="text-sm">{{ message }}</p>
       <p v-if="loading" role="status">{{ t('hostingBilling.loading') }}</p>
       <p v-if="error" role="alert" class="text-danger-strong">{{ error }}</p>
+      <p v-if="!projectId" role="alert">{{ t('hostingBilling.ownerNeeded') }}</p>
       <template v-if="projectId && hostingData">
         <HostingBillingPicker v-model="context" :project-id="projectId" :data="hostingData" @refreshed="hostingData = $event" @reconcile="reconcile" />
         <template v-if="!source?.operational && !hostingData.selection?.requires_reconciliation">
@@ -54,7 +55,7 @@ function reconcile() { emit('reconcile', { record: props.record, hosting_payment
       </template>
       <div class="flex flex-wrap justify-end gap-3">
         <BaseButton variant="secondary" @click="cancel">{{ t('hostingBilling.cancel') }}</BaseButton>
-        <BaseButton :disabled="!ready" :loading="loading" :disabled-reason="t('hostingBilling.paymentRequired')" @click="confirm">Enviar al cliente</BaseButton>
+        <BaseButton :disabled="!ready" :loading="loading" :disabled-reason="period?.blocker || t('hostingBilling.reconcileRequired')" @click="confirm">{{ t('hostingBilling.sendClient') }}</BaseButton>
       </div>
     </div>
   </BaseModal>

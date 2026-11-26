@@ -1576,6 +1576,11 @@ PROJECT_BILLING_CONTRACTS = (
               excluded=_excluded(_AUTOMATION_STATE, 'wompi_payment_source_id card_exp_month card_exp_year is_archived archived_at')),
     _contract('accounts.Payment', read_only='id subscription amount description billing_period_start billing_period_end due_date status paid_at created_at is_archived archived_at',
               excluded=_excluded(_AUTOMATION_STATE, 'wompi_transaction_id wompi_payment_link_id wompi_payment_link_url charge_attempts last_charge_error next_retry_at')),
+    _contract('content.HostingIncomePeriod', read_only='id hosting income start end'),
+    _contract('content.HostingReceipt', read_only='id issuer reference settlement'),
+    _contract('content.HostingReceiptAllocation', read_only='id receipt period liquid cycle existing_cycle'),
+    _contract('content.HostingReceiptAttempt', excluded=_excluded(
+        'Registro interno de reintentos del escritor compartido.', 'id receipt payload_hash')),
     _contract('accounts.ProjectHosting', read_only='id project version created_at updated_at', read_write='subscription operational_accounting_source'),
     _contract('accounts.ProjectHostingAccountingSource', read_only='id created_at', read_write='hosting hosting_record'),
     _contract('accounts.CollectionAccountContext', read_only='id document version updated_at pending_by pending_at', read_write='nature contract amendment hosting document_pending'),

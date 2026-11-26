@@ -238,7 +238,13 @@ def validate_hosting_account_evidence(document, hosting):
         evidence = HostingEvidence.objects.select_related('group').filter(document=document).first()
         if not evidence or evidence.group.hosting_id != hosting.pk or not evidence.group.evidence.filter(payment__subscription_id=hosting.subscription_id).exists():
             invalid('Asocia explícitamente esta cuenta a la obligación de la suscripción antes de emitir; no se deduce un ciclo por importe o fecha.')
-        if evidence.group.evidence.filter(document__commercial_status__in=('issued', 'paid')).exclude(document=document).exists():
+        others = evidence.group.evidence.filter(document__commercial_status__in=('issued', 'paid')).exclude(document=document)
+        allocation_id = (document.metadata or {}).get('hosting_period_review', {}).get('receipt_allocation_id')
+        if allocation_id and getattr(document.income_record, 'hosting_allocation', None):
+            from django.db.models import Q
+            others = others.exclude(Q(document__commercial_status='paid', document__income_record__hosting_allocation__isnull=False)
+                                    & ~Q(document__income_record_id=document.income_record_id))
+        if others.exists():
             invalid('La obligación seleccionada ya tiene una cuenta emitida; concilia o anula explícitamente antes de emitir otra.')
     if document.hosting_record_id:
         source = hosting.operational_accounting_source
