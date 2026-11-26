@@ -6,139 +6,203 @@ import { get_request } from '../../../../stores/services/request_http'
 
 jest.mock('../../../../stores/services/request_http', () => ({ get_request: jest.fn() }))
 
-const record = { id: 44, project: 7, domain_url: 'aurora.co' }
+const alfa = {
+  id: 44, client: 17, client_display_name: 'Cliente Alfa', project: 7, project_name: 'Proyecto Alfa',
+  domain_url: 'alfa.example.invalid', billing_email: 'alfa@example.invalid', payment_per_cycle: '999999',
+}
+const beta = {
+  id: 45, client: 18, client_display_name: 'Cliente Beta', project: 8, project_name: 'Proyecto Beta',
+  domain_url: 'beta.example.invalid', billing_email: 'beta@example.invalid',
+}
 
-function contextData(overrides = {}) {
+function decision(record = alfa, period = {}) {
   return {
     overview: {
-      hosting_id: 91,
-      reconciliation_required: false,
-      subscription: null,
-      accounting_sources: [{ id: 44, operational: true }],
-      ...overrides.overview,
+      project_id: record.project, hosting_id: 91, reconciliation_required: false,
+      accounting_sources: [{ id: record.id, associated: true, operational: true }],
     },
-    selection: { requires_reconciliation: false, ...overrides.selection },
+    selection: { requires_reconciliation: false, blockers: [] },
     billing_period: {
-      version: 'period-v4', hosting_payment_id: null,
-      period_start: '2026-11-01', period_end: '2027-01-31', state: 'pending',
-      amount: '233280', received: '0', balance: '233280', source: 'subscription', documents: [],
-      ...overrides.billing_period,
+      project_id: record.project, project_hosting_id: 91, hosting_record_id: record.id, client_id: record.client,
+      source: 'subscription', hosting_payment_id: 8, income_id: null, documents: [],
+      period_start: '2026-04-01', period_end: '2026-06-30', currency: 'COP',
+      amount: '240000', received: '60000', balance: '180000', state: 'partial', version: 'review-alfa', ...period,
     },
   }
 }
 
-function button(wrapper, label) {
-  const control = wrapper.findAll('[role="button"]').find(item => item.text() === label)
-  expect(control.text()).toBe(label)
-  return control
-}
-
-async function mountOpen(props = {}) {
-  const wrapper = mount(HostingAccountEmissionModal, {
-    props: { modelValue: false, record, message: 'Confirma el cobro.', ...props },
+function open(record = alfa) {
+  return mount(HostingAccountEmissionModal, {
+    props: { modelValue: true, record },
     global: {
-      plugins: [createI18n({
-        legacy: false,
-        locale: 'es',
-        messages: { es: { hostingBilling } },
-      })],
+      plugins: [createI18n({ legacy: false, locale: 'es', messages: { es: { hostingBilling } } })],
       stubs: {
-        BaseModal: {
-          props: ['modelValue'],
-          template: '<section v-if="modelValue" role="dialog"><slot /></section>',
-        },
+        BaseModal: { props: ['modelValue'], template: '<section role="dialog" v-if="modelValue"><slot /></section>' },
         BaseButton: {
-          props: ['disabled', 'loading'],
-          emits: ['click'],
-          template: '<button role="button" type="button" :disabled="disabled || loading" @click="!disabled && !loading && $emit(\'click\')"><slot /></button>',
-        },
-        HostingBillingPicker: {
-          props: ['modelValue'],
-          emits: ['update:modelValue', 'reconcile'],
-          mounted() { this.$emit('update:modelValue', { ...this.modelValue, period_version: 'period-v4' }) },
-          template: `<section role="group">
-            <button data-testid="emission-picker-payment" @click="$emit('update:modelValue', { ...modelValue, hosting_payment_id: 8, period_version: 'period-v4' })">Seleccionar período 8</button>
-            <button data-testid="emission-picker-reconcile" @click="$emit('reconcile')">Conciliar</button>
-          </section>`,
+          props: ['disabled', 'loading'], emits: ['click'],
+          template: '<button :disabled="disabled || loading" @click="$emit(\'click\')"><slot /></button>',
         },
       },
     },
   })
-  await wrapper.setProps({ modelValue: true })
-  await flushPromises()
-  return wrapper
 }
 
+function button(wrapper, label) {
+  return wrapper.findAll('button').find(item => item.text() === label)
+}
+const send = wrapper => button(wrapper, 'Enviar al cliente')
+
 describe('HostingAccountEmissionModal', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => get_request.mockReset())
 
-  // Falla si un origen pendiente o una selección en conciliación todavía permite enviar al cliente.
-  it('blocks sending while the hosting source still needs reconciliation', async () => {
-    get_request.mockResolvedValue({ data: contextData({
-      overview: { accounting_sources: [{ id: 44, operational: false }] },
-      selection: { requires_reconciliation: true },
-    }) })
-    const wrapper = await mountOpen()
-    const confirm = button(wrapper, 'Enviar al cliente')
+  it('shows the row identity alongside the shared summary of the outstanding balance', async () => {
+    const context = decision()
+    get_request.mockResolvedValue({ data: context })
+    const wrapper = open()
+    await flushPromises()
 
-    expect(confirm.element.disabled).toBe(true)
-    await confirm.trigger('click')
-
-    expect(wrapper.emitted('confirm')).toBeUndefined()
     expect(get_request).toHaveBeenCalledWith('admin/billing-context/projects/7/hosting/')
-    wrapper.unmount()
+    expect(wrapper.get('dl').text()).toContain('Proyecto Alfa')
+    expect(wrapper.get('dl').text()).toContain('Cliente Alfa')
+    expect(wrapper.get('dl').text()).toContain(alfa.domain_url)
+    expect(wrapper.get('dl').text()).toContain(alfa.billing_email)
+    expect(wrapper.getComponent({ name: 'HostingPeriodSummary' }).props('period')).toEqual(context.billing_period)
+    expect(wrapper.text()).toContain('PDF adjunto')
+    expect(wrapper.text()).toContain('próxima renovación')
+    expect(wrapper.text()).toContain('$180.000 COP')
+    expect(wrapper.text()).not.toContain('999.999')
+    expect(wrapper.find('select').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'HostingBillingPicker' }).exists()).toBe(false)
+    expect(wrapper.emitted('confirm')).toBeUndefined()
   })
 
-  // Falla si un origen operativo sin suscripción exige un período inexistente o emite uno inventado.
-  it('confirms an operational source without a subscription using a null payment', async () => {
-    get_request.mockResolvedValue({ data: contextData() })
-    const wrapper = await mountOpen()
-    const confirm = button(wrapper, 'Enviar al cliente')
-
-    expect(confirm.element.disabled).toBe(false)
-    await confirm.trigger('click')
-
-    expect(wrapper.emitted('confirm')).toEqual([[{ hosting_payment_id: null, period_version: 'period-v4' }]])
-    expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
-    wrapper.unmount()
-  })
-
-  // Falla si el modal acepta un período ajeno a la suscripción o rechaza uno recuperado del borrador.
   it.each([
-    ['a saved subscription payment', 8, false, [[{ hosting_payment_id: 8, period_version: 'period-v4' }]]],
-    ['a foreign subscription payment', 99, false, [[{ hosting_payment_id: 8, period_version: 'period-v4' }]]],
-  ])('handles %s by its current payment list', async (_case, paymentId, disabled, expectedConfirm) => {
-    get_request.mockResolvedValue({ data: contextData({
-      overview: {
-        subscription: { associated: true, payments: [{ id: 8, status: 'pending' }] },
-      },
-      billing_period: { hosting_payment_id: 8 },
-    }) })
-    const wrapper = await mountOpen({ resumeDraft: { hosting_payment_id: paymentId } })
-    const confirm = button(wrapper, 'Enviar al cliente')
+    ['subscription', { hosting_payment_id: 8 }],
+    ['expected_income', { hosting_payment_id: null, income_id: 31 }],
+  ])('submits the reviewed %s once on explicit confirmation', async (source, identity) => {
+    get_request.mockResolvedValue({ data: decision(alfa, { source, ...identity }) })
+    const wrapper = open()
+    await flushPromises()
+    send(wrapper).element.click()
+    send(wrapper).element.click()
 
-    expect(confirm.element.disabled).toBe(disabled)
-    await confirm.trigger('click')
-
-    expect(wrapper.emitted('confirm')).toEqual(expectedConfirm)
-    wrapper.unmount()
+    expect(wrapper.emitted('confirm')).toEqual([[{
+      hosting_payment_id: identity.hosting_payment_id, period_version: 'review-alfa',
+    }]])
+    expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
   })
 
-  // Falla si la conciliación pierde el hosting elegido antes de retornar a la emisión.
-  it('sends the hosting record with the selected payment to reconciliation', async () => {
-    get_request.mockResolvedValue({ data: contextData({
-      overview: {
-        subscription: { associated: true, payments: [{ id: 8, status: 'pending' }] },
-      },
+  it('ignores a late read after canceling and opening a different hosting', async () => {
+    let finishAlfa
+    get_request.mockImplementationOnce(() => new Promise(resolve => { finishAlfa = resolve }))
+    get_request.mockResolvedValueOnce({ data: decision(beta, {
+      period_start: '2026-07-01', period_end: '2026-09-30', balance: '45000', version: 'review-beta', hosting_payment_id: 12,
     }) })
-    const wrapper = await mountOpen()
+    const wrapper = open()
+    expect(send(wrapper).element.disabled).toBe(true)
+    await button(wrapper, 'Cancelar').trigger('click')
+    await wrapper.setProps({ modelValue: false })
+    await wrapper.setProps({ modelValue: true, record: beta })
+    await flushPromises()
+    finishAlfa({ data: decision() })
+    await flushPromises()
 
-    await wrapper.get('[data-testid="emission-picker-payment"]').trigger('click')
-    await wrapper.get('[data-testid="emission-picker-reconcile"]').trigger('click')
+    expect(wrapper.emitted('cancel')).toHaveLength(1)
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(wrapper.text()).toContain(beta.billing_email)
+    expect(wrapper.text()).toContain('2026-07-01')
+    expect(wrapper.text()).not.toContain(alfa.billing_email)
+    expect(wrapper.text()).not.toContain('2026-04-01')
+    await send(wrapper).trigger('click')
+    expect(wrapper.emitted('confirm')).toEqual([[{ hosting_payment_id: 12, period_version: 'review-beta' }]])
+  })
 
-    expect(wrapper.emitted('reconcile')).toEqual([[
-      { record, hosting_payment_id: 8 },
-    ]])
-    wrapper.unmount()
+  it.each([
+    ['project', { project: null }, 'proyecto'],
+    ['client', { client: null }, 'cliente'],
+    ['recipient', { billing_email: '' }, 'correo'],
+  ])('gives the correction for a missing %s before reading the period', async (_field, missing, correction) => {
+    const wrapper = open({ ...alfa, ...missing })
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text().toLowerCase()).toContain(correction)
+    expect(send(wrapper).element.disabled).toBe(true)
+    expect(get_request).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['client', { client_id: beta.client }], ['project', { project_id: beta.project }],
+    ['service', { project_hosting_id: 32 }], ['row', { hosting_record_id: beta.id }],
+  ])('withholds another %s’s decision from the dialog', async (_field, changed) => {
+    get_request.mockResolvedValue({ data: decision(alfa, changed) })
+    const wrapper = open()
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toMatch(/coincid/i)
+    expect(wrapper.find('[data-testid="hosting-period-summary"]').exists()).toBe(false)
+    expect(send(wrapper).element.disabled).toBe(true)
+  })
+
+  it('opens reconciliation for a historical row without selecting any other service', async () => {
+    const data = decision()
+    data.overview.accounting_sources[0].operational = false
+    get_request.mockResolvedValue({ data })
+    const wrapper = open()
+    await flushPromises()
+
+    expect(send(wrapper).element.disabled).toBe(true)
+    await button(wrapper, 'Revisar conciliación del hosting').trigger('click')
+    expect(wrapper.emitted('reconcile')).toEqual([[{ record: alfa, hosting_payment_id: null }]])
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+  })
+
+  it.each([
+    'No hay un período pendiente. Revisa las obligaciones del hosting.',
+    'El pago y el ciclo tienen fechas distintas. Revisa los límites en conciliación.',
+    'El período ya tiene cuenta. Consulta su referencia antes de enviar otra.',
+  ])('displays the resolver’s correction: %s', async blocker => {
+    const data = decision()
+    data.billing_period = { state: 'blocked', blocker }
+    get_request.mockResolvedValue({ data })
+    const wrapper = open()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="hosting-period-summary"] [role="alert"]').text()).toBe(blocker)
+    expect(send(wrapper).element.disabled).toBe(true)
+  })
+
+  it('explains ambiguous service ownership before sending', async () => {
+    const data = decision()
+    const message = 'Hay varios registros pendientes. Revisa cuál se usará para cobrar.'
+    data.selection = { requires_reconciliation: true, blockers: [{ message }] }
+    get_request.mockResolvedValue({ data })
+    const wrapper = open()
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toBe(message)
+    expect(send(wrapper).element.disabled).toBe(true)
+  })
+
+  it('shows how to retry a failed read without enabling emission', async () => {
+    get_request.mockRejectedValue(new Error('offline'))
+    const wrapper = open()
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toMatch(/vuelve a abrir/i)
+    expect(send(wrapper).element.disabled).toBe(true)
+  })
+
+  it('reads the decision again when a reconciled row reopens', async () => {
+    get_request.mockResolvedValueOnce({ data: decision() })
+    get_request.mockResolvedValueOnce({ data: decision(alfa, { hosting_payment_id: 57, version: 'after-review' }) })
+    const wrapper = open()
+    await flushPromises()
+    await wrapper.setProps({ modelValue: false })
+    await wrapper.setProps({ modelValue: true })
+    await flushPromises()
+    await send(wrapper).trigger('click')
+
+    expect(get_request).toHaveBeenCalledTimes(2)
+    expect(wrapper.emitted('confirm')).toEqual([[{ hosting_payment_id: 57, period_version: 'after-review' }]])
   })
 })

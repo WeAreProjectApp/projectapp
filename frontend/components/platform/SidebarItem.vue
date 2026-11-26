@@ -5,9 +5,10 @@
     :target="item.openInNewTab ? '_blank' : undefined"
     :rel="item.openInNewTab ? 'noopener noreferrer' : undefined"
     :class="itemClasses"
+    :aria-label="isCollapsed ? item.label : undefined"
     :title="isCollapsed ? item.label : undefined"
   >
-    <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" />
+    <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" aria-hidden="true" />
     <span v-if="!isCollapsed" :class="labelClass">{{ item.label }}</span>
   </a>
   <NuxtLink
@@ -15,10 +16,11 @@
     :to="item.href"
     :data-tour="item.tourTarget"
     :class="itemClasses"
+    :aria-label="isCollapsed ? item.label : undefined"
     :title="isCollapsed ? item.label : undefined"
     :aria-current="isActive ? 'page' : undefined"
   >
-    <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" />
+    <SidebarIcon :name="item.icon" class="h-5 w-5 shrink-0" aria-hidden="true" />
     <span v-if="!isCollapsed" :class="labelClass">{{ item.label }}</span>
     <span
       v-if="!isCollapsed && item.badge"

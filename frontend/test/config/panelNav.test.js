@@ -9,6 +9,16 @@ import { getPanelNavSections } from '../../config/panelNav';
 const identityLocalePath = (path) => path;
 
 describe('getPanelNavSections', () => {
+  it.each([true, false])('keeps the localized Secop destination in Contratación estatal (superuser=%s)', (isSuperuser) => {
+    const sections = getPanelNavSections(path => `/es-co${path}`, { includeSuperuserOnly: isSuperuser });
+    const procurement = sections.find(section => section.id === 'procurement');
+
+    expect(procurement.label).toBe('Contratación estatal');
+    expect(procurement.items).toContainEqual({
+      label: 'Secop', href: '/es-co/panel/procurement', icon: 'landmark',
+    });
+  });
+
   it('shows a writing icon for the proposals module', () => {
     const sections = getPanelNavSections(identityLocalePath);
     const proposals = sections.find(section => section.id === 'commercial').items.find(item => item.href === '/panel/proposals');

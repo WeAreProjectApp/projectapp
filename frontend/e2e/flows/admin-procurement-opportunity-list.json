@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Staff navigates from the panel to the paginated SECOP II list, reads source status, opens a process and retries a failed load.",
+  "description": "Staff opens Secop under Contratación estatal from the expanded or compact panel menu, reads the paginated SECOP II list and source status, opens a process and retries a failed load.",
   "outcomes": [
     "display",
     "success",
