@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "sources": {
-    "frontend/config/viewCatalog.js": "ffb90c9b9f8563a5a86296d2103e25a244fca967d4c165002e07879d51ccdeae",
+    "frontend/config/viewCatalog.js": "06a819654fcfbb183f830a64069033abdd0e1d1aa66d6d8d3dd6341535cb6993",
     "frontend/config/viewCapabilityCatalog.js": "6ea16ac68afc1e5aab372d23227b1acca61bb999c201f316ac8e8a40d2ed00c6"
   },
   "surfaces": [
@@ -9,7 +9,7 @@
       "id": "/panel/procurement",
       "surface": "Panel",
       "module": "Contratación estatal",
-      "view": "Oportunidades SECOP",
+      "view": "Secop",
       "file": "frontend/pages/panel/procurement/index.vue",
       "audience": "admin",
       "view_type": "list",
